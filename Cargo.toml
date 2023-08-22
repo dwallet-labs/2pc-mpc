@@ -5,5 +5,8 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
+crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint.git", features = ["rand_core", "serde"], default-features = false }
+serde = { version = "1.0.163", features = ["derive"] }
+subtle = "2.5"
 
 [dev-dependencies]
