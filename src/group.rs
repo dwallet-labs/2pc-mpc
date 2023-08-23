@@ -36,10 +36,6 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     + for<'r> AddAssign<&'r Self>
     + SubAssign<Self>
     + for<'r> SubAssign<&'r Self>
-    + Mul<Uint<SCALAR_LIMBS>, Output = Self>
-    + for<'r> Mul<&'r Uint<SCALAR_LIMBS>, Output = Self>
-    + MulAssign<Uint<SCALAR_LIMBS>>
-    + for<'r> MulAssign<&'r Uint<SCALAR_LIMBS>>
 {
     /// The actual value of the group point used for encoding/decoding.
     ///
