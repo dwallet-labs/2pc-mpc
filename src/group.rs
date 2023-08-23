@@ -7,9 +7,14 @@ use crypto_bigint::Uint;
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
-#[derive(thiserror::Error, Debug, PartialEq)]
-#[error("Invalid Group Element: does not belong to the group")]
-pub struct InvalidGroupElementError();
+#[derive(thiserror::Error, Clone, Debug, PartialEq)]
+#[error(
+    "Invalid Group Element: `value` does not belong to the group identified by `public_parameters`"
+)]
+pub struct InvalidGroupElementError<Value, PublicParameters> {
+    value: Value,
+    public_parameters: PublicParameters,
+}
 
 /// An element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in additive
 /// notation.
@@ -53,12 +58,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     ///
     /// In order to mitigate these risks and save on communication, we separate the value of the
     /// point from the group parameters.
-    type Value: Serialize
-        + for<'r> Deserialize<'r>
-        + Clone
-        + PartialEq
-        + ConstantTimeEq
-        + AsRef<[u8]>;
+    type Value: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq + ConstantTimeEq;
 
     /// Returns the value of this group element
     fn value(&self) -> &Self::Value;
@@ -70,7 +70,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     /// instantiate a `GroupElement`), as well as static information hardcoded into the code
     /// (that, together with the dynamic information, uniquely identifies a group and will be used
     /// for Fiat-Shamir Transcripts).
-    type PublicParameters: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq + AsRef<[u8]>;
+    type PublicParameters: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq;
 
     /// Returns the public parameters of this group element
     fn public_parameters(&self) -> &Self::PublicParameters;
@@ -85,7 +85,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     fn new(
         value: Self::Value,
         params: Self::PublicParameters,
-    ) -> Result<Self, InvalidGroupElementError>;
+    ) -> Result<Self, InvalidGroupElementError<Self::Value, Self::PublicParameters>>;
 
     /// Returns the additive identity, also known as the "neutral element".
     fn neutral(&self) -> Self;
