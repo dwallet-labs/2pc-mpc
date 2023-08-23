@@ -102,10 +102,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
 /// Constant-time multiplication by the generator.
 ///
 /// May use optimizations (e.g. precomputed tables) when available.
-pub trait MulByGenerator<T>
-where
-    Self: Mul<T, Output = Self>,
-{
+pub trait MulByGenerator<T> {
     /// Multiply by the generator of the cyclic group in constant-time.
     #[must_use]
     fn mul_by_generator(scalar: T) -> Self;
