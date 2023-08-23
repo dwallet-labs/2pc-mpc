@@ -111,7 +111,9 @@ pub trait MulByGenerator<T> {
 /// An element of an abelian, cyclic group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in
 /// additive notation.
 pub trait CyclicGroupElement<const SCALAR_LIMBS: usize>:
-    GroupElement<SCALAR_LIMBS> + MulByGenerator<Uint<SCALAR_LIMBS>>
+    GroupElement<SCALAR_LIMBS>
+    + MulByGenerator<Uint<SCALAR_LIMBS>>
+    + for<'r> MulByGenerator<&'r Uint<SCALAR_LIMBS>>
 {
     fn generator() -> Self;
 }
@@ -140,5 +142,6 @@ pub trait PrimeGroupElement<
     KnownOrderGroupElement<SCALAR_LIMBS, Scalar>
     + CyclicGroupElement<SCALAR_LIMBS>
     + MulByGenerator<Scalar>
+    + for<'r> MulByGenerator<&'r Scalar>
 {
 }
