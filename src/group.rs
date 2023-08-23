@@ -61,7 +61,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     type Value: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq + ConstantTimeEq;
 
     /// Returns the value of this group element
-    fn value(&self) -> &Self::Value;
+    fn value(&self) -> Self::Value;
 
     /// The public parameters of the group, used for group operations.
     ///
@@ -73,7 +73,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     type PublicParameters: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq;
 
     /// Returns the public parameters of this group element
-    fn public_parameters(&self) -> &Self::PublicParameters;
+    fn public_parameters(&self) -> Self::PublicParameters;
 
     /// Instantiate the group element from its value and the caller supplied parameters.
     ///
@@ -84,7 +84,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     /// element of the group either here or in deserialization.
     fn new(
         value: Self::Value,
-        params: Self::PublicParameters,
+        public_parameters: Self::PublicParameters,
     ) -> Result<Self, InvalidGroupElementError<Self::Value, Self::PublicParameters>>;
 
     /// Returns the additive identity, also known as the "neutral element".
