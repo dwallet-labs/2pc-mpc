@@ -1,7 +1,7 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use crypto_bigint::Uint;
 use serde::{Deserialize, Serialize};
@@ -33,6 +33,8 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     + for<'r> SubAssign<&'r Self>
     + Mul<Uint<SCALAR_LIMBS>, Output = Self>
     + for<'r> Mul<&'r Uint<SCALAR_LIMBS>, Output = Self>
+    + MulAssign<Uint<SCALAR_LIMBS>>
+    + for<'r> MulAssign<&'r Uint<SCALAR_LIMBS>>
 {
     /// The actual value of the group point used for encoding/decoding.
     ///
@@ -69,6 +71,9 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     /// (that, together with the dynamic information, uniquely identifies a group and will be used
     /// for Fiat-Shamir Transcripts).
     type PublicParameters: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq + AsRef<[u8]>;
+
+    /// Returns the public parameters of this group element
+    fn public_parameters(&self) -> &Self::PublicParameters;
 
     /// Instantiate the group element from its value and the caller supplied parameters.
     ///
@@ -123,7 +128,11 @@ pub trait KnownOrderGroupElement<
     const SCALAR_LIMBS: usize,
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar>,
 >:
-    GroupElement<SCALAR_LIMBS> + Mul<Scalar, Output = Self> + for<'r> Mul<&'r Scalar, Output = Self>
+    GroupElement<SCALAR_LIMBS>
+    + Mul<Scalar, Output = Self>
+    + for<'r> Mul<&'r Scalar, Output = Self>
+    + MulAssign<Scalar>
+    + for<'r> MulAssign<&'r Scalar>
 {
     fn order() -> Uint<SCALAR_LIMBS>;
 }
