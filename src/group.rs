@@ -4,7 +4,12 @@
 use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::Uint;
+use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+#[error("Invalid Group Element: does not belong to the group")]
+pub struct InvalidGroupElementError();
 
 /// An element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in additive
 /// notation.
@@ -29,6 +34,54 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     + Mul<Uint<SCALAR_LIMBS>, Output = Self>
     + for<'r> Mul<&'r Uint<SCALAR_LIMBS>, Output = Self>
 {
+    /// The actual value of the group point used for encoding/decoding.
+    ///
+    /// For some groups (e.g. `group::secp256k1::Secp256k1GroupElement`) the group parameters and
+    /// equations are statically hard-coded into the code, and then they would have `Self::Value
+    /// = Self`.
+    ///
+    /// However, other groups (e.g. `group::paillier::PaillierCiphertextGroupElement`) rely on
+    /// dynamic values to determine group operations in runtime (like the Paillier modulus
+    /// $N^2$).
+    ///
+    /// In those cases, it is both ineffecient communication-wise to serialize these public values
+    /// as they are known by the deserializing side, and even worse it is a security risk as
+    /// malicious actors could try and craft groups in which they can break security assumptions
+    /// in order to e.g. bypass zk-proof verification and have the verifier use those groups.
+    ///
+    /// In order to mitigate these risks and save on communication, we separate the value of the
+    /// point from the group parameters.
+    type Value: Serialize
+        + for<'r> Deserialize<'r>
+        + Clone
+        + PartialEq
+        + ConstantTimeEq
+        + AsRef<[u8]>;
+
+    /// Returns the value of this group element
+    fn value(&self) -> &Self::Value;
+
+    /// The public parameters of the group, used for group operations.
+    ///
+    /// These include both dynamic information for runtime calculations
+    /// (that provides the required context for `Self::new()` alongside the `Self::Value` to
+    /// instantiate a `GroupElement`), as well as static information hardcoded into the code
+    /// (that, together with the dynamic information, uniquely identifies a group and will be used
+    /// for Fiat-Shamir Transcripts).
+    type PublicParameters: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq + AsRef<[u8]>;
+
+    /// Instantiate the group element from its value and the caller supplied parameters.
+    ///
+    /// *** NOTICE ***: `Self::new()` must check that the
+    /// `value` belongs to the group identified by `params` and return an error otherwise!
+    ///
+    /// Even for static groups where `Self::Value = Self`, it must be assured the value is an
+    /// element of the group either here or in deserialization.
+    fn new(
+        value: Self::Value,
+        params: Self::PublicParameters,
+    ) -> Result<Self, InvalidGroupElementError>;
+
     /// Returns the additive identity, also known as the "neutral element".
     fn neutral(&self) -> Self;
 
