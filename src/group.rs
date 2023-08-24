@@ -25,7 +25,6 @@ pub struct InvalidGroupElementError<Value, PublicParameters> {
 /// All group operations are guaranteed to be constant time
 pub trait GroupElement<const SCALAR_LIMBS: usize>:
     PartialEq
-    + ConstantTimeEq
     + Clone
     + Neg<Output = Self>
     + Add<Self, Output = Self>
@@ -88,7 +87,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
 
     /// Determines if this point is the identity in constant-time.
     fn is_neutral(&self) -> Choice {
-        self.ct_eq(&self.neutral())
+        self.value().ct_eq(&self.neutral().value())
     }
 
     /// Constant-time Multiplication by (any bounded) natural number (scalar)
