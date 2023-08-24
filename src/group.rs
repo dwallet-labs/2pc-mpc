@@ -8,12 +8,20 @@ use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
-#[error(
+
+pub enum Error<Value, PublicParameters> {
+    #[error(
+    "Invalid Public Parameters: no valid group can be identified by `public_parameters`, or the implementation doesn't support it"
+    )]
+    InvalidPublicParametersError { public_parameters: PublicParameters },
+
+    #[error(
     "Invalid Group Element: `value` does not belong to the group identified by `public_parameters`"
-)]
-pub struct InvalidGroupElementError<Value, PublicParameters> {
-    value: Value,
-    public_parameters: PublicParameters,
+    )]
+    InvalidGroupElementError {
+        value: Value,
+        public_parameters: PublicParameters,
+    },
 }
 
 /// An element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in additive
@@ -80,7 +88,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     fn new(
         value: Self::Value,
         public_parameters: Self::PublicParameters,
-    ) -> Result<Self, InvalidGroupElementError<Self::Value, Self::PublicParameters>>;
+    ) -> Result<Self, Error<Self::Value, Self::PublicParameters>>;
 
     /// Returns the additive identity, also known as the "neutral element".
     fn neutral(&self) -> Self;
