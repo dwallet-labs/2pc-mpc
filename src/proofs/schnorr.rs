@@ -1,12 +1,15 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
-use serde::Serialize;
+use crypto_bigint::rand_core::CryptoRngCore;
+use serde::{Deserialize, Serialize};
 
-use crate::group::GroupElement;
+use super::Result;
+use crate::{group::GroupElement, marker::Marker};
 
 /// A Schnorr Zero-Knowledge Proof Language
-/// Can be generically used to generate an (enhanced) batched proof
+/// Can be generically used to generate an enhanced batched `Proof`
+/// As defined in Appendix B. Schnorr Protocols in the paper
 pub trait Language<
     const SCALAR_LIMBS: usize,
     // An element of the witness space $(\HH, +)$
@@ -28,4 +31,67 @@ pub trait Language<
         witness: &WitnessSpaceGroupElement,
         public_parameters: &Self::PublicParameters,
     ) -> PublicValueSpaceGroupElement;
+}
+
+/// An Enhanced Batched Schnorr Zero-Knowledge Proof
+/// Implements Appendix B. Schnorr Protocols in the paper
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Proof<
+    const SCALAR_LIMBS: usize,
+    WitnessSpaceGroupElement: GroupElement<SCALAR_LIMBS>,
+    PublicValueSpaceGroupElement: GroupElement<SCALAR_LIMBS>,
+    L,
+    // A struct used by the protocol using this proof,
+    // used to provide extra necessary context that will parameterize the proof (and thus verifier
+    // code) and be inserted to the Fiat-Shamir transcript
+    ProtocolContext,
+> {
+    statement_mask: PublicValueSpaceGroupElement::Value,
+    response: WitnessSpaceGroupElement::Value,
+
+    _language_choice: Marker<L>,
+    _protocol_context_choice: Marker<ProtocolContext>,
+}
+
+impl<
+        const SCALAR_LIMBS: usize,
+        WitnessSpaceGroupElement: GroupElement<SCALAR_LIMBS>,
+        PublicValueSpaceGroupElement: GroupElement<SCALAR_LIMBS>,
+        L: Language<SCALAR_LIMBS, WitnessSpaceGroupElement, PublicValueSpaceGroupElement>,
+        ProtocolContext: Serialize,
+    >
+    Proof<SCALAR_LIMBS, WitnessSpaceGroupElement, PublicValueSpaceGroupElement, L, ProtocolContext>
+{
+    fn new(
+        statement_mask: PublicValueSpaceGroupElement,
+        response: WitnessSpaceGroupElement,
+    ) -> Self {
+        Self {
+            statement_mask: statement_mask.value(),
+            response: response.value(),
+            _language_choice: Marker::<L>::new(),
+            _protocol_context_choice: Marker::<ProtocolContext>::new(),
+        }
+    }
+
+    /// Prove an enhanced batched Schnorr zero-knowledge claim
+    /// Returns the zero-knowledge proof
+    pub fn prove(
+        _protocol_context: ProtocolContext,
+        _public_parameters: &L::PublicParameters,
+        _witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
+        _rng: &mut impl CryptoRngCore,
+    ) -> Result<Self> {
+        todo!()
+    }
+
+    /// Verify an enhanced batched Schnorr zero-knowledge proof
+    pub fn verify(
+        &self,
+        _protocol_context: ProtocolContext,
+        _public_parameters: &L::PublicParameters,
+        _statements: Vec<PublicValueSpaceGroupElement>,
+    ) -> Result<()> {
+        todo!()
+    }
 }
