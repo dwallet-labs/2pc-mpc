@@ -40,5 +40,5 @@ pub trait Language<
         _language_public_parameters: &Self::PublicParameters,
         _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
         _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
-    ) -> Result<PublicValueSpaceGroupElement, group::Error>;
+    ) -> group::Result<PublicValueSpaceGroupElement>;
 }
