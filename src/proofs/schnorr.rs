@@ -1,8 +1,6 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::borrow::Borrow;
-
 use crypto_bigint::rand_core::CryptoRngCore;
 use serde::{Deserialize, Serialize};
 
@@ -105,7 +103,9 @@ impl<
     /// Returns the zero-knowledge proof
     pub fn prove(
         _protocol_context: ProtocolContext,
-        _public_parameters: &L::PublicParameters,
+        _language_public_parameters: &L::PublicParameters,
+        _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
         _witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
         _rng: &mut impl CryptoRngCore,
     ) -> Result<Self> {
@@ -116,7 +116,9 @@ impl<
     pub fn verify(
         &self,
         _protocol_context: ProtocolContext,
-        _public_parameters: &L::PublicParameters,
+        _language_public_parameters: &L::PublicParameters,
+        _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
         _statements: Vec<PublicValueSpaceGroupElement>,
     ) -> Result<()> {
         todo!()
