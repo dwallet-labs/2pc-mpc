@@ -8,14 +8,17 @@ use super::Result;
 use crate::{group::GroupElement, marker::Marker};
 
 /// A Schnorr Zero-Knowledge Proof Language
-/// Can be generically used to generate an enhanced batched `Proof`
+/// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`
 /// As defined in Appendix B. Schnorr Protocols in the paper
 pub trait Language<
-    const SCALAR_LIMBS: usize,
+    // The upper bound for the scalar size of the witness group
+    const WITNESS_SCALAR_LIMBS: usize,
+    // The upper bound for the scalar size of the associated public-value space group
+    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     // An element of the witness space $(\HH, +)$
-    WitnessSpaceGroupElement: GroupElement<SCALAR_LIMBS>,
-    // An element in the associated public-value space $(\GG, +)$
-    PublicValueSpaceGroupElement: GroupElement<SCALAR_LIMBS>,
+    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
+    // An element in the associated public-value space $(\GG, \cdot)$
+    PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
 >
 {
     /// Public parameters for a language family $\pp \gets \Setup(1^\kappa)$
@@ -37,9 +40,10 @@ pub trait Language<
 /// Implements Appendix B. Schnorr Protocols in the paper
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Proof<
-    const SCALAR_LIMBS: usize,
-    WitnessSpaceGroupElement: GroupElement<SCALAR_LIMBS>,
-    PublicValueSpaceGroupElement: GroupElement<SCALAR_LIMBS>,
+    const WITNESS_SCALAR_LIMBS: usize,
+    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
+    PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
     L,
     // A struct used by the protocol using this proof,
     // used to provide extra necessary context that will parameterize the proof (and thus verifier
@@ -54,13 +58,26 @@ pub struct Proof<
 }
 
 impl<
-        const SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement: GroupElement<SCALAR_LIMBS>,
-        PublicValueSpaceGroupElement: GroupElement<SCALAR_LIMBS>,
-        L: Language<SCALAR_LIMBS, WitnessSpaceGroupElement, PublicValueSpaceGroupElement>,
+        const WITNESS_SCALAR_LIMBS: usize,
+        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
+        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+        L: Language<
+            WITNESS_SCALAR_LIMBS,
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            WitnessSpaceGroupElement,
+            PublicValueSpaceGroupElement,
+        >,
         ProtocolContext: Serialize,
     >
-    Proof<SCALAR_LIMBS, WitnessSpaceGroupElement, PublicValueSpaceGroupElement, L, ProtocolContext>
+    Proof<
+        WITNESS_SCALAR_LIMBS,
+        PUBLIC_VALUE_SCALAR_LIMBS,
+        WitnessSpaceGroupElement,
+        PublicValueSpaceGroupElement,
+        L,
+        ProtocolContext,
+    >
 {
     fn new(
         statement_mask: PublicValueSpaceGroupElement,
