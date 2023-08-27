@@ -6,13 +6,16 @@ use serde::Serialize;
 use crate::group::GroupElement;
 
 /// A Schnorr Zero-Knowledge Proof Language
-/// Can be generically used to generate an (enhanced) batched proof
+/// Can be generically used to generate a batched Schnorr zero-knowledge proof
 pub trait Language<
-    const SCALAR_LIMBS: usize,
+    // The upper bound for the scalar size of the witness group
+    const WITNESS_SCALAR_LIMBS: usize,
+    // The upper bound for the scalar size of the associated public-value space group
+    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     // An element of the witness space $(\HH, +)$
-    WitnessSpaceGroupElement: GroupElement<SCALAR_LIMBS>,
+    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
     // An element in the associated public-value space $(\GG, +)$
-    PublicValueSpaceGroupElement: GroupElement<SCALAR_LIMBS>,
+    PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
 >
 {
     /// Public parameters for a language family $\pp \gets \Setup(1^\kappa)$
