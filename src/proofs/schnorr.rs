@@ -12,6 +12,7 @@ use crate::{
     group::GroupElement,
     marker::Marker,
     proofs::{Error, TranscriptProtocol},
+    ComputationalSecuritySizedNumber,
 };
 
 /// A Schnorr Zero-Knowledge Proof Language
@@ -133,6 +134,7 @@ impl<
         todo!()
     }
 
+    #[allow(dead_code)]
     fn setup_protocol(
         protocol_context: &ProtocolContext,
         public_parameters: &L::PublicParameters,
@@ -140,17 +142,23 @@ impl<
     ) -> Result<Transcript> {
         let mut transcript = Transcript::new(L::NAME.as_bytes());
 
+        // TODO: should we add anything on the challenge space E? Even though it's hardcoded U128?
+
         transcript
             .serialize_to_transcript_as_json(b"protocol context", protocol_context)
-            .map_err(|e| Error::InvalidParameters())?;
+            .map_err(|_e| Error::InvalidParameters())?;
 
         transcript
             .serialize_to_transcript_as_json(b"public parameters", public_parameters)
-            .map_err(|e| Error::InvalidParameters())?;
+            .map_err(|_e| Error::InvalidParameters())?;
 
         if statements
             .iter()
             .map(|statement| {
+                // TODO: do we also want to put the public parameters of all statements here?
+                // It kinda makes no sense as it would already be included in the language public
+                // parameters and there is no parallel in which we iterate over the
+                // witnesses and put their public parameters in the transcript.
                 transcript.serialize_to_transcript_as_json(b"statement value", &statement.value())
             })
             .any(|res| res.is_err())
@@ -161,14 +169,17 @@ impl<
         Ok(transcript)
     }
 
+    #[allow(dead_code)]
     fn compute_challenges(
-        mask_statement: &PublicValueSpaceGroupElement,
+        statement_mask_value: &PublicValueSpaceGroupElement::Value,
         batch_size: usize,
         transcript: &mut Transcript,
-    ) -> Vec<ComputationalSecuritySizedNumber> {
-        transcript.append_encodable(b"randomizer public value", mask_statement);
+    ) -> Result<Vec<ComputationalSecuritySizedNumber>> {
+        transcript
+            .serialize_to_transcript_as_json(b"randomizer public value", statement_mask_value)
+            .map_err(|_e| Error::InvalidParameters())?;
 
-        (1..=batch_size)
+        Ok((1..=batch_size)
             .map(|_| {
                 // The `.challenge` method mutates `transcript` by adding the label to it.
                 // Although the same label is used for all values,
@@ -176,7 +187,9 @@ impl<
                 // (i.e. it will hold different `multiple` of the label inside the digest),
                 // and will therefore be unique.
                 transcript.challenge(b"challenge")
+
+                // TODO: should we also add the challenge to the transcript?
             })
-            .collect()
+            .collect())
     }
 }
