@@ -1,6 +1,8 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::borrow::Borrow;
+
 use crypto_bigint::rand_core::CryptoRngCore;
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
@@ -27,7 +29,20 @@ pub trait Language<
 >
 {
     /// Public parameters for a language family $\pp \gets \Setup(1^\kappa)$
-    type PublicParameters: Serialize + PartialEq;
+    ///
+    /// Must uniquely identify the witness and statement spaces,
+    /// as well as including all public parameters of the language
+    /// (e.g., the public parameters of the commitment scheme used for proving knowledge of
+    /// decommitment - the bases $g$, $h$ in the case of Pedersen)
+    ///
+    /// By restricting `Borrow` here we assure that `PublicParameters` encodes both
+    /// `WitnessSpaceGroupElement::PublicParameters` and
+    /// `PublicValueSpaceGroupElement::PublicParameters`, which restricts implementors to hold
+    /// copies of these values inside the struct they use for `PublicParameters`.
+    type PublicParameters: Serialize
+        + PartialEq
+        + Borrow<WitnessSpaceGroupElement::PublicParameters>
+        + Borrow<PublicValueSpaceGroupElement::PublicParameters>;
 
     /// A unique string representing the name of this language; will be inserted to the Fiat-Shamir
     /// transcript.
