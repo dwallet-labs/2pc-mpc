@@ -23,19 +23,13 @@ pub trait Language<
 {
     /// Public parameters for a language family $\pp \gets \Setup(1^\kappa)$
     ///
-    /// Must uniquely identify the witness and statement spaces,
-    /// as well as including all public parameters of the language
-    /// (e.g., the public parameters of the commitment scheme used for proving knowledge of
-    /// decommitment - the bases $g$, $h$ in the case of Pedersen)
+    /// Used for language-specific parameters (e.g., the public parameters of the commitment scheme
+    /// used for proving knowledge of decommitment - the bases $g$, $h$ in the case of Pedersen).
     ///
-    /// By restricting `Borrow` here we assure that `PublicParameters` encodes both
+    /// Group public parameters are encoded separately in
     /// `WitnessSpaceGroupElement::PublicParameters` and
-    /// `PublicValueSpaceGroupElement::PublicParameters`, which restricts implementors to hold
-    /// copies of these values inside the struct they use for `PublicParameters`.
-    type PublicParameters: Serialize
-        + PartialEq
-        + Borrow<WitnessSpaceGroupElement::PublicParameters>
-        + Borrow<PublicValueSpaceGroupElement::PublicParameters>;
+    /// `PublicValueSpaceGroupElement::PublicParameters`.
+    type PublicParameters: Serialize + PartialEq;
 
     /// A unique string representing the name of this language; will be inserted to the Fiat-Shamir
     /// transcript.
