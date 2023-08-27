@@ -7,7 +7,7 @@ use crypto_bigint::Uint;
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
-/// An error in group element instantiation (`GroupElement::new()`)
+/// An error in group element instantiation [`GroupElement::new()`]
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
 pub enum Error {
     #[error(
