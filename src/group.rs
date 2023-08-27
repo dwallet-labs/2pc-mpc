@@ -9,20 +9,19 @@ use subtle::{Choice, ConstantTimeEq};
 
 /// An error in group element instantiation (`GroupElement::new()`)
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
-pub enum GroupElementError<Value, PublicParameters> {
+pub enum GroupElementError {
     #[error(
-    "Unsupported Public Parameters: the implementation doesn't support `public_parameters`, whether or not it identifies a valid group."
+    "Unsupported Public Parameters: the implementation doesn't support the public parameters, whether or not it identifies a valid group."
     )]
-    UnsupportedPublicParametersError { public_parameters: PublicParameters },
-    #[error("Invalid Public Parameters: no valid group can be identified by `public_parameters`.")]
-    InvalidPublicParametersError { public_parameters: PublicParameters },
+    UnsupportedPublicParametersError,
     #[error(
-    "Invalid Group Element: `value` does not belong to the group identified by `public_parameters`."
+        "Invalid Public Parameters: no valid group can be identified by the public parameters."
     )]
-    InvalidGroupElementError {
-        value: Value,
-        public_parameters: PublicParameters,
-    },
+    InvalidPublicParametersError,
+    #[error(
+    "Invalid Group Element: the value does not belong to the group identified by the public parameters."
+    )]
+    InvalidGroupElementError,
 }
 
 /// An element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in additive
@@ -89,7 +88,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     fn new(
         value: Self::Value,
         public_parameters: Self::PublicParameters,
-    ) -> Result<Self, GroupElementError<Self::Value, Self::PublicParameters>>;
+    ) -> Result<Self, GroupElementError>;
 
     /// Returns the additive identity, also known as the "neutral element".
     fn neutral(&self) -> Self;
