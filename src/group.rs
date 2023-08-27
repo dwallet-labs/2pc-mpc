@@ -9,7 +9,7 @@ use subtle::{Choice, ConstantTimeEq};
 
 /// An error in group element instantiation (`GroupElement::new()`)
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
-pub enum GroupElementError {
+pub enum Error {
     #[error(
     "unsupported public parameters: the implementation doesn't support the public parameters, whether or not it identifies a valid group."
     )]
@@ -23,6 +23,9 @@ pub enum GroupElementError {
     )]
     InvalidGroupElementError,
 }
+
+/// The Result of the `new()` operation of types implementing the `GroupElement` trait
+pub type Result<T> = std::result::Result<T, Error>;
 
 /// An element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in additive
 /// notation.
@@ -85,10 +88,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     ///
     /// Even for static groups where `Self::Value = Self`, it must be assured the value is an
     /// element of the group either here or in deserialization.
-    fn new(
-        value: Self::Value,
-        public_parameters: Self::PublicParameters,
-    ) -> Result<Self, GroupElementError>;
+    fn new(value: Self::Value, public_parameters: Self::PublicParameters) -> Result<Self>;
 
     /// Returns the additive identity, also known as the "neutral element".
     fn neutral(&self) -> Self;
