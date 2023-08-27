@@ -39,9 +39,9 @@ pub trait Language<
     /// \cdot)$, the statement space.
     fn group_homomorphism(
         witness: &WitnessSpaceGroupElement,
-        _language_public_parameters: &Self::PublicParameters,
-        _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
-        _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
+        language_public_parameters: &Self::PublicParameters,
+        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
     ) -> group::Result<PublicValueSpaceGroupElement>;
 }
 
