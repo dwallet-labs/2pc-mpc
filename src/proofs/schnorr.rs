@@ -14,7 +14,7 @@ pub trait Language<
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     // An element of the witness space $(\HH, +)$
     WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
-    // An element in the associated public-value space $(\GG, +)$
+    // An element in the associated public-value space $(\GG, \cdot)$
     PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
 >
 {
