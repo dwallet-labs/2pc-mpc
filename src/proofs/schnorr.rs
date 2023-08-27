@@ -7,6 +7,7 @@ use crate::group::GroupElement;
 
 /// A Schnorr Zero-Knowledge Proof Language
 /// Can be generically used to generate a batched Schnorr zero-knowledge proof
+/// As defined in Appendix B. Schnorr Protocols in the paper
 pub trait Language<
     // The upper bound for the scalar size of the witness group
     const WITNESS_SCALAR_LIMBS: usize,
