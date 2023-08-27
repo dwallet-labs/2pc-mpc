@@ -7,7 +7,7 @@ use crypto_bigint::Uint;
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
-/// An error in group element instantiation (`GroupElement::new()`)
+/// An error in group element instantiation [`GroupElement::new()`]
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
 pub enum Error {
     #[error(
@@ -88,7 +88,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     ///
     /// Even for static groups where `Self::Value = Self`, it must be assured the value is an
     /// element of the group either here or in deserialization.
-    fn new(value: Self::Value, public_parameters: Self::PublicParameters) -> Result<Self>;
+    fn new(value: Self::Value, public_parameters: &Self::PublicParameters) -> Result<Self>;
 
     /// Returns the additive identity, also known as the "neutral element".
     fn neutral(&self) -> Self;
