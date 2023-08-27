@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use super::Result;
 use crate::{group::GroupElement, marker::Marker};
 
+use crate::{group};
+
 /// A Schnorr Zero-Knowledge Proof Language
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`
 /// As defined in Appendix B. Schnorr Protocols in the paper
@@ -39,8 +41,10 @@ pub trait Language<
     /// \cdot)$, the statement space.
     fn group_homomorphism(
         witness: &WitnessSpaceGroupElement,
-        public_parameters: &Self::PublicParameters,
-    ) -> PublicValueSpaceGroupElement;
+        _language_public_parameters: &Self::PublicParameters,
+        _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
+    ) -> Result<PublicValueSpaceGroupElement, group::Error>;
 }
 
 /// An Enhanced Batched Schnorr Zero-Knowledge Proof

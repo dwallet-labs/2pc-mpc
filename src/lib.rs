@@ -2,7 +2,7 @@ use crypto_bigint::U128;
 
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: Apache-2.0
-mod group;
+pub mod group;
 mod marker;
 pub mod proofs;
 
