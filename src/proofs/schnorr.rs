@@ -155,10 +155,6 @@ impl<
         if statements
             .iter()
             .map(|statement| {
-                // TODO: do we also want to put the public parameters of all statements here?
-                // It kinda makes no sense as it would already be included in the language public
-                // parameters and there is no parallel in which we iterate over the
-                // witnesses and put their public parameters in the transcript.
                 transcript.serialize_to_transcript_as_json(b"statement value", &statement.value())
             })
             .any(|res| res.is_err())
