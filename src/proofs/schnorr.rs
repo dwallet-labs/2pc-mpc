@@ -2,10 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crypto_bigint::rand_core::CryptoRngCore;
+use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use super::Result;
-use crate::{group::GroupElement, marker::Marker};
+use crate::{
+    group::GroupElement,
+    marker::Marker,
+    proofs::{Error, TranscriptProtocol},
+};
 
 /// A Schnorr Zero-Knowledge Proof Language
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`
@@ -95,7 +100,7 @@ impl<
     /// Prove an enhanced batched Schnorr zero-knowledge claim
     /// Returns the zero-knowledge proof
     pub fn prove(
-        _protocol_context: ProtocolContext,
+        _protocol_context: &ProtocolContext,
         _public_parameters: &L::PublicParameters,
         _witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
         _rng: &mut impl CryptoRngCore,
@@ -106,10 +111,57 @@ impl<
     /// Verify an enhanced batched Schnorr zero-knowledge proof
     pub fn verify(
         &self,
-        _protocol_context: ProtocolContext,
+        _protocol_context: &ProtocolContext,
         _public_parameters: &L::PublicParameters,
         _statements: Vec<PublicValueSpaceGroupElement>,
     ) -> Result<()> {
         todo!()
+    }
+
+    fn setup_protocol(
+        protocol_context: &ProtocolContext,
+        public_parameters: &L::PublicParameters,
+        statements: Vec<PublicValueSpaceGroupElement>,
+    ) -> Result<Transcript> {
+        let mut transcript = Transcript::new(L::NAME.as_bytes());
+
+        transcript
+            .serialize_to_transcript_as_json(b"protocol context", protocol_context)
+            .map_err(|e| Error::InvalidParameters())?;
+
+        transcript
+            .serialize_to_transcript_as_json(b"public parameters", public_parameters)
+            .map_err(|e| Error::InvalidParameters())?;
+
+        if statements
+            .iter()
+            .map(|statement| {
+                transcript.serialize_to_transcript_as_json(b"statement value", &statement.value())
+            })
+            .any(|res| res.is_err())
+        {
+            return Err(Error::InvalidParameters());
+        }
+
+        Ok(transcript)
+    }
+
+    fn compute_challenges(
+        mask_statement: &PublicValueSpaceGroupElement,
+        batch_size: usize,
+        transcript: &mut Transcript,
+    ) -> Vec<ComputationalSecuritySizedNumber> {
+        transcript.append_encodable(b"randomizer public value", mask_statement);
+
+        (1..=batch_size)
+            .map(|_| {
+                // The `.challenge` method mutates `transcript` by adding the label to it.
+                // Although the same label is used for all values,
+                // each value will be a digest of different values
+                // (i.e. it will hold different `multiple` of the label inside the digest),
+                // and will therefore be unique.
+                transcript.challenge(b"challenge")
+            })
+            .collect()
     }
 }
