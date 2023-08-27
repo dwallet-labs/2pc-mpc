@@ -79,6 +79,7 @@ impl<
         ProtocolContext,
     >
 {
+    #[allow(dead_code)]
     fn new(
         statement_mask: PublicValueSpaceGroupElement,
         response: WitnessSpaceGroupElement,
