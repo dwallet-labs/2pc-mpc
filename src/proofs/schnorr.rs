@@ -100,7 +100,6 @@ impl<
         ProtocolContext,
     >
 {
-    #[allow(dead_code)]
     fn new(
         statement_mask: PublicValueSpaceGroupElement,
         response: WitnessSpaceGroupElement,
@@ -116,12 +115,40 @@ impl<
     /// Prove an enhanced batched Schnorr zero-knowledge claim
     /// Returns the zero-knowledge proof
     pub fn prove(
-        _protocol_context: &ProtocolContext,
-        _public_parameters: &L::PublicParameters,
-        _witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
-        _rng: &mut impl CryptoRngCore,
+        protocol_context: &ProtocolContext,
+        public_parameters: &L::PublicParameters,
+        witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
+        rng: &mut impl CryptoRngCore,
     ) -> Result<Self> {
-        todo!()
+        if witnesses_and_statements.is_empty() {
+            return Err(Error::InvalidParameters());
+        }
+
+        let batch_size = witnesses_and_statements.len();
+
+        let (witnesses, statements): (
+            Vec<WitnessSpaceGroupElement>,
+            Vec<PublicValueSpaceGroupElement>,
+        ) = witnesses_and_statements.iter().cloned().unzip();
+
+        let mut transcript = Self::setup_protocol(protocol_context, public_parameters, statements)?;
+
+        let randomizer = WitnessSpaceGroupElement::sample(rng);
+
+        let statement_mask = L::group_homomorphism(&randomizer, public_parameters);
+
+        let challenges: Vec<ComputationalSecuritySizedNumber> =
+            Self::compute_challenges(&statement_mask.value(), batch_size, &mut transcript)?;
+
+        let response = randomizer
+            + witnesses
+                .into_iter()
+                .zip(challenges)
+                .map(|(witness, challenge)| witness.scalar_mul(challenge))
+                .reduce(|a, b| a + b)
+                .unwrap();
+
+        Ok(Self::new(statement_mask, response))
     }
 
     /// Verify an enhanced batched Schnorr zero-knowledge proof
@@ -134,7 +161,6 @@ impl<
         todo!()
     }
 
-    #[allow(dead_code)]
     fn setup_protocol(
         protocol_context: &ProtocolContext,
         public_parameters: &L::PublicParameters,
@@ -165,7 +191,6 @@ impl<
         Ok(transcript)
     }
 
-    #[allow(dead_code)]
     fn compute_challenges(
         statement_mask_value: &PublicValueSpaceGroupElement::Value,
         batch_size: usize,
