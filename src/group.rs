@@ -7,16 +7,17 @@ use crypto_bigint::Uint;
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
+/// An error in group element instantiation (`GroupElement::new()`)
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
-
-pub enum Error<Value, PublicParameters> {
+pub enum GroupElementError<Value, PublicParameters> {
     #[error(
-    "Invalid Public Parameters: no valid group can be identified by `public_parameters`, or the implementation doesn't support it"
+    "Unsupported Public Parameters: the implementation doesn't support `public_parameters`, whether or not it identifies a valid group."
     )]
+    UnsupportedPublicParametersError { public_parameters: PublicParameters },
+    #[error("Invalid Public Parameters: no valid group can be identified by `public_parameters`.")]
     InvalidPublicParametersError { public_parameters: PublicParameters },
-
     #[error(
-    "Invalid Group Element: `value` does not belong to the group identified by `public_parameters`"
+    "Invalid Group Element: `value` does not belong to the group identified by `public_parameters`."
     )]
     InvalidGroupElementError {
         value: Value,
@@ -88,7 +89,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     fn new(
         value: Self::Value,
         public_parameters: Self::PublicParameters,
-    ) -> Result<Self, Error<Self::Value, Self::PublicParameters>>;
+    ) -> Result<Self, GroupElementError<Self::Value, Self::PublicParameters>>;
 
     /// Returns the additive identity, also known as the "neutral element".
     fn neutral(&self) -> Self;
