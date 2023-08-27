@@ -5,9 +5,7 @@ use crypto_bigint::rand_core::CryptoRngCore;
 use serde::{Deserialize, Serialize};
 
 use super::Result;
-use crate::{group::GroupElement, marker::Marker};
-
-use crate::{group};
+use crate::{group, group::GroupElement, marker::Marker};
 
 /// A Schnorr Zero-Knowledge Proof Language
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`
@@ -44,7 +42,7 @@ pub trait Language<
         _language_public_parameters: &Self::PublicParameters,
         _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
         _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
-    ) -> Result<PublicValueSpaceGroupElement, group::Error>;
+    ) -> group::Result<PublicValueSpaceGroupElement>;
 }
 
 /// An Enhanced Batched Schnorr Zero-Knowledge Proof
