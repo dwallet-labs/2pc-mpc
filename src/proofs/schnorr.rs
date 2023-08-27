@@ -144,7 +144,7 @@ impl<
             + witnesses
                 .into_iter()
                 .zip(challenges)
-                .map(|(witness, challenge)| witness.scalar_mul(challenge))
+                .map(|(witness, challenge)| witness.scalar_mul(&challenge))
                 .reduce(|a, b| a + b)
                 .unwrap();
 
