@@ -1,8 +1,6 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::borrow::Borrow;
-
 use serde::Serialize;
 
 use crate::{group, group::GroupElement};
@@ -42,11 +40,5 @@ pub trait Language<
         _language_public_parameters: &Self::PublicParameters,
         _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
         _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
-    ) -> Result<
-        PublicValueSpaceGroupElement,
-        group::InvalidGroupElementError<
-            PUBLIC_VALUE_SCALAR_LIMBS,
-            PublicValueSpaceGroupElement::PublicParameters,
-        >,
-    >;
+    ) -> Result<PublicValueSpaceGroupElement, group::GroupElementError>;
 }
