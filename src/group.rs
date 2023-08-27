@@ -11,15 +11,15 @@ use subtle::{Choice, ConstantTimeEq};
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
 pub enum GroupElementError {
     #[error(
-    "Unsupported Public Parameters: the implementation doesn't support the public parameters, whether or not it identifies a valid group."
+    "unsupported Public Parameters: the implementation doesn't support the public parameters, whether or not it identifies a valid group."
     )]
     UnsupportedPublicParametersError,
     #[error(
-        "Invalid Public Parameters: no valid group can be identified by the public parameters."
+        "invalid Public Parameters: no valid group can be identified by the public parameters."
     )]
     InvalidPublicParametersError,
     #[error(
-    "Invalid Group Element: the value does not belong to the group identified by the public parameters."
+    "invalid Group Element: the value does not belong to the group identified by the public parameters."
     )]
     InvalidGroupElementError,
 }
