@@ -5,7 +5,7 @@ use std::borrow::Borrow;
 
 use serde::Serialize;
 
-use crate::group::GroupElement;
+use crate::{group, group::GroupElement};
 
 /// A Schnorr Zero-Knowledge Proof Language
 /// Can be generically used to generate a batched Schnorr zero-knowledge proof
@@ -39,6 +39,14 @@ pub trait Language<
     /// \cdot)$, the statement space.
     fn group_homomorphism(
         witness: &WitnessSpaceGroupElement,
-        public_parameters: &Self::PublicParameters,
-    ) -> PublicValueSpaceGroupElement;
+        _language_public_parameters: &Self::PublicParameters,
+        _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
+    ) -> Result<
+        PublicValueSpaceGroupElement,
+        group::InvalidGroupElementError<
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            PublicValueSpaceGroupElement::PublicParameters,
+        >,
+    >;
 }
