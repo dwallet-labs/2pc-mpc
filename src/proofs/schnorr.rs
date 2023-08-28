@@ -64,7 +64,7 @@ pub struct Proof<
     statement_mask: PublicValueSpaceGroupElement::Value,
     response: WitnessSpaceGroupElement::Value,
 
-    _language_choice: PhantomData<L>,
+    _language_choice: PhantomData<Lang>,
     _protocol_context_choice: PhantomData<ProtocolContext>,
 }
 
