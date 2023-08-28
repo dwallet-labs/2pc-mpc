@@ -55,7 +55,7 @@ pub struct Proof<
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
     PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
-    L,
+    Lang,
     // A struct used by the protocol using this proof,
     // used to provide extra necessary context that will parameterize the proof (and thus verifier
     // code) and be inserted to the Fiat-Shamir transcript
