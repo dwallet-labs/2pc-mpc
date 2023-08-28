@@ -6,6 +6,6 @@ mod traits;
 
 use crypto_bigint::U128;
 
-/// Represents an unsigned integer sized based on the computation security parameter, denoted as $\kappa$.
-/// Configured for 128-bit security using U128.
+/// Represents an unsigned integer sized based on the computation security parameter, denoted as
+/// $\kappa$. Configured for 128-bit security using U128.
 pub type ComputationalSecuritySizedNumber = U128;
