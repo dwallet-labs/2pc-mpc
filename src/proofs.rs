@@ -1,9 +1,9 @@
+// Author: dWallet Labs, Ltd.
+// SPDX-License-Identifier: Apache-2.0
 use crypto_bigint::{Limb, Uint};
 use merlin::Transcript;
 use serde::Serialize;
 
-// Author: dWallet Labs, Ltd.
-// SPDX-License-Identifier: Apache-2.0
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum Error {
     #[error("Invalid Parameters")]
