@@ -14,10 +14,12 @@ pub enum Error {
     "unsupported public parameters: the implementation doesn't support the public parameters, whether or not it identifies a valid group."
     )]
     UnsupportedPublicParametersError,
+
     #[error(
         "invalid public parameters: no valid group can be identified by the public parameters."
     )]
     InvalidPublicParametersError,
+
     #[error(
     "invalid group element: the value does not belong to the group identified by the public parameters."
     )]
