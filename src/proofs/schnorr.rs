@@ -1,11 +1,13 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::marker::PhantomData;
+
 use crypto_bigint::rand_core::CryptoRngCore;
 use serde::{Deserialize, Serialize};
 
 use super::Result;
-use crate::{group, group::GroupElement, marker::Marker};
+use crate::{group, group::GroupElement};
 
 /// A Schnorr Zero-Knowledge Proof Language
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`
@@ -62,8 +64,8 @@ pub struct Proof<
     statement_mask: PublicValueSpaceGroupElement::Value,
     response: WitnessSpaceGroupElement::Value,
 
-    _language_choice: Marker<L>,
-    _protocol_context_choice: Marker<ProtocolContext>,
+    _language_choice: PhantomData<L>,
+    _protocol_context_choice: PhantomData<ProtocolContext>,
 }
 
 impl<
@@ -96,8 +98,8 @@ impl<
         Self {
             statement_mask: statement_mask.value(),
             response: response.value(),
-            _language_choice: Marker::<L>::new(),
-            _protocol_context_choice: Marker::<ProtocolContext>::new(),
+            _language_choice: PhantomData,
+            _protocol_context_choice: PhantomData,
         }
     }
 
