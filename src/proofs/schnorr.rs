@@ -1,4 +1,4 @@
-// Author: dWallet Labs, Ltd.
+// Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
 use std::marker::PhantomData;
@@ -47,8 +47,8 @@ pub trait Language<
     ) -> group::Result<PublicValueSpaceGroupElement>;
 }
 
-/// An Enhanced Batched Schnorr Zero-Knowledge Proof
-/// Implements Appendix B. Schnorr Protocols in the paper
+/// An Enhanced Batched Schnorr Zero-Knowledge Proof.
+/// Implements Appendix B. Schnorr Protocols in the paper.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Proof<
     const WITNESS_SCALAR_LIMBS: usize,
@@ -103,8 +103,8 @@ impl<
         }
     }
 
-    /// Prove an enhanced batched Schnorr zero-knowledge claim
-    /// Returns the zero-knowledge proof
+    /// Prove an enhanced batched Schnorr zero-knowledge claim.
+    /// Returns the zero-knowledge proof.
     pub fn prove(
         _protocol_context: ProtocolContext,
         _language_public_parameters: &L::PublicParameters,
