@@ -8,11 +8,11 @@ use serde::Serialize;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum Error {
-    #[error("Invalid Parameters")]
-    InvalidParameters(),
+    #[error("invalid parameters")]
+    InvalidParameters,
 
-    #[error("Invalid proof - didn't satisfy the proof equation")]
-    ProofVerificationError(),
+    #[error("invalid proof - did not satisfy the verification equation")]
+    ProofVerificationError,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
