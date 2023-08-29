@@ -13,9 +13,9 @@ pub trait Language<
     const WITNESS_SCALAR_LIMBS: usize,
     // The upper bound for the scalar size of the associated public-value space group
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-    // An element of the witness space $(\HH, +)$
+    // An element of the witness space $(\HH_\pp, +)$
     WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
-    // An element in the associated public-value space $(\GG, \cdot)$
+    // An element in the associated public-value space $(\GG_\pp, \cdot)$,
     PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
 >
 {
