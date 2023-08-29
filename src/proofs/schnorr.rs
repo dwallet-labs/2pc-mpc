@@ -250,15 +250,102 @@ impl<
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::iter;
 
+    use rand::rngs::OsRng;
+
+    use super::*;
     // use rstest::rstest;
+
+    fn generate_witnesses_and_statements<
+        const WITNESS_SCALAR_LIMBS: usize,
+        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable,
+        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+        Lang: Language<
+            WITNESS_SCALAR_LIMBS,
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            WitnessSpaceGroupElement,
+            PublicValueSpaceGroupElement,
+        >,
+    >(
+        language_public_parameters: &Lang::PublicParameters,
+        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
+        batch_size: usize,
+    ) -> Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)> {
+        let witnesses: Vec<WitnessSpaceGroupElement> =
+            iter::repeat_with(|| WitnessSpaceGroupElement::sample(&mut OsRng))
+                .take(batch_size)
+                .collect();
+
+        let statements: Vec<PublicValueSpaceGroupElement> = witnesses
+            .iter()
+            .map(|witness| {
+                Lang::group_homomorphism(
+                    &witness,
+                    &language_public_parameters,
+                    &witness_space_public_parameters,
+                    &public_value_space_public_parameters,
+                )
+                .unwrap()
+            })
+            .collect();
+
+        witnesses
+            .clone()
+            .into_iter()
+            .zip(statements.into_iter())
+            .collect()
+    }
+
+    fn generate_valid_proof<
+        const WITNESS_SCALAR_LIMBS: usize,
+        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable,
+        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+        Lang: Language<
+            WITNESS_SCALAR_LIMBS,
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            WitnessSpaceGroupElement,
+            PublicValueSpaceGroupElement,
+        >,
+    >(
+        language_public_parameters: &Lang::PublicParameters,
+        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
+        witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
+    ) -> Proof<
+        WITNESS_SCALAR_LIMBS,
+        PUBLIC_VALUE_SCALAR_LIMBS,
+        WitnessSpaceGroupElement,
+        PublicValueSpaceGroupElement,
+        Lang,
+        PhantomData<()>,
+    > {
+        Proof::<
+            WITNESS_SCALAR_LIMBS,
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            WitnessSpaceGroupElement,
+            PublicValueSpaceGroupElement,
+            Lang,
+            PhantomData<()>,
+        >::prove(
+            PhantomData,
+            &language_public_parameters,
+            &witness_space_public_parameters,
+            &public_value_space_public_parameters,
+            witnesses_and_statements,
+            &mut OsRng,
+        )
+        .unwrap()
+    }
 
     // #[rstest]
     fn valid_proof_verifies<
         const WITNESS_SCALAR_LIMBS: usize,
         const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
+        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable,
         PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
         Lang: Language<
             WITNESS_SCALAR_LIMBS,
@@ -268,18 +355,57 @@ mod tests {
         >,
     >(
         language_public_parameters: Lang::PublicParameters,
-        // #[case] language_public_parameters: Lang::PublicParameters,
-        // #[case] _marker: PhantomData<L>,
+        witness_space_public_parameters: WitnessSpaceGroupElement::PublicParameters,
+        public_value_space_public_parameters: PublicValueSpaceGroupElement::PublicParameters,
+        batch_size: usize, /* TODO: case it, 1, 2, 3
+                            * #[case] _marker: PhantomData<L>, */
     ) {
-        // TODO: sample a witness, prove it, verify it.
-        // TODO: sample a number of witnesses, prove it, verify it.
+        let witnesses_and_statements = generate_witnesses_and_statements::<
+            WITNESS_SCALAR_LIMBS,
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            WitnessSpaceGroupElement,
+            PublicValueSpaceGroupElement,
+            Lang,
+        >(
+            &language_public_parameters,
+            &witness_space_public_parameters,
+            &public_value_space_public_parameters,
+            batch_size,
+        );
+        let proof = generate_valid_proof::<
+            WITNESS_SCALAR_LIMBS,
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            WitnessSpaceGroupElement,
+            PublicValueSpaceGroupElement,
+            Lang,
+        >(
+            &language_public_parameters,
+            &witness_space_public_parameters,
+            &public_value_space_public_parameters,
+            witnesses_and_statements.clone(),
+        );
+
+        let (_, statements): (
+            Vec<WitnessSpaceGroupElement>,
+            Vec<PublicValueSpaceGroupElement>,
+        ) = witnesses_and_statements.into_iter().unzip();
+
+        assert!(proof
+            .verify(
+                PhantomData,
+                &language_public_parameters,
+                &witness_space_public_parameters,
+                &public_value_space_public_parameters,
+                statements.into_iter().take(1).collect(),
+            )
+            .is_ok());
     }
 
     // #[rstest]
     fn invalid_proof_does_not_verify<
         const WITNESS_SCALAR_LIMBS: usize,
         const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
+        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable,
         PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
         Lang: Language<
             WITNESS_SCALAR_LIMBS,
@@ -289,6 +415,8 @@ mod tests {
         >,
     >(
         language_public_parameters: Lang::PublicParameters,
+        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
         // #[case] language_public_parameters: Lang::PublicParameters,
         // #[case] _marker: PhantomData<L>,
     ) {
