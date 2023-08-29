@@ -80,7 +80,7 @@ impl<
         const PUBLIC_VALUE_SCALAR_LIMBS: usize,
         WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
         PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
-        L: Language<
+        Lang: Language<
             WITNESS_SCALAR_LIMBS,
             PUBLIC_VALUE_SCALAR_LIMBS,
             WitnessSpaceGroupElement,
@@ -93,7 +93,7 @@ impl<
         PUBLIC_VALUE_SCALAR_LIMBS,
         WitnessSpaceGroupElement,
         PublicValueSpaceGroupElement,
-        L,
+        Lang,
         ProtocolContext,
     >
 {
@@ -114,7 +114,7 @@ impl<
     /// Returns the zero-knowledge proof.
     pub fn prove(
         _protocol_context: ProtocolContext,
-        _language_public_parameters: &L::PublicParameters,
+        _language_public_parameters: &Lang::PublicParameters,
         _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
         _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
         _witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
@@ -127,7 +127,7 @@ impl<
     pub fn verify(
         &self,
         _protocol_context: ProtocolContext,
-        _language_public_parameters: &L::PublicParameters,
+        _language_public_parameters: &Lang::PublicParameters,
         _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
         _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
         _statements: Vec<PublicValueSpaceGroupElement>,
@@ -138,12 +138,12 @@ impl<
     #[allow(dead_code)]
     fn setup_protocol(
         protocol_context: &ProtocolContext,
-        language_public_parameters: &L::PublicParameters,
+        language_public_parameters: &Lang::PublicParameters,
         witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
         public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
         statements: Vec<PublicValueSpaceGroupElement>,
     ) -> Result<Transcript> {
-        let mut transcript = Transcript::new(L::NAME.as_bytes());
+        let mut transcript = Transcript::new(Lang::NAME.as_bytes());
 
         // TODO: now that the challenge space is hard-coded U192, we don't need to anything about it
         // right?
