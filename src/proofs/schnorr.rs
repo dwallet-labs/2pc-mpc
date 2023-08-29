@@ -33,7 +33,7 @@ pub trait Language<
     /// transcript.
     const NAME: &'static str;
 
-    /// $\phi:\HH\to\GG$ a group homomorphism from $(\HH_\pp, +)$, the witness space, 
+    /// A group homomorphism $\phi:\HH\to\GG$  from $(\HH_\pp, +)$, the witness space,
     /// to $(\GG_\pp,\cdot)$, the statement space.
     fn group_homomorphism(
         witness: &WitnessSpaceGroupElement,
