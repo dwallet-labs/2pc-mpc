@@ -1,8 +1,8 @@
-// Author: dWallet Labs, Ltd.
+// Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 pub mod schnorr;
 
-use crypto_bigint::{Limb, Uint};
+use crypto_bigint::{Encoding, Limb, Uint};
 use merlin::Transcript;
 use serde::Serialize;
 
@@ -25,6 +25,10 @@ trait TranscriptProtocol {
         message: &T,
     ) -> serde_json::Result<()>;
 
+    fn append_uint<const LIMBS: usize>(&mut self, label: &'static [u8], value: &Uint<LIMBS>)
+    where
+        Uint<LIMBS>: Encoding;
+
     fn challenge<const LIMBS: usize>(&mut self, label: &'static [u8]) -> Uint<LIMBS>;
 }
 
@@ -39,6 +43,13 @@ impl TranscriptProtocol for Transcript {
         self.append_message(label, serialized_message.as_slice());
 
         Ok(())
+    }
+
+    fn append_uint<const LIMBS: usize>(&mut self, label: &'static [u8], value: &Uint<LIMBS>)
+    where
+        Uint<LIMBS>: Encoding,
+    {
+        self.append_message(label, Uint::<LIMBS>::to_le_bytes(value).as_mut());
     }
 
     fn challenge<const LIMBS: usize>(&mut self, label: &'static [u8]) -> Uint<LIMBS> {

@@ -1,19 +1,20 @@
-// Author: dWallet Labs, Ltd.
+// Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::borrow::Borrow;
+use std::marker::PhantomData;
 
-use crypto_bigint::rand_core::CryptoRngCore;
+use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, U64};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
-use super::Result;
-use crate::{
-    group::GroupElement,
-    marker::Marker,
-    proofs::{Error, TranscriptProtocol},
-    ComputationalSecuritySizedNumber,
-};
+use super::{Error, Result, TranscriptProtocol};
+use crate::{group, group::GroupElement, ComputationalSecuritySizedNumber};
+
+// For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
+// Setting it to be 64-bit larger than the computational security parameter $\kappa$ allows us to
+// practically use any batch size (Rust does not allow a vector larger than $2^64$ elements,
+// as does 64-bit architectures in which the memory won't even be addressable.)
+type ChallengeSizedNumber = <ComputationalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput;
 
 /// A Schnorr Zero-Knowledge Proof Language
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`
@@ -23,49 +24,45 @@ pub trait Language<
     const WITNESS_SCALAR_LIMBS: usize,
     // The upper bound for the scalar size of the associated public-value space group
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-    // An element of the witness space $(\HH, +)$
+    // An element of the witness space $(\HH_\pp, +)$
     WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
-    // An element in the associated public-value space $(\GG, \cdot)$
+    // An element in the associated public-value space $(\GG_\pp, \cdot)$,
     PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
 >
 {
     /// Public parameters for a language family $\pp \gets \Setup(1^\kappa)$
     ///
-    /// Must uniquely identify the witness and statement spaces,
-    /// as well as including all public parameters of the language
-    /// (e.g., the public parameters of the commitment scheme used for proving knowledge of
-    /// decommitment - the bases $g$, $h$ in the case of Pedersen)
+    /// Used for language-specific parameters (e.g., the public parameters of the commitment scheme
+    /// used for proving knowledge of decommitment - the bases $g$, $h$ in the case of Pedersen).
     ///
-    /// By restricting `Borrow` here we assure that `PublicParameters` encodes both
+    /// Group public parameters are encoded separately in
     /// `WitnessSpaceGroupElement::PublicParameters` and
-    /// `PublicValueSpaceGroupElement::PublicParameters`, which restricts implementors to hold
-    /// copies of these values inside the struct they use for `PublicParameters`.
-    type PublicParameters: Serialize
-        + PartialEq
-        + Borrow<WitnessSpaceGroupElement::PublicParameters>
-        + Borrow<PublicValueSpaceGroupElement::PublicParameters>;
+    /// `PublicValueSpaceGroupElement::PublicParameters`.
+    type PublicParameters: Serialize + PartialEq;
 
     /// A unique string representing the name of this language; will be inserted to the Fiat-Shamir
     /// transcript.
     const NAME: &'static str;
 
-    /// $\phi:\HH\to\GG$ a group homomorphism from $(\HH_\pp, +)$, the witness space, to $(\GG_\pp,
-    /// \cdot)$, the statement space.
+    /// A group homomorphism $\phi:\HH\to\GG$  from $(\HH_\pp, +)$, the witness space,
+    /// to $(\GG_\pp,\cdot)$, the statement space.
     fn group_homomorphism(
         witness: &WitnessSpaceGroupElement,
-        public_parameters: &Self::PublicParameters,
-    ) -> PublicValueSpaceGroupElement;
+        language_public_parameters: &Self::PublicParameters,
+        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
+    ) -> group::Result<PublicValueSpaceGroupElement>;
 }
 
-/// An Enhanced Batched Schnorr Zero-Knowledge Proof
-/// Implements Appendix B. Schnorr Protocols in the paper
+/// An Enhanced Batched Schnorr Zero-Knowledge Proof.
+/// Implements Appendix B. Schnorr Protocols in the paper.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Proof<
     const WITNESS_SCALAR_LIMBS: usize,
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
     PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
-    L,
+    Lang,
     // A struct used by the protocol using this proof,
     // used to provide extra necessary context that will parameterize the proof (and thus verifier
     // code) and be inserted to the Fiat-Shamir transcript
@@ -74,8 +71,8 @@ pub struct Proof<
     statement_mask: PublicValueSpaceGroupElement::Value,
     response: WitnessSpaceGroupElement::Value,
 
-    _language_choice: Marker<L>,
-    _protocol_context_choice: Marker<ProtocolContext>,
+    _language_choice: PhantomData<Lang>,
+    _protocol_context_choice: PhantomData<ProtocolContext>,
 }
 
 impl<
@@ -107,18 +104,20 @@ impl<
         Self {
             statement_mask: statement_mask.value(),
             response: response.value(),
-            _language_choice: Marker::<L>::new(),
-            _protocol_context_choice: Marker::<ProtocolContext>::new(),
+            _language_choice: PhantomData,
+            _protocol_context_choice: PhantomData,
         }
     }
 
-    /// Prove an enhanced batched Schnorr zero-knowledge claim
-    /// Returns the zero-knowledge proof
+    /// Prove an enhanced batched Schnorr zero-knowledge claim.
+    /// Returns the zero-knowledge proof.
     pub fn prove(
-        protocol_context: &ProtocolContext,
-        public_parameters: &L::PublicParameters,
-        witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
-        rng: &mut impl CryptoRngCore,
+        _protocol_context: ProtocolContext,
+        _language_public_parameters: &L::PublicParameters,
+        _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
+        _witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
+        _rng: &mut impl CryptoRngCore,
     ) -> Result<Self> {
         if witnesses_and_statements.is_empty() {
             return Err(Error::InvalidParameters());
@@ -154,8 +153,10 @@ impl<
     /// Verify an enhanced batched Schnorr zero-knowledge proof
     pub fn verify(
         &self,
-        _protocol_context: &ProtocolContext,
-        _public_parameters: &L::PublicParameters,
+        _protocol_context: ProtocolContext,
+        _language_public_parameters: &L::PublicParameters,
+        _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
         _statements: Vec<PublicValueSpaceGroupElement>,
     ) -> Result<()> {
         todo!()
@@ -163,19 +164,39 @@ impl<
 
     fn setup_protocol(
         protocol_context: &ProtocolContext,
-        public_parameters: &L::PublicParameters,
+        language_public_parameters: &L::PublicParameters,
+        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
         statements: Vec<PublicValueSpaceGroupElement>,
     ) -> Result<Transcript> {
         let mut transcript = Transcript::new(L::NAME.as_bytes());
 
-        // TODO: should we add anything on the challenge space E? Even though it's hardcoded U128?
+        // TODO: now that the challenge space is hard-coded U192, we don't need to anything about it
+        // right?
 
         transcript
             .serialize_to_transcript_as_json(b"protocol context", protocol_context)
             .map_err(|_e| Error::InvalidParameters())?;
 
         transcript
-            .serialize_to_transcript_as_json(b"public parameters", public_parameters)
+            .serialize_to_transcript_as_json(
+                b"language public parameters",
+                language_public_parameters,
+            )
+            .map_err(|_e| Error::InvalidParameters())?;
+
+        transcript
+            .serialize_to_transcript_as_json(
+                b"witness space public parameters",
+                witness_space_public_parameters,
+            )
+            .map_err(|_e| Error::InvalidParameters())?;
+
+        transcript
+            .serialize_to_transcript_as_json(
+                b"public value space public parameters",
+                public_value_space_public_parameters,
+            )
             .map_err(|_e| Error::InvalidParameters())?;
 
         if statements
@@ -195,21 +216,20 @@ impl<
         statement_mask_value: &PublicValueSpaceGroupElement::Value,
         batch_size: usize,
         transcript: &mut Transcript,
-    ) -> Result<Vec<ComputationalSecuritySizedNumber>> {
+    ) -> Result<Vec<ChallengeSizedNumber>> {
         transcript
             .serialize_to_transcript_as_json(b"randomizer public value", statement_mask_value)
             .map_err(|_e| Error::InvalidParameters())?;
 
         Ok((1..=batch_size)
             .map(|_| {
-                // The `.challenge` method mutates `transcript` by adding the label to it.
-                // Although the same label is used for all values,
-                // each value will be a digest of different values
-                // (i.e. it will hold different `multiple` of the label inside the digest),
-                // and will therefore be unique.
-                transcript.challenge(b"challenge")
+                let challenge = transcript.challenge(b"challenge");
 
-                // TODO: should we also add the challenge to the transcript?
+                // we don't have to do this because Merlin uses a PRF behind the scenes,
+                // but we do it anyways as a security best-practice
+                transcript.append_uint(b"challenge", &challenge);
+
+                challenge
             })
             .collect())
     }
