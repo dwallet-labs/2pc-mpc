@@ -9,7 +9,7 @@ pub enum Error {
     #[error("invalid parameters")]
     InvalidParameters,
 
-    #[error("invalid proof - did not satisfy the proof equation")]
+    #[error("invalid proof - did not satisfy the verification equation")]
     ProofVerificationError,
 }
 
