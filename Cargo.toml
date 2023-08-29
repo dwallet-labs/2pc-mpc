@@ -13,3 +13,4 @@ merlin = { version = "3.0.0", default-features = false }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
+rstest = "0.17.0"

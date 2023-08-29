@@ -128,3 +128,60 @@ impl<
         todo!()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // use rstest::rstest;
+
+    // #[rstest]
+    fn valid_proof_verifies<
+        const WITNESS_SCALAR_LIMBS: usize,
+        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
+        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+        Lang: Language<
+            WITNESS_SCALAR_LIMBS,
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            WitnessSpaceGroupElement,
+            PublicValueSpaceGroupElement,
+        >,
+    >(
+        language_public_parameters: Lang::PublicParameters,
+        // #[case] language_public_parameters: Lang::PublicParameters,
+        // #[case] _marker: PhantomData<L>,
+    ) {
+        // TODO: sample a witness, prove it, verify it.
+        // TODO: sample a number of witnesses, prove it, verify it.
+    }
+
+    // #[rstest]
+    fn invalid_proof_does_not_verify<
+        const WITNESS_SCALAR_LIMBS: usize,
+        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
+        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+        Lang: Language<
+            WITNESS_SCALAR_LIMBS,
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            WitnessSpaceGroupElement,
+            PublicValueSpaceGroupElement,
+        >,
+    >(
+        language_public_parameters: Lang::PublicParameters,
+        // #[case] language_public_parameters: Lang::PublicParameters,
+        // #[case] _marker: PhantomData<L>,
+    ) {
+        // TODO: sample a witness, prove it, send valid proof, and make sure it doesn't verify
+        // against another statement.
+        //
+        // TODO: valid proof with neutral response/mask doesn't verify
+        //
+        //
+        // TODO: valid proof with invalid response/mask doesn't verify
+        //
+        // TODO: how do I even generate an invalid element generically? perhaps I should pass it as
+        // a parameter.
+    }
+}
