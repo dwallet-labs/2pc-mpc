@@ -47,15 +47,15 @@ pub trait Language<
     ) -> group::Result<PublicValueSpaceGroupElement>;
 }
 
-/// An Enhanced Batched Schnorr Zero-Knowledge Proof
-/// Implements Appendix B. Schnorr Protocols in the paper
+/// An Enhanced Batched Schnorr Zero-Knowledge Proof.
+/// Implements Appendix B. Schnorr Protocols in the paper.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Proof<
     const WITNESS_SCALAR_LIMBS: usize,
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
     PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
-    L,
+    Lang,
     // A struct used by the protocol using this proof,
     // used to provide extra necessary context that will parameterize the proof (and thus verifier
     // code) and be inserted to the Fiat-Shamir transcript
@@ -64,7 +64,7 @@ pub struct Proof<
     statement_mask: PublicValueSpaceGroupElement::Value,
     response: WitnessSpaceGroupElement::Value,
 
-    _language_choice: PhantomData<L>,
+    _language_choice: PhantomData<Lang>,
     _protocol_context_choice: PhantomData<ProtocolContext>,
 }
 
@@ -103,8 +103,8 @@ impl<
         }
     }
 
-    /// Prove an enhanced batched Schnorr zero-knowledge claim
-    /// Returns the zero-knowledge proof
+    /// Prove an enhanced batched Schnorr zero-knowledge claim.
+    /// Returns the zero-knowledge proof.
     pub fn prove(
         _protocol_context: ProtocolContext,
         _language_public_parameters: &L::PublicParameters,
