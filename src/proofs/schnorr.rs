@@ -1,14 +1,20 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::borrow::Borrow;
+use std::marker::PhantomData;
 
-use crypto_bigint::rand_core::CryptoRngCore;
+use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, U64};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
-use super::Result;
-use crate::{group, group::GroupElement};
+use super::{Error, Result, TranscriptProtocol};
+use crate::{group, group::GroupElement, ComputationalSecuritySizedNumber};
+
+// For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
+// Setting it to be 64-bit larger than the computational security parameter $\kappa$ allows us to
+// practically use any batch size (Rust does not allow a vector larger than $2^64$ elements,
+// as does 64-bit architectures in which the memory won't even be addressable.)
+type ChallengeSizedNumber = <ComputationalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput;
 
 /// A Schnorr Zero-Knowledge Proof Language
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`
@@ -132,19 +138,39 @@ impl<
     #[allow(dead_code)]
     fn setup_protocol(
         protocol_context: &ProtocolContext,
-        public_parameters: &L::PublicParameters,
+        language_public_parameters: &L::PublicParameters,
+        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
         statements: Vec<PublicValueSpaceGroupElement>,
     ) -> Result<Transcript> {
         let mut transcript = Transcript::new(L::NAME.as_bytes());
 
-        // TODO: should we add anything on the challenge space E? Even though it's hardcoded U128?
+        // TODO: now that the challenge space is hard-coded U192, we don't need to anything about it
+        // right?
 
         transcript
             .serialize_to_transcript_as_json(b"protocol context", protocol_context)
             .map_err(|_e| Error::InvalidParameters())?;
 
         transcript
-            .serialize_to_transcript_as_json(b"public parameters", public_parameters)
+            .serialize_to_transcript_as_json(
+                b"language public parameters",
+                language_public_parameters,
+            )
+            .map_err(|_e| Error::InvalidParameters())?;
+
+        transcript
+            .serialize_to_transcript_as_json(
+                b"witness space public parameters",
+                witness_space_public_parameters,
+            )
+            .map_err(|_e| Error::InvalidParameters())?;
+
+        transcript
+            .serialize_to_transcript_as_json(
+                b"public value space public parameters",
+                public_value_space_public_parameters,
+            )
             .map_err(|_e| Error::InvalidParameters())?;
 
         if statements
@@ -165,21 +191,20 @@ impl<
         statement_mask_value: &PublicValueSpaceGroupElement::Value,
         batch_size: usize,
         transcript: &mut Transcript,
-    ) -> Result<Vec<ComputationalSecuritySizedNumber>> {
+    ) -> Result<Vec<ChallengeSizedNumber>> {
         transcript
             .serialize_to_transcript_as_json(b"randomizer public value", statement_mask_value)
             .map_err(|_e| Error::InvalidParameters())?;
 
         Ok((1..=batch_size)
             .map(|_| {
-                // The `.challenge` method mutates `transcript` by adding the label to it.
-                // Although the same label is used for all values,
-                // each value will be a digest of different values
-                // (i.e. it will hold different `multiple` of the label inside the digest),
-                // and will therefore be unique.
-                transcript.challenge(b"challenge")
+                let challenge = transcript.challenge(b"challenge");
 
-                // TODO: should we also add the challenge to the transcript?
+                // we don't have to do this because Merlin uses a PRF behind the scenes,
+                // but we do it anyways as a security best-practice
+                transcript.append_uint(b"challenge", &challenge);
+
+                challenge
             })
             .collect())
     }
