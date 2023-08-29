@@ -8,7 +8,7 @@ use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use super::{Error, Result, TranscriptProtocol};
-use crate::{group, group::GroupElement, ComputationalSecuritySizedNumber};
+use crate::{group, group::GroupElement, traits::Samplable, ComputationalSecuritySizedNumber};
 
 // For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
 // Setting it to be 64-bit larger than the computational security parameter $\kappa$ allows us to
@@ -25,7 +25,7 @@ pub trait Language<
     // The upper bound for the scalar size of the associated public-value space group
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     // An element of the witness space $(\HH_\pp, +)$
-    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
+    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable,
     // An element in the associated public-value space $(\GG_\pp, \cdot)$,
     PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
 >
@@ -78,7 +78,7 @@ pub struct Proof<
 impl<
         const WITNESS_SCALAR_LIMBS: usize,
         const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
+        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable,
         PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
         L: Language<
             WITNESS_SCALAR_LIMBS,
@@ -112,12 +112,12 @@ impl<
     /// Prove an enhanced batched Schnorr zero-knowledge claim.
     /// Returns the zero-knowledge proof.
     pub fn prove(
-        _protocol_context: ProtocolContext,
-        _language_public_parameters: &L::PublicParameters,
-        _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
-        _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
-        _witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
-        _rng: &mut impl CryptoRngCore,
+        protocol_context: ProtocolContext,
+        language_public_parameters: &L::PublicParameters,
+        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
+        witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
+        rng: &mut impl CryptoRngCore,
     ) -> Result<Self> {
         if witnesses_and_statements.is_empty() {
             return Err(Error::InvalidParameters());
@@ -130,15 +130,28 @@ impl<
             Vec<PublicValueSpaceGroupElement>,
         ) = witnesses_and_statements.iter().cloned().unzip();
 
-        let mut transcript = Self::setup_protocol(protocol_context, public_parameters, statements)?;
+        let mut transcript = Self::setup_protocol(
+            &protocol_context,
+            language_public_parameters,
+            witness_space_public_parameters,
+            public_value_space_public_parameters,
+            statements,
+        )?;
 
         let randomizer = WitnessSpaceGroupElement::sample(rng);
 
-        let statement_mask = L::group_homomorphism(&randomizer, public_parameters);
+        let statement_mask = L::group_homomorphism(
+            &randomizer,
+            language_public_parameters,
+            witness_space_public_parameters,
+            public_value_space_public_parameters,
+        )
+        .map_err(|_| Error::InvalidParameters())?;
 
-        let challenges: Vec<ComputationalSecuritySizedNumber> =
+        let challenges: Vec<ChallengeSizedNumber> =
             Self::compute_challenges(&statement_mask.value(), batch_size, &mut transcript)?;
 
+        // TODO: do I need to handle the e < 0 case? if not, please update the paper
         let response = randomizer
             + witnesses
                 .into_iter()
