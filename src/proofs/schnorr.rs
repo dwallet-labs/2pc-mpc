@@ -150,28 +150,28 @@ impl<
 
         transcript
             .serialize_to_transcript_as_json(b"protocol context", protocol_context)
-            .map_err(|_e| Error::InvalidParameters())?;
+            .map_err(|_e| Error::InvalidParameters)?;
 
         transcript
             .serialize_to_transcript_as_json(
                 b"language public parameters",
                 language_public_parameters,
             )
-            .map_err(|_e| Error::InvalidParameters())?;
+            .map_err(|_e| Error::InvalidParameters)?;
 
         transcript
             .serialize_to_transcript_as_json(
                 b"witness space public parameters",
                 witness_space_public_parameters,
             )
-            .map_err(|_e| Error::InvalidParameters())?;
+            .map_err(|_e| Error::InvalidParameters)?;
 
         transcript
             .serialize_to_transcript_as_json(
                 b"public value space public parameters",
                 public_value_space_public_parameters,
             )
-            .map_err(|_e| Error::InvalidParameters())?;
+            .map_err(|_e| Error::InvalidParameters)?;
 
         if statements
             .iter()
@@ -180,7 +180,7 @@ impl<
             })
             .any(|res| res.is_err())
         {
-            return Err(Error::InvalidParameters());
+            return Err(Error::InvalidParameters);
         }
 
         Ok(transcript)
@@ -194,7 +194,7 @@ impl<
     ) -> Result<Vec<ChallengeSizedNumber>> {
         transcript
             .serialize_to_transcript_as_json(b"randomizer public value", statement_mask_value)
-            .map_err(|_e| Error::InvalidParameters())?;
+            .map_err(|_e| Error::InvalidParameters)?;
 
         Ok((1..=batch_size)
             .map(|_| {
