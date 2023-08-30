@@ -5,6 +5,8 @@ pub mod direct_product;
 
 pub mod secp256k1;
 
+pub mod self_product_group;
+
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 pub mod paillier;
 use crypto_bigint::Uint;
