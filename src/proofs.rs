@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pub mod schnorr;
 
-use crypto_bigint::{Limb, Uint};
+use crypto_bigint::{Encoding, Limb, Uint};
 use merlin::Transcript;
 use serde::Serialize;
+
+use crate::group;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum Error {
@@ -17,6 +19,18 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+impl From<serde_json::Error> for Error {
+    fn from(_: serde_json::Error) -> Self {
+        Error::InvalidParameters
+    }
+}
+
+impl From<group::Error> for Error {
+    fn from(_: group::Error) -> Self {
+        Error::InvalidParameters
+    }
+}
+
 /// A transcript protocol for fiat-shamir transforms of interactive to non-interactive proofs.
 trait TranscriptProtocol {
     fn serialize_to_transcript_as_json<T: Serialize>(
@@ -24,6 +38,10 @@ trait TranscriptProtocol {
         label: &'static [u8],
         message: &T,
     ) -> serde_json::Result<()>;
+
+    fn append_uint<const LIMBS: usize>(&mut self, label: &'static [u8], value: &Uint<LIMBS>)
+    where
+        Uint<LIMBS>: Encoding;
 
     fn challenge<const LIMBS: usize>(&mut self, label: &'static [u8]) -> Uint<LIMBS>;
 }
@@ -39,6 +57,13 @@ impl TranscriptProtocol for Transcript {
         self.append_message(label, serialized_message.as_slice());
 
         Ok(())
+    }
+
+    fn append_uint<const LIMBS: usize>(&mut self, label: &'static [u8], value: &Uint<LIMBS>)
+    where
+        Uint<LIMBS>: Encoding,
+    {
+        self.append_message(label, Uint::<LIMBS>::to_le_bytes(value).as_mut());
     }
 
     fn challenge<const LIMBS: usize>(&mut self, label: &'static [u8]) -> Uint<LIMBS> {
