@@ -8,7 +8,7 @@ use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use super::{Error, Result, TranscriptProtocol};
-use crate::{group, group::GroupElement, ComputationalSecuritySizedNumber};
+use crate::{group, group::GroupElement, traits::Samplable, ComputationalSecuritySizedNumber};
 
 // For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
 // Setting it to be 64-bit larger than the computational security parameter $\kappa$ allows us to
@@ -25,7 +25,7 @@ pub trait Language<
     // The upper bound for the scalar size of the associated public-value space group
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     // An element of the witness space $(\HH_\pp, +)$
-    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
+    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable,
     // An element in the associated public-value space $(\GG_\pp, \cdot)$,
     PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
 >
@@ -78,7 +78,7 @@ pub struct Proof<
 impl<
         const WITNESS_SCALAR_LIMBS: usize,
         const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
+        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable,
         PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
         Lang: Language<
             WITNESS_SCALAR_LIMBS,
@@ -97,7 +97,6 @@ impl<
         ProtocolContext,
     >
 {
-    #[allow(dead_code)]
     fn new(
         statement_mask: PublicValueSpaceGroupElement,
         response: WitnessSpaceGroupElement,
@@ -113,14 +112,59 @@ impl<
     /// Prove an enhanced batched Schnorr zero-knowledge claim.
     /// Returns the zero-knowledge proof.
     pub fn prove(
-        _protocol_context: ProtocolContext,
-        _language_public_parameters: &Lang::PublicParameters,
-        _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
-        _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
-        _witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
-        _rng: &mut impl CryptoRngCore,
+        protocol_context: ProtocolContext,
+        language_public_parameters: &Lang::PublicParameters,
+        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
+        witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
+        rng: &mut impl CryptoRngCore,
     ) -> Result<Self> {
-        todo!()
+        if witnesses_and_statements.is_empty() {
+            return Err(Error::InvalidParameters);
+        }
+
+        let batch_size = witnesses_and_statements.len();
+
+        let (witnesses, statements): (
+            Vec<WitnessSpaceGroupElement>,
+            Vec<PublicValueSpaceGroupElement>,
+        ) = witnesses_and_statements.iter().cloned().unzip();
+
+        let mut transcript = Self::setup_protocol(
+            &protocol_context,
+            language_public_parameters,
+            witness_space_public_parameters,
+            public_value_space_public_parameters,
+            statements,
+        )?;
+
+        let randomizer = WitnessSpaceGroupElement::sample(rng);
+
+        let statement_mask = Lang::group_homomorphism(
+            &randomizer,
+            language_public_parameters,
+            witness_space_public_parameters,
+            public_value_space_public_parameters,
+        )?;
+
+        let challenges: Vec<ChallengeSizedNumber> =
+            Self::compute_challenges(&statement_mask.value(), batch_size, &mut transcript)?;
+
+        // Using the "small exponents" method for batching;
+        // the exponents actually need to account for the batch size.
+        // We added 64-bit for that, which is fine for sampling randmoness,
+        // but in practice the exponentiation (i.e. `scalar_mul`) could use
+        // the real bound: `128 + log2(BatchSize)+2 < 192` to increase performance.
+        // We leave that as future work in case this becomes a bottleneck.
+        let response = randomizer
+            + witnesses
+                .into_iter()
+                .zip(challenges)
+                .map(|(witness, challenge)| witness.scalar_mul(&challenge))
+                .reduce(|a, b| a + b)
+                .unwrap();
+
+        Ok(Self::new(statement_mask, response))
     }
 
     /// Verify an enhanced batched Schnorr zero-knowledge proof
@@ -135,7 +179,6 @@ impl<
         todo!()
     }
 
-    #[allow(dead_code)]
     fn setup_protocol(
         protocol_context: &ProtocolContext,
         language_public_parameters: &Lang::PublicParameters,
@@ -144,9 +187,6 @@ impl<
         statements: Vec<PublicValueSpaceGroupElement>,
     ) -> Result<Transcript> {
         let mut transcript = Transcript::new(Lang::NAME.as_bytes());
-
-        // TODO: now that the challenge space is hard-coded U192, we don't need to anything about it
-        // right?
 
         transcript.serialize_to_transcript_as_json(b"protocol context", protocol_context)?;
 
@@ -176,7 +216,6 @@ impl<
         Ok(transcript)
     }
 
-    #[allow(dead_code)]
     fn compute_challenges(
         statement_mask_value: &PublicValueSpaceGroupElement::Value,
         batch_size: usize,
