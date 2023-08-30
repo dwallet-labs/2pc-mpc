@@ -9,6 +9,9 @@ use crypto_bigint::Uint;
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
+#[allow(clippy::suspicious_arithmetic_impl)]
+pub mod multiplicative_group_of_integers_modulu_n;
+
 /// An error in group element instantiation [`GroupElement::new()`]
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
 pub enum Error {
