@@ -1,8 +1,12 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use serde::Serialize;
+use std::marker::PhantomData;
 
+use crypto_bigint::rand_core::CryptoRngCore;
+use serde::{Deserialize, Serialize};
+
+use super::Result;
 use crate::{group, group::GroupElement};
 
 /// A Schnorr Zero-Knowledge Proof Language
@@ -41,4 +45,86 @@ pub trait Language<
         witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
         public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
     ) -> group::Result<PublicValueSpaceGroupElement>;
+}
+
+/// An Enhanced Batched Schnorr Zero-Knowledge Proof.
+/// Implements Appendix B. Schnorr Protocols in the paper.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Proof<
+    const WITNESS_SCALAR_LIMBS: usize,
+    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
+    PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+    Lang,
+    // A struct used by the protocol using this proof,
+    // used to provide extra necessary context that will parameterize the proof (and thus verifier
+    // code) and be inserted to the Fiat-Shamir transcript
+    ProtocolContext,
+> {
+    statement_mask: PublicValueSpaceGroupElement::Value,
+    response: WitnessSpaceGroupElement::Value,
+
+    _language_choice: PhantomData<Lang>,
+    _protocol_context_choice: PhantomData<ProtocolContext>,
+}
+
+impl<
+        const WITNESS_SCALAR_LIMBS: usize,
+        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
+        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+        Lang: Language<
+            WITNESS_SCALAR_LIMBS,
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            WitnessSpaceGroupElement,
+            PublicValueSpaceGroupElement,
+        >,
+        ProtocolContext: Serialize,
+    >
+    Proof<
+        WITNESS_SCALAR_LIMBS,
+        PUBLIC_VALUE_SCALAR_LIMBS,
+        WitnessSpaceGroupElement,
+        PublicValueSpaceGroupElement,
+        Lang,
+        ProtocolContext,
+    >
+{
+    #[allow(dead_code)]
+    fn new(
+        statement_mask: PublicValueSpaceGroupElement,
+        response: WitnessSpaceGroupElement,
+    ) -> Self {
+        Self {
+            statement_mask: statement_mask.value(),
+            response: response.value(),
+            _language_choice: PhantomData,
+            _protocol_context_choice: PhantomData,
+        }
+    }
+
+    /// Prove an enhanced batched Schnorr zero-knowledge claim.
+    /// Returns the zero-knowledge proof.
+    pub fn prove(
+        _protocol_context: ProtocolContext,
+        _language_public_parameters: &Lang::PublicParameters,
+        _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
+        _witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
+        _rng: &mut impl CryptoRngCore,
+    ) -> Result<Self> {
+        todo!()
+    }
+
+    /// Verify an enhanced batched Schnorr zero-knowledge proof
+    pub fn verify(
+        &self,
+        _protocol_context: ProtocolContext,
+        _language_public_parameters: &Lang::PublicParameters,
+        _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
+        _statements: Vec<PublicValueSpaceGroupElement>,
+    ) -> Result<()> {
+        todo!()
+    }
 }
