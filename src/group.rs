@@ -3,13 +3,14 @@
 
 pub mod direct_product;
 
+pub mod secp256k1;
+
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 pub mod paillier;
 use crypto_bigint::Uint;
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
-#[allow(clippy::suspicious_arithmetic_impl)]
 pub mod multiplicative_group_of_integers_modulu_n;
 
 /// An error in group element instantiation [`GroupElement::new()`]

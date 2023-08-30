@@ -9,8 +9,12 @@ crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint.git", featu
 serde = { version = "1.0", features = ["derive"] }
 subtle = "2.5"
 thiserror = "1.0.47"
+k256 = {version = "0.13.1", features = ["arithmetic", "critical-section", "precomputed-tables", "serde"], default-features = false  }
 merlin = { version = "3.0.0", default-features = false }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 tiresias = { git = "https://github.com/odsy-network/tiresias.git"}
 
 [dev-dependencies]
+
+[patch.crates-io]
+crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint.git" }
