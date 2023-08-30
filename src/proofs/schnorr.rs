@@ -167,16 +167,55 @@ impl<
         Ok(Self::new(statement_mask, response))
     }
 
-    /// Verify an enhanced batched Schnorr zero-knowledge proof
+    /// Verify an enhanced batched Schnorr zero-knowledge proof.
     pub fn verify(
         &self,
-        _protocol_context: ProtocolContext,
-        _language_public_parameters: &Lang::PublicParameters,
-        _witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
-        _public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
-        _statements: Vec<PublicValueSpaceGroupElement>,
+        protocol_context: ProtocolContext,
+        language_public_parameters: &Lang::PublicParameters,
+        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
+        statements: Vec<PublicValueSpaceGroupElement>,
     ) -> Result<()> {
-        todo!()
+        let batch_size = statements.len();
+
+        let mut transcript = Self::setup_protocol(
+            &protocol_context,
+            language_public_parameters,
+            witness_space_public_parameters,
+            public_value_space_public_parameters,
+            statements.clone(),
+        )?;
+
+        let challenges: Vec<ChallengeSizedNumber> =
+            Self::compute_challenges(&self.statement_mask, batch_size, &mut transcript)?;
+
+        let response =
+            WitnessSpaceGroupElement::new(self.response.clone(), witness_space_public_parameters)?;
+
+        let statement_mask = PublicValueSpaceGroupElement::new(
+            self.statement_mask.clone(),
+            public_value_space_public_parameters,
+        )?;
+
+        let response_statement: PublicValueSpaceGroupElement = Lang::group_homomorphism(
+            &response,
+            language_public_parameters,
+            witness_space_public_parameters,
+            public_value_space_public_parameters,
+        )?;
+
+        let reconstructed_response_statement: PublicValueSpaceGroupElement = statement_mask
+            + statements
+                .into_iter()
+                .zip(challenges)
+                .map(|(statement, challenge)| statement.scalar_mul(&challenge))
+                .reduce(|a, b| a + b)
+                .unwrap();
+
+        if response_statement == reconstructed_response_statement {
+            return Ok(());
+        }
+        Err(Error::ProofVerificationError)
     }
 
     fn setup_protocol(
