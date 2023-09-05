@@ -4,10 +4,12 @@
 use std::ops::{Add, AddAssign, BitAnd, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use crypto_bigint::Uint;
-use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
-use crate::{group, group::GroupElement as GroupElementTrait};
+use crate::{
+    group, group::GroupElement as GroupElementTrait, helpers::const_generic_array_serialization,
+};
 
 /// An element of the Self Product of the Group `G` by Itself.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -25,39 +27,10 @@ pub struct PublicParameters<
 }
 
 /// The value of the Self Product of the Group `G` by Itself.
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct Value<const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMBS>>(
-    [G::Value; N],
+    #[serde(with = "const_generic_array_serialization")] [G::Value; N],
 );
-
-/// [`serde` is missing const-generic support](https://github.com/serde-rs/serde/issues/1937)
-/// As a workaround we are serializing it as a vector.
-/// This adds the size of the vector as an overhead to the serialization output.
-impl<const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMBS>> Serialize
-    for Value<N, SCALAR_LIMBS, G>
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.0.to_vec().serialize(serializer)
-    }
-}
-
-impl<'de, const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMBS>>
-    Deserialize<'de> for Value<N, SCALAR_LIMBS, G>
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let vec = <Vec<G::Value>>::deserialize(deserializer)?;
-
-        <&[G::Value; N]>::try_from(vec.as_slice())
-            .map(|x| Self(x.clone()))
-            .map_err(|_| D::Error::invalid_length(vec.len(), &N.to_string().as_str()))
-    }
-}
 
 impl<const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMBS>> ConstantTimeEq
     for Value<N, SCALAR_LIMBS, G>
