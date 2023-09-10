@@ -1,9 +1,12 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+pub use pedersen::Pedersen;
 use serde::{Deserialize, Serialize};
 
 use crate::{group, group::GroupElement};
+
+pub mod pedersen;
 
 /// A Homomorphic Commitment Scheme
 ///

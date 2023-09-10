@@ -282,3 +282,27 @@ impl<
         *self = self.scalar_mul(rhs)
     }
 }
+
+impl<const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMBS>>
+    From<GroupElement<N, SCALAR_LIMBS, G>> for [G; N]
+{
+    fn from(value: GroupElement<N, SCALAR_LIMBS, G>) -> Self {
+        value.0
+    }
+}
+
+impl<'r, const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMBS>>
+    From<&'r GroupElement<N, SCALAR_LIMBS, G>> for &'r [G; N]
+{
+    fn from(value: &'r GroupElement<N, SCALAR_LIMBS, G>) -> Self {
+        &value.0
+    }
+}
+
+impl<const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMBS>> From<[G; N]>
+    for GroupElement<N, SCALAR_LIMBS, G>
+{
+    fn from(value: [G; N]) -> Self {
+        GroupElement::<N, SCALAR_LIMBS, G>(value)
+    }
+}
