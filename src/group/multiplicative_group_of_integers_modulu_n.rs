@@ -28,6 +28,15 @@ where
     modulus: Uint<LIMBS>,
 }
 
+impl<const LIMBS: usize> PublicParameters<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    pub fn new(modulus: Uint<LIMBS>) -> Self {
+        Self { modulus }
+    }
+}
+
 impl<const LIMBS: usize> GroupElementTrait<LIMBS> for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
@@ -212,5 +221,17 @@ where
 
     fn mul(self, rhs: &Uint<RHS_LIMBS>) -> Self::Output {
         self.scalar_mul(rhs)
+    }
+}
+
+impl<const LIMBS: usize> From<GroupElement<LIMBS>> for Uint<LIMBS> {
+    fn from(value: GroupElement<LIMBS>) -> Self {
+        value.0.retrieve()
+    }
+}
+
+impl<'r, const LIMBS: usize> From<&'r GroupElement<LIMBS>> for Uint<LIMBS> {
+    fn from(value: &'r GroupElement<LIMBS>) -> Self {
+        value.0.retrieve()
     }
 }
