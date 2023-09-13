@@ -13,6 +13,7 @@ use crypto_bigint::Uint;
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
+mod additive_group_of_integers_modulu_n;
 pub mod multiplicative_group_of_integers_modulu_n;
 
 /// An error in group element instantiation [`GroupElement::new()`]
@@ -122,7 +123,7 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
 pub trait MulByGenerator<T> {
     /// Multiply by the generator of the cyclic group in constant-time.
     #[must_use]
-    fn mul_by_generator(scalar: T) -> Self;
+    fn mul_by_generator(&self, scalar: T) -> Self;
 }
 
 /// An element of an abelian, cyclic group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in
@@ -132,7 +133,7 @@ pub trait CyclicGroupElement<const SCALAR_LIMBS: usize>:
     + MulByGenerator<Uint<SCALAR_LIMBS>>
     + for<'r> MulByGenerator<&'r Uint<SCALAR_LIMBS>>
 {
-    fn generator() -> Self;
+    fn generator(&self) -> Self;
 }
 
 /// An element of a known-order abelian group, in additive notation.
@@ -146,7 +147,7 @@ pub trait KnownOrderGroupElement<
     + MulAssign<Scalar>
     + for<'r> MulAssign<&'r Scalar>
 {
-    fn order() -> Uint<SCALAR_LIMBS>;
+    fn order(&self) -> Uint<SCALAR_LIMBS>;
 }
 
 /// A marker trait for elements of a (known) prime-order group.

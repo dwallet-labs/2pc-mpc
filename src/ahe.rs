@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
-use tiresias;
 
 use crate::group::GroupElement;
 
@@ -119,43 +118,4 @@ pub trait AdditivelyHomomorphicEncryption<
         ciphertexts: [CiphertextSpaceGroupElement; FUNCTION_DEGREE],
         rng: &mut impl CryptoRngCore,
     ) -> Result<CiphertextSpaceGroupElement>;
-}
-
-trait A {
-    fn foo() -> Option<u8>;
-}
-
-trait B: A {
-    fn foo() -> u8;
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::ahe;
-    use crate::ahe::B;
-
-    fn hey(x: u8) {}
-
-    fn you<T: B>(b: T) {
-        hey(b.foo())
-    }
-
-    struct Bla;
-    impl ahe::A for Bla {
-        fn foo() -> Option<u8> {
-            None
-        }
-    }
-
-    impl B for Bla {
-        fn foo() -> u8 {
-            42
-        }
-    }
-
-    #[test]
-    fn works() {
-        let bla = Bla{};
-        assert_eq!(bla.foo(), 42u8);
-    }
 }

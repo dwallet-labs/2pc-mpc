@@ -250,31 +250,31 @@ impl<'r, const LIMBS: usize> MulAssign<&'r Uint<LIMBS>> for GroupElement {
 }
 
 impl MulByGenerator<U256> for GroupElement {
-    fn mul_by_generator(scalar: U256) -> Self {
-        Self::mul_by_generator(Scalar::from(scalar))
+    fn mul_by_generator(&self, scalar: U256) -> Self {
+        self.mul_by_generator(Scalar::from(scalar))
     }
 }
 
 impl<'r> MulByGenerator<&'r U256> for GroupElement {
-    fn mul_by_generator(scalar: &'r U256) -> Self {
-        Self::mul_by_generator(*scalar)
+    fn mul_by_generator(&self, scalar: &'r U256) -> Self {
+        self.mul_by_generator(*scalar)
     }
 }
 
 impl CyclicGroupElement<{ U256::LIMBS }> for GroupElement {
-    fn generator() -> Self {
+    fn generator(&self) -> Self {
         Self(ProjectivePoint::GENERATOR)
     }
 }
 
 impl KnownOrderGroupElement<{ U256::LIMBS }, Scalar> for GroupElement {
-    fn order() -> Uint<{ U256::LIMBS }> {
+    fn order(&self) -> Uint<{ U256::LIMBS }> {
         ORDER
     }
 }
 
 impl MulByGenerator<Scalar> for GroupElement {
-    fn mul_by_generator(scalar: Scalar) -> Self {
+    fn mul_by_generator(&self, scalar: Scalar) -> Self {
         GroupElement(
             <ProjectivePoint as elliptic_curve::ops::MulByGenerator>::mul_by_generator(&scalar.0),
         )
@@ -282,8 +282,8 @@ impl MulByGenerator<Scalar> for GroupElement {
 }
 
 impl<'r> MulByGenerator<&'r Scalar> for GroupElement {
-    fn mul_by_generator(scalar: &'r Scalar) -> Self {
-        Self::mul_by_generator(*scalar)
+    fn mul_by_generator(&self, scalar: &'r Scalar) -> Self {
+        self.mul_by_generator(*scalar)
     }
 }
 
