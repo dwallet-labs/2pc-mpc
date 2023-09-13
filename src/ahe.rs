@@ -3,7 +3,7 @@
 
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 
-use crate::group::GroupElement;
+use crate::group::{additive_group_of_integers_modulu_n, GroupElement};
 
 /// An error in additively homomorphic encryption evaluation
 /// [`AdditivelyHomomorphicEncryption::evaluate_linear_transformation()`]
@@ -25,12 +25,14 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 // alt: define only for homomorphic, but still with traits for the keys themselves.
 
-/// An encryption key which allows encryption of messages
-pub trait EncryptionKey<
+type MessageSpaceGroupElement<const LIMBS: usize> =
+    additive_group_of_integers_modulu_n::GroupElement<LIMBS>;
+
+/// An Encryption Key of an Additively Homomorphic Encryption scheme
+pub trait AdditivelyHomomorphicEncryption<
     const PLAINTEXT_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-    // TODO: MessageSpaceGroupElement with Z_n+ which is known-order. Then use this for eval.
     RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
 >
@@ -45,7 +47,7 @@ pub trait EncryptionKey<
     /// enc})\in\calC_{pk}$.
     fn encrypt_with_randomness(
         &self,
-        plaintext: Uint<PLAINTEXT_LIMBS>,
+        plaintext: MessageSpaceGroupElement<PLAINTEXT_LIMBS>,
         randomness: &RandomnessSpaceGroupElement,
     ) -> CiphertextSpaceGroupElement;
 
@@ -55,36 +57,10 @@ pub trait EncryptionKey<
     /// from `rng`.    
     fn encrypt(
         &self,
-        plaintext: Uint<PLAINTEXT_LIMBS>,
+        plaintext: MessageSpaceGroupElement<PLAINTEXT_LIMBS>,
         rng: &mut impl CryptoRngCore,
     ) -> CiphertextSpaceGroupElement;
-}
 
-pub trait DecryptionKey<
-    const PLAINTEXT_LIMBS: usize,
-    const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-    const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-    // TODO: MessageSpaceGroupElement with Z_n+ which is known-order. Then use this for eval.
-    RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-    CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
->: EncryptionKey<PLAINTEXT_LIMBS, RANDOMNESS_SPACE_SCALAR_LIMBS, CIPHERTEXT_SPACE_SCALAR_LIMBS, RandomnessSpaceGroupElement, CiphertextSpaceGroupElement>
-{
-    /// $\Dec(sk, \ct) \to \pt$: Decrypt `ciphertext` using `decryption_key`.
-    /// A deterministic algorithm that on input a secret key $sk$ and a ciphertext $\ct \in
-    /// \calC_{pk}$ outputs a plaintext $\pt \in \calP_{pk}$.
-    fn decrypt(&self, ciphertext: &CiphertextSpaceGroupElement) -> Uint<PLAINTEXT_LIMBS>;
-}
-
-/// An Additively Homomorphic Encryption scheme
-pub trait AdditivelyHomomorphicEncryption<
-    const PLAINTEXT_LIMBS: usize,
-    const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-    const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-    // TODO: MessageSpaceGroupElement with Z_n+ which is known-order. Then use this for eval.
-    RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-    CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
->: EncryptionKey<PLAINTEXT_LIMBS, RANDOMNESS_SPACE_SCALAR_LIMBS, CIPHERTEXT_SPACE_SCALAR_LIMBS, RandomnessSpaceGroupElement, CiphertextSpaceGroupElement>
-{
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
     /// affine function defined by `free_variable` and `coefficients` on `ciphertexts`; to
     /// ensure     circuit-privacy, some implementations may require `mask` and `randmomness` to
@@ -118,4 +94,28 @@ pub trait AdditivelyHomomorphicEncryption<
         ciphertexts: [CiphertextSpaceGroupElement; FUNCTION_DEGREE],
         rng: &mut impl CryptoRngCore,
     ) -> Result<CiphertextSpaceGroupElement>;
+}
+
+pub trait AdditivelyHomomorphicDecryption<
+    const PLAINTEXT_LIMBS: usize,
+    const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
+    const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
+    RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
+    CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+>:
+    AdditivelyHomomorphicEncryption<
+    PLAINTEXT_LIMBS,
+    RANDOMNESS_SPACE_SCALAR_LIMBS,
+    CIPHERTEXT_SPACE_SCALAR_LIMBS,
+    RandomnessSpaceGroupElement,
+    CiphertextSpaceGroupElement,
+>
+{
+    /// $\Dec(sk, \ct) \to \pt$: Decrypt `ciphertext` using `decryption_key`.
+    /// A deterministic algorithm that on input a secret key $sk$ and a ciphertext $\ct \in
+    /// \calC_{pk}$ outputs a plaintext $\pt \in \calP_{pk}$.
+    fn decrypt(
+        &self,
+        ciphertext: &CiphertextSpaceGroupElement,
+    ) -> MessageSpaceGroupElement<PLAINTEXT_LIMBS>;
 }

@@ -10,9 +10,14 @@ use crypto_bigint::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    group::{CyclicGroupElement, GroupElement, KnownOrderGroupElement, MulByGenerator},
+    group,
+    group::{CyclicGroupElement, KnownOrderGroupElement, MulByGenerator},
     traits::Reduce,
 };
+
+/// An element of the additive group of integers modulo `n = modulus`
+/// $\mathbb{Z}_n^+$
+pub type GroupElement<const LIMBS: usize> = DynResidue<LIMBS>;
 
 /// The public parameters of the additive group of integers modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
@@ -33,7 +38,7 @@ where
     }
 }
 
-impl<const LIMBS: usize> GroupElement<LIMBS> for DynResidue<LIMBS>
+impl<const LIMBS: usize> group::GroupElement<LIMBS> for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -105,7 +110,7 @@ where
     }
 }
 
-impl<const LIMBS: usize> CyclicGroupElement<LIMBS> for DynResidue<LIMBS>
+impl<const LIMBS: usize> CyclicGroupElement<LIMBS> for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -114,12 +119,12 @@ where
     }
 }
 
-impl<const LIMBS: usize> KnownOrderGroupElement<LIMBS, Self> for DynResidue<LIMBS>
+impl<const LIMBS: usize> KnownOrderGroupElement<LIMBS, Self> for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
     fn order(&self) -> Uint<LIMBS> {
         // todo: this is right?
-        *self.public_parameters().modulus
+        *self.params().modulus()
     }
 }
