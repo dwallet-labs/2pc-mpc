@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod commitment_of_discrete_log;
+
 pub mod knowledge_of_discrete_log;
 
 pub mod knowledge_of_decommitment;

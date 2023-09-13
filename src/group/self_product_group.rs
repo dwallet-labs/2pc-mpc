@@ -36,7 +36,7 @@ pub struct PublicParameters<
     const SCALAR_LIMBS: usize,
     G: GroupElementTrait<SCALAR_LIMBS>,
 > {
-    public_parameters: G::PublicParameters,
+    pub(crate) public_parameters: G::PublicParameters,
     size: usize,
 }
 
