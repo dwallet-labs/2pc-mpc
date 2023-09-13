@@ -3,6 +3,8 @@
 
 pub mod knowledge_of_discrete_log;
 
+pub mod knowledge_of_decommitment;
+
 use std::marker::PhantomData;
 
 use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, U64};

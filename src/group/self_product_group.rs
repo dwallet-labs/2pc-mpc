@@ -1,19 +1,33 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ops::{Add, AddAssign, BitAnd, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::{
+    array,
+    ops::{Add, AddAssign, BitAnd, Mul, MulAssign, Neg, Sub, SubAssign},
+};
 
-use crypto_bigint::Uint;
+use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
 use crate::{
     group, group::GroupElement as GroupElementTrait, helpers::const_generic_array_serialization,
+    traits::Samplable,
 };
 
 /// An element of the Self Product of the Group `G` by Itself.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct GroupElement<const N: usize, const SCALAR_LIMBS: usize, G>([G; N]);
+
+impl<const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMBS>> Samplable
+    for GroupElement<N, SCALAR_LIMBS, G>
+where
+    G: Samplable,
+{
+    fn sample(rng: &mut impl CryptoRngCore) -> Self {
+        Self(array::from_fn(|_| G::sample(rng)))
+    }
+}
 
 /// The public parameters of the Self Product of the Group `G` by Itself.
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
