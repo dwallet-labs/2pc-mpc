@@ -1,7 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto_bigint::{rand_core::CryptoRngCore, CheckedAdd, Uint};
+use crypto_bigint::{rand_core::CryptoRngCore, CheckedAdd, CheckedMul, Uint};
 use tiresias::{DecryptionKey, EncryptionKey, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 
 use crate::{
@@ -81,11 +81,17 @@ impl
     ) -> super::Result<CiphertextGroupElement> {
         // TODO: range checks: e.g. check that COEFFICIENT_LIMBS < LargeBiPrimeSizedNumber::LIMBS
 
-        let bla = mask.checked_mul(&range_upper_bound);
-        Ok(Self::encrypt_with_randomness(
-            free_variable.wrapped_add(&mask.wrapped_mul(&range_upper_bound)),
-            randomness,
-        ))
+        if let Some(mask_by_range_upper_bound) = mask.checked_mul(&range_upper_bound).into().into()
+        {
+            todo!()
+            // Ok(Self::encrypt_with_randomness(
+            //     free_variable.wrapped_add(&mask.wrapped_mul(&range_upper_bound)),
+            //     randomness,
+            // ))
+        } else {
+            return Err(super::Error::OutOfRangeError);
+        }
+
         // todo
     }
 

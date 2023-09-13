@@ -46,14 +46,10 @@ pub trait AdditivelyHomomorphicEncryption<
         rng: &mut impl CryptoRngCore,
     ) -> CiphertextSpaceGroupElement;
 
-    // TODO: can this fail? should we return Result?
     fn decrypt(
         decryption_key: &DecryptionKey,
         ciphertext: &CiphertextSpaceGroupElement,
     ) -> Uint<PLAINTEXT_LIMBS>;
-
-    // TODO: rename affine_evaluation()?
-    // TODO: coefficient size?
 
     fn evaluate_linear_transformation_with_randomness<
         const FUNCTION_DEGREE: usize,
