@@ -27,6 +27,7 @@ pub trait AdditivelyHomomorphicEncryption<
     const PLAINTEXT_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
+    // TODO: MessageSpaceGroupElement with Z_n+ which is known-order. Then use this for eval.
     RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
 >
@@ -44,7 +45,7 @@ pub trait AdditivelyHomomorphicEncryption<
         encryption_key: &EncryptionKey,
         plaintext: Uint<PLAINTEXT_LIMBS>,
         rng: &mut impl CryptoRngCore,
-    ) -> CiphertextSpaceGroupElement;
+    ) -> CiphertextSpaceGroupElement; // TODO: blanket implementation where we have Samplable?
 
     fn decrypt(
         decryption_key: &DecryptionKey,
@@ -54,13 +55,13 @@ pub trait AdditivelyHomomorphicEncryption<
     fn evaluate_linear_transformation_with_randomness<
         const FUNCTION_DEGREE: usize,
         const COEFFICIENT_LIMBS: usize,
+        const MASK_LIMBS: usize,
     >(
         encryption_key: &EncryptionKey,
-        range_upper_bound: Uint<COEFFICIENT_LIMBS>,
         free_variable: Uint<COEFFICIENT_LIMBS>,
         coefficients: [Uint<COEFFICIENT_LIMBS>; FUNCTION_DEGREE],
         ciphertexts: [CiphertextSpaceGroupElement; FUNCTION_DEGREE],
-        mask: Uint<PLAINTEXT_LIMBS>,
+        mask: Uint<MASK_LIMBS>,
         randomness: &RandomnessSpaceGroupElement,
     ) -> Result<CiphertextSpaceGroupElement>;
 
@@ -69,7 +70,6 @@ pub trait AdditivelyHomomorphicEncryption<
         const COEFFICIENT_LIMBS: usize,
     >(
         encryption_key: &EncryptionKey,
-        range_upper_bound: Uint<COEFFICIENT_LIMBS>,
         free_variable: Uint<COEFFICIENT_LIMBS>,
         coefficients: [Uint<COEFFICIENT_LIMBS>; FUNCTION_DEGREE],
         ciphertexts: [CiphertextSpaceGroupElement; FUNCTION_DEGREE],

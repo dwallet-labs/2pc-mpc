@@ -79,8 +79,12 @@ impl
         mask: LargeBiPrimeSizedNumber,
         randomness: &RandomnessGroupElement,
     ) -> super::Result<CiphertextGroupElement> {
-        // TODO: range checks: e.g. check that COEFFICIENT_LIMBS < LargeBiPrimeSizedNumber::LIMBS
+        // The check (Dolev): MASK_LIMBS = LOG_FUNCTION_DEGREE + LOG_ORDER (rounded up) +
+        // STATISTICAL_SECURITY_PARAMETER then this needs to be sampled uniformly
 
+        // also check that MASK_LIMBS < LargeBiPrimeSizedNumber::LIMBS
+
+        // do wrapped mul, add but with U2048.
         if let Some(mask_by_range_upper_bound) = mask.checked_mul(&range_upper_bound).into().into()
         {
             todo!()
