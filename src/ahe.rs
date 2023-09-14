@@ -87,6 +87,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     fn evaluate_linear_transformation<
         const FUNCTION_DEGREE: usize,
         const COEFFICIENT_LIMBS: usize,
+        const MASK_LIMBS: usize,
     >(
         &self,
         free_variable: Uint<COEFFICIENT_LIMBS>,
