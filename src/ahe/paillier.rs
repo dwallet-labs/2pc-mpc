@@ -1,12 +1,22 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto_bigint::{rand_core::CryptoRngCore, Uint};
-use group::paillier::{CiphertextGroupElement, MessageGroupElement, RandomnessGroupElement};
+use crypto_bigint::{
+    modular::runtime_mod::{DynResidue, DynResidueParams},
+    rand_core::CryptoRngCore,
+    NonZero, Uint,
+};
+use group::{
+    additive_group_of_integers_modulu_n, multiplicative_group_of_integers_modulu_n,
+    paillier::{CiphertextGroupElement, MessageGroupElement, RandomnessGroupElement},
+};
 use tiresias::{DecryptionKey, EncryptionKey, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 
 use super::{Error, Result};
-use crate::{group, AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey};
+use crate::{
+    group, group::GroupElement, AdditivelyHomomorphicDecryptionKey,
+    AdditivelyHomomorphicEncryptionKey,
+};
 
 impl
     AdditivelyHomomorphicEncryptionKey<
@@ -22,8 +32,15 @@ impl
         plaintext: MessageGroupElement,
         randomness: &RandomnessGroupElement,
     ) -> CiphertextGroupElement {
-        // self.encrypt_with_randomness(randomness.into())
-        todo!()
+        // TODO: this can be optimized by returning DynResidue from tiresias function
+
+        // safe to `unwrap()` here, as encryption always returns a valid element in the
+        // ciphertext group
+        CiphertextGroupElement::new(
+            self.encrypt_with_randomness(&plaintext.retrieve(), &randomness.into()),
+            &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2),
+        )
+        .unwrap()
     }
 
     fn encrypt(
@@ -31,7 +48,13 @@ impl
         plaintext: MessageGroupElement,
         rng: &mut impl CryptoRngCore,
     ) -> CiphertextGroupElement {
-        todo!()
+        // safe to `unwrap()` here, as encryption always returns a valid element in the
+        // ciphertext group
+        CiphertextGroupElement::new(
+            self.encrypt(&plaintext.retrieve(), rng),
+            &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2),
+        )
+        .unwrap()
     }
 
     fn evaluate_linear_transformation_with_randomness<
@@ -150,6 +173,12 @@ impl
     > for DecryptionKey
 {
     fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> MessageGroupElement {
-        todo!()
+        // TODO: with all this functions, do I know they are correct?
+        // Yes, the ciphertext group element is indeed valid, but who says its connected to the `n`
+        // of `self`? or that the decryption key is valid?
+        DynResidue::new(
+            &self.decrypt(&ciphertext.into()),
+            DynResidueParams::new(&self.encryption_key.n),
+        )
     }
 }
