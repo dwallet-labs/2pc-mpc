@@ -22,11 +22,6 @@ pub enum Error {
 /// [`AdditivelyHomomorphicEncryptionKey::evaluate_linear_transformation()`]
 pub type Result<T> = std::result::Result<T, Error>;
 
-// todo: if I define non-honmorphic traits, then encryption + decryption may fail.
-// I can do something that fails, but then it'll be ugly and ambiguous with same names?
-
-// alt: define only for homomorphic, but still with traits for the keys themselves.
-
 type MessageSpaceGroupElement<const LIMBS: usize> =
     additive_group_of_integers_modulu_n::GroupElement<LIMBS>;
 
@@ -89,6 +84,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     fn evaluate_linear_transformation<
         const FUNCTION_DEGREE: usize,
         const COEFFICIENT_LIMBS: usize,
+        const MASK_LIMBS: usize,
     >(
         &self,
         free_variable: Uint<COEFFICIENT_LIMBS>,
