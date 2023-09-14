@@ -6,7 +6,7 @@ use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use crate::group::{additive_group_of_integers_modulu_n, GroupElement};
 
 /// An error in additively homomorphic encryption evaluation
-/// [`AdditivelyHomomorphicEncryption::evaluate_linear_transformation()`]
+/// [`AdditivelyHomomorphicEncryptionKey::evaluate_linear_transformation()`]
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
 pub enum Error {
     #[error(
@@ -17,7 +17,7 @@ pub enum Error {
 }
 
 /// The result of an additively homomorphic encryption evaluation
-/// [`AdditivelyHomomorphicEncryption::evaluate_linear_transformation()`]
+/// [`AdditivelyHomomorphicEncryptionKey::evaluate_linear_transformation()`]
 pub type Result<T> = std::result::Result<T, Error>;
 
 // todo: if I define non-honmorphic traits, then encryption + decryption may fail.
@@ -29,7 +29,7 @@ type MessageSpaceGroupElement<const LIMBS: usize> =
     additive_group_of_integers_modulu_n::GroupElement<LIMBS>;
 
 /// An Encryption Key of an Additively Homomorphic Encryption scheme
-pub trait AdditivelyHomomorphicEncryption<
+pub trait AdditivelyHomomorphicEncryptionKey<
     const PLAINTEXT_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
@@ -96,14 +96,14 @@ pub trait AdditivelyHomomorphicEncryption<
     ) -> Result<CiphertextSpaceGroupElement>;
 }
 
-pub trait AdditivelyHomomorphicDecryption<
+pub trait AdditivelyHomomorphicDecryptionKey<
     const PLAINTEXT_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
     RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
 >:
-    AdditivelyHomomorphicEncryption<
+    AdditivelyHomomorphicEncryptionKey<
     PLAINTEXT_LIMBS,
     RANDOMNESS_SPACE_SCALAR_LIMBS,
     CIPHERTEXT_SPACE_SCALAR_LIMBS,
