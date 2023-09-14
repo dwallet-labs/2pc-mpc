@@ -69,6 +69,17 @@ impl
         mask: Option<Uint<MASK_LIMBS>>,
         randomness: Option<RandomnessGroupElement>,
     ) -> Result<CiphertextGroupElement> {
+        // The check (Dolev): MASK_LIMBS = LOG_FUNCTION_DEGREE + LOG_ORDER (rounded up) +
+        // STATISTICAL_SECURITY_PARAMETER then this needs to be sampled uniformly
+
+        // also check that MASK_LIMBS < LargeBiPrimeSizedNumber::LIMBS
+
+        // do wrapped mul, add but with U2048.
+
+        if MASK_LIMBS >= LargeBiPrimeSizedNumber::LIMBS {
+            return Err();
+        }
+
         todo!()
     }
 
