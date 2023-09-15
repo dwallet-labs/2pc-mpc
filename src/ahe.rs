@@ -1,11 +1,11 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-mod paillier;
-
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 
 use crate::group::{additive_group_of_integers_modulu_n, GroupElement};
+
+mod paillier;
 
 /// An error in additively homomorphic encryption evaluation
 /// [`AdditivelyHomomorphicEncryptionKey::evaluate_linear_transformation()`]
