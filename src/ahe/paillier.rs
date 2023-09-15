@@ -1,60 +1,103 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::process::Output;
+
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
     rand_core::CryptoRngCore,
-    NonZero, Uint,
+    ConcatMixed, NonZero, Uint, U128, U64,
 };
 use group::{
-    additive_group_of_integers_modulu_n, multiplicative_group_of_integers_modulu_n,
-    paillier::{CiphertextGroupElement, MessageGroupElement, RandomnessGroupElement},
+    multiplicative_group_of_integers_modulu_n,
+    paillier::{CiphertextGroupElement, RandomnessGroupElement},
 };
 use tiresias::{DecryptionKey, EncryptionKey, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 
 use crate::{
-    group, group::GroupElement, AdditivelyHomomorphicDecryptionKey,
-    AdditivelyHomomorphicEncryptionKey,
+    group,
+    group::{GroupElement, KnownOrderGroupElement},
+    AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
+    StatisticalSecuritySizedNumber,
 };
 
-impl<const MASK_LIMBS: usize, const PLAINTEXT_LIMBS: usize>
+/// Emulate an additively homomorphic encryption with `PlaintextSpaceGroupElement` as the plaintext
+/// group using the Paillier encryption scheme.
+///
+/// NOTICE: ensures circuit-privacy as long as MASK_LIMBS < LargeBiPrimeSizedNumber::LIMBS
+impl<
+        const MASK_LIMBS: usize,
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        PlaintextSpaceGroupElement,
+    >
     AdditivelyHomomorphicEncryptionKey<
         MASK_LIMBS,
-        PLAINTEXT_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
         { LargeBiPrimeSizedNumber::LIMBS },
         { PaillierModulusSizedNumber::LIMBS },
+        PlaintextSpaceGroupElement,
         RandomnessGroupElement,
         CiphertextGroupElement,
     > for EncryptionKey
+where
+    PlaintextSpaceGroupElement:
+        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<PlaintextSpaceGroupElement>,
+    // to ensure circuit-privacy:
+    // First, assure that the statistical security (currently configured to U64, code would break
+    // and require changes if it will change) concatted with a U64 which is a bound on the log of
+    // FUNCTION_DEGREE
+    StatisticalSecuritySizedNumber: ConcatMixed<U64, MixedOutput = U128>,
+    // Second, assure that MASK_LIMBS is PLAINTEXT_SPACE_SCALAR_LIMBS +
+    // StatisticalSecuritySizedNumber + U64 = PLAINTEXT_SPACE_SCALAR_LIMBS + U128
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: ConcatMixed<U128, MixedOutput = Uint<MASK_LIMBS>>,
 {
     fn encrypt_with_randomness(
         &self,
-        plaintext: MessageSpaceGroupElement<PLAINTEXT_LIMBS>,
+        plaintext: PlaintextSpaceGroupElement,
         randomness: &RandomnessGroupElement,
-    ) -> CiphertextGroupElement;
+    ) -> CiphertextGroupElement {
+        //   TODO: this can be optimized by returning DynResidue from
+        // tiresias function
+
+        // safe to `unwrap()` here, as encryption always returns a valid element in the
+        // ciphertext group
+
+        // CiphertextGroupElement::new(
+        //     self.encrypt_with_randomness(&plaintext.into(), &randomness.into()),
+        //     &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2),
+        // )
+        // .unwrap()
+    }
 
     fn encrypt(
         &self,
-        plaintext: MessageSpaceGroupElement<PLAINTEXT_LIMBS>,
+        plaintext: PlaintextSpaceGroupElement,
         rng: &mut impl CryptoRngCore,
-    ) -> CiphertextGroupElement;
+    ) -> CiphertextGroupElement {
+        todo!()
+    }
 
     fn evaluate_linear_transformation_with_randomness<const FUNCTION_DEGREE: usize>(
         &self,
-        free_variable: Uint<PLAINTEXT_LIMBS>,
-        coefficients: [Uint<PLAINTEXT_LIMBS>; FUNCTION_DEGREE],
+        free_variable: PlaintextSpaceGroupElement,
+        coefficients: [PlaintextSpaceGroupElement; FUNCTION_DEGREE],
         ciphertexts: [CiphertextGroupElement; FUNCTION_DEGREE],
         mask: Uint<MASK_LIMBS>,
         randomness: RandomnessGroupElement,
-    ) -> CiphertextGroupElement;
+    ) -> CiphertextGroupElement {
+        todo!()
+    }
 
     fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize>(
         &self,
-        free_variable: Uint<PLAINTEXT_LIMBS>,
-        coefficients: [Uint<PLAINTEXT_LIMBS>; FUNCTION_DEGREE],
+        free_variable: PlaintextSpaceGroupElement,
+        coefficients: [PlaintextSpaceGroupElement; FUNCTION_DEGREE],
         ciphertexts: [CiphertextGroupElement; FUNCTION_DEGREE],
         rng: &mut impl CryptoRngCore,
-    ) -> CiphertextGroupElement;
+    ) -> CiphertextGroupElement {
+        todo!()
+    }
 }
 
 // impl
@@ -97,8 +140,8 @@ impl<const MASK_LIMBS: usize, const PLAINTEXT_LIMBS: usize>
 //         const MASK_LIMBS: usize,
 //     >(
 //         &self,
-//         free_variable: Uint<PLAINTEXT_LIMBS>,
-//         coefficients: [Uint<PLAINTEXT_LIMBS>; FUNCTION_DEGREE],
+//         free_variable: PlaintextSpaceGroupElement,
+//         coefficients: [PlaintextSpaceGroupElement; FUNCTION_DEGREE],
 //         ciphertexts: [CiphertextGroupElement; FUNCTION_DEGREE],
 //         mask: Uint<MASK_LIMBS>,
 //         randomness: RandomnessGroupElement,
@@ -120,7 +163,7 @@ impl<const MASK_LIMBS: usize, const PLAINTEXT_LIMBS: usize>
 //
 //     fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize, const MASK_LIMBS: usize>(
 //         &self,
-//         free_variable: Uint<PLAINTEXT_LIMBS>,
+//         free_variable: PlaintextSpaceGroupElement,
 //         coefficients: [Uint<PLAINTEXT_LIMBS>; FUNCTION_DEGREE],
 //         ciphertexts: [CiphertextGroupElement; FUNCTION_DEGREE],
 //         rng: &mut impl CryptoRngCore,
