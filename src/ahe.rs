@@ -4,20 +4,22 @@ mod paillier;
 
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 
-use crate::group::{additive_group_of_integers_modulu_n, GroupElement};
-
-type MessageSpaceGroupElement<const LIMBS: usize> =
-    additive_group_of_integers_modulu_n::GroupElement<LIMBS>;
+use crate::group::{GroupElement, KnownOrderGroupElement};
 
 /// An Encryption Key of an Additively Homomorphic Encryption scheme
 pub trait AdditivelyHomomorphicEncryptionKey<
     const MASK_LIMBS: usize,
-    const PLAINTEXT_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
+    PlaintextSpaceGroupElement,
+    RandomnessSpaceGroupElement,
+    CiphertextSpaceGroupElement,
+> where
+    PlaintextSpaceGroupElement:
+        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
->
 {
     /// $\Enc(pk, \pt; \eta_{\sf enc}) \to \ct$: Encrypt `plaintext` to `self` using
     /// `randomness`.
@@ -29,7 +31,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// enc})\in\calC_{pk}$.
     fn encrypt_with_randomness(
         &self,
-        plaintext: MessageSpaceGroupElement<PLAINTEXT_LIMBS>,
+        plaintext: PlaintextSpaceGroupElement,
         randomness: &RandomnessSpaceGroupElement,
     ) -> CiphertextSpaceGroupElement;
 
@@ -39,7 +41,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// from `rng`.    
     fn encrypt(
         &self,
-        plaintext: MessageSpaceGroupElement<PLAINTEXT_LIMBS>,
+        plaintext: PlaintextSpaceGroupElement,
         rng: &mut impl CryptoRngCore,
     ) -> CiphertextSpaceGroupElement;
 
@@ -54,8 +56,8 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// outputs a ciphertext $\ct$.
     fn evaluate_linear_transformation_with_randomness<const FUNCTION_DEGREE: usize>(
         &self,
-        free_variable: Uint<PLAINTEXT_LIMBS>,
-        coefficients: [Uint<PLAINTEXT_LIMBS>; FUNCTION_DEGREE],
+        free_variable: PlaintextSpaceGroupElement,
+        coefficients: [PlaintextSpaceGroupElement; FUNCTION_DEGREE],
         ciphertexts: [CiphertextSpaceGroupElement; FUNCTION_DEGREE],
         mask: Uint<MASK_LIMBS>,
         randomness: RandomnessSpaceGroupElement,
@@ -63,8 +65,8 @@ pub trait AdditivelyHomomorphicEncryptionKey<
 
     fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize>(
         &self,
-        free_variable: Uint<PLAINTEXT_LIMBS>,
-        coefficients: [Uint<PLAINTEXT_LIMBS>; FUNCTION_DEGREE],
+        free_variable: PlaintextSpaceGroupElement,
+        coefficients: [PlaintextSpaceGroupElement; FUNCTION_DEGREE],
         ciphertexts: [CiphertextSpaceGroupElement; FUNCTION_DEGREE],
         rng: &mut impl CryptoRngCore,
     ) -> CiphertextSpaceGroupElement;
@@ -73,26 +75,29 @@ pub trait AdditivelyHomomorphicEncryptionKey<
 /// A Decryption Key of an Additively Homomorphic Encryption scheme
 pub trait AdditivelyHomomorphicDecryptionKey<
     const MASK_LIMBS: usize,
-    const PLAINTEXT_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-    RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-    CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+    PlaintextSpaceGroupElement,
+    RandomnessSpaceGroupElement,
+    CiphertextSpaceGroupElement,
 >:
     AdditivelyHomomorphicEncryptionKey<
     MASK_LIMBS,
-    PLAINTEXT_LIMBS,
+    PLAINTEXT_SPACE_SCALAR_LIMBS,
     RANDOMNESS_SPACE_SCALAR_LIMBS,
     CIPHERTEXT_SPACE_SCALAR_LIMBS,
+    PlaintextSpaceGroupElement,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
->
+> where
+    PlaintextSpaceGroupElement:
+        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
+    RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
+    CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
 {
     /// $\Dec(sk, \ct) \to \pt$: Decrypt `ciphertext` using `decryption_key`.
     /// A deterministic algorithm that on input a secret key $sk$ and a ciphertext $\ct \in
     /// \calC_{pk}$ outputs a plaintext $\pt \in \calP_{pk}$.
-    fn decrypt(
-        &self,
-        ciphertext: &CiphertextSpaceGroupElement,
-    ) -> MessageSpaceGroupElement<PLAINTEXT_LIMBS>;
+    fn decrypt(&self, ciphertext: &CiphertextSpaceGroupElement) -> PlaintextSpaceGroupElement;
 }

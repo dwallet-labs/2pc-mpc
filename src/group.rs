@@ -13,7 +13,6 @@ use crypto_bigint::Uint;
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
-pub mod additive_group_of_integers_modulu_n;
 pub mod multiplicative_group_of_integers_modulu_n;
 
 /// An error in group element instantiation [`GroupElement::new()`]
