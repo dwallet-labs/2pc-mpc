@@ -17,15 +17,44 @@ use crate::{
     AdditivelyHomomorphicEncryptionKey,
 };
 
-impl
+impl<const MASK_LIMBS: usize, const PLAINTEXT_LIMBS: usize>
     AdditivelyHomomorphicEncryptionKey<
-        { LargeBiPrimeSizedNumber::LIMBS },
+        MASK_LIMBS,
+        PLAINTEXT_LIMBS,
         { LargeBiPrimeSizedNumber::LIMBS },
         { PaillierModulusSizedNumber::LIMBS },
         RandomnessGroupElement,
         CiphertextGroupElement,
     > for EncryptionKey
 {
+    fn encrypt_with_randomness(
+        &self,
+        plaintext: MessageSpaceGroupElement<PLAINTEXT_LIMBS>,
+        randomness: &RandomnessGroupElement,
+    ) -> CiphertextGroupElement;
+
+    fn encrypt(
+        &self,
+        plaintext: MessageSpaceGroupElement<PLAINTEXT_LIMBS>,
+        rng: &mut impl CryptoRngCore,
+    ) -> CiphertextGroupElement;
+
+    fn evaluate_linear_transformation_with_randomness<const FUNCTION_DEGREE: usize>(
+        &self,
+        free_variable: Uint<PLAINTEXT_LIMBS>,
+        coefficients: [Uint<PLAINTEXT_LIMBS>; FUNCTION_DEGREE],
+        ciphertexts: [CiphertextGroupElement; FUNCTION_DEGREE],
+        mask: Uint<MASK_LIMBS>,
+        randomness: RandomnessGroupElement,
+    ) -> CiphertextGroupElement;
+
+    fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize>(
+        &self,
+        free_variable: Uint<PLAINTEXT_LIMBS>,
+        coefficients: [Uint<PLAINTEXT_LIMBS>; FUNCTION_DEGREE],
+        ciphertexts: [CiphertextGroupElement; FUNCTION_DEGREE],
+        rng: &mut impl CryptoRngCore,
+    ) -> CiphertextGroupElement;
 }
 
 // impl
