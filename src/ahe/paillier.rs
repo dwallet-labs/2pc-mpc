@@ -1,24 +1,33 @@
-// // Author: dWallet Labs, LTD.
-// // SPDX-License-Identifier: Apache-2.0
-//
-// use crypto_bigint::{
-//     modular::runtime_mod::{DynResidue, DynResidueParams},
-//     rand_core::CryptoRngCore,
-//     NonZero, Uint,
-// };
-// use group::{
-//     additive_group_of_integers_modulu_n, multiplicative_group_of_integers_modulu_n,
-//     paillier::{CiphertextGroupElement, MessageGroupElement, RandomnessGroupElement},
-// };
-// use tiresias::{DecryptionKey, EncryptionKey, LargeBiPrimeSizedNumber,
-// PaillierModulusSizedNumber};
-//
-// use super::{Error, Result};
-// use crate::{
-//     group, group::GroupElement, AdditivelyHomomorphicDecryptionKey,
-//     AdditivelyHomomorphicEncryptionKey,
-// };
-//
+// Author: dWallet Labs, LTD.
+// SPDX-License-Identifier: Apache-2.0
+
+use crypto_bigint::{
+    modular::runtime_mod::{DynResidue, DynResidueParams},
+    rand_core::CryptoRngCore,
+    NonZero, Uint,
+};
+use group::{
+    additive_group_of_integers_modulu_n, multiplicative_group_of_integers_modulu_n,
+    paillier::{CiphertextGroupElement, MessageGroupElement, RandomnessGroupElement},
+};
+use tiresias::{DecryptionKey, EncryptionKey, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
+
+use crate::{
+    group, group::GroupElement, AdditivelyHomomorphicDecryptionKey,
+    AdditivelyHomomorphicEncryptionKey,
+};
+
+impl
+    AdditivelyHomomorphicEncryptionKey<
+        { LargeBiPrimeSizedNumber::LIMBS },
+        { LargeBiPrimeSizedNumber::LIMBS },
+        { PaillierModulusSizedNumber::LIMBS },
+        RandomnessGroupElement,
+        CiphertextGroupElement,
+    > for EncryptionKey
+{
+}
+
 // impl
 //     AdditivelyHomomorphicEncryptionKey<
 //         { LargeBiPrimeSizedNumber::LIMBS },
