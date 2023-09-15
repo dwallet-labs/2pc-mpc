@@ -11,8 +11,8 @@ type MessageSpaceGroupElement<const LIMBS: usize> =
 
 /// An Encryption Key of an Additively Homomorphic Encryption scheme
 pub trait AdditivelyHomomorphicEncryptionKey<
-    const PLAINTEXT_LIMBS: usize,
     const MASK_LIMBS: usize,
+    const PLAINTEXT_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
     RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
@@ -72,16 +72,16 @@ pub trait AdditivelyHomomorphicEncryptionKey<
 
 /// A Decryption Key of an Additively Homomorphic Encryption scheme
 pub trait AdditivelyHomomorphicDecryptionKey<
-    const PLAINTEXT_LIMBS: usize,
     const MASK_LIMBS: usize,
+    const PLAINTEXT_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
     RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
 >:
     AdditivelyHomomorphicEncryptionKey<
-    PLAINTEXT_LIMBS,
     MASK_LIMBS,
+    PLAINTEXT_LIMBS,
     RANDOMNESS_SPACE_SCALAR_LIMBS,
     CIPHERTEXT_SPACE_SCALAR_LIMBS,
     RandomnessSpaceGroupElement,
