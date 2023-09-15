@@ -9,11 +9,10 @@ use crate::group::{additive_group_of_integers_modulu_n, GroupElement};
 /// [`AdditivelyHomomorphicEncryptionKey::evaluate_linear_transformation()`]
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
 pub enum Error {
-    #[error(
-    "out of range: the range upper bound over the coefficients is too large to satisfy circuit privacy"
-    )]
-    OutOfRangeError,
-    // TODO: do I want to seperate cases where the number of coefficients is too large?
+    #[error("wrong mask size: the mask size is not of the right size, which might compromise circuit privacy")]
+    WrongMaskSizeError,
+    #[error("oversize mask: the mask is too large to satisfy circuit privacy")]
+    OversizeMaskError,
 }
 
 /// The result of an additively homomorphic encryption evaluation
@@ -58,35 +57,29 @@ pub trait AdditivelyHomomorphicEncryptionKey<
 
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
     /// affine function defined by `free_variable` and `coefficients` on `ciphertexts`; to
-    /// ensure     circuit-privacy, some implementations may require `mask` and `randmomness` to
-    /// be `Some`.    Whenever we omit the randomness in $\Eval(pk,
-    /// f, \ct_1,\ldots,\ct_t)$, we refer to the process of sampling a randomness $\eta_{\sf
-    /// eval}\gets\{0,1\}^{\poly(\kappa)}$ and running $\Eval(pk, f, \ct_1,\ldots,\ct_t; \eta_{\sf
-    /// eval})$. Given a public key $pk$, an affine function $f(x_1,\ldots,x_\ell)=
+    /// ensure circuit-privacy, the `mask` and `randmomness` to parameters should be passed (and
+    /// could be ignored by some implementors if unneeded.)
+    ///
+    /// Given a public key $pk$, an affine function $f(x_1,\ldots,x_\ell)=
     /// a_0+\sum_{i=1}^{\ell}{a_i x_i}$ (with $a_i\in\ZZ$ and $\ell,\|a_i\|_2\in\poly(\kappa)$ for
     /// all $0\le i\le \ell$) and $\ell$ ciphertexts $\ct_1,\ldots,\ct_t \in \calC$, $\Eval$
     /// outputs a ciphertext $\ct$.
     fn evaluate_linear_transformation_with_randomness<
         const FUNCTION_DEGREE: usize,
-        const COEFFICIENT_LIMBS: usize,
         const MASK_LIMBS: usize,
     >(
         &self,
-        free_variable: Uint<COEFFICIENT_LIMBS>,
-        coefficients: [Uint<COEFFICIENT_LIMBS>; FUNCTION_DEGREE],
+        free_variable: Uint<PLAINTEXT_LIMBS>,
+        coefficients: [Uint<PLAINTEXT_LIMBS>; FUNCTION_DEGREE],
         ciphertexts: [CiphertextSpaceGroupElement; FUNCTION_DEGREE],
-        mask: Option<Uint<MASK_LIMBS>>,
-        randomness: Option<RandomnessSpaceGroupElement>,
+        mask: Uint<MASK_LIMBS>,
+        randomness: RandomnessSpaceGroupElement,
     ) -> Result<CiphertextSpaceGroupElement>;
 
-    fn evaluate_linear_transformation<
-        const FUNCTION_DEGREE: usize,
-        const COEFFICIENT_LIMBS: usize,
-        const MASK_LIMBS: usize,
-    >(
+    fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize, const MASK_LIMBS: usize>(
         &self,
-        free_variable: Uint<COEFFICIENT_LIMBS>,
-        coefficients: [Uint<COEFFICIENT_LIMBS>; FUNCTION_DEGREE],
+        free_variable: Uint<PLAINTEXT_LIMBS>,
+        coefficients: [Uint<PLAINTEXT_LIMBS>; FUNCTION_DEGREE],
         ciphertexts: [CiphertextSpaceGroupElement; FUNCTION_DEGREE],
         rng: &mut impl CryptoRngCore,
     ) -> Result<CiphertextSpaceGroupElement>;
