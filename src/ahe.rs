@@ -1,25 +1,10 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
+mod paillier;
 
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 
 use crate::group::{additive_group_of_integers_modulu_n, GroupElement};
-
-mod paillier;
-
-/// An error in additively homomorphic encryption evaluation
-/// [`AdditivelyHomomorphicEncryptionKey::evaluate_linear_transformation()`]
-#[derive(thiserror::Error, Clone, Debug, PartialEq)]
-pub enum Error {
-    #[error("wrong mask size: the mask size is not of the right size, which might compromise circuit privacy")]
-    WrongMaskSizeError,
-    #[error("oversize mask: the mask is too large to satisfy circuit privacy")]
-    OversizeMaskError,
-}
-
-/// The result of an additively homomorphic encryption evaluation
-/// [`AdditivelyHomomorphicEncryptionKey::evaluate_linear_transformation()`]
-pub type Result<T> = std::result::Result<T, Error>;
 
 type MessageSpaceGroupElement<const LIMBS: usize> =
     additive_group_of_integers_modulu_n::GroupElement<LIMBS>;
@@ -27,6 +12,7 @@ type MessageSpaceGroupElement<const LIMBS: usize> =
 /// An Encryption Key of an Additively Homomorphic Encryption scheme
 pub trait AdditivelyHomomorphicEncryptionKey<
     const PLAINTEXT_LIMBS: usize,
+    const MASK_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
     RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
@@ -66,29 +52,28 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// a_0+\sum_{i=1}^{\ell}{a_i x_i}$ (with $a_i\in\ZZ$ and $\ell,\|a_i\|_2\in\poly(\kappa)$ for
     /// all $0\le i\le \ell$) and $\ell$ ciphertexts $\ct_1,\ldots,\ct_t \in \calC$, $\Eval$
     /// outputs a ciphertext $\ct$.
-    fn evaluate_linear_transformation_with_randomness<
-        const FUNCTION_DEGREE: usize,
-        const MASK_LIMBS: usize,
-    >(
+    fn evaluate_linear_transformation_with_randomness<const FUNCTION_DEGREE: usize>(
         &self,
         free_variable: Uint<PLAINTEXT_LIMBS>,
         coefficients: [Uint<PLAINTEXT_LIMBS>; FUNCTION_DEGREE],
         ciphertexts: [CiphertextSpaceGroupElement; FUNCTION_DEGREE],
         mask: Uint<MASK_LIMBS>,
         randomness: RandomnessSpaceGroupElement,
-    ) -> Result<CiphertextSpaceGroupElement>;
+    ) -> CiphertextSpaceGroupElement;
 
-    fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize, const MASK_LIMBS: usize>(
+    fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize>(
         &self,
         free_variable: Uint<PLAINTEXT_LIMBS>,
         coefficients: [Uint<PLAINTEXT_LIMBS>; FUNCTION_DEGREE],
         ciphertexts: [CiphertextSpaceGroupElement; FUNCTION_DEGREE],
         rng: &mut impl CryptoRngCore,
-    ) -> Result<CiphertextSpaceGroupElement>;
+    ) -> CiphertextSpaceGroupElement;
 }
 
+/// A Decryption Key of an Additively Homomorphic Encryption scheme
 pub trait AdditivelyHomomorphicDecryptionKey<
     const PLAINTEXT_LIMBS: usize,
+    const MASK_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
     RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
@@ -96,6 +81,7 @@ pub trait AdditivelyHomomorphicDecryptionKey<
 >:
     AdditivelyHomomorphicEncryptionKey<
     PLAINTEXT_LIMBS,
+    MASK_LIMBS,
     RANDOMNESS_SPACE_SCALAR_LIMBS,
     CIPHERTEXT_SPACE_SCALAR_LIMBS,
     RandomnessSpaceGroupElement,
