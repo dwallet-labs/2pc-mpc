@@ -25,9 +25,8 @@ pub struct PublicParameters<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     PlaintextSpaceGroupElement,
 > {
-    paillier_modulus: LargeBiPrimeSizedNumber,
-    // TODO: better name? the modulus is N^2 but N is
-    // good enough here.
+    // The Paillier associated bi-prime $N$
+    associated_bi_prime: LargeBiPrimeSizedNumber,
     #[serde(skip_serializing)]
     _plaintext_group_element_choice: PhantomData<PlaintextSpaceGroupElement>,
 }
@@ -69,13 +68,13 @@ where
 
     fn public_parameters(&self) -> Self::PublicParameters {
         Self::PublicParameters {
-            paillier_modulus: self.n,
+            associated_bi_prime: self.n,
             _plaintext_group_element_choice: PhantomData,
         }
     }
 
     fn new(public_parameters: &Self::PublicParameters) -> Self {
-        EncryptionKey::new(public_parameters.paillier_modulus)
+        EncryptionKey::new(public_parameters.associated_bi_prime)
     }
 
     fn encrypt_with_randomness(
