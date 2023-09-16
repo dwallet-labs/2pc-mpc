@@ -16,7 +16,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     PlaintextSpaceGroupElement,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
-> where
+>: PartialEq where
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     RandomnessSpaceGroupElement:
