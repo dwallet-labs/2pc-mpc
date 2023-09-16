@@ -46,7 +46,7 @@ pub struct Language<
     _encryption_key_choice: PhantomData<EncryptionKey>,
 }
 
-/// The Public Parameters of the Commitment of Discrete Log Schnorr Language
+/// The Public Parameters of the Encryption of Discrete Log Schnorr Language
 #[derive(Debug, PartialEq, Serialize)]
 pub struct PublicParameters<
     const MASK_LIMBS: usize,
@@ -190,7 +190,7 @@ where
             GroupElement,
         >,
     > {
-        let (value, randomness): (&Scalar, &RandomnessSpaceGroupElement) = witness.into();
+        let (discrete_log, randomness): (&Scalar, &RandomnessSpaceGroupElement) = witness.into();
 
         let (_, group_public_parameters) = public_value_space_public_parameters.into();
 
@@ -199,26 +199,57 @@ where
             group_public_parameters,
         )?;
 
-        // EncryptionKey
+        let encryption_key =
+            EncryptionKey::new(&language_public_parameters.encryption_key_public_parameters);
 
-        todo!()
-
-        // let commitment_scheme = EncryptionKey::new(
-        //     &language_public_parameters.commitment_scheme_public_parameters,
-        //     &public_value_space_public_parameters.public_parameters,
-        // )?;
-        //
-        // Ok([Encryption_scheme.commit(value, randomness), base * value].into())
+        Ok((
+            encryption_key.encrypt_with_randomness(discrete_log, randomness),
+            base * discrete_log,
+        )
+            .into())
     }
 }
-// /// A Encryption of Discrete Log Schnorr Proof
-// #[allow(dead_code)]
-// pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, EncryptionKey, ProtocolContext> =
-//     schnorr::Proof<
-//         SCALAR_LIMBS,
-//         SCALAR_LIMBS,
-//         self_product_group::GroupElement<2, SCALAR_LIMBS, Scalar>,
-//         self_product_group::GroupElement<2, SCALAR_LIMBS, GroupElement>,
-//         Language<SCALAR_LIMBS, Scalar, GroupElement, EncryptionKey>,
-//         ProtocolContext,
-//     >;
+
+/// An Encryption of Discrete Log Schnorr Proof
+#[allow(dead_code)]
+pub type Proof<
+    const MASK_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
+    const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
+    const WITNESS_SCALAR_LIMBS: usize,
+    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+    Scalar,
+    RandomnessSpaceGroupElement,
+    CiphertextSpaceGroupElement,
+    GroupElement,
+    EncryptionKey,
+    ProtocolContext,
+> = schnorr::Proof<
+    SCALAR_LIMBS,
+    SCALAR_LIMBS,
+    direct_product::GroupElement<
+        SCALAR_LIMBS,
+        RANDOMNESS_SPACE_SCALAR_LIMBS,
+        Scalar,
+        RandomnessSpaceGroupElement,
+    >,
+    direct_product::GroupElement<
+        CIPHERTEXT_SPACE_SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        CiphertextSpaceGroupElement,
+        GroupElement,
+    >,
+    Language<
+        MASK_LIMBS,
+        SCALAR_LIMBS,
+        RANDOMNESS_SPACE_SCALAR_LIMBS,
+        CIPHERTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        RandomnessSpaceGroupElement,
+        CiphertextSpaceGroupElement,
+        GroupElement,
+        EncryptionKey,
+    >,
+    ProtocolContext,
+>;
