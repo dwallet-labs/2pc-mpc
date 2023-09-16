@@ -1,9 +1,9 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto_bigint::{rand_core::CryptoRngCore, Uint};
+use crypto_bigint::{rand_core::CryptoRngCore, Random, Uint};
 
-use crate::group::{GroupElement, KnownOrderGroupElement};
+use crate::group::{GroupElement, KnownOrderGroupElement, Samplable};
 
 /// An Encryption Key of an Additively Homomorphic Encryption scheme
 pub trait AdditivelyHomomorphicEncryptionKey<
@@ -17,7 +17,8 @@ pub trait AdditivelyHomomorphicEncryptionKey<
 > where
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
-    RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
+    RandomnessSpaceGroupElement:
+        GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
 {
     /// $\Enc(pk, \pt; \eta_{\sf enc}) \to \ct$: Encrypt `plaintext` to `self` using
@@ -41,8 +42,16 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     fn encrypt(
         &self,
         plaintext: &PlaintextSpaceGroupElement,
+        randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
         rng: &mut impl CryptoRngCore,
-    ) -> CiphertextSpaceGroupElement;
+    ) -> (RandomnessSpaceGroupElement, CiphertextSpaceGroupElement) {
+        let randomness =
+            RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters);
+
+        let ciphertext = self.encrypt_with_randomness(plaintext, &randomness);
+
+        (randomness, ciphertext)
+    }
 
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
     /// affine function defined by `free_variable` and `coefficients` on `ciphertexts`; to
@@ -67,8 +76,28 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         free_variable: &PlaintextSpaceGroupElement,
         coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
         ciphertexts: &[CiphertextSpaceGroupElement; FUNCTION_DEGREE],
+        randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
         rng: &mut impl CryptoRngCore,
-    ) -> CiphertextSpaceGroupElement;
+    ) -> (
+        Uint<MASK_LIMBS>,
+        RandomnessSpaceGroupElement,
+        CiphertextSpaceGroupElement,
+    ) {
+        let mask = Uint::<MASK_LIMBS>::random(rng);
+
+        let randomness =
+            RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters);
+
+        let evaluated_ciphertext = self.evaluate_linear_transformation_with_randomness(
+            free_variable,
+            coefficients,
+            ciphertexts,
+            &mask,
+            &randomness,
+        );
+
+        (mask, randomness, evaluated_ciphertext)
+    }
 }
 
 /// A Decryption Key of an Additively Homomorphic Encryption scheme
@@ -92,7 +121,8 @@ pub trait AdditivelyHomomorphicDecryptionKey<
 > where
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
-    RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
+    RandomnessSpaceGroupElement:
+        GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
 {
     /// $\Dec(sk, \ct) \to \pt$: Decrypt `ciphertext` using `decryption_key`.
