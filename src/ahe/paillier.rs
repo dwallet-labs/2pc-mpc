@@ -54,7 +54,7 @@ where
 {
     fn encrypt_with_randomness(
         &self,
-        plaintext: PlaintextSpaceGroupElement,
+        plaintext: &PlaintextSpaceGroupElement,
         randomness: &RandomnessGroupElement,
     ) -> CiphertextGroupElement {
         // safe to `unwrap()` here, as encryption always returns a valid element in the
@@ -72,7 +72,7 @@ where
 
     fn encrypt(
         &self,
-        plaintext: PlaintextSpaceGroupElement,
+        plaintext: &PlaintextSpaceGroupElement,
         rng: &mut impl CryptoRngCore,
     ) -> CiphertextGroupElement {
         CiphertextGroupElement::new(
@@ -96,7 +96,7 @@ where
         let masking_encryption_of_free_variable =
             AdditivelyHomomorphicEncryptionKey::encrypt_with_randomness(
                 self,
-                free_variable,
+                &free_variable,
                 &randomness,
             );
 
