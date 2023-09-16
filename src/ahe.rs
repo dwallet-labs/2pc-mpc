@@ -3,7 +3,6 @@
 
 use crypto_bigint::{rand_core::CryptoRngCore, Random, Uint};
 use serde::{Deserialize, Serialize};
-use tiresias::EncryptionKey;
 
 use crate::group::{GroupElement, KnownOrderGroupElement, Samplable};
 
