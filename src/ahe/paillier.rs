@@ -1,11 +1,14 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::marker::PhantomData;
+
 use crypto_bigint::{ConcatMixed, Uint, U64};
 use group::{
     multiplicative_group_of_integers_modulu_n,
     paillier::{CiphertextGroupElement, RandomnessGroupElement},
 };
+use serde::{Deserialize, Serialize};
 use tiresias::{DecryptionKey, EncryptionKey, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 
 use crate::{
@@ -14,6 +17,19 @@ use crate::{
     AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
     StatisticalSecuritySizedNumber,
 };
+
+/// The Public Parameters of the Paillier Additively Homomorphic Encryption Scheme
+#[derive(PartialEq, Clone, Serialize, Deserialize)]
+pub struct PublicParameters<
+    const MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    PlaintextSpaceGroupElement,
+> {
+    paillier_modulus: LargeBiPrimeSizedNumber,
+
+    #[serde(skip_serializing)]
+    _plaintext_group_element_choice: PhantomData<PlaintextSpaceGroupElement>,
+}
 
 /// Emulate an additively homomorphic encryption with `PlaintextSpaceGroupElement` as the plaintext
 /// group using the Paillier encryption scheme.
@@ -47,6 +63,9 @@ where
         MixedOutput = Uint<MASK_LIMBS>,
     >,
 {
+    type PublicParameters =
+        PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>;
+
     fn encrypt_with_randomness(
         &self,
         plaintext: &PlaintextSpaceGroupElement,
@@ -133,6 +152,9 @@ where
         MixedOutput = Uint<MASK_LIMBS>,
     >,
 {
+    type PublicParameters =
+        PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>;
+
     fn encrypt_with_randomness(
         &self,
         plaintext: &PlaintextSpaceGroupElement,
@@ -193,6 +215,9 @@ where
         MixedOutput = Uint<MASK_LIMBS>,
     >,
 {
+    type PublicParameters =
+        PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>;
+
     fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextSpaceGroupElement {
         self.decrypt(&ciphertext.into()).into()
     }
