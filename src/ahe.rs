@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::group::{GroupElement, KnownOrderGroupElement, Samplable};
 
-/// An Encryption Key of an Additively Homomorphic Encryption scheme
+/// An Encryption Key of an Additively Homomorphic Encryption scheme.
 pub trait AdditivelyHomomorphicEncryptionKey<
     const MASK_LIMBS: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
