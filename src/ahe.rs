@@ -45,11 +45,13 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         plaintext: &PlaintextSpaceGroupElement,
         randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
         rng: &mut impl CryptoRngCore,
-    ) -> CiphertextSpaceGroupElement {
+    ) -> (RandomnessSpaceGroupElement, CiphertextSpaceGroupElement) {
         let randomness =
             RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters);
 
-        self.encrypt_with_randomness(plaintext, &randomness)
+        let ciphertext = self.encrypt_with_randomness(plaintext, &randomness);
+
+        (randomness, ciphertext)
     }
 
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
@@ -77,19 +79,25 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         ciphertexts: &[CiphertextSpaceGroupElement; FUNCTION_DEGREE],
         randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
         rng: &mut impl CryptoRngCore,
-    ) -> CiphertextSpaceGroupElement {
+    ) -> (
+        Uint<MASK_LIMBS>,
+        RandomnessSpaceGroupElement,
+        CiphertextSpaceGroupElement,
+    ) {
         let mask = Uint::<MASK_LIMBS>::random(rng);
 
         let randomness =
             RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters);
 
-        self.evaluate_linear_transformation_with_randomness(
+        let evaluated_ciphertext = self.evaluate_linear_transformation_with_randomness(
             free_variable,
             coefficients,
             ciphertexts,
             &mask,
             &randomness,
-        )
+        );
+
+        (mask, randomness, evaluated_ciphertext)
     }
 }
 
