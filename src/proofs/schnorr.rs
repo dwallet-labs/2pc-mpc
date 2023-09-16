@@ -5,8 +5,8 @@ pub mod commitment_of_discrete_log;
 
 pub mod knowledge_of_discrete_log;
 
-pub mod encryption_of_discrete_log;
 pub mod committed_affine_evaluation;
+pub mod encryption_of_discrete_log;
 pub mod knowledge_of_decommitment;
 
 use std::marker::PhantomData;
