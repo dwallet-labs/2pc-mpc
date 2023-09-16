@@ -59,7 +59,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         free_variable: &PlaintextSpaceGroupElement,
         coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
         ciphertexts: &[CiphertextSpaceGroupElement; FUNCTION_DEGREE],
-        mask: Uint<MASK_LIMBS>,
+        mask: &Uint<MASK_LIMBS>,
         randomness: &RandomnessSpaceGroupElement,
     ) -> CiphertextSpaceGroupElement;
 
