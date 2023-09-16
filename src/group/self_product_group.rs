@@ -11,21 +11,24 @@ use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
 use crate::{
-    group, group::GroupElement as GroupElementTrait, helpers::const_generic_array_serialization,
-    traits::Samplable,
+    group,
+    group::{GroupElement as GroupElementTrait, Samplable},
+    helpers::const_generic_array_serialization,
 };
 
 /// An element of the Self Product of the Group `G` by Itself.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct GroupElement<const N: usize, const SCALAR_LIMBS: usize, G>([G; N]);
 
-impl<const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMBS>> Samplable
-    for GroupElement<N, SCALAR_LIMBS, G>
+impl<const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMBS>>
+    Samplable<SCALAR_LIMBS> for GroupElement<N, SCALAR_LIMBS, G>
 where
-    G: Samplable,
+    G: Samplable<SCALAR_LIMBS>,
 {
-    fn sample(rng: &mut impl CryptoRngCore) -> Self {
-        Self(array::from_fn(|_| G::sample(rng)))
+    fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> Self {
+        Self(array::from_fn(|_| {
+            G::sample(rng, &public_parameters.public_parameters)
+        }))
     }
 }
 

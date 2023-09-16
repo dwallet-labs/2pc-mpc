@@ -1,7 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, Random, Uint, U64};
+use crypto_bigint::{ConcatMixed, Uint, U64};
 use group::{
     multiplicative_group_of_integers_modulu_n,
     paillier::{CiphertextGroupElement, RandomnessGroupElement},
@@ -62,18 +62,6 @@ where
         .unwrap()
     }
 
-    fn encrypt(
-        &self,
-        plaintext: &PlaintextSpaceGroupElement,
-        rng: &mut impl CryptoRngCore,
-    ) -> CiphertextGroupElement {
-        CiphertextGroupElement::new(
-            self.encrypt(&(&plaintext.value()).into(), rng),
-            &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2),
-        )
-        .unwrap()
-    }
-
     fn evaluate_linear_transformation_with_randomness<const FUNCTION_DEGREE: usize>(
         &self,
         free_variable: &PlaintextSpaceGroupElement,
@@ -113,36 +101,6 @@ where
         coefficients.iter().zip(ciphertexts.iter()).fold(
             masking_encryption_of_free_variable,
             |curr, (coefficient, ciphertext)| curr + ciphertext.scalar_mul(&coefficient.value()),
-        )
-    }
-
-    fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize>(
-        &self,
-        free_variable: &PlaintextSpaceGroupElement,
-        coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
-        ciphertexts: &[CiphertextGroupElement; FUNCTION_DEGREE],
-        rng: &mut impl CryptoRngCore,
-    ) -> CiphertextGroupElement {
-        let mask = Uint::<MASK_LIMBS>::random(rng);
-
-        // In Paillier, it is actually statistically insignificant to randomly generate an invalid
-        // element of the randomness group. We perform the check anyways to be 100% safe, since it
-        // is a cheap check that will succeed on the first iteration with overwhalming odds.
-        let randomness = loop {
-            if let Ok(randomness) = RandomnessGroupElement::new(
-                LargeBiPrimeSizedNumber::random(rng),
-                &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n),
-            ) {
-                break randomness;
-            }
-        };
-
-        self.evaluate_linear_transformation_with_randomness(
-            free_variable,
-            coefficients,
-            ciphertexts,
-            &mask,
-            &randomness,
         )
     }
 }
@@ -187,14 +145,6 @@ where
         )
     }
 
-    fn encrypt(
-        &self,
-        plaintext: &PlaintextSpaceGroupElement,
-        rng: &mut impl CryptoRngCore,
-    ) -> CiphertextGroupElement {
-        AdditivelyHomomorphicEncryptionKey::encrypt(&self.encryption_key, plaintext, rng)
-    }
-
     fn evaluate_linear_transformation_with_randomness<const FUNCTION_DEGREE: usize>(
         &self,
         free_variable: &PlaintextSpaceGroupElement,
@@ -210,22 +160,6 @@ where
             ciphertexts,
             mask,
             randomness,
-        )
-    }
-
-    fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize>(
-        &self,
-        free_variable: &PlaintextSpaceGroupElement,
-        coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
-        ciphertexts: &[CiphertextGroupElement; FUNCTION_DEGREE],
-        rng: &mut impl CryptoRngCore,
-    ) -> CiphertextGroupElement {
-        AdditivelyHomomorphicEncryptionKey::evaluate_linear_transformation(
-            &self.encryption_key,
-            free_variable,
-            coefficients,
-            ciphertexts,
-            rng,
         )
     }
 }
