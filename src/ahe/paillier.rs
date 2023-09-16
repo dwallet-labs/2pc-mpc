@@ -137,75 +137,6 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         PlaintextSpaceGroupElement,
     >
-    AdditivelyHomomorphicEncryptionKey<
-        MASK_LIMBS,
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        { LargeBiPrimeSizedNumber::LIMBS },
-        { PaillierModulusSizedNumber::LIMBS },
-        PlaintextSpaceGroupElement,
-        RandomnessGroupElement,
-        CiphertextGroupElement,
-    > for DecryptionKey
-where
-    PlaintextSpaceGroupElement: KnownOrderGroupElement<
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        PlaintextSpaceGroupElement,
-        Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    >,
-    // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
-    // plaintext concated with the statistical security parameter contacted with a U64 (which is a
-    // bound on the log of FUNCTION_DEGREE)
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: ConcatMixed<
-        <StatisticalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput,
-        MixedOutput = Uint<MASK_LIMBS>,
-    >,
-{
-    type PublicParameters =
-        PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>;
-
-    fn public_parameters(&self) -> Self::PublicParameters {
-        Self::PublicParameters {
-            paillier_modulus: self.encryption_key.n,
-            _plaintext_group_element_choice: PhantomData,
-        }
-    }
-
-    fn encrypt_with_randomness(
-        &self,
-        plaintext: &PlaintextSpaceGroupElement,
-        randomness: &RandomnessGroupElement,
-    ) -> CiphertextGroupElement {
-        AdditivelyHomomorphicEncryptionKey::encrypt_with_randomness(
-            &self.encryption_key,
-            plaintext,
-            randomness,
-        )
-    }
-
-    fn evaluate_linear_transformation_with_randomness<const FUNCTION_DEGREE: usize>(
-        &self,
-        free_variable: &PlaintextSpaceGroupElement,
-        coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
-        ciphertexts: &[CiphertextGroupElement; FUNCTION_DEGREE],
-        mask: &Uint<MASK_LIMBS>,
-        randomness: &RandomnessGroupElement,
-    ) -> CiphertextGroupElement {
-        AdditivelyHomomorphicEncryptionKey::evaluate_linear_transformation_with_randomness(
-            &self.encryption_key,
-            free_variable,
-            coefficients,
-            ciphertexts,
-            mask,
-            randomness,
-        )
-    }
-}
-
-impl<
-        const MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        PlaintextSpaceGroupElement,
-    >
     AdditivelyHomomorphicDecryptionKey<
         MASK_LIMBS,
         PLAINTEXT_SPACE_SCALAR_LIMBS,
@@ -214,6 +145,7 @@ impl<
         PlaintextSpaceGroupElement,
         RandomnessGroupElement,
         CiphertextGroupElement,
+        EncryptionKey,
     > for DecryptionKey
 where
     PlaintextSpaceGroupElement: KnownOrderGroupElement<
