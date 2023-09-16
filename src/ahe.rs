@@ -3,6 +3,7 @@
 mod paillier;
 
 use crypto_bigint::{rand_core::CryptoRngCore, Random, Uint};
+use serde::{Deserialize, Serialize};
 
 use crate::group::{GroupElement, KnownOrderGroupElement, Samplable};
 
@@ -22,6 +23,20 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
 {
+    /// The public parameters of the encryption scheme.
+    ///
+    /// Used for encryption-specific parameters (e.g., the modulus $N$ in case of Paillier.)
+    ///
+    /// Group public parameters are encoded separately in
+    /// `PlaintextSpaceGroupElement::PublicParameters`,
+    /// `RandomnessSpaceGroupElement::PublicParameters`
+    /// `CiphertextSpaceGroupElement::PublicParameters`.
+    ///
+    /// Used in [`Self::encrypt()`] to define the encryption algorithm.
+    /// As such, it uniquely identifies the encryption-scheme (alongside the type `Self`) and will
+    /// be used for Fiat-Shamir Transcripts).
+    type PublicParameters: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq;
+
     /// $\Enc(pk, \pt; \eta_{\sf enc}) \to \ct$: Encrypt `plaintext` to `self` using
     /// `randomness`.
     ///
