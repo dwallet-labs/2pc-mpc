@@ -87,26 +87,26 @@ pub struct Proof<
 }
 
 impl<
-    const WITNESS_SCALAR_LIMBS: usize,
-    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
-    PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
-    Lang: Language<
+        const WITNESS_SCALAR_LIMBS: usize,
+        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+        WitnessSpaceGroupElement: Samplable<WITNESS_SCALAR_LIMBS>,
+        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+        Lang: Language<
+            WITNESS_SCALAR_LIMBS,
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            WitnessSpaceGroupElement,
+            PublicValueSpaceGroupElement,
+        >,
+        ProtocolContext: Serialize,
+    >
+    Proof<
         WITNESS_SCALAR_LIMBS,
         PUBLIC_VALUE_SCALAR_LIMBS,
         WitnessSpaceGroupElement,
         PublicValueSpaceGroupElement,
-    >,
-    ProtocolContext: Serialize,
->
-Proof<
-    WITNESS_SCALAR_LIMBS,
-    PUBLIC_VALUE_SCALAR_LIMBS,
-    WitnessSpaceGroupElement,
-    PublicValueSpaceGroupElement,
-    Lang,
-    ProtocolContext,
->
+        Lang,
+        ProtocolContext,
+    >
 {
     fn new(
         statement_mask: PublicValueSpaceGroupElement,
@@ -169,11 +169,11 @@ Proof<
         // We leave that as future work in case this becomes a bottleneck.
         let response = randomizer
             + witnesses
-            .into_iter()
-            .zip(challenges)
-            .map(|(witness, challenge)| witness.scalar_mul(&challenge))
-            .reduce(|a, b| a + b)
-            .unwrap();
+                .into_iter()
+                .zip(challenges)
+                .map(|(witness, challenge)| witness.scalar_mul(&challenge))
+                .reduce(|a, b| a + b)
+                .unwrap();
 
         Ok(Self::new(statement_mask, response))
     }
@@ -217,11 +217,11 @@ Proof<
 
         let reconstructed_response_statement: PublicValueSpaceGroupElement = statement_mask
             + statements
-            .into_iter()
-            .zip(challenges)
-            .map(|(statement, challenge)| statement.scalar_mul(&challenge))
-            .reduce(|a, b| a + b)
-            .unwrap();
+                .into_iter()
+                .zip(challenges)
+                .map(|(statement, challenge)| statement.scalar_mul(&challenge))
+                .reduce(|a, b| a + b)
+                .unwrap();
 
         if response_statement == reconstructed_response_statement {
             return Ok(());
