@@ -1,8 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::process::Output;
-
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
     rand_core::CryptoRngCore,
@@ -42,15 +40,14 @@ impl<
 where
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<PlaintextSpaceGroupElement>,
-    // to ensure circuit-privacy:
-    // First, assure that the statistical security (currently configured to U64, code would break
-    // and require changes if it will change) contacted with a U64 which is a bound on the log of
-    // FUNCTION_DEGREE
-    StatisticalSecuritySizedNumber: ConcatMixed<U64, MixedOutput = U128>,
-    // Second, assure that MASK_LIMBS is PLAINTEXT_SPACE_SCALAR_LIMBS +
-    // StatisticalSecuritySizedNumber + U64 = PLAINTEXT_SPACE_SCALAR_LIMBS + U128
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: ConcatMixed<U128, MixedOutput = Uint<MASK_LIMBS>>,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+    // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
+    // plaintext concated with the statistical security parameter contacted with a U64 (which is a
+    // bound on the log of FUNCTION_DEGREE)
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: ConcatMixed<
+        <StatisticalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput,
+        MixedOutput = Uint<MASK_LIMBS>,
+    >,
 {
     fn encrypt_with_randomness(
         &self,
@@ -90,26 +87,57 @@ where
         free_variable: &PlaintextSpaceGroupElement,
         coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
         ciphertexts: &[CiphertextGroupElement; FUNCTION_DEGREE],
-        mask: Uint<MASK_LIMBS>,
+        mask: &Uint<MASK_LIMBS>,
         randomness: &RandomnessGroupElement,
     ) -> CiphertextGroupElement {
-        let masking_encryption_of_free_variable =
-            AdditivelyHomomorphicEncryptionKey::encrypt_with_randomness(
-                self,
-                &free_variable,
-                &randomness,
-            );
+        // Compute:
+        //
+        // $\ct = \Enc(pk,a_0 + \omega q; \eta) \bigoplus_{i=1}^\ell \left(  a_i \odot \ct_i
+        // \right)$
+        //
+        // Which is the affine evaluation masked by an encryption of a masked
+        // multiplication of the order $q$ using fresh randomness.
+        //
+        // This method ensures circuit privacy.
 
-        todo!()
+        // TODO: assure bound computations are correct.
+        let plaintext_order = LargeBiPrimeSizedNumber::from(&free_variable.order());
+        let free_variable = LargeBiPrimeSizedNumber::from(
+            &Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(free_variable),
+        );
+
+        // \Enc(pk,a_0 + \omega q; \eta): An encryption of the free variable with fresh randomness
+        // and a masked multiplication of the order $q$ (the free variable is added here instead of
+        // in the affine evaluation below)
+        let masking_encryption_of_free_variable = CiphertextGroupElement::new(
+            self.encrypt_with_randomness(
+                &free_variable.wrapping_add(
+                    &LargeBiPrimeSizedNumber::from(mask).wrapping_mul(&plaintext_order),
+                ),
+                &randomness.into(),
+            ),
+            &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2),
+        )
+        .unwrap();
+
+        coefficients.iter().zip(ciphertexts.iter()).fold(
+            masking_encryption_of_free_variable,
+            |curr, (coefficient, ciphertext)| {
+                curr + ciphertext
+                    .scalar_mul(&Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(coefficient))
+            },
+        )
     }
 
     fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize>(
         &self,
-        free_variable: PlaintextSpaceGroupElement,
-        coefficients: [PlaintextSpaceGroupElement; FUNCTION_DEGREE],
-        ciphertexts: [CiphertextGroupElement; FUNCTION_DEGREE],
+        free_variable: &PlaintextSpaceGroupElement,
+        coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
+        ciphertexts: &[CiphertextGroupElement; FUNCTION_DEGREE],
         rng: &mut impl CryptoRngCore,
     ) -> CiphertextGroupElement {
+        let randomness = RandomnessGroupElement::sample(rng);
+
         todo!()
     }
 }
