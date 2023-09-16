@@ -4,7 +4,7 @@
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
     rand_core::CryptoRngCore,
-    ConcatMixed, NonZero, Uint, U128, U64,
+    ConcatMixed, NonZero, Random, Uint, U128, U64,
 };
 use group::{
     multiplicative_group_of_integers_modulu_n,
@@ -136,141 +136,145 @@ where
         ciphertexts: &[CiphertextGroupElement; FUNCTION_DEGREE],
         rng: &mut impl CryptoRngCore,
     ) -> CiphertextGroupElement {
-        let randomness = RandomnessGroupElement::sample(rng);
+        let mask = Uint::<MASK_LIMBS>::random(rng);
 
-        todo!()
+        // In Paillier, it is actually statistically insignificant to randomly generate an invalid
+        // element of the randomness group. We perform the check anyways to be 100% safe, since it
+        // is a cheap check that will succeed on the first iteration with overwhalming odds.
+        let randomness = loop {
+            if let Ok(randomness) = RandomnessGroupElement::new(
+                LargeBiPrimeSizedNumber::random(rng),
+                &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n),
+            ) {
+                break randomness;
+            }
+        };
+
+        self.evaluate_linear_transformation_with_randomness(
+            free_variable,
+            coefficients,
+            ciphertexts,
+            &mask,
+            &randomness,
+        )
     }
 }
 
-// impl
-//     AdditivelyHomomorphicEncryptionKey<
-//         { LargeBiPrimeSizedNumber::LIMBS },
-//         { LargeBiPrimeSizedNumber::LIMBS },
-//         { PaillierModulusSizedNumber::LIMBS },
-//         RandomnessGroupElement,
-//         CiphertextGroupElement,
-//     > for EncryptionKey
-// {
-//     fn encrypt_with_randomness(
-//         &self,
-//         plaintext: MessageGroupElement,
-//         randomness: &RandomnessGroupElement,
-//     ) -> CiphertextGroupElement { // TODO: this can be optimized by returning DynResidue from
-//       tiresias function
-//
-//         // safe to `unwrap()` here, as encryption always returns a valid element in the
-//         // ciphertext group
-//         CiphertextGroupElement::new(
-//             self.encrypt_with_randomness(&plaintext.retrieve(), &randomness.into()),
-//             &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2),
-//         )
-//         .unwrap()
-//     }
-//
-//     fn encrypt(
-//         &self,
-//         plaintext: MessageGroupElement,
-//         rng: &mut impl CryptoRngCore,
-//     ) -> CiphertextGroupElement { // safe to `unwrap()` here, as encryption always returns a
-//       valid element in the // ciphertext group CiphertextGroupElement::new(
-//       self.encrypt(&plaintext.retrieve(), rng),
-//       &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2), ) .unwrap()
-//     }
-//
-//     fn evaluate_linear_transformation_with_randomness<
-//         const FUNCTION_DEGREE: usize,
-//         const MASK_LIMBS: usize,
-//     >(
-//         &self,
-//         free_variable: PlaintextSpaceGroupElement,
-//         coefficients: [PlaintextSpaceGroupElement; FUNCTION_DEGREE],
-//         ciphertexts: [CiphertextGroupElement; FUNCTION_DEGREE],
-//         mask: Uint<MASK_LIMBS>,
-//         randomness: RandomnessGroupElement,
-//     ) -> Result<CiphertextGroupElement> { // The check (Dolev): MASK_LIMBS = LOG_FUNCTION_DEGREE
-//       + LOG_ORDER (rounded up) + // STATISTICAL_SECURITY_PARAMETER then this needs to be sampled
-//       uniformly
-//
-//         // also check that MASK_LIMBS < LargeBiPrimeSizedNumber::LIMBS
-//         // maybe check that in new, or statically
-//
-//         // do wrapped mul, add but with U2048.
-//
-//         // if MASK_LIMBS >= LargeBiPrimeSizedNumber::LIMBS {
-//         //     return Err(Error::);
-//         // }
-//         //
-//         // todo!()
-//     }
-//
-//     fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize, const MASK_LIMBS: usize>(
-//         &self,
-//         free_variable: PlaintextSpaceGroupElement,
-//         coefficients: [Uint<PLAINTEXT_LIMBS>; FUNCTION_DEGREE],
-//         ciphertexts: [CiphertextGroupElement; FUNCTION_DEGREE],
-//         rng: &mut impl CryptoRngCore,
-//     ) -> Result<CiphertextGroupElement> { todo!()
-//     }
-// }
-//
-// impl
-//     AdditivelyHomomorphicEncryptionKey<
-//         { LargeBiPrimeSizedNumber::LIMBS },
-//         { LargeBiPrimeSizedNumber::LIMBS },
-//         { PaillierModulusSizedNumber::LIMBS },
-//         RandomnessGroupElement,
-//         CiphertextGroupElement,
-//     > for DecryptionKey
-// {
-//     fn encrypt_with_randomness(
-//         &self,
-//         plaintext: MessageGroupElement,
-//         randomness: &RandomnessGroupElement,
-//     ) -> CiphertextGroupElement { AdditivelyHomomorphicEncryptionKey::encrypt_with_randomness(
-//       &self.encryption_key, plaintext, randomness, )
-//     }
-//
-//     fn encrypt(
-//         &self,
-//         plaintext: MessageGroupElement,
-//         rng: &mut impl CryptoRngCore,
-//     ) -> CiphertextGroupElement {
-//       AdditivelyHomomorphicEncryptionKey::encrypt(&self.encryption_key, plaintext, rng)
-//     }
-//
-//     fn evaluate_linear_transformation_with_randomness<
-//         const FUNCTION_DEGREE: usize,
-//         const COEFFICIENT_LIMBS: usize,
-//         const MASK_LIMBS: usize,
-//     >(
-//         &self,
-//         free_variable: Uint<COEFFICIENT_LIMBS>,
-//         coefficients: [Uint<COEFFICIENT_LIMBS>; FUNCTION_DEGREE],
-//         ciphertexts: [CiphertextGroupElement; FUNCTION_DEGREE],
-//         mask: Uint<MASK_LIMBS>,
-//         randomness: RandomnessGroupElement,
-//     ) -> Result<CiphertextGroupElement> {
-//       AdditivelyHomomorphicEncryptionKey::evaluate_linear_transformation_with_randomness(
-//       &self.encryption_key, free_variable, coefficients, ciphertexts, mask, randomness, )
-//     }
-//
-//     fn evaluate_linear_transformation<
-//         const FUNCTION_DEGREE: usize,
-//         const COEFFICIENT_LIMBS: usize,
-//         const MASK_LIMBS: usize,
-//     >(
-//         &self,
-//         free_variable: Uint<COEFFICIENT_LIMBS>,
-//         coefficients: [Uint<COEFFICIENT_LIMBS>; FUNCTION_DEGREE],
-//         ciphertexts: [CiphertextGroupElement; FUNCTION_DEGREE],
-//         rng: &mut impl CryptoRngCore,
-//     ) -> Result<CiphertextGroupElement> {
-//       AdditivelyHomomorphicEncryptionKey::evaluate_linear_transformation::< FUNCTION_DEGREE,
-//       COEFFICIENT_LIMBS, MASK_LIMBS, >( &self.encryption_key, free_variable, coefficients,
-//       ciphertexts, rng, )
-//     }
-// }
-//
+impl<
+        const MASK_LIMBS: usize,
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        PlaintextSpaceGroupElement,
+    >
+    AdditivelyHomomorphicEncryptionKey<
+        MASK_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        { LargeBiPrimeSizedNumber::LIMBS },
+        { PaillierModulusSizedNumber::LIMBS },
+        PlaintextSpaceGroupElement,
+        RandomnessGroupElement,
+        CiphertextGroupElement,
+    > for DecryptionKey
+where
+    PlaintextSpaceGroupElement:
+        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+    // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
+    // plaintext concated with the statistical security parameter contacted with a U64 (which is a
+    // bound on the log of FUNCTION_DEGREE)
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: ConcatMixed<
+        <StatisticalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput,
+        MixedOutput = Uint<MASK_LIMBS>,
+    >,
+{
+    fn encrypt_with_randomness(
+        &self,
+        plaintext: &PlaintextSpaceGroupElement,
+        randomness: &RandomnessGroupElement,
+    ) -> CiphertextGroupElement {
+        AdditivelyHomomorphicEncryptionKey::encrypt_with_randomness(
+            &self.encryption_key,
+            plaintext,
+            randomness,
+        )
+    }
+
+    fn encrypt(
+        &self,
+        plaintext: &PlaintextSpaceGroupElement,
+        rng: &mut impl CryptoRngCore,
+    ) -> CiphertextGroupElement {
+        AdditivelyHomomorphicEncryptionKey::encrypt(&self.encryption_key, plaintext, rng)
+    }
+
+    fn evaluate_linear_transformation_with_randomness<const FUNCTION_DEGREE: usize>(
+        &self,
+        free_variable: &PlaintextSpaceGroupElement,
+        coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
+        ciphertexts: &[CiphertextGroupElement; FUNCTION_DEGREE],
+        mask: &Uint<MASK_LIMBS>,
+        randomness: &RandomnessGroupElement,
+    ) -> CiphertextGroupElement {
+        AdditivelyHomomorphicEncryptionKey::evaluate_linear_transformation_with_randomness(
+            &self.encryption_key,
+            free_variable,
+            coefficients,
+            ciphertexts,
+            mask,
+            randomness,
+        )
+    }
+
+    fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize>(
+        &self,
+        free_variable: &PlaintextSpaceGroupElement,
+        coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
+        ciphertexts: &[CiphertextGroupElement; FUNCTION_DEGREE],
+        rng: &mut impl CryptoRngCore,
+    ) -> CiphertextGroupElement {
+        AdditivelyHomomorphicEncryptionKey::evaluate_linear_transformation(
+            &self.encryption_key,
+            free_variable,
+            coefficients,
+            ciphertexts,
+            rng,
+        )
+    }
+}
+
+impl<
+        const MASK_LIMBS: usize,
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        PlaintextSpaceGroupElement,
+    >
+    AdditivelyHomomorphicDecryptionKey<
+        MASK_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        { LargeBiPrimeSizedNumber::LIMBS },
+        { PaillierModulusSizedNumber::LIMBS },
+        PlaintextSpaceGroupElement,
+        RandomnessGroupElement,
+        CiphertextGroupElement,
+    > for DecryptionKey
+where
+    PlaintextSpaceGroupElement:
+        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+    // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
+    // plaintext concated with the statistical security parameter contacted with a U64 (which is a
+    // bound on the log of FUNCTION_DEGREE)
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: ConcatMixed<
+        <StatisticalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput,
+        MixedOutput = Uint<MASK_LIMBS>,
+    >,
+{
+    fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextSpaceGroupElement {
+        PlaintextSpaceGroupElement::new()
+            &self.decrypt(&ciphertext.into()),
+        // todo
+        )
+    }
+}
+
 // impl
 //     AdditivelyHomomorphicDecryptionKey<
 //         { LargeBiPrimeSizedNumber::LIMBS },
