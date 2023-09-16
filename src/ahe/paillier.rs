@@ -267,10 +267,8 @@ where
         ciphertext: &CiphertextGroupElement,
         plaintext_group_public_parameters: &PlaintextSpaceGroupElement::PublicParameters,
     ) -> PlaintextSpaceGroupElement {
-        let plaintext_order = LargeBiPrimeSizedNumber::from(&free_variable.order());
-
         PlaintextSpaceGroupElement::new(
-            self.decrypt(&ciphertext.into()) % NonZero::new(plaintext_order).unwrap(),
+            self.decrypt(&ciphertext.into()),
             plaintext_group_public_parameters,
         )
         .unwrap()
