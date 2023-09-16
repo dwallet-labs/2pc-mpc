@@ -38,9 +38,11 @@ impl<
         CiphertextGroupElement,
     > for EncryptionKey
 where
-    PlaintextSpaceGroupElement:
-        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+    PlaintextSpaceGroupElement: KnownOrderGroupElement<
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        PlaintextSpaceGroupElement,
+        Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    >,
     // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
     // plaintext concated with the statistical security parameter contacted with a U64 (which is a
     // bound on the log of FUNCTION_DEGREE)
@@ -58,10 +60,7 @@ where
         // ciphertext group
 
         CiphertextGroupElement::new(
-            self.encrypt_with_randomness(
-                &(&Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(plaintext)).into(),
-                &randomness.into(),
-            ),
+            self.encrypt_with_randomness(&(&plaintext.value()).into(), &randomness.into()),
             &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2),
         )
         .unwrap()
@@ -73,10 +72,7 @@ where
         rng: &mut impl CryptoRngCore,
     ) -> CiphertextGroupElement {
         CiphertextGroupElement::new(
-            self.encrypt(
-                &(&Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(plaintext)).into(),
-                rng,
-            ),
+            self.encrypt(&(&plaintext.value()).into(), rng),
             &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2),
         )
         .unwrap()
@@ -102,9 +98,7 @@ where
 
         // TODO: assure bound computations are correct.
         let plaintext_order = LargeBiPrimeSizedNumber::from(&free_variable.order());
-        let free_variable = LargeBiPrimeSizedNumber::from(
-            &Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(free_variable),
-        );
+        let free_variable = LargeBiPrimeSizedNumber::from(&free_variable.value());
 
         // \Enc(pk,a_0 + \omega q; \eta): An encryption of the free variable with fresh randomness
         // and a masked multiplication of the order $q$ (the free variable is added here instead of
@@ -122,10 +116,7 @@ where
 
         coefficients.iter().zip(ciphertexts.iter()).fold(
             masking_encryption_of_free_variable,
-            |curr, (coefficient, ciphertext)| {
-                curr + ciphertext
-                    .scalar_mul(&Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(coefficient))
-            },
+            |curr, (coefficient, ciphertext)| curr + ciphertext.scalar_mul(&coefficient.value()),
         )
     }
 
@@ -175,9 +166,11 @@ impl<
         CiphertextGroupElement,
     > for DecryptionKey
 where
-    PlaintextSpaceGroupElement:
-        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+    PlaintextSpaceGroupElement: KnownOrderGroupElement<
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        PlaintextSpaceGroupElement,
+        Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    >,
     // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
     // plaintext concated with the statistical security parameter contacted with a U64 (which is a
     // bound on the log of FUNCTION_DEGREE)
@@ -256,9 +249,11 @@ impl<
         CiphertextGroupElement,
     > for DecryptionKey
 where
-    PlaintextSpaceGroupElement:
-        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+    PlaintextSpaceGroupElement: KnownOrderGroupElement<
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        PlaintextSpaceGroupElement,
+        Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    >,
     // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
     // plaintext concated with the statistical security parameter contacted with a U64 (which is a
     // bound on the log of FUNCTION_DEGREE)
@@ -267,30 +262,17 @@ where
         MixedOutput = Uint<MASK_LIMBS>,
     >,
 {
-    fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextSpaceGroupElement {
-        PlaintextSpaceGroupElement::new()
-            &self.decrypt(&ciphertext.into()),
-        // todo
+    fn decrypt(
+        &self,
+        ciphertext: &CiphertextGroupElement,
+        plaintext_group_public_parameters: &PlaintextSpaceGroupElement::PublicParameters,
+    ) -> PlaintextSpaceGroupElement {
+        let plaintext_order = LargeBiPrimeSizedNumber::from(&free_variable.order());
+
+        PlaintextSpaceGroupElement::new(
+            self.decrypt(&ciphertext.into()) % NonZero::new(plaintext_order).unwrap(),
+            plaintext_group_public_parameters,
         )
+        .unwrap()
     }
 }
-
-// impl
-//     AdditivelyHomomorphicDecryptionKey<
-//         { LargeBiPrimeSizedNumber::LIMBS },
-//         { LargeBiPrimeSizedNumber::LIMBS },
-//         { PaillierModulusSizedNumber::LIMBS },
-//         RandomnessGroupElement,
-//         CiphertextGroupElement,
-//     > for DecryptionKey
-// {
-//     fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> MessageGroupElement {
-//         // TODO: with all this functions, do I know they are correct?
-//         // Yes, the ciphertext group element is indeed valid, but who says its connected to the
-// `n`         // of `self`? or that the decryption key is valid?
-//         DynResidue::new(
-//             &self.decrypt(&ciphertext.into()),
-//             DynResidueParams::new(&self.encryption_key.n),
-//         )
-//     }
-// }
