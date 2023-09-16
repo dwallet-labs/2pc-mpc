@@ -56,18 +56,18 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// outputs a ciphertext $\ct$.
     fn evaluate_linear_transformation_with_randomness<const FUNCTION_DEGREE: usize>(
         &self,
-        free_variable: PlaintextSpaceGroupElement,
-        coefficients: [PlaintextSpaceGroupElement; FUNCTION_DEGREE],
-        ciphertexts: [CiphertextSpaceGroupElement; FUNCTION_DEGREE],
+        free_variable: &PlaintextSpaceGroupElement,
+        coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
+        ciphertexts: &[CiphertextSpaceGroupElement; FUNCTION_DEGREE],
         mask: Uint<MASK_LIMBS>,
-        randomness: RandomnessSpaceGroupElement,
+        randomness: &RandomnessSpaceGroupElement,
     ) -> CiphertextSpaceGroupElement;
 
     fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize>(
         &self,
-        free_variable: PlaintextSpaceGroupElement,
-        coefficients: [PlaintextSpaceGroupElement; FUNCTION_DEGREE],
-        ciphertexts: [CiphertextSpaceGroupElement; FUNCTION_DEGREE],
+        free_variable: &PlaintextSpaceGroupElement,
+        coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
+        ciphertexts: &[CiphertextSpaceGroupElement; FUNCTION_DEGREE],
         rng: &mut impl CryptoRngCore,
     ) -> CiphertextSpaceGroupElement;
 }
