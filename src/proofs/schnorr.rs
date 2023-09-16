@@ -1,6 +1,12 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod commitment_of_discrete_log;
+
+pub mod knowledge_of_discrete_log;
+
+pub mod knowledge_of_decommitment;
+
 use std::marker::PhantomData;
 
 use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, U64};
@@ -45,7 +51,7 @@ pub trait Language<
     const NAME: &'static str;
 
     /// A group homomorphism $\phi:\HH\to\GG$  from $(\HH_\pp, +)$, the witness space,
-    /// to $(\GG_\pp,\cdot)$, the statement space.
+    /// to $(\GG_\pp,\cdot)$, the public-value space space.
     fn group_homomorphism(
         witness: &WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
