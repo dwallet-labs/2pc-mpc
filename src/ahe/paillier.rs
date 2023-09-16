@@ -1,11 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto_bigint::{
-    modular::runtime_mod::{DynResidue, DynResidueParams},
-    rand_core::CryptoRngCore,
-    ConcatMixed, NonZero, Random, Uint, U128, U64,
-};
+use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, Random, Uint, U64};
 use group::{
     multiplicative_group_of_integers_modulu_n,
     paillier::{CiphertextGroupElement, RandomnessGroupElement},
@@ -254,6 +250,7 @@ where
         PlaintextSpaceGroupElement,
         Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     >,
+    PlaintextSpaceGroupElement: From<LargeBiPrimeSizedNumber>,
     // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
     // plaintext concated with the statistical security parameter contacted with a U64 (which is a
     // bound on the log of FUNCTION_DEGREE)
@@ -262,15 +259,7 @@ where
         MixedOutput = Uint<MASK_LIMBS>,
     >,
 {
-    fn decrypt(
-        &self,
-        ciphertext: &CiphertextGroupElement,
-        plaintext_group_public_parameters: &PlaintextSpaceGroupElement::PublicParameters,
-    ) -> PlaintextSpaceGroupElement {
-        PlaintextSpaceGroupElement::new(
-            self.decrypt(&ciphertext.into()),
-            plaintext_group_public_parameters,
-        )
-        .unwrap()
+    fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextSpaceGroupElement {
+        self.decrypt(&ciphertext.into()).into()
     }
 }
