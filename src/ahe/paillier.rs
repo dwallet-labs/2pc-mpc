@@ -87,11 +87,11 @@ where
 
     fn evaluate_linear_transformation_with_randomness<const FUNCTION_DEGREE: usize>(
         &self,
-        free_variable: PlaintextSpaceGroupElement,
-        coefficients: [PlaintextSpaceGroupElement; FUNCTION_DEGREE],
-        ciphertexts: [CiphertextGroupElement; FUNCTION_DEGREE],
+        free_variable: &PlaintextSpaceGroupElement,
+        coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
+        ciphertexts: &[CiphertextGroupElement; FUNCTION_DEGREE],
         mask: Uint<MASK_LIMBS>,
-        randomness: RandomnessGroupElement,
+        randomness: &RandomnessGroupElement,
     ) -> CiphertextGroupElement {
         let masking_encryption_of_free_variable =
             AdditivelyHomomorphicEncryptionKey::encrypt_with_randomness(
