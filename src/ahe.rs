@@ -37,6 +37,9 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// be used for Fiat-Shamir Transcripts).
     type PublicParameters: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq;
 
+    /// Returns the public parameters of this encryption scheme.
+    fn public_parameters(&self) -> Self::PublicParameters;
+
     /// $\Enc(pk, \pt; \eta_{\sf enc}) \to \ct$: Encrypt `plaintext` to `self` using
     /// `randomness`.
     ///

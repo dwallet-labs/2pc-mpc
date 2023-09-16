@@ -26,7 +26,8 @@ pub struct PublicParameters<
     PlaintextSpaceGroupElement,
 > {
     paillier_modulus: LargeBiPrimeSizedNumber,
-
+    // TODO: better name? the modulus is N^2 but N is
+    // good enough here.
     #[serde(skip_serializing)]
     _plaintext_group_element_choice: PhantomData<PlaintextSpaceGroupElement>,
 }
@@ -65,6 +66,13 @@ where
 {
     type PublicParameters =
         PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>;
+
+    fn public_parameters(&self) -> Self::PublicParameters {
+        Self::PublicParameters {
+            paillier_modulus: self.n,
+            _plaintext_group_element_choice: PhantomData,
+        }
+    }
 
     fn encrypt_with_randomness(
         &self,
@@ -155,6 +163,13 @@ where
     type PublicParameters =
         PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>;
 
+    fn public_parameters(&self) -> Self::PublicParameters {
+        Self::PublicParameters {
+            paillier_modulus: self.encryption_key.n,
+            _plaintext_group_element_choice: PhantomData,
+        }
+    }
+
     fn encrypt_with_randomness(
         &self,
         plaintext: &PlaintextSpaceGroupElement,
@@ -215,9 +230,6 @@ where
         MixedOutput = Uint<MASK_LIMBS>,
     >,
 {
-    type PublicParameters =
-        PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>;
-
     fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextSpaceGroupElement {
         self.decrypt(&ciphertext.into()).into()
     }
