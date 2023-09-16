@@ -74,6 +74,10 @@ where
         }
     }
 
+    fn new(public_parameters: &Self::PublicParameters) -> Self {
+        EncryptionKey::new(public_parameters.paillier_modulus)
+    }
+
     fn encrypt_with_randomness(
         &self,
         plaintext: &PlaintextSpaceGroupElement,
