@@ -3,13 +3,13 @@
 
 use std::{marker::PhantomData, ops::Mul};
 
+use crypto_bigint::{ConcatMixed, Uint};
 use serde::Serialize;
 
 use crate::{
     group,
     group::{
-        direct_product, paillier::CiphertextGroupElement, self_product_group, CyclicGroupElement,
-        KnownOrderGroupElement, Samplable,
+        direct_product, self_product_group, CyclicGroupElement, KnownOrderGroupElement, Samplable,
     },
     proofs::schnorr,
     AdditivelyHomomorphicEncryptionKey,
@@ -18,14 +18,18 @@ use crate::{
 /// Encryption of Discrete Log Schnorr Language
 ///
 /// SECURITY NOTICE:
-/// Because correctness and zero-knowledge is guaranteed for any group in this language, we choose
-/// to provide a fully generic implementation.
+/// Because correctness and zero-knowledge is guaranteed for any group and additively homomorphic
+/// encryption scheme (TODO: right?) in this language, we choose to provide a fully generic
+/// implementation.
 ///
-/// However knowledge-soundness proofs are group dependent, and thus we can only assure security for
-/// groups for which we know how to prove it.
+/// However knowledge-soundness proofs are group and encryption scheme dependent, and thus we can
+/// only assure security for groups and encryption schemes for which we know how to prove it.
 ///
 /// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
-/// `PrimeOrderGroupElement`.
+/// `PrimeOrderGroupElement`. (TODO: still ?)
+///
+/// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
+// also TODO: for commitments, say the same?
 pub struct Language<
     const MASK_LIMBS: usize,
     const SCALAR_LIMBS: usize,
@@ -90,6 +94,8 @@ impl<
         const SCALAR_LIMBS: usize,
         const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
         const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
+        const WITNESS_SCALAR_LIMBS: usize,
+        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
         Scalar,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
@@ -97,18 +103,18 @@ impl<
         EncryptionKey,
     >
     schnorr::Language<
-        SCALAR_LIMBS,
-        SCALAR_LIMBS,
+        WITNESS_SCALAR_LIMBS,
+        PUBLIC_VALUE_SCALAR_LIMBS,
         direct_product::GroupElement<
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
-            RandomnessSpaceGroupElement,
+            RANDOMNESS_SPACE_SCALAR_LIMBS,
             Scalar,
+            RandomnessSpaceGroupElement,
         >,
         direct_product::GroupElement<
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
-            CiphertextGroupElement,
+            CiphertextSpaceGroupElement,
             GroupElement,
         >,
     >
@@ -131,6 +137,10 @@ where
     RandomnessSpaceGroupElement: group::GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>
         + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: group::GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+    Uint<SCALAR_LIMBS>:
+        ConcatMixed<Uint<RANDOMNESS_SPACE_SCALAR_LIMBS>, MixedOutput = Uint<WITNESS_SCALAR_LIMBS>>,
+    Uint<CIPHERTEXT_SPACE_SCALAR_LIMBS>:
+        ConcatMixed<Uint<SCALAR_LIMBS>, MixedOutput = Uint<PUBLIC_VALUE_SCALAR_LIMBS>>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<
         MASK_LIMBS,
         SCALAR_LIMBS,
@@ -173,7 +183,7 @@ where
         direct_product::GroupElement<
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
-            CiphertextGroupElement,
+            CiphertextSpaceGroupElement,
             GroupElement,
         >,
     > {
