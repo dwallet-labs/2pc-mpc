@@ -45,7 +45,7 @@ where
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<PlaintextSpaceGroupElement>,
     // to ensure circuit-privacy:
     // First, assure that the statistical security (currently configured to U64, code would break
-    // and require changes if it will change) concatted with a U64 which is a bound on the log of
+    // and require changes if it will change) contacted with a U64 which is a bound on the log of
     // FUNCTION_DEGREE
     StatisticalSecuritySizedNumber: ConcatMixed<U64, MixedOutput = U128>,
     // Second, assure that MASK_LIMBS is PLAINTEXT_SPACE_SCALAR_LIMBS +
@@ -57,17 +57,17 @@ where
         plaintext: PlaintextSpaceGroupElement,
         randomness: &RandomnessGroupElement,
     ) -> CiphertextGroupElement {
-        //   TODO: this can be optimized by returning DynResidue from
-        // tiresias function
-
         // safe to `unwrap()` here, as encryption always returns a valid element in the
         // ciphertext group
 
-        // CiphertextGroupElement::new(
-        //     self.encrypt_with_randomness(&plaintext.into(), &randomness.into()),
-        //     &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2),
-        // )
-        // .unwrap()
+        CiphertextGroupElement::new(
+            self.encrypt_with_randomness(
+                &(&Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(plaintext)).into(),
+                &randomness.into(),
+            ),
+            &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2),
+        )
+        .unwrap()
     }
 
     fn encrypt(
@@ -75,7 +75,14 @@ where
         plaintext: PlaintextSpaceGroupElement,
         rng: &mut impl CryptoRngCore,
     ) -> CiphertextGroupElement {
-        todo!()
+        CiphertextGroupElement::new(
+            self.encrypt(
+                &(&Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(plaintext)).into(),
+                rng,
+            ),
+            &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2),
+        )
+        .unwrap()
     }
 
     fn evaluate_linear_transformation_with_randomness<const FUNCTION_DEGREE: usize>(
@@ -86,6 +93,13 @@ where
         mask: Uint<MASK_LIMBS>,
         randomness: RandomnessGroupElement,
     ) -> CiphertextGroupElement {
+        let masking_encryption_of_free_variable =
+            AdditivelyHomomorphicEncryptionKey::encrypt_with_randomness(
+                self,
+                free_variable,
+                &randomness,
+            );
+
         todo!()
     }
 
