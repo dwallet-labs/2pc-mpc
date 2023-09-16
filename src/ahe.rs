@@ -40,6 +40,10 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// Returns the public parameters of this encryption scheme.
     fn public_parameters(&self) -> Self::PublicParameters;
 
+    /// Instantiate the encryption scheme from its public parameters
+    /// TODO: do I need the public parameters of the plaintext/randomness/ciphertext groups here?
+    fn new(public_parameters: &Self::PublicParameters) -> Self;
+
     /// $\Enc(pk, \pt; \eta_{\sf enc}) \to \ct$: Encrypt `plaintext` to `self` using
     /// `randomness`.
     ///
@@ -128,21 +132,22 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     PlaintextSpaceGroupElement,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
->:
-    AdditivelyHomomorphicEncryptionKey<
-    MASK_LIMBS,
-    PLAINTEXT_SPACE_SCALAR_LIMBS,
-    RANDOMNESS_SPACE_SCALAR_LIMBS,
-    CIPHERTEXT_SPACE_SCALAR_LIMBS,
-    PlaintextSpaceGroupElement,
-    RandomnessSpaceGroupElement,
-    CiphertextSpaceGroupElement,
-> where
+    EncryptionKey,
+>: AsRef<EncryptionKey> where
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     RandomnessSpaceGroupElement:
         GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<
+        MASK_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        RANDOMNESS_SPACE_SCALAR_LIMBS,
+        CIPHERTEXT_SPACE_SCALAR_LIMBS,
+        PlaintextSpaceGroupElement,
+        RandomnessSpaceGroupElement,
+        CiphertextSpaceGroupElement,
+    >,
 {
     /// $\Dec(sk, \ct) \to \pt$: Decrypt `ciphertext` using `decryption_key`.
     /// A deterministic algorithm that on input a secret key $sk$ and a ciphertext $\ct \in
