@@ -30,7 +30,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// enc})\in\calC_{pk}$.
     fn encrypt_with_randomness(
         &self,
-        plaintext: PlaintextSpaceGroupElement,
+        plaintext: &PlaintextSpaceGroupElement,
         randomness: &RandomnessSpaceGroupElement,
     ) -> CiphertextSpaceGroupElement;
 
@@ -40,7 +40,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// from `rng`.    
     fn encrypt(
         &self,
-        plaintext: PlaintextSpaceGroupElement,
+        plaintext: &PlaintextSpaceGroupElement,
         rng: &mut impl CryptoRngCore,
     ) -> CiphertextSpaceGroupElement;
 
