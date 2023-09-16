@@ -6,17 +6,32 @@ use std::ops::Mul;
 
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Encoding, Integer, Uint,
+    rand_core::CryptoRngCore,
+    Encoding, Integer, Random, Uint,
 };
 use group::GroupElement as GroupElementTrait;
 use serde::{Deserialize, Serialize};
 
-use crate::group;
+use crate::{group, group::Samplable};
 
 /// An element of the multiplicative group of integers modulo `n` $\mathbb{Z}_n^*$
 /// [Multiplicative group of integers modulo n](https://en.wikipedia.org/wiki/Multiplicative_group_of_integers_modulo_n)
 #[derive(PartialEq, Eq, Clone, Debug, Copy)]
 pub struct GroupElement<const LIMBS: usize>(DynResidue<LIMBS>);
+
+impl<const LIMBS: usize> Samplable<LIMBS> for GroupElement<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> Self {
+        // Classic rejection-sampling technique
+        loop {
+            if let Ok(sampled_element) = Self::new(Uint::<LIMBS>::random(rng), public_parameters) {
+                return sampled_element;
+            }
+        }
+    }
+}
 
 /// The public parameters of the multiplicative group of integers modulo `n = modulus`
 /// $\mathbb{Z}_n^+$

@@ -7,9 +7,8 @@ use serde::Serialize;
 
 use crate::{
     commitments::HomomorphicCommitmentScheme,
-    group::{self_product_group, CyclicGroupElement, KnownOrderGroupElement},
+    group::{self_product_group, CyclicGroupElement, KnownOrderGroupElement, Samplable},
     proofs::schnorr,
-    traits::Samplable,
 };
 
 /// Commitment of Discrete Log Schnorr Language
@@ -33,7 +32,7 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentS
 #[derive(Debug, PartialEq, Serialize)]
 pub struct PublicParameters<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
 where
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable,
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
@@ -61,7 +60,7 @@ impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
         self_product_group::GroupElement<2, SCALAR_LIMBS, GroupElement>,
     > for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
 where
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable,
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
