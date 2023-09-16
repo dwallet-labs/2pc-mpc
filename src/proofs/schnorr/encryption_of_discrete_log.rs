@@ -8,9 +8,7 @@ use serde::Serialize;
 
 use crate::{
     group,
-    group::{
-        direct_product, self_product_group, CyclicGroupElement, KnownOrderGroupElement, Samplable,
-    },
+    group::{direct_product, CyclicGroupElement, KnownOrderGroupElement, Samplable},
     proofs::schnorr,
     AdditivelyHomomorphicEncryptionKey,
 };
@@ -165,19 +163,24 @@ where
     const NAME: &'static str = "Encryption of Discrete Log";
 
     fn group_homomorphism(
-        witness: &self_product_group::GroupElement<2, SCALAR_LIMBS, Scalar>,
-        language_public_parameters: &Self::PublicParameters,
-        _witness_space_public_parameters: &direct_product::GroupElement<
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
+        witness: &direct_product::GroupElement<
             SCALAR_LIMBS,
-            RandomnessSpaceGroupElement,
+            RANDOMNESS_SPACE_SCALAR_LIMBS,
             Scalar,
+            RandomnessSpaceGroupElement,
+        >,
+        language_public_parameters: &Self::PublicParameters,
+        _witness_space_public_parameters: &direct_product::PublicParameters<
+            SCALAR_LIMBS,
+            RANDOMNESS_SPACE_SCALAR_LIMBS,
+            Scalar,
+            RandomnessSpaceGroupElement,
         >,
         public_value_space_public_parameters: &direct_product::PublicParameters<
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
+            CIPHERTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
-            RandomnessSpaceGroupElement,
-            Scalar,
+            CiphertextSpaceGroupElement,
+            GroupElement,
         >,
     ) -> group::Result<
         direct_product::GroupElement<
@@ -187,14 +190,19 @@ where
             GroupElement,
         >,
     > {
+        let (value, randomness): (&Scalar, &RandomnessSpaceGroupElement) = witness.into();
+
+        let (_, group_public_parameters) = public_value_space_public_parameters.into();
+
+        let base = GroupElement::new(
+            language_public_parameters.generator.clone(),
+            group_public_parameters,
+        )?;
+
+        // EncryptionKey
+
         todo!()
-        // let [value, randomness]: &[Scalar; 2] = witness.into();
-        //
-        // let base = GroupElement::new(
-        //     language_public_parameters.generator.clone(),
-        //     &public_value_space_public_parameters.public_parameters,
-        // )?;
-        //
+
         // let commitment_scheme = EncryptionKey::new(
         //     &language_public_parameters.commitment_scheme_public_parameters,
         //     &public_value_space_public_parameters.public_parameters,
