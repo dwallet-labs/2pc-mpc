@@ -138,7 +138,6 @@ where
     Uint<LIMBS>: Encoding,
 {
     fn order(&self) -> Uint<LIMBS> {
-        // todo: this is right?
         *self.params().modulus()
     }
 }
