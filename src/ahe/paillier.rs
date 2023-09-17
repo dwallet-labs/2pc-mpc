@@ -18,7 +18,7 @@ use crate::{
     StatisticalSecuritySizedNumber,
 };
 
-/// The Public Parameters of the Paillier Additively Homomorphic Encryption Scheme
+/// The Public Parameters of the Paillier Additively Homomorphic Encryption Scheme.
 #[derive(PartialEq, Clone, Serialize, Deserialize)]
 pub struct PublicParameters<
     const MASK_LIMBS: usize,
