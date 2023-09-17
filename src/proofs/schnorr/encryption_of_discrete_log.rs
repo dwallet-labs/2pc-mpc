@@ -17,17 +17,16 @@ use crate::{
 ///
 /// SECURITY NOTICE:
 /// Because correctness and zero-knowledge is guaranteed for any group and additively homomorphic
-/// encryption scheme (TODO: right?) in this language, we choose to provide a fully generic
+/// encryption scheme in this language, we choose to provide a fully generic
 /// implementation.
 ///
 /// However knowledge-soundness proofs are group and encryption scheme dependent, and thus we can
 /// only assure security for groups and encryption schemes for which we know how to prove it.
 ///
 /// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
-/// `PrimeOrderGroupElement`. (TODO: still ?)
+/// `PrimeOrderGroupElement`.
 ///
 /// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
-// also TODO: for commitments, say the same?
 pub struct Language<
     const MASK_LIMBS: usize,
     const SCALAR_LIMBS: usize,
