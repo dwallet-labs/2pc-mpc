@@ -76,15 +76,11 @@ pub struct PublicParameters<
         CiphertextSpaceGroupElement,
     >,
 {
-    encryption_key_public_parameters: EncryptionKey::PublicParameters,
+    encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
+    randomness_group_public_parameters: RandomnessSpaceGroupElement::PublicParameters,
+    ciphertext_group_public_parameters: CiphertextSpaceGroupElement::PublicParameters,
+    // todo: comm
     generator: GroupElement::Value, // The base of discrete log
-
-    #[serde(skip_serializing)]
-    _randomness_group_element_choice: PhantomData<RandomnessSpaceGroupElement>,
-    #[serde(skip_serializing)]
-    _ciphertext_group_element_choice: PhantomData<CiphertextSpaceGroupElement>,
-    #[serde(skip_serializing)]
-    _encryption_key_choice: PhantomData<EncryptionKey>,
 }
 
 impl<
@@ -170,7 +166,7 @@ where
             RandomnessSpaceGroupElement,
         >,
         language_public_parameters: &Self::PublicParameters,
-        _witness_space_public_parameters: &direct_product::PublicParameters<
+        witness_space_public_parameters: &direct_product::PublicParameters<
             SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             Scalar,
@@ -192,6 +188,8 @@ where
     > {
         let (discrete_log, randomness): (&Scalar, &RandomnessSpaceGroupElement) = witness.into();
 
+        let (scalar_group_public_parameters, _) = witness_space_public_parameters.into();
+
         let (_, group_public_parameters) = public_value_space_public_parameters.into();
 
         let base = GroupElement::new(
@@ -199,8 +197,12 @@ where
             group_public_parameters,
         )?;
 
-        let encryption_key =
-            EncryptionKey::new(&language_public_parameters.encryption_key_public_parameters);
+        let encryption_key = EncryptionKey::new(
+            &language_public_parameters.encryption_scheme_public_parameters,
+            scalar_group_public_parameters,
+            &language_public_parameters.randomness_group_public_parameters,
+            &language_public_parameters.ciphertext_group_public_parameters,
+        );
 
         Ok((
             encryption_key.encrypt_with_randomness(discrete_log, randomness),
