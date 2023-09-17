@@ -35,6 +35,8 @@ pub struct PublicParameters<
 /// group using the Paillier encryption scheme.
 ///
 /// NOTICE: ensures circuit-privacy as long as MASK_LIMBS < LargeBiPrimeSizedNumber::LIMBS
+/// TODO: this might not be the right check, and I might be able to enforce this better with
+/// ConcatMixed that sums up to LargeBiPrimeSizedNumber.
 impl<
         const MASK_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
