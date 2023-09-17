@@ -39,9 +39,14 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// Returns the public parameters of this encryption scheme.
     fn public_parameters(&self) -> Self::PublicParameters;
 
-    /// Instantiate the encryption scheme from its public parameters
-    /// TODO: do I need the public parameters of the plaintext/randomness/ciphertext groups here?
-    fn new(public_parameters: &Self::PublicParameters) -> Self;
+    /// Instantiate the encryption scheme from the public parameters of the encryption scheme,
+    /// plaintext, randomness and ciphertext groups.
+    fn new(
+        encryption_scheme_public_parameters: &Self::PublicParameters,
+        plaintext_group_public_parameters: &PlaintextSpaceGroupElement::PublicParameters,
+        randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
+        ciphertext_group_public_parameters: &CiphertextSpaceGroupElement::PublicParameters,
+    ) -> Self;
 
     /// $\Enc(pk, \pt; \eta_{\sf enc}) \to \ct$: Encrypt `plaintext` to `self` using
     /// `randomness`.
