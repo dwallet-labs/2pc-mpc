@@ -84,28 +84,27 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     }
 
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
-    /// affine function defined by `free_variable` and `coefficients` on `ciphertexts`; to
-    /// ensure circuit-privacy, the `mask` and `randmomness` to parameters should be passed (and
-    /// could be ignored by some implementors if unneeded.)
+    /// linear combination defined by `coefficients` and `ciphertexts`.
     ///
-    /// Given a public key $pk$, an affine function $f(x_1,\ldots,x_\ell)=
-    /// a_0+\sum_{i=1}^{\ell}{a_i x_i}$ (with $a_i\in\ZZ$ and $\ell,\|a_i\|_2\in\poly(\kappa)$ for
-    /// all $0\le i\le \ell$) and $\ell$ ciphertexts $\ct_1,\ldots,\ct_t \in \calC$, $\Eval$
-    /// outputs a ciphertext $\ct$.
-    fn evaluate_linear_transformation_with_randomness<const FUNCTION_DEGREE: usize>(
+    /// To ensure circuit-privacy, the `mask` and `randmomness` to parameters may be used by
+    /// implementers.
+    fn evaluate_linear_combination_with_randomness<const DIMENSION: usize>(
         &self,
-        free_variable: &PlaintextSpaceGroupElement,
-        coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
-        ciphertexts: &[CiphertextSpaceGroupElement; FUNCTION_DEGREE],
+        coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
+        ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
         mask: &Uint<MASK_LIMBS>,
         randomness: &RandomnessSpaceGroupElement,
     ) -> CiphertextSpaceGroupElement;
 
-    fn evaluate_linear_transformation<const FUNCTION_DEGREE: usize>(
+    /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
+    /// linear combination defined by `coefficients` and `ciphertexts`.
+    ///
+    /// This is the probabilistic linear combination algorithm which samples `mask` and `randomness`
+    /// from `rng` and calls [`Self::linear_combination_with_randomness()`].
+    fn evaluate_linear_combination<const DIMENSION: usize>(
         &self,
-        free_variable: &PlaintextSpaceGroupElement,
-        coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
-        ciphertexts: &[CiphertextSpaceGroupElement; FUNCTION_DEGREE],
+        coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
+        ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
         randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
         rng: &mut impl CryptoRngCore,
     ) -> group::Result<(
@@ -118,8 +117,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         let randomness =
             RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters)?;
 
-        let evaluated_ciphertext = self.evaluate_linear_transformation_with_randomness(
-            free_variable,
+        let evaluated_ciphertext = self.evaluate_linear_combination_with_randomness(
             coefficients,
             ciphertexts,
             &mask,
