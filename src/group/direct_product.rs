@@ -3,7 +3,7 @@
 
 use std::ops::{Add, AddAssign, BitAnd, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, Uint};
+use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
@@ -52,14 +52,12 @@ pub type FourWayGroupElement<
 >;
 
 impl<
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS> + Samplable<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS> + Samplable<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > Samplable<SCALAR_LIMBS> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
-where
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> Self {
         Self(
@@ -100,16 +98,12 @@ impl<
 }
 
 impl<
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > GroupElementTrait<SCALAR_LIMBS> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
-where
-    // The direct product of two bounded-order groups `G` and `H` is bounded by the order of the
-    // multiple of the bounds.
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     type Value = Value<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>;
 
@@ -274,14 +268,12 @@ impl<
 
 impl<
         const LIMBS: usize,
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > Mul<Uint<LIMBS>> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
-where
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     type Output = Self;
 
@@ -293,14 +285,12 @@ where
 impl<
         'r,
         const LIMBS: usize,
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > Mul<&'r Uint<LIMBS>> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
-where
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     type Output = Self;
 
@@ -312,14 +302,12 @@ where
 impl<
         'r,
         const LIMBS: usize,
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > Mul<Uint<LIMBS>> for &'r GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
-where
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     type Output = GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>;
 
@@ -331,14 +319,12 @@ where
 impl<
         'r,
         const LIMBS: usize,
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > Mul<&'r Uint<LIMBS>> for &'r GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
-where
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     type Output = GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>;
 
@@ -349,14 +335,12 @@ where
 
 impl<
         const LIMBS: usize,
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > MulAssign<Uint<LIMBS>> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
-where
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     fn mul_assign(&mut self, rhs: Uint<LIMBS>) {
         *self = self.scalar_mul(&rhs)
@@ -366,14 +350,12 @@ where
 impl<
         'r,
         const LIMBS: usize,
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > MulAssign<&'r Uint<LIMBS>> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
-where
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     fn mul_assign(&mut self, rhs: &'r Uint<LIMBS>) {
         *self = self.scalar_mul(rhs)
@@ -381,14 +363,12 @@ where
 }
 
 impl<
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > From<GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>> for (G, H)
-where
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     fn from(value: GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>) -> Self {
         (value.0, value.1)
@@ -397,14 +377,12 @@ where
 
 impl<
         'r,
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > From<&'r GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>> for (&'r G, &'r H)
-where
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     fn from(value: &'r GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>) -> Self {
         (&value.0, &value.1)
@@ -412,14 +390,12 @@ where
 }
 
 impl<
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > From<(G, H)> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
-where
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     fn from(value: (G, H)) -> Self {
         Self(value.0, value.1)
@@ -427,15 +403,13 @@ where
 }
 
 impl<
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > From<PublicParameters<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>>
     for (G::PublicParameters, H::PublicParameters)
-where
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     fn from(value: PublicParameters<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>) -> Self {
         (value.0, value.1)
@@ -444,15 +418,13 @@ where
 
 impl<
         'r,
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > From<&'r PublicParameters<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>>
     for (&'r G::PublicParameters, &'r H::PublicParameters)
-where
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     fn from(value: &'r PublicParameters<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>) -> Self {
         (&value.0, &value.1)
@@ -460,15 +432,13 @@ where
 }
 
 impl<
+        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
         H: GroupElementTrait<H_SCALAR_LIMBS>,
-        const SCALAR_LIMBS: usize,
     > From<(G::PublicParameters, H::PublicParameters)>
     for PublicParameters<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
-where
-    Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
     fn from(value: (G::PublicParameters, H::PublicParameters)) -> Self {
         Self(value.0, value.1)

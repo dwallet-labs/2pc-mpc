@@ -3,7 +3,7 @@
 
 use std::{marker::PhantomData, ops::Mul};
 
-use crypto_bigint::{ConcatMixed, Uint};
+use crypto_bigint::Uint;
 use serde::Serialize;
 
 use crate::{
@@ -130,10 +130,6 @@ where
     RandomnessSpaceGroupElement: group::GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>
         + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: group::GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
-    Uint<SCALAR_LIMBS>:
-        ConcatMixed<Uint<RANDOMNESS_SPACE_SCALAR_LIMBS>, MixedOutput = Uint<WITNESS_SCALAR_LIMBS>>,
-    Uint<CIPHERTEXT_SPACE_SCALAR_LIMBS>:
-        ConcatMixed<Uint<SCALAR_LIMBS>, MixedOutput = Uint<PUBLIC_VALUE_SCALAR_LIMBS>>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<
         MASK_LIMBS,
         SCALAR_LIMBS,

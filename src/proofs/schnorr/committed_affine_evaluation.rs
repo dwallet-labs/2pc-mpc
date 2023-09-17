@@ -9,7 +9,9 @@ use serde::Serialize;
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group,
-    group::{direct_product, CyclicGroupElement, KnownOrderGroupElement, Samplable},
+    group::{
+        direct_product, self_product_group, CyclicGroupElement, KnownOrderGroupElement, Samplable,
+    },
     helpers::const_generic_array_serialization,
     proofs::schnorr,
     AdditivelyHomomorphicEncryptionKey,
@@ -119,12 +121,16 @@ impl<
     schnorr::Language<
         WITNESS_SCALAR_LIMBS,
         PUBLIC_VALUE_SCALAR_LIMBS,
-        //         self_product_group::GroupElement<FUNCTION_DEGREE, SCALAR_LIMBS, Scalar>,
-        // Scalar, additive, RandomnessSpaceGroupElement,
         direct_product::FourWayGroupElement<
             SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            MASK_LIMBS,
+            WITNESS_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
+            self_product_group::GroupElement<FUNCTION_DEGREE, SCALAR_LIMBS, Scalar>,
             Scalar,
+            additive_group_of_integers_modulu_n::GroupElement<MASK_LIMBS>,
             RandomnessSpaceGroupElement,
         >,
         direct_product::GroupElement<
