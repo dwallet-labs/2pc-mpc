@@ -5,7 +5,10 @@ mod paillier;
 use crypto_bigint::{rand_core::CryptoRngCore, Random, Uint};
 use serde::{Deserialize, Serialize};
 
-use crate::group::{GroupElement, KnownOrderGroupElement, Samplable};
+use crate::{
+    group,
+    group::{GroupElement, KnownOrderGroupElement, Samplable},
+};
 
 /// An Encryption Key of an Additively Homomorphic Encryption scheme.
 pub trait AdditivelyHomomorphicEncryptionKey<
@@ -72,13 +75,13 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         plaintext: &PlaintextSpaceGroupElement,
         randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
         rng: &mut impl CryptoRngCore,
-    ) -> (RandomnessSpaceGroupElement, CiphertextSpaceGroupElement) {
+    ) -> group::Result<(RandomnessSpaceGroupElement, CiphertextSpaceGroupElement)> {
         let randomness =
-            RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters);
+            RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters)?;
 
         let ciphertext = self.encrypt_with_randomness(plaintext, &randomness);
 
-        (randomness, ciphertext)
+        Ok((randomness, ciphertext))
     }
 
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
@@ -106,15 +109,15 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         ciphertexts: &[CiphertextSpaceGroupElement; FUNCTION_DEGREE],
         randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
         rng: &mut impl CryptoRngCore,
-    ) -> (
+    ) -> group::Result<(
         Uint<MASK_LIMBS>,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
-    ) {
+    )> {
         let mask = Uint::<MASK_LIMBS>::random(rng);
 
         let randomness =
-            RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters);
+            RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters)?;
 
         let evaluated_ciphertext = self.evaluate_linear_transformation_with_randomness(
             free_variable,
@@ -124,7 +127,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
             &randomness,
         );
 
-        (mask, randomness, evaluated_ciphertext)
+        Ok((mask, randomness, evaluated_ciphertext))
     }
 }
 

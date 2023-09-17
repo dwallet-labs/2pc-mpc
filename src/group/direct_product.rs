@@ -7,7 +7,10 @@ use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
-use crate::group::{GroupElement as GroupElementTrait, Samplable};
+use crate::{
+    group,
+    group::{GroupElement as GroupElementTrait, Samplable},
+};
 
 /// An element of the Direct Product of the two Groups `G` and `H`.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -59,11 +62,14 @@ impl<
         H: GroupElementTrait<H_SCALAR_LIMBS> + Samplable<H_SCALAR_LIMBS>,
     > Samplable<SCALAR_LIMBS> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
 {
-    fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> Self {
-        Self(
-            G::sample(rng, &public_parameters.0),
-            H::sample(rng, &public_parameters.1),
-        )
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+    ) -> group::Result<Self> {
+        Ok(Self(
+            G::sample(rng, &public_parameters.0)?,
+            H::sample(rng, &public_parameters.1)?,
+        ))
     }
 }
 
