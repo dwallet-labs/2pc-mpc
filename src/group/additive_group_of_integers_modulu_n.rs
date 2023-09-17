@@ -5,19 +5,35 @@
 
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Encoding, NonZero, Uint,
+    rand_core::CryptoRngCore,
+    Encoding, NonZero, Random, Uint,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
-    group::{CyclicGroupElement, KnownOrderGroupElement, MulByGenerator},
+    group::{CyclicGroupElement, KnownOrderGroupElement, MulByGenerator, Samplable},
     traits::Reduce,
 };
 
 /// An element of the additive group of integers modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
 pub type GroupElement<const LIMBS: usize> = DynResidue<LIMBS>;
+
+impl<const LIMBS: usize> Samplable<LIMBS> for GroupElement<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+    ) -> group::Result<Self> {
+        <GroupElement<LIMBS> as group::GroupElement<LIMBS>>::new(
+            Uint::<LIMBS>::random(rng),
+            public_parameters,
+        )
+    }
+}
 
 /// The public parameters of the additive group of integers modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
