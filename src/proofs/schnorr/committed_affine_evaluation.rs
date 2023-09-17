@@ -119,8 +119,9 @@ impl<
     schnorr::Language<
         WITNESS_SCALAR_LIMBS,
         PUBLIC_VALUE_SCALAR_LIMBS,
-        // complete bullshit
-        direct_product::GroupElement<
+        //         self_product_group::GroupElement<FUNCTION_DEGREE, SCALAR_LIMBS, Scalar>,
+        // Scalar, additive, RandomnessSpaceGroupElement,
+        direct_product::FourWayGroupElement<
             SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             Scalar,
