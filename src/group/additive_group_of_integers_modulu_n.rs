@@ -79,7 +79,6 @@ where
         value: Self::Value,
         public_parameters: &Self::PublicParameters,
     ) -> crate::group::Result<Self> {
-        // todo: this is always safe for any non-zero modulu right?
         Ok(DynResidue::<LIMBS>::new(
             &value,
             DynResidueParams::<LIMBS>::new(&public_parameters.modulus),
