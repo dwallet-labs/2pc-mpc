@@ -10,7 +10,8 @@ use crate::{
     commitments::HomomorphicCommitmentScheme,
     group,
     group::{
-        direct_product, self_product_group, CyclicGroupElement, KnownOrderGroupElement, Samplable,
+        additive_group_of_integers_modulu_n, direct_product, self_product_group,
+        CyclicGroupElement, KnownOrderGroupElement, Samplable,
     },
     helpers::const_generic_array_serialization,
     proofs::schnorr,
@@ -199,10 +200,16 @@ where
     const NAME: &'static str = "Committed Affine Evaluation";
 
     fn group_homomorphism(
-        witness: &direct_product::GroupElement<
+        witness: &direct_product::FourWayGroupElement<
             SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            MASK_LIMBS,
+            WITNESS_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
+            self_product_group::GroupElement<FUNCTION_DEGREE, SCALAR_LIMBS, Scalar>,
             Scalar,
+            additive_group_of_integers_modulu_n::GroupElement<MASK_LIMBS>,
             RandomnessSpaceGroupElement,
         >,
         language_public_parameters: &Self::PublicParameters,

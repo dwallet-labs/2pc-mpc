@@ -268,7 +268,6 @@ impl<
 
 impl<
         const LIMBS: usize,
-        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
@@ -285,7 +284,6 @@ impl<
 impl<
         'r,
         const LIMBS: usize,
-        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
@@ -302,7 +300,6 @@ impl<
 impl<
         'r,
         const LIMBS: usize,
-        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
@@ -319,7 +316,6 @@ impl<
 impl<
         'r,
         const LIMBS: usize,
-        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
@@ -335,7 +331,6 @@ impl<
 
 impl<
         const LIMBS: usize,
-        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
@@ -350,7 +345,6 @@ impl<
 impl<
         'r,
         const LIMBS: usize,
-        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
@@ -363,7 +357,6 @@ impl<
 }
 
 impl<
-        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
@@ -377,7 +370,6 @@ impl<
 
 impl<
         'r,
-        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
@@ -390,7 +382,6 @@ impl<
 }
 
 impl<
-        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
@@ -403,7 +394,6 @@ impl<
 }
 
 impl<
-        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
@@ -418,7 +408,6 @@ impl<
 
 impl<
         'r,
-        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
@@ -432,7 +421,6 @@ impl<
 }
 
 impl<
-        const SCALAR_LIMBS: usize,
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
         G: GroupElementTrait<G_SCALAR_LIMBS>,
