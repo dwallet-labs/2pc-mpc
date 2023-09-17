@@ -148,7 +148,7 @@ impl<
             statements,
         )?;
 
-        let randomizer = WitnessSpaceGroupElement::sample(rng, witness_space_public_parameters);
+        let randomizer = WitnessSpaceGroupElement::sample(rng, witness_space_public_parameters)?;
 
         let statement_mask = Lang::group_homomorphism(
             &randomizer,
