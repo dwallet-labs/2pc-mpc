@@ -7,8 +7,10 @@ use crypto_bigint::{ConcatMixed, Uint};
 use serde::Serialize;
 
 use crate::{
+    commitments::HomomorphicCommitmentScheme,
     group,
     group::{direct_product, CyclicGroupElement, KnownOrderGroupElement, Samplable},
+    helpers::const_generic_array_serialization,
     proofs::schnorr,
     AdditivelyHomomorphicEncryptionKey,
 };
@@ -33,17 +35,20 @@ pub struct Language<
     const SCALAR_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
+    const FUNCTION_DEGREE: usize,
     Scalar,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
     GroupElement,
     EncryptionKey,
+    CommitmentScheme,
 > {
     _scalar_choice: PhantomData<Scalar>,
     _group_element_choice: PhantomData<GroupElement>,
     _randomness_group_element_choice: PhantomData<RandomnessSpaceGroupElement>,
     _ciphertext_group_element_choice: PhantomData<CiphertextSpaceGroupElement>,
     _encryption_key_choice: PhantomData<EncryptionKey>,
+    _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
 /// The Public Parameters of the Committed Affine Evaluation Schnorr Language
@@ -53,11 +58,13 @@ pub struct PublicParameters<
     const SCALAR_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
+    const FUNCTION_DEGREE: usize,
     Scalar,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
     GroupElement,
     EncryptionKey,
+    CommitmentScheme,
 > where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
@@ -75,12 +82,23 @@ pub struct PublicParameters<
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
     >,
+    CommitmentScheme: HomomorphicCommitmentScheme<
+        SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        Scalar,
+        Scalar,
+        GroupElement,
+    >,
 {
     encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
     randomness_group_public_parameters: RandomnessSpaceGroupElement::PublicParameters,
     ciphertext_group_public_parameters: CiphertextSpaceGroupElement::PublicParameters,
-    // todo: comm
-    generator: GroupElement::Value, // The base of discrete log
+    commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
+    // The base of discrete log
+    generator: GroupElement::Value,
+    #[serde(with = "const_generic_array_serialization")]
+    ciphertexts: [CiphertextSpaceGroupElement::Value; FUNCTION_DEGREE],
 }
 
 impl<
@@ -88,6 +106,7 @@ impl<
         const SCALAR_LIMBS: usize,
         const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
         const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
+        const FUNCTION_DEGREE: usize,
         const WITNESS_SCALAR_LIMBS: usize,
         const PUBLIC_VALUE_SCALAR_LIMBS: usize,
         Scalar,
@@ -95,10 +114,12 @@ impl<
         CiphertextSpaceGroupElement,
         GroupElement,
         EncryptionKey,
+        CommitmentScheme,
     >
     schnorr::Language<
         WITNESS_SCALAR_LIMBS,
         PUBLIC_VALUE_SCALAR_LIMBS,
+        // complete bullshit
         direct_product::GroupElement<
             SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
@@ -117,11 +138,13 @@ impl<
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
+        FUNCTION_DEGREE,
         Scalar,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
         GroupElement,
         EncryptionKey,
+        CommitmentScheme,
     >
 where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
@@ -144,17 +167,27 @@ where
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
     >,
+    CommitmentScheme: HomomorphicCommitmentScheme<
+        SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        Scalar,
+        Scalar,
+        GroupElement,
+    >,
 {
     type PublicParameters = PublicParameters<
         MASK_LIMBS,
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
+        FUNCTION_DEGREE,
         Scalar,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
         GroupElement,
         EncryptionKey,
+        CommitmentScheme,
     >;
     const NAME: &'static str = "Committed Affine Evaluation";
 
@@ -204,6 +237,11 @@ where
             &language_public_parameters.ciphertext_group_public_parameters,
         );
 
+        let commitment_scheme = CommitmentScheme::new(
+            &language_public_parameters.commitment_scheme_public_parameters,
+            &group_public_parameters,
+        )?;
+
         Ok((
             encryption_key.encrypt_with_randomness(discrete_log, randomness),
             base * discrete_log,
@@ -219,13 +257,13 @@ pub type Proof<
     const SCALAR_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-    const WITNESS_SCALAR_LIMBS: usize,
-    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+    const FUNCTION_DEGREE: usize,
     Scalar,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
     GroupElement,
     EncryptionKey,
+    CommitmentScheme,
     ProtocolContext,
 > = schnorr::Proof<
     SCALAR_LIMBS,
@@ -247,11 +285,13 @@ pub type Proof<
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
+        FUNCTION_DEGREE,
         Scalar,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
         GroupElement,
         EncryptionKey,
+        CommitmentScheme,
     >,
     ProtocolContext,
 >;
