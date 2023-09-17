@@ -70,7 +70,7 @@ where
     >,
     // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
     // plaintext concated with the statistical security parameter contacted with a U64 (which is a
-    // bound on the log of FUNCTION_DEGREE)
+    // bound on the log of DIMENSION)
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: ConcatMixed<
         <StatisticalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput,
         MixedOutput = Uint<MASK_LIMBS>,
@@ -110,36 +110,33 @@ where
         .unwrap()
     }
 
-    fn evaluate_linear_transformation_with_randomness<const FUNCTION_DEGREE: usize>(
+    fn evaluate_linear_combination_with_randomness<const DIMENSION: usize>(
         &self,
-        free_variable: &PlaintextSpaceGroupElement,
-        coefficients: &[PlaintextSpaceGroupElement; FUNCTION_DEGREE],
-        ciphertexts: &[CiphertextGroupElement; FUNCTION_DEGREE],
+        coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
+        ciphertexts: &[CiphertextGroupElement; DIMENSION],
         mask: &Uint<MASK_LIMBS>,
         randomness: &RandomnessGroupElement,
     ) -> CiphertextGroupElement {
         // Compute:
         //
-        // $\ct = \Enc(pk,a_0 + \omega q; \eta) \bigoplus_{i=1}^\ell \left(  a_i \odot \ct_i
+        // $\ct = \Enc(pk, \omega q; \eta) \bigoplus_{i=1}^\ell \left(  a_i \odot \ct_i
         // \right)$
         //
-        // Which is the affine evaluation masked by an encryption of a masked
+        // Which is the linear combination masked by an encryption of a masked
         // multiplication of the order $q$ using fresh randomness.
         //
         // This method ensures circuit privacy.
 
         // TODO: assure bound computations are correct.
-        let plaintext_order = LargeBiPrimeSizedNumber::from(&free_variable.order());
-        let free_variable = LargeBiPrimeSizedNumber::from(&free_variable.value());
+        // TODO: this throws an exception if coefficients is empty, maybe also check that N is right
+        // in new()
+        let plaintext_order = LargeBiPrimeSizedNumber::from(&coefficients[0].order());
 
-        // \Enc(pk,a_0 + \omega q; \eta): An encryption of the free variable with fresh randomness
-        // and a masked multiplication of the order $q$ (the free variable is added here instead of
-        // in the affine evaluation below)
-        let masking_encryption_of_free_variable = CiphertextGroupElement::new(
+        // \Enc(pk, \omega q; \eta): An encryption of a masked multiplication of the order $q$ with
+        // fresh randomness.
+        let encryption_of_mask_with_fresh_randomness = CiphertextGroupElement::new(
             self.encrypt_with_randomness(
-                &free_variable.wrapping_add(
-                    &LargeBiPrimeSizedNumber::from(mask).wrapping_mul(&plaintext_order),
-                ),
+                &LargeBiPrimeSizedNumber::from(mask).wrapping_mul(&plaintext_order),
                 &randomness.into(),
             ),
             &CiphertextPublicParameters::new(self.n2),
@@ -147,7 +144,7 @@ where
         .unwrap();
 
         coefficients.iter().zip(ciphertexts.iter()).fold(
-            masking_encryption_of_free_variable,
+            encryption_of_mask_with_fresh_randomness,
             |curr, (coefficient, ciphertext)| curr + ciphertext.scalar_mul(&coefficient.value()),
         )
     }
@@ -177,7 +174,7 @@ where
     PlaintextSpaceGroupElement: From<LargeBiPrimeSizedNumber>,
     // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
     // plaintext concated with the statistical security parameter contacted with a U64 (which is a
-    // bound on the log of FUNCTION_DEGREE)
+    // bound on the log of DIMENSION)
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: ConcatMixed<
         <StatisticalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput,
         MixedOutput = Uint<MASK_LIMBS>,
