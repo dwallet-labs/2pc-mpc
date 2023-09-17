@@ -18,6 +18,8 @@ use crate::{
     AdditivelyHomomorphicEncryptionKey,
 };
 
+// TODO: rename all text to linear combination
+
 /// Committed Affine Evaluation Schnorr Language
 ///
 /// SECURITY NOTICE:
@@ -38,7 +40,7 @@ pub struct Language<
     const SCALAR_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-    const FUNCTION_DEGREE: usize,
+    const DIMENSION: usize,
     const WITNESS_SCALAR_LIMBS: usize,
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     Scalar,
@@ -63,7 +65,7 @@ pub struct PublicParameters<
     const SCALAR_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-    const FUNCTION_DEGREE: usize,
+    const DIMENSION: usize,
     const WITNESS_SCALAR_LIMBS: usize,
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     Scalar,
@@ -93,19 +95,16 @@ pub struct PublicParameters<
         SCALAR_LIMBS,
         SCALAR_LIMBS,
         SCALAR_LIMBS,
-        self_product_group::GroupElement<FUNCTION_DEGREE, SCALAR_LIMBS, Scalar>,
+        self_product_group::GroupElement<DIMENSION, SCALAR_LIMBS, Scalar>,
         Scalar,
         GroupElement,
     >,
 {
     encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    randomness_group_public_parameters: RandomnessSpaceGroupElement::PublicParameters, // TODO: remove these as they are derived from the witness/public
-    ciphertext_group_public_parameters: CiphertextSpaceGroupElement::PublicParameters,
     commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
-    // The base of discrete log
-    generator: GroupElement::Value,
+
     #[serde(with = "const_generic_array_serialization")]
-    ciphertexts: [CiphertextSpaceGroupElement::Value; FUNCTION_DEGREE],
+    ciphertexts: [CiphertextSpaceGroupElement::Value; DIMENSION],
 }
 
 impl<
@@ -113,7 +112,7 @@ impl<
         const SCALAR_LIMBS: usize,
         const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
         const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-        const FUNCTION_DEGREE: usize,
+        const DIMENSION: usize,
         const WITNESS_SCALAR_LIMBS: usize,
         const PUBLIC_VALUE_SCALAR_LIMBS: usize,
         Scalar,
@@ -134,7 +133,7 @@ impl<
             MASK_LIMBS,
             WITNESS_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
-            self_product_group::GroupElement<FUNCTION_DEGREE, SCALAR_LIMBS, Scalar>,
+            self_product_group::GroupElement<DIMENSION, SCALAR_LIMBS, Scalar>,
             Scalar,
             additive_group_of_integers_modulu_n::GroupElement<MASK_LIMBS>,
             RandomnessSpaceGroupElement,
@@ -152,7 +151,7 @@ impl<
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
-        FUNCTION_DEGREE,
+        DIMENSION,
         WITNESS_SCALAR_LIMBS,
         PUBLIC_VALUE_SCALAR_LIMBS,
         Scalar,
@@ -188,7 +187,7 @@ where
         SCALAR_LIMBS,
         SCALAR_LIMBS,
         SCALAR_LIMBS,
-        self_product_group::GroupElement<FUNCTION_DEGREE, SCALAR_LIMBS, Scalar>,
+        self_product_group::GroupElement<DIMENSION, SCALAR_LIMBS, Scalar>,
         Scalar,
         GroupElement,
     >,
@@ -198,7 +197,7 @@ where
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
-        FUNCTION_DEGREE,
+        DIMENSION,
         WITNESS_SCALAR_LIMBS,
         PUBLIC_VALUE_SCALAR_LIMBS,
         Scalar,
@@ -219,7 +218,7 @@ where
             MASK_LIMBS,
             WITNESS_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
-            self_product_group::GroupElement<FUNCTION_DEGREE, SCALAR_LIMBS, Scalar>,
+            self_product_group::GroupElement<DIMENSION, SCALAR_LIMBS, Scalar>,
             Scalar,
             additive_group_of_integers_modulu_n::GroupElement<MASK_LIMBS>,
             RandomnessSpaceGroupElement,
@@ -233,7 +232,7 @@ where
             MASK_LIMBS,
             WITNESS_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
-            self_product_group::GroupElement<FUNCTION_DEGREE, SCALAR_LIMBS, Scalar>,
+            self_product_group::GroupElement<DIMENSION, SCALAR_LIMBS, Scalar>,
             Scalar,
             additive_group_of_integers_modulu_n::GroupElement<MASK_LIMBS>,
             RandomnessSpaceGroupElement,
@@ -256,36 +255,48 @@ where
     > {
         let (coefficients, commitment_randomness, mask, encryption_randomness) = witness.into();
 
-        let (_, scalar_group_public_parameters, _, randomness_public_parameters) =
+        let (_, scalar_group_public_parameters, _, randomness_group_public_parameters) =
             witness_space_public_parameters.into();
 
-        let (_, group_public_parameters) = public_value_space_public_parameters.into();
-
-        let base = GroupElement::new(
-            language_public_parameters.generator.clone(),
-            group_public_parameters,
-        )?;
+        let (ciphertext_group_public_parameters, group_public_parameters) =
+            public_value_space_public_parameters.into();
 
         let encryption_key = EncryptionKey::new(
             &language_public_parameters.encryption_scheme_public_parameters,
             scalar_group_public_parameters,
-            &language_public_parameters.randomness_group_public_parameters,
-            &language_public_parameters.ciphertext_group_public_parameters,
+            randomness_group_public_parameters,
+            ciphertext_group_public_parameters,
         );
 
         let commitment_scheme = CommitmentScheme::new(
             &language_public_parameters.commitment_scheme_public_parameters,
-            &group_public_parameters,
+            group_public_parameters,
         )?;
 
-        // Ok((
-        //     encryption_key.evaluate_linear_transformation_with_randomness(?, coefficients,
-        // &language_public_parameters.ciphertexts, mask, encryption_randomness),
-        //     commitment_scheme.commit(coefficients, commitment_randomness),
-        // )
-        //     .into())
+        // TODO: DRY-out
+        // Any one of these values could be invalid and thus return an error upon instantiation
+        // First, get all the `Result<>`s from `new()`
+        let ciphertexts = language_public_parameters.ciphertexts.clone().map(|value| {
+            CiphertextSpaceGroupElement::new(value, ciphertext_group_public_parameters)
+        });
 
-        todo!()
+        // Then return the first error you encounter, or create a valid group element and return it
+        if let Some(Err(err)) = ciphertexts.iter().find(|res| res.is_err()) {
+            return Err(err.clone());
+        }
+
+        let ciphertexts = ciphertexts.map(|res| res.unwrap());
+
+        Ok((
+            encryption_key.evaluate_linear_combination_with_randomness(
+                coefficients.into(),
+                &ciphertexts,
+                &mask.retrieve(),
+                encryption_randomness,
+            ),
+            commitment_scheme.commit(coefficients, commitment_randomness),
+        )
+            .into())
     }
 }
 
@@ -296,7 +307,7 @@ pub type Proof<
     const SCALAR_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-    const FUNCTION_DEGREE: usize,
+    const DIMENSION: usize,
     const WITNESS_SCALAR_LIMBS: usize,
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     Scalar,
@@ -328,7 +339,7 @@ pub type Proof<
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
-        FUNCTION_DEGREE,
+        DIMENSION,
         WITNESS_SCALAR_LIMBS,
         PUBLIC_VALUE_SCALAR_LIMBS,
         Scalar,
