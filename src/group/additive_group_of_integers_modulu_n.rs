@@ -75,7 +75,6 @@ where
     }
 
     fn scalar_mul<const RHS_LIMBS: usize>(&self, scalar: &Uint<RHS_LIMBS>) -> Self {
-        // I can't do this elegantly right? montgomery only works for the same limbs?
 
         let scalar = DynResidue::new(
             &scalar.reduce(&self.public_parameters().modulus),
