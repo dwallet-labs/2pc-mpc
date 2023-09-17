@@ -14,7 +14,11 @@ use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use super::{Error, Result, TranscriptProtocol};
-use crate::{group, group::GroupElement, traits::Samplable, ComputationalSecuritySizedNumber};
+use crate::{
+    group,
+    group::{GroupElement, Samplable},
+    ComputationalSecuritySizedNumber,
+};
 
 // For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
 // Setting it to be 64-bit larger than the computational security parameter $\kappa$ allows us to
@@ -31,7 +35,7 @@ pub trait Language<
     // The upper bound for the scalar size of the associated public-value space group
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     // An element of the witness space $(\HH_\pp, +)$
-    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable,
+    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
     // An element in the associated public-value space $(\GG_\pp, \cdot)$,
     PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
 >
@@ -84,7 +88,7 @@ pub struct Proof<
 impl<
         const WITNESS_SCALAR_LIMBS: usize,
         const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable,
+        WitnessSpaceGroupElement: Samplable<WITNESS_SCALAR_LIMBS>,
         PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
         Lang: Language<
             WITNESS_SCALAR_LIMBS,
@@ -144,7 +148,7 @@ impl<
             statements,
         )?;
 
-        let randomizer = WitnessSpaceGroupElement::sample(rng);
+        let randomizer = WitnessSpaceGroupElement::sample(rng, witness_space_public_parameters);
 
         let statement_mask = Lang::group_homomorphism(
             &randomizer,

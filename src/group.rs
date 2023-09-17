@@ -8,12 +8,14 @@ pub mod secp256k1;
 pub mod self_product_group;
 
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+
+use crypto_bigint::rand_core::CryptoRngCore;
+
 pub mod paillier;
 use crypto_bigint::Uint;
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
-pub mod additive_group_of_integers_modulu_n;
 pub mod multiplicative_group_of_integers_modulu_n;
 
 /// An error in group element instantiation [`GroupElement::new()`]
@@ -162,4 +164,9 @@ pub trait PrimeGroupElement<
     + MulByGenerator<Scalar>
     + for<'r> MulByGenerator<&'r Scalar>
 {
+}
+
+pub trait Samplable<const SCALAR_LIMBS: usize>: GroupElement<SCALAR_LIMBS> {
+    /// Uniformly sample a random value.
+    fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> Self;
 }

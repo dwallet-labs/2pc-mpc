@@ -5,7 +5,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 use serde::Serialize;
 
-use crate::{group, proofs::schnorr, traits::Samplable};
+use crate::{group, group::Samplable, proofs::schnorr};
 
 /// Knowledge of Discrete Log Schnorr Language.
 pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
@@ -17,7 +17,7 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
 #[derive(Debug, PartialEq, Serialize)]
 pub struct PublicParameters<const SCALAR_LIMBS: usize, Scalar, GroupElement>
 where
-    Scalar: group::GroupElement<SCALAR_LIMBS> + Samplable,
+    Scalar: group::GroupElement<SCALAR_LIMBS> + Samplable<SCALAR_LIMBS>,
     GroupElement: group::GroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
@@ -43,7 +43,7 @@ impl<const SCALAR_LIMBS: usize, Scalar, GroupElement>
     schnorr::Language<SCALAR_LIMBS, SCALAR_LIMBS, Scalar, GroupElement>
     for Language<SCALAR_LIMBS, Scalar, GroupElement>
 where
-    Scalar: group::GroupElement<SCALAR_LIMBS> + Samplable,
+    Scalar: group::GroupElement<SCALAR_LIMBS> + Samplable<SCALAR_LIMBS>,
     GroupElement: group::GroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
