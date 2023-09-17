@@ -31,6 +31,12 @@ pub struct PublicParameters<
     _plaintext_group_element_choice: PhantomData<PlaintextSpaceGroupElement>,
 }
 
+type RandomnessPublicParameters =
+    multiplicative_group_of_integers_modulu_n::PublicParameters<{ LargeBiPrimeSizedNumber::LIMBS }>;
+type CiphertextPublicParameters = multiplicative_group_of_integers_modulu_n::PublicParameters<
+    { PaillierModulusSizedNumber::LIMBS },
+>;
+
 /// Emulate an additively homomorphic encryption with `PlaintextSpaceGroupElement` as the plaintext
 /// group using the Paillier encryption scheme.
 ///
@@ -75,8 +81,13 @@ where
         }
     }
 
-    fn new(public_parameters: &Self::PublicParameters) -> Self {
-        EncryptionKey::new(public_parameters.associated_bi_prime)
+    fn new(
+        encryption_scheme_public_parameters: &Self::PublicParameters,
+        _plaintext_group_public_parameters: &PlaintextSpaceGroupElement::PublicParameters,
+        _randomness_group_public_parameters: &RandomnessPublicParameters,
+        _ciphertext_group_public_parameters: &CiphertextPublicParameters,
+    ) -> Self {
+        EncryptionKey::new(encryption_scheme_public_parameters.associated_bi_prime)
     }
 
     fn encrypt_with_randomness(
@@ -89,7 +100,7 @@ where
 
         CiphertextGroupElement::new(
             self.encrypt_with_randomness(&(&plaintext.value()).into(), &randomness.into()),
-            &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2),
+            &CiphertextPublicParameters::new(self.n2),
         )
         .unwrap()
     }
@@ -126,7 +137,7 @@ where
                 ),
                 &randomness.into(),
             ),
-            &multiplicative_group_of_integers_modulu_n::PublicParameters::new(self.n2),
+            &CiphertextPublicParameters::new(self.n2),
         )
         .unwrap();
 
