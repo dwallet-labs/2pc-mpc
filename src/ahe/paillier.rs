@@ -40,7 +40,12 @@ type CiphertextPublicParameters = multiplicative_group_of_integers_modulu_n::Pub
 /// Emulate an additively homomorphic encryption with `PlaintextSpaceGroupElement` as the plaintext
 /// group using the Paillier encryption scheme.
 ///
-/// NOTICE: ensures circuit-privacy as long as MASK_LIMBS < LargeBiPrimeSizedNumber::LIMBS
+/// NOTICE: ensures circuit-privacy as long as MASK_LIMBS < LargeBiPrimeSizedNumber::LIMBS -
+/// PLAINTEXT_SPACE_SCALAR_LIMBS - 1 bit
+///
+/// MASK_LIMBS = LargeBiPrimeSizedNumber::LIMBS - PLAINTEXT_SPACE_SCALAR_LIMBS - U64::LIMBS =>
+/// Concat...
+///
 /// TODO: this might not be the right check, and I might be able to enforce this better with
 /// ConcatMixed that sums up to LargeBiPrimeSizedNumber.
 impl<
