@@ -7,7 +7,10 @@ use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, Uint};
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
-use crate::group::{GroupElement as GroupElementTrait, Samplable};
+use crate::{
+    group,
+    group::{GroupElement as GroupElementTrait, Samplable},
+};
 
 /// An element of the Direct Product of the two Groups `G` and `H`.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -23,11 +26,14 @@ impl<
 where
     Uint<G_SCALAR_LIMBS>: ConcatMixed<Uint<H_SCALAR_LIMBS>, MixedOutput = Uint<SCALAR_LIMBS>>,
 {
-    fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> Self {
-        Self(
-            G::sample(rng, &public_parameters.0),
-            H::sample(rng, &public_parameters.1),
-        )
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+    ) -> group::Result<Self> {
+        Ok(Self(
+            G::sample(rng, &public_parameters.0)?,
+            H::sample(rng, &public_parameters.1)?,
+        ))
     }
 }
 
