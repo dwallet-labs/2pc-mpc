@@ -3,7 +3,7 @@
 
 use std::{marker::PhantomData, ops::Mul};
 
-use crypto_bigint::{ConcatMixed, Uint};
+use crypto_bigint::{ConcatMixed, Encoding, Uint};
 use serde::Serialize;
 
 use crate::{
@@ -39,6 +39,8 @@ pub struct Language<
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
     const FUNCTION_DEGREE: usize,
+    const WITNESS_SCALAR_LIMBS: usize,
+    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     Scalar,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
@@ -62,6 +64,8 @@ pub struct PublicParameters<
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
     const FUNCTION_DEGREE: usize,
+    const WITNESS_SCALAR_LIMBS: usize,
+    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     Scalar,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
@@ -123,6 +127,7 @@ impl<
         WITNESS_SCALAR_LIMBS,
         PUBLIC_VALUE_SCALAR_LIMBS,
         direct_product::FourWayGroupElement<
+            WITNESS_SCALAR_LIMBS,
             SCALAR_LIMBS,
             SCALAR_LIMBS,
             SCALAR_LIMBS,
@@ -135,6 +140,7 @@ impl<
             RandomnessSpaceGroupElement,
         >,
         direct_product::GroupElement<
+            PUBLIC_VALUE_SCALAR_LIMBS,
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
             CiphertextSpaceGroupElement,
@@ -147,6 +153,8 @@ impl<
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
         FUNCTION_DEGREE,
+        WITNESS_SCALAR_LIMBS,
+        PUBLIC_VALUE_SCALAR_LIMBS,
         Scalar,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
@@ -162,6 +170,7 @@ where
     RandomnessSpaceGroupElement: group::GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>
         + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: group::GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+    Uint<MASK_LIMBS>: Encoding,
     Uint<SCALAR_LIMBS>:
         ConcatMixed<Uint<RANDOMNESS_SPACE_SCALAR_LIMBS>, MixedOutput = Uint<WITNESS_SCALAR_LIMBS>>,
     Uint<CIPHERTEXT_SPACE_SCALAR_LIMBS>:
@@ -190,6 +199,8 @@ where
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
         FUNCTION_DEGREE,
+        WITNESS_SCALAR_LIMBS,
+        PUBLIC_VALUE_SCALAR_LIMBS,
         Scalar,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
@@ -201,6 +212,7 @@ where
 
     fn group_homomorphism(
         witness: &direct_product::FourWayGroupElement<
+            WITNESS_SCALAR_LIMBS,
             SCALAR_LIMBS,
             SCALAR_LIMBS,
             SCALAR_LIMBS,
@@ -213,13 +225,21 @@ where
             RandomnessSpaceGroupElement,
         >,
         language_public_parameters: &Self::PublicParameters,
-        witness_space_public_parameters: &direct_product::PublicParameters<
+        witness_space_public_parameters: &<direct_product::FourWayGroupElement<
+            WITNESS_SCALAR_LIMBS,
             SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            MASK_LIMBS,
+            WITNESS_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
+            self_product_group::GroupElement<FUNCTION_DEGREE, SCALAR_LIMBS, Scalar>,
             Scalar,
+            additive_group_of_integers_modulu_n::GroupElement<MASK_LIMBS>,
             RandomnessSpaceGroupElement,
-        >,
+        > as group::GroupElement<WITNESS_SCALAR_LIMBS>>::PublicParameters,
         public_value_space_public_parameters: &direct_product::PublicParameters<
+            PUBLIC_VALUE_SCALAR_LIMBS,
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
             CiphertextSpaceGroupElement,
@@ -227,40 +247,42 @@ where
         >,
     ) -> group::Result<
         direct_product::GroupElement<
+            PUBLIC_VALUE_SCALAR_LIMBS,
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
             CiphertextSpaceGroupElement,
             GroupElement,
         >,
     > {
-        let (discrete_log, randomness): (&Scalar, &RandomnessSpaceGroupElement) = witness.into();
-
-        let (scalar_group_public_parameters, _) = witness_space_public_parameters.into();
-
-        let (_, group_public_parameters) = public_value_space_public_parameters.into();
-
-        let base = GroupElement::new(
-            language_public_parameters.generator.clone(),
-            group_public_parameters,
-        )?;
-
-        let encryption_key = EncryptionKey::new(
-            &language_public_parameters.encryption_scheme_public_parameters,
-            scalar_group_public_parameters,
-            &language_public_parameters.randomness_group_public_parameters,
-            &language_public_parameters.ciphertext_group_public_parameters,
-        );
-
-        let commitment_scheme = CommitmentScheme::new(
-            &language_public_parameters.commitment_scheme_public_parameters,
-            &group_public_parameters,
-        )?;
-
-        Ok((
-            encryption_key.encrypt_with_randomness(discrete_log, randomness),
-            base * discrete_log,
-        )
-            .into())
+        todo!()
+        // let (discrete_log, randomness): (&Scalar, &RandomnessSpaceGroupElement) = witness.into();
+        //
+        // let (scalar_group_public_parameters, _) = witness_space_public_parameters.into();
+        //
+        // let (_, group_public_parameters) = public_value_space_public_parameters.into();
+        //
+        // let base = GroupElement::new(
+        //     language_public_parameters.generator.clone(),
+        //     group_public_parameters,
+        // )?;
+        //
+        // let encryption_key = EncryptionKey::new(
+        //     &language_public_parameters.encryption_scheme_public_parameters,
+        //     scalar_group_public_parameters,
+        //     &language_public_parameters.randomness_group_public_parameters,
+        //     &language_public_parameters.ciphertext_group_public_parameters,
+        // );
+        //
+        // let commitment_scheme = CommitmentScheme::new(
+        //     &language_public_parameters.commitment_scheme_public_parameters,
+        //     &group_public_parameters,
+        // )?;
+        //
+        // Ok((
+        //     encryption_key.encrypt_with_randomness(discrete_log, randomness),
+        //     base * discrete_log,
+        // )
+        //     .into())
     }
 }
 
@@ -272,6 +294,8 @@ pub type Proof<
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
     const FUNCTION_DEGREE: usize,
+    const WITNESS_SCALAR_LIMBS: usize,
+    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     Scalar,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
@@ -283,12 +307,14 @@ pub type Proof<
     SCALAR_LIMBS,
     SCALAR_LIMBS,
     direct_product::GroupElement<
+        WITNESS_SCALAR_LIMBS,
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         Scalar,
         RandomnessSpaceGroupElement,
     >,
     direct_product::GroupElement<
+        PUBLIC_VALUE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
         CiphertextSpaceGroupElement,
@@ -300,6 +326,8 @@ pub type Proof<
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
         FUNCTION_DEGREE,
+        WITNESS_SCALAR_LIMBS,
+        PUBLIC_VALUE_SCALAR_LIMBS,
         Scalar,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,

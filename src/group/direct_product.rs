@@ -14,41 +14,52 @@ use crate::{
 
 /// An element of the Direct Product of the two Groups `G` and `H`.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub struct GroupElement<const G_SCALAR_LIMBS: usize, const H_SCALAR_LIMBS: usize, G, H>(G, H);
+pub struct GroupElement<
+    const SCALAR_LIMBS: usize,
+    const FIRST_SCALAR_LIMBS: usize,
+    const SECOND_SCALAR_LIMBS: usize,
+    G,
+    H,
+>(G, H);
 
 pub type ThreeWayGroupElement<
-    const G_SCALAR_LIMBS: usize,
-    const H_SCALAR_LIMBS: usize,
-    const G_H_SCALAR_LIMBS: usize,
-    const I_SCALAR_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    const FIRST_SCALAR_LIMBS: usize,
+    const SECOND_SCALAR_LIMBS: usize,
+    const G_SECOND_SCALAR_LIMBS: usize,
+    const THIRD_SCALAR_LIMBS: usize,
     G,
     H,
     I,
 > = GroupElement<
-    G_H_SCALAR_LIMBS,
-    I_SCALAR_LIMBS,
-    GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>,
+    SCALAR_LIMBS,
+    G_SECOND_SCALAR_LIMBS,
+    THIRD_SCALAR_LIMBS,
+    GroupElement<G_SECOND_SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>,
     I,
 >;
 
 pub type FourWayGroupElement<
-    const G_SCALAR_LIMBS: usize,
-    const H_SCALAR_LIMBS: usize,
-    const G_H_SCALAR_LIMBS: usize,
-    const I_SCALAR_LIMBS: usize,
-    const G_H_I_SCALAR_LIMBS: usize,
-    const J_SCALAR_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    const FIRST_SCALAR_LIMBS: usize,
+    const SECOND_SCALAR_LIMBS: usize,
+    const G_SECOND_SCALAR_LIMBS: usize,
+    const THIRD_SCALAR_LIMBS: usize,
+    const G_H_THIRD_SCALAR_LIMBS: usize,
+    const FOURTH_SCALAR_LIMBS: usize,
     G,
     H,
     I,
     J,
 > = GroupElement<
-    G_H_I_SCALAR_LIMBS,
-    J_SCALAR_LIMBS,
+    SCALAR_LIMBS,
+    G_H_THIRD_SCALAR_LIMBS,
+    FOURTH_SCALAR_LIMBS,
     GroupElement<
-        G_H_SCALAR_LIMBS,
-        I_SCALAR_LIMBS,
-        GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>,
+        G_H_THIRD_SCALAR_LIMBS,
+        G_SECOND_SCALAR_LIMBS,
+        THIRD_SCALAR_LIMBS,
+        GroupElement<G_SECOND_SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>,
         I,
     >,
     J,
@@ -56,11 +67,12 @@ pub type FourWayGroupElement<
 
 impl<
         const SCALAR_LIMBS: usize,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS> + Samplable<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS> + Samplable<H_SCALAR_LIMBS>,
-    > Samplable<SCALAR_LIMBS> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS> + Samplable<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS> + Samplable<SECOND_SCALAR_LIMBS>,
+    > Samplable<SCALAR_LIMBS>
+    for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     fn sample(
         rng: &mut impl CryptoRngCore,
@@ -76,27 +88,30 @@ impl<
 /// The public parameters of the Direct Product of the two Groups `G` and `H`.
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct PublicParameters<
-    const G_SCALAR_LIMBS: usize,
-    const H_SCALAR_LIMBS: usize,
-    G: GroupElementTrait<G_SCALAR_LIMBS>,
-    H: GroupElementTrait<H_SCALAR_LIMBS>,
+    const SCALAR_LIMBS: usize,
+    const FIRST_SCALAR_LIMBS: usize,
+    const SECOND_SCALAR_LIMBS: usize,
+    G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+    H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
 >(G::PublicParameters, H::PublicParameters);
 
 /// The value of the Direct Product of the two Groups `G` and `H`.
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct Value<
-    const G_SCALAR_LIMBS: usize,
-    const H_SCALAR_LIMBS: usize,
-    G: GroupElementTrait<G_SCALAR_LIMBS>,
-    H: GroupElementTrait<H_SCALAR_LIMBS>,
+    const SCALAR_LIMBS: usize,
+    const FIRST_SCALAR_LIMBS: usize,
+    const SECOND_SCALAR_LIMBS: usize,
+    G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+    H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
 >(G::Value, H::Value);
 
 impl<
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > ConstantTimeEq for Value<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > ConstantTimeEq for Value<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.0.ct_eq(&other.0).bitand(self.1.ct_eq(&other.1))
@@ -105,19 +120,21 @@ impl<
 
 impl<
         const SCALAR_LIMBS: usize,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > GroupElementTrait<SCALAR_LIMBS> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > GroupElementTrait<SCALAR_LIMBS>
+    for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
-    type Value = Value<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>;
+    type Value = Value<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>;
 
     fn value(&self) -> Self::Value {
         Value(self.0.value(), self.1.value())
     }
 
-    type PublicParameters = PublicParameters<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>;
+    type PublicParameters =
+        PublicParameters<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>;
 
     fn public_parameters(&self) -> Self::PublicParameters {
         PublicParameters(self.0.public_parameters(), self.1.public_parameters())
@@ -147,11 +164,12 @@ impl<
 }
 
 impl<
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > Neg for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > Neg for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     type Output = Self;
 
@@ -161,11 +179,12 @@ impl<
 }
 
 impl<
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > Add<Self> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > Add<Self> for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     type Output = Self;
 
@@ -176,11 +195,12 @@ impl<
 
 impl<
         'r,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > Add<&'r Self> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > Add<&'r Self> for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     type Output = Self;
 
@@ -190,11 +210,12 @@ impl<
 }
 
 impl<
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > Sub<Self> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > Sub<Self> for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     type Output = Self;
 
@@ -205,11 +226,12 @@ impl<
 
 impl<
         'r,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > Sub<&'r Self> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > Sub<&'r Self> for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     type Output = Self;
 
@@ -219,11 +241,13 @@ impl<
 }
 
 impl<
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > AddAssign<Self> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > AddAssign<Self>
+    for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     fn add_assign(&mut self, rhs: Self) {
         self.0.add_assign(&rhs.0);
@@ -233,11 +257,13 @@ impl<
 
 impl<
         'r,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > AddAssign<&'r Self> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > AddAssign<&'r Self>
+    for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     fn add_assign(&mut self, rhs: &'r Self) {
         self.0.add_assign(&rhs.0);
@@ -246,11 +272,13 @@ impl<
 }
 
 impl<
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > SubAssign<Self> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > SubAssign<Self>
+    for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     fn sub_assign(&mut self, rhs: Self) {
         self.0.sub_assign(&rhs.0);
@@ -260,11 +288,13 @@ impl<
 
 impl<
         'r,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > SubAssign<&'r Self> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > SubAssign<&'r Self>
+    for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     fn sub_assign(&mut self, rhs: &'r Self) {
         self.0.sub_assign(&rhs.0);
@@ -274,11 +304,13 @@ impl<
 
 impl<
         const LIMBS: usize,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > Mul<Uint<LIMBS>> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > Mul<Uint<LIMBS>>
+    for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     type Output = Self;
 
@@ -290,11 +322,13 @@ impl<
 impl<
         'r,
         const LIMBS: usize,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > Mul<&'r Uint<LIMBS>> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > Mul<&'r Uint<LIMBS>>
+    for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     type Output = Self;
 
@@ -306,13 +340,15 @@ impl<
 impl<
         'r,
         const LIMBS: usize,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > Mul<Uint<LIMBS>> for &'r GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > Mul<Uint<LIMBS>>
+    for &'r GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
-    type Output = GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>;
+    type Output = GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>;
 
     fn mul(self, rhs: Uint<LIMBS>) -> Self::Output {
         self.scalar_mul(&rhs)
@@ -322,13 +358,15 @@ impl<
 impl<
         'r,
         const LIMBS: usize,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > Mul<&'r Uint<LIMBS>> for &'r GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > Mul<&'r Uint<LIMBS>>
+    for &'r GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
-    type Output = GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>;
+    type Output = GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>;
 
     fn mul(self, rhs: &'r Uint<LIMBS>) -> Self::Output {
         self.scalar_mul(rhs)
@@ -337,11 +375,13 @@ impl<
 
 impl<
         const LIMBS: usize,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > MulAssign<Uint<LIMBS>> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > MulAssign<Uint<LIMBS>>
+    for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     fn mul_assign(&mut self, rhs: Uint<LIMBS>) {
         *self = self.scalar_mul(&rhs)
@@ -351,11 +391,13 @@ impl<
 impl<
         'r,
         const LIMBS: usize,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > MulAssign<&'r Uint<LIMBS>> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > MulAssign<&'r Uint<LIMBS>>
+    for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     fn mul_assign(&mut self, rhs: &'r Uint<LIMBS>) {
         *self = self.scalar_mul(rhs)
@@ -363,36 +405,44 @@ impl<
 }
 
 impl<
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > From<GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>> for (G, H)
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > From<GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>> for (G, H)
 {
-    fn from(value: GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>) -> Self {
+    fn from(
+        value: GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>,
+    ) -> Self {
         (value.0, value.1)
     }
 }
 
 impl<
         'r,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > From<&'r GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>> for (&'r G, &'r H)
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > From<&'r GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>>
+    for (&'r G, &'r H)
 {
-    fn from(value: &'r GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>) -> Self {
+    fn from(
+        value: &'r GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>,
+    ) -> Self {
         (&value.0, &value.1)
     }
 }
 
 impl<
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > From<(G, H)> for GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > From<(G, H)> for GroupElement<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     fn from(value: (G, H)) -> Self {
         Self(value.0, value.1)
@@ -400,39 +450,46 @@ impl<
 }
 
 impl<
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > From<PublicParameters<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > From<PublicParameters<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>>
     for (G::PublicParameters, H::PublicParameters)
 {
-    fn from(value: PublicParameters<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>) -> Self {
+    fn from(
+        value: PublicParameters<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>,
+    ) -> Self {
         (value.0, value.1)
     }
 }
 
 impl<
         'r,
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
-    > From<&'r PublicParameters<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>>
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
+    > From<&'r PublicParameters<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>>
     for (&'r G::PublicParameters, &'r H::PublicParameters)
 {
-    fn from(value: &'r PublicParameters<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>) -> Self {
+    fn from(
+        value: &'r PublicParameters<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>,
+    ) -> Self {
         (&value.0, &value.1)
     }
 }
 
 impl<
-        const G_SCALAR_LIMBS: usize,
-        const H_SCALAR_LIMBS: usize,
-        G: GroupElementTrait<G_SCALAR_LIMBS>,
-        H: GroupElementTrait<H_SCALAR_LIMBS>,
+        const SCALAR_LIMBS: usize,
+        const FIRST_SCALAR_LIMBS: usize,
+        const SECOND_SCALAR_LIMBS: usize,
+        G: GroupElementTrait<FIRST_SCALAR_LIMBS>,
+        H: GroupElementTrait<SECOND_SCALAR_LIMBS>,
     > From<(G::PublicParameters, H::PublicParameters)>
-    for PublicParameters<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G, H>
+    for PublicParameters<SCALAR_LIMBS, FIRST_SCALAR_LIMBS, SECOND_SCALAR_LIMBS, G, H>
 {
     fn from(value: (G::PublicParameters, H::PublicParameters)) -> Self {
         Self(value.0, value.1)

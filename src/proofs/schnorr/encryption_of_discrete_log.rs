@@ -33,6 +33,8 @@ pub struct Language<
     const SCALAR_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
+    const WITNESS_SCALAR_LIMBS: usize,
+    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     Scalar,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
@@ -53,6 +55,8 @@ pub struct PublicParameters<
     const SCALAR_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
+    const WITNESS_SCALAR_LIMBS: usize,
+    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     Scalar,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
@@ -99,12 +103,14 @@ impl<
         WITNESS_SCALAR_LIMBS,
         PUBLIC_VALUE_SCALAR_LIMBS,
         direct_product::GroupElement<
+            WITNESS_SCALAR_LIMBS,
             SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             Scalar,
             RandomnessSpaceGroupElement,
         >,
         direct_product::GroupElement<
+            PUBLIC_VALUE_SCALAR_LIMBS,
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
             CiphertextSpaceGroupElement,
@@ -116,6 +122,8 @@ impl<
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
+        WITNESS_SCALAR_LIMBS,
+        PUBLIC_VALUE_SCALAR_LIMBS,
         Scalar,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
@@ -145,6 +153,8 @@ where
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
+        WITNESS_SCALAR_LIMBS,
+        PUBLIC_VALUE_SCALAR_LIMBS,
         Scalar,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
@@ -155,6 +165,7 @@ where
 
     fn group_homomorphism(
         witness: &direct_product::GroupElement<
+            WITNESS_SCALAR_LIMBS,
             SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             Scalar,
@@ -162,12 +173,14 @@ where
         >,
         language_public_parameters: &Self::PublicParameters,
         witness_space_public_parameters: &direct_product::PublicParameters<
+            WITNESS_SCALAR_LIMBS,
             SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             Scalar,
             RandomnessSpaceGroupElement,
         >,
         public_value_space_public_parameters: &direct_product::PublicParameters<
+            PUBLIC_VALUE_SCALAR_LIMBS,
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
             CiphertextSpaceGroupElement,
@@ -175,6 +188,7 @@ where
         >,
     ) -> group::Result<
         direct_product::GroupElement<
+            PUBLIC_VALUE_SCALAR_LIMBS,
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
             CiphertextSpaceGroupElement,
@@ -226,12 +240,14 @@ pub type Proof<
     SCALAR_LIMBS,
     SCALAR_LIMBS,
     direct_product::GroupElement<
+        WITNESS_SCALAR_LIMBS,
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         Scalar,
         RandomnessSpaceGroupElement,
     >,
     direct_product::GroupElement<
+        PUBLIC_VALUE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
         CiphertextSpaceGroupElement,
@@ -242,6 +258,8 @@ pub type Proof<
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
+        WITNESS_SCALAR_LIMBS,
+        PUBLIC_VALUE_SCALAR_LIMBS,
         Scalar,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
