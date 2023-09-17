@@ -168,5 +168,8 @@ pub trait PrimeGroupElement<
 
 pub trait Samplable<const SCALAR_LIMBS: usize>: GroupElement<SCALAR_LIMBS> {
     /// Uniformly sample a random value.
-    fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> Self;
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+    ) -> Result<Self>;
 }

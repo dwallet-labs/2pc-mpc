@@ -25,10 +25,26 @@ impl<const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMB
 where
     G: Samplable<SCALAR_LIMBS>,
 {
-    fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> Self {
-        Self(array::from_fn(|_| {
-            G::sample(rng, &public_parameters.public_parameters)
-        }))
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+    ) -> group::Result<Self> {
+        let public_parameters = &public_parameters.public_parameters;
+
+        if N < 2 {
+            // there is no use of using this struct for a "product group" of less than two groups.
+            return Err(group::Error::InvalidPublicParametersError);
+        }
+
+        // Any one of these values could be invalid and thus return an error upon instantiation
+        // First, get all the `Result<>`s from `new()`
+        let results = array::from_fn(|_| G::sample(rng, public_parameters));
+
+        // Then return the first error you encounter, or create a valid group element and return it
+        if let Some(Err(err)) = results.iter().find(|res| res.is_err()) {
+            return Err(err.clone());
+        }
+        Ok(Self(results.map(|res| res.unwrap())))
     }
 }
 
