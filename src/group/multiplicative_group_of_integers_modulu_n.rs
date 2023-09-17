@@ -23,11 +23,25 @@ impl<const LIMBS: usize> Samplable<LIMBS> for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
-    fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> Self {
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+    ) -> group::Result<Self> {
         // Classic rejection-sampling technique.
         loop {
-            if let Ok(sampled_element) = Self::new(Uint::<LIMBS>::random(rng), public_parameters) {
-                return sampled_element;
+            match Self::new(Uint::<LIMBS>::random(rng), public_parameters) {
+                Err(group::Error::UnsupportedPublicParametersError) => {
+                    return Err(group::Error::UnsupportedPublicParametersError);
+                }
+                Err(group::Error::InvalidPublicParametersError) => {
+                    return Err(group::Error::InvalidPublicParametersError);
+                }
+                Err(group::Error::InvalidGroupElementError) => {
+                    continue;
+                }
+                Ok(sampled_element) => {
+                    return Ok(sampled_element);
+                }
             }
         }
     }
