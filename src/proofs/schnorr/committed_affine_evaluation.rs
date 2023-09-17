@@ -93,13 +93,13 @@ pub struct PublicParameters<
         SCALAR_LIMBS,
         SCALAR_LIMBS,
         SCALAR_LIMBS,
-        Scalar,
+        self_product_group::GroupElement<FUNCTION_DEGREE, SCALAR_LIMBS, Scalar>,
         Scalar,
         GroupElement,
     >,
 {
     encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    randomness_group_public_parameters: RandomnessSpaceGroupElement::PublicParameters,
+    randomness_group_public_parameters: RandomnessSpaceGroupElement::PublicParameters, // TODO: remove these as they are derived from the witness/public
     ciphertext_group_public_parameters: CiphertextSpaceGroupElement::PublicParameters,
     commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
     // The base of discrete log
@@ -188,7 +188,7 @@ where
         SCALAR_LIMBS,
         SCALAR_LIMBS,
         SCALAR_LIMBS,
-        Scalar,
+        self_product_group::GroupElement<FUNCTION_DEGREE, SCALAR_LIMBS, Scalar>,
         Scalar,
         GroupElement,
     >,
@@ -254,35 +254,38 @@ where
             GroupElement,
         >,
     > {
-        todo!()
-        // let (discrete_log, randomness): (&Scalar, &RandomnessSpaceGroupElement) = witness.into();
-        //
-        // let (scalar_group_public_parameters, _) = witness_space_public_parameters.into();
-        //
-        // let (_, group_public_parameters) = public_value_space_public_parameters.into();
-        //
-        // let base = GroupElement::new(
-        //     language_public_parameters.generator.clone(),
-        //     group_public_parameters,
-        // )?;
-        //
-        // let encryption_key = EncryptionKey::new(
-        //     &language_public_parameters.encryption_scheme_public_parameters,
-        //     scalar_group_public_parameters,
-        //     &language_public_parameters.randomness_group_public_parameters,
-        //     &language_public_parameters.ciphertext_group_public_parameters,
-        // );
-        //
-        // let commitment_scheme = CommitmentScheme::new(
-        //     &language_public_parameters.commitment_scheme_public_parameters,
-        //     &group_public_parameters,
-        // )?;
-        //
+        let (coefficients, commitment_randomness, mask, encryption_randomness) = witness.into();
+
+        let (_, scalar_group_public_parameters, _, randomness_public_parameters) =
+            witness_space_public_parameters.into();
+
+        let (_, group_public_parameters) = public_value_space_public_parameters.into();
+
+        let base = GroupElement::new(
+            language_public_parameters.generator.clone(),
+            group_public_parameters,
+        )?;
+
+        let encryption_key = EncryptionKey::new(
+            &language_public_parameters.encryption_scheme_public_parameters,
+            scalar_group_public_parameters,
+            &language_public_parameters.randomness_group_public_parameters,
+            &language_public_parameters.ciphertext_group_public_parameters,
+        );
+
+        let commitment_scheme = CommitmentScheme::new(
+            &language_public_parameters.commitment_scheme_public_parameters,
+            &group_public_parameters,
+        )?;
+
         // Ok((
-        //     encryption_key.encrypt_with_randomness(discrete_log, randomness),
-        //     base * discrete_log,
+        //     encryption_key.evaluate_linear_transformation_with_randomness(?, coefficients,
+        // &language_public_parameters.ciphertexts, mask, encryption_randomness),
+        //     commitment_scheme.commit(coefficients, commitment_randomness),
         // )
         //     .into())
+
+        todo!()
     }
 }
 
