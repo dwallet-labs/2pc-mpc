@@ -24,7 +24,7 @@ where
     Uint<LIMBS>: Encoding,
 {
     fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> Self {
-        // Classic rejection-sampling technique
+        // Classic rejection-sampling technique.
         loop {
             if let Ok(sampled_element) = Self::new(Uint::<LIMBS>::random(rng), public_parameters) {
                 return sampled_element;
