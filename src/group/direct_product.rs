@@ -13,6 +13,13 @@ use crate::group::{GroupElement as GroupElementTrait, Samplable};
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct GroupElement<const G_SCALAR_LIMBS: usize, const H_SCALAR_LIMBS: usize, G, H>(G, H);
 
+// pub type ThreeWayGroupElement<const G_SCALAR_LIMBS: usize, const H_SCALAR_LIMBS: usize, const
+// I_SCALAR_LIMBS: usize, G, H, I> = GroupElement<GroupElement<G_SCALAR_LIMBS, H_SCALAR_LIMBS, G,
+// H>, I>;
+//
+// pub type ProductGroup4Element<G, H, I, J> =
+// ProductGroupElement<ProductGroupElement<G, H>, ProductGroupElement<I, J>>;
+
 impl<
         const G_SCALAR_LIMBS: usize,
         const H_SCALAR_LIMBS: usize,
