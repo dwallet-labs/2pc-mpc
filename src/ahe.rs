@@ -102,6 +102,11 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
     /// linear combination defined by `coefficients` and `ciphertexts`.
     ///
+    /// To ensure circuit-privacy, one must assure that `ciphertexts` are encryptions of plaintext
+    /// group elements (and thus their message is bounded by the plaintext group order) either by
+    /// generating them via ['Self::encrypt()'] or verifying appropriate zero-knowledge proofs from
+    /// encryptors.
+    ///
     /// To ensure circuit-privacy, the `mask` and `randmomness` to parameters may be used by
     /// implementers.
     fn evaluate_linear_combination_with_randomness<const DIMENSION: usize>(
@@ -117,6 +122,11 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     ///
     /// This is the probabilistic linear combination algorithm which samples `mask` and `randomness`
     /// from `rng` and calls [`Self::linear_combination_with_randomness()`].
+    ///
+    /// To ensure circuit-privacy, one must assure that `ciphertexts` are encryptions of plaintext
+    /// group elements (and thus their message is bounded by the plaintext group order) either by
+    /// generating them via ['Self::encrypt()'] or verifying appropriate zero-knowledge proofs from
+    /// encryptors.
     fn evaluate_linear_combination<const DIMENSION: usize>(
         &self,
         coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
@@ -153,22 +163,12 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     PlaintextSpaceGroupElement,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
-    EncryptionKey,
->: AsRef<EncryptionKey> where
+> where
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     RandomnessSpaceGroupElement:
         GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
-    EncryptionKey: AdditivelyHomomorphicEncryptionKey<
-        MASK_LIMBS,
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        RANDOMNESS_SPACE_SCALAR_LIMBS,
-        CIPHERTEXT_SPACE_SCALAR_LIMBS,
-        PlaintextSpaceGroupElement,
-        RandomnessSpaceGroupElement,
-        CiphertextSpaceGroupElement,
-    >,
 {
     /// $\Dec(sk, \ct) \to \pt$: Decrypt `ciphertext` using `decryption_key`.
     /// A deterministic algorithm that on input a secret key $sk$ and a ciphertext $\ct \in
