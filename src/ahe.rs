@@ -162,22 +162,12 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     PlaintextSpaceGroupElement,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
-    EncryptionKey,
->: AsRef<EncryptionKey> where
+> where
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     RandomnessSpaceGroupElement:
         GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
-    EncryptionKey: AdditivelyHomomorphicEncryptionKey<
-        MASK_LIMBS,
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        RANDOMNESS_SPACE_SCALAR_LIMBS,
-        CIPHERTEXT_SPACE_SCALAR_LIMBS,
-        PlaintextSpaceGroupElement,
-        RandomnessSpaceGroupElement,
-        CiphertextSpaceGroupElement,
-    >,
 {
     /// $\Dec(sk, \ct) \to \pt$: Decrypt `ciphertext` using `decryption_key`.
     /// A deterministic algorithm that on input a secret key $sk$ and a ciphertext $\ct \in
