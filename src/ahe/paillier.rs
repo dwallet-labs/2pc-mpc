@@ -37,17 +37,8 @@ type CiphertextPublicParameters = multiplicative_group_of_integers_modulu_n::Pub
     { PaillierModulusSizedNumber::LIMBS },
 >;
 
-/// Emulate an additively homomorphic encryption with `PlaintextSpaceGroupElement` as the plaintext
-/// group using the Paillier encryption scheme.
-///
-/// NOTICE: ensures circuit-privacy as long as MASK_LIMBS < LargeBiPrimeSizedNumber::LIMBS -
-/// PLAINTEXT_SPACE_SCALAR_LIMBS - 1 bit
-///
-/// MASK_LIMBS = LargeBiPrimeSizedNumber::LIMBS - PLAINTEXT_SPACE_SCALAR_LIMBS - U64::LIMBS =>
-/// Concat...
-///
-/// TODO: this might not be the right check, and I might be able to enforce this better with
-/// ConcatMixed that sums up to LargeBiPrimeSizedNumber.
+/// Emulate a circuit-privacy conserving additively homomorphic encryption with
+/// `PlaintextSpaceGroupElement` as the plaintext group using the Paillier encryption scheme.
 impl<
         const MASK_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
@@ -91,8 +82,44 @@ where
         _plaintext_group_public_parameters: &PlaintextSpaceGroupElement::PublicParameters,
         _randomness_group_public_parameters: &RandomnessPublicParameters,
         _ciphertext_group_public_parameters: &CiphertextPublicParameters,
-    ) -> Self {
-        EncryptionKey::new(encryption_scheme_public_parameters.associated_bi_prime)
+    ) -> super::Result<Self> {
+        // In order to assure circuit-privacy, the computation in
+        // [`Self::evaluate_linear_combination_with_randomness()`] must not overflow the Paillier
+        // message space modulus.
+        //
+        // This computation is $\Enc(pk, \omega q; \eta) \bigoplus_{i=1}^\ell \left(  a_i \odot
+        // \ct_i \right)$, where $\omega$ is uniformly chosen from $[0,\ellq 2^s)$.
+        //
+        // Thus, with the bound on $q$ being `PLAINTEXT_SPACE_SCALAR_LIMBS`,
+        // on the dimension $\ell$ being U64::LIMBS (as `DIMENSION` is of type `usize`),
+        // the bound on $\omega$ is therefore `(PLAINTEXT_SPACE_SCALAR_LIMBS +
+        // StatisticalSecuritySizedNumber::LIMBS + U64::LIMBS)`.
+        //
+        // Multiplying $\omega$ by $q$ thus adds an additional `PLAINTEXT_SPACE_SCALAR_LIMBS` to the
+        // bound on $\omega$ (hence the multiplication by 2).
+        //
+        // Now, we have $\ell$ more additions,
+        // each bounded to $q^2$ (as both the coefficients and the encrypted messaged of the
+        // ciphertexts are bounded by $q$ - TODO: how is this enforced in the paper? and perhaps we
+        // should also enforce this here by bounding the `CiphertextGroupElement` to
+        // PLAINTEXT_SPACE_SCALAR_LIMBS.) which at most adds $log(\ell)$ bits, which we can bound
+        // again by a `U64`.
+        //
+        // All of this must be `< LargeBiPrimeSizedNumber::LIMBS`.
+        if let Some(evaluation_upper_bound) = PLAINTEXT_SPACE_SCALAR_LIMBS
+            .checked_mul(2)
+            .and_then(|x| x.checked_add(StatisticalSecuritySizedNumber::LIMBS))
+            .and_then(|x| x.checked_add(U64::LIMBS))
+            .and_then(|x| x.checked_add(U64::LIMBS))
+        {
+            if evaluation_upper_bound < LargeBiPrimeSizedNumber::LIMBS {
+                return Ok(EncryptionKey::new(
+                    encryption_scheme_public_parameters.associated_bi_prime,
+                ));
+            }
+        }
+
+        Err(super::Error::UnsafePublicParametersError)
     }
 
     fn encrypt_with_randomness(
