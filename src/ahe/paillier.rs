@@ -100,9 +100,7 @@ where
         //
         // Now, we have $\ell$ more additions,
         // each bounded to $q^2$ (as both the coefficients and the encrypted messaged of the
-        // ciphertexts are bounded by $q$ - TODO: how is this enforced in the paper? and perhaps we
-        // should also enforce this here by bounding the `CiphertextGroupElement` to
-        // PLAINTEXT_SPACE_SCALAR_LIMBS.) which at most adds $log(\ell)$ bits, which we can bound
+        // ciphertexts are bounded by $q$) which at most adds $log(\ell)$ bits, which we can bound
         // again by a `U64`.
         //
         // All of this must be `< LargeBiPrimeSizedNumber::LIMBS`.
@@ -154,9 +152,6 @@ where
         //
         // This method ensures circuit privacy.
 
-        // TODO: assure bound computations are correct.
-        // TODO: this throws an exception if coefficients is empty, maybe also check that N is right
-        // in new()
         let plaintext_order = LargeBiPrimeSizedNumber::from(&coefficients[0].order());
 
         // \Enc(pk, \omega q; \eta): An encryption of a masked multiplication of the order $q$ with
