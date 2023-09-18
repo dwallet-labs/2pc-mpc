@@ -31,6 +31,20 @@ pub struct PublicParameters<
     _plaintext_group_element_choice: PhantomData<PlaintextSpaceGroupElement>,
 }
 
+impl<
+        const MASK_LIMBS: usize,
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        PlaintextSpaceGroupElement,
+    > PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>
+{
+    pub fn new(associated_bi_prime: LargeBiPrimeSizedNumber) -> Self {
+        Self {
+            associated_bi_prime,
+            _plaintext_group_element_choice: PhantomData,
+        }
+    }
+}
+
 type RandomnessPublicParameters =
     multiplicative_group_of_integers_modulu_n::PublicParameters<{ LargeBiPrimeSizedNumber::LIMBS }>;
 type CiphertextPublicParameters = multiplicative_group_of_integers_modulu_n::PublicParameters<
@@ -57,7 +71,7 @@ where
     PlaintextSpaceGroupElement: KnownOrderGroupElement<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         PlaintextSpaceGroupElement,
-        Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        // todo: safe to delete?
     >,
     // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
     // plaintext concated with the statistical security parameter contacted with a U64 (which is a
@@ -77,6 +91,9 @@ where
         }
     }
 
+    // TODO: so long as we use tiresias types, we can't assure that the encryption key will be
+    // created by calling `new()`. This might cause situations in which circuit-privacy is
+    // compromised. We should either use new types or move this code to tirseias.
     fn new(
         encryption_scheme_public_parameters: &Self::PublicParameters,
         _plaintext_group_public_parameters: &PlaintextSpaceGroupElement::PublicParameters,

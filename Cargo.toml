@@ -15,6 +15,7 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 tiresias = { git = "https://github.com/odsy-network/tiresias.git" }
 
 [dev-dependencies]
+rstest = "0.18.2"
 
 [patch.crates-io]
 crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint.git" }
