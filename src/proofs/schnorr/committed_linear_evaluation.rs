@@ -18,23 +18,20 @@ use crate::{
     AdditivelyHomomorphicEncryptionKey,
 };
 
-// TODO: rename all text to linear combination
-
-/// Committed Affine Evaluation Schnorr Language
+/// Committed Linear Evaluation Schnorr Language
 ///
 /// SECURITY NOTICE:
 /// Because correctness and zero-knowledge is guaranteed for any group and additively homomorphic
-/// encryption scheme (TODO: right?) in this language, we choose to provide a fully generic
+/// encryption scheme in this language, we choose to provide a fully generic
 /// implementation.
 ///
 /// However knowledge-soundness proofs are group and encryption scheme dependent, and thus we can
 /// only assure security for groups and encryption schemes for which we know how to prove it.
 ///
 /// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
-/// `PrimeOrderGroupElement`. (TODO: still ?)
+/// `PrimeOrderGroupElement`.
 ///
 /// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
-// also TODO: for commitments, say the same?
 pub struct Language<
     const MASK_LIMBS: usize,
     const SCALAR_LIMBS: usize,
@@ -58,7 +55,7 @@ pub struct Language<
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
-/// The Public Parameters of the Committed Affine Evaluation Schnorr Language
+/// The Public Parameters of the Committed Linear Evaluation Schnorr Language
 #[derive(Debug, PartialEq, Serialize)]
 pub struct PublicParameters<
     const MASK_LIMBS: usize,
@@ -207,7 +204,7 @@ where
         EncryptionKey,
         CommitmentScheme,
     >;
-    const NAME: &'static str = "Committed Affine Evaluation";
+    const NAME: &'static str = "Committed Linear Evaluation";
 
     fn group_homomorphism(
         witness: &direct_product::FourWayGroupElement<
@@ -300,7 +297,7 @@ where
     }
 }
 
-/// A Committed Affine Evaluation Schnorr Proof
+/// A Committed Linear Evaluation Schnorr Proof
 #[allow(dead_code)]
 pub type Proof<
     const MASK_LIMBS: usize,
