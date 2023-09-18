@@ -20,6 +20,12 @@ use crate::{
 
 /// Committed Linear Evaluation Schnorr Language
 ///
+/// This language allows to prove a linear combination have been homomorphically evaluated on a
+/// vector of ciphertexts. If one wishes to prove an affine evaluation instead of a linear one, as
+/// is required in the paper, the first ciphertexts should be set to an encryption of one with
+/// randomness zero ($\Enc(1; 0)$). This would allow the first coefficient to be evaluated as the
+/// free variable of an affine transformation.
+///
 /// SECURITY NOTICE:
 /// Because correctness and zero-knowledge is guaranteed for any group and additively homomorphic
 /// encryption scheme in this language, we choose to provide a fully generic
@@ -56,6 +62,9 @@ pub struct Language<
 }
 
 /// The Public Parameters of the Committed Linear Evaluation Schnorr Language
+///
+/// In order to prove an affine transformation, set `ciphertexts[0]` to an encryption of one with
+/// randomness zero ($\Enc(1; 0)$).
 #[derive(Debug, PartialEq, Serialize)]
 pub struct PublicParameters<
     const MASK_LIMBS: usize,
