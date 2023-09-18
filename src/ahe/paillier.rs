@@ -32,10 +32,10 @@ pub struct PublicParameters<
 }
 
 impl<
-        const MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        PlaintextSpaceGroupElement,
-    > PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>
+    const MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    PlaintextSpaceGroupElement,
+> PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>
 {
     pub fn new(associated_bi_prime: LargeBiPrimeSizedNumber) -> Self {
         Self {
@@ -46,7 +46,7 @@ impl<
 }
 
 type RandomnessPublicParameters =
-    multiplicative_group_of_integers_modulu_n::PublicParameters<{ LargeBiPrimeSizedNumber::LIMBS }>;
+multiplicative_group_of_integers_modulu_n::PublicParameters<{ LargeBiPrimeSizedNumber::LIMBS }>;
 type CiphertextPublicParameters = multiplicative_group_of_integers_modulu_n::PublicParameters<
     { PaillierModulusSizedNumber::LIMBS },
 >;
@@ -54,35 +54,33 @@ type CiphertextPublicParameters = multiplicative_group_of_integers_modulu_n::Pub
 /// Emulate a circuit-privacy conserving additively homomorphic encryption with
 /// `PlaintextSpaceGroupElement` as the plaintext group using the Paillier encryption scheme.
 impl<
-        const MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        PlaintextSpaceGroupElement,
-    >
-    AdditivelyHomomorphicEncryptionKey<
-        MASK_LIMBS,
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        { LargeBiPrimeSizedNumber::LIMBS },
-        { PaillierModulusSizedNumber::LIMBS },
-        PlaintextSpaceGroupElement,
-        RandomnessGroupElement,
-        CiphertextGroupElement,
-    > for EncryptionKey
-where
-    PlaintextSpaceGroupElement: KnownOrderGroupElement<
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        PlaintextSpaceGroupElement,
-        // todo: safe to delete?
-    >,
+    const MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    PlaintextSpaceGroupElement,
+>
+AdditivelyHomomorphicEncryptionKey<
+    MASK_LIMBS,
+    PLAINTEXT_SPACE_SCALAR_LIMBS,
+    { LargeBiPrimeSizedNumber::LIMBS },
+    { PaillierModulusSizedNumber::LIMBS },
+    PlaintextSpaceGroupElement,
+    RandomnessGroupElement,
+    CiphertextGroupElement,
+> for EncryptionKey
+    where
+        PlaintextSpaceGroupElement:
+        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement> + From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
+        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
     // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
     // plaintext concated with the statistical security parameter contacted with a U64 (which is a
     // bound on the log of DIMENSION)
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: ConcatMixed<
-        <StatisticalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput,
-        MixedOutput = Uint<MASK_LIMBS>,
-    >,
+        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: ConcatMixed<
+            <StatisticalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput,
+            MixedOutput=Uint<MASK_LIMBS>,
+        >,
 {
     type PublicParameters =
-        PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>;
+    PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>;
 
     fn public_parameters(&self) -> Self::PublicParameters {
         Self::PublicParameters {
@@ -146,10 +144,10 @@ where
         // ciphertext group
 
         CiphertextGroupElement::new(
-            self.encrypt_with_randomness(&(&plaintext.value()).into(), &randomness.into()),
+            self.encrypt_with_randomness(&(<&PlaintextSpaceGroupElement as Into<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>>::into(plaintext)).into(), &randomness.into()),
             &CiphertextPublicParameters::new(self.n2),
         )
-        .unwrap()
+            .unwrap()
     }
 
     fn evaluate_linear_combination_with_randomness<const DIMENSION: usize>(
@@ -180,7 +178,7 @@ where
             ),
             &CiphertextPublicParameters::new(self.n2),
         )
-        .unwrap();
+            .unwrap();
 
         coefficients.iter().zip(ciphertexts.iter()).fold(
             encryption_of_mask_with_fresh_randomness,
@@ -190,34 +188,31 @@ where
 }
 
 impl<
-        const MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        PlaintextSpaceGroupElement,
-    >
-    AdditivelyHomomorphicDecryptionKey<
-        MASK_LIMBS,
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        { LargeBiPrimeSizedNumber::LIMBS },
-        { PaillierModulusSizedNumber::LIMBS },
-        PlaintextSpaceGroupElement,
-        RandomnessGroupElement,
-        CiphertextGroupElement,
-        EncryptionKey,
-    > for DecryptionKey
-where
-    PlaintextSpaceGroupElement: KnownOrderGroupElement<
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        PlaintextSpaceGroupElement,
-        Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    >,
-    PlaintextSpaceGroupElement: From<LargeBiPrimeSizedNumber>,
+    const MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    PlaintextSpaceGroupElement,
+>
+AdditivelyHomomorphicDecryptionKey<
+    MASK_LIMBS,
+    PLAINTEXT_SPACE_SCALAR_LIMBS,
+    { LargeBiPrimeSizedNumber::LIMBS },
+    { PaillierModulusSizedNumber::LIMBS },
+    PlaintextSpaceGroupElement,
+    RandomnessGroupElement,
+    CiphertextGroupElement,
+    EncryptionKey,
+> for DecryptionKey
+    where
+        PlaintextSpaceGroupElement:
+        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement> + From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>> + From<LargeBiPrimeSizedNumber>,
+        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
     // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
     // plaintext concated with the statistical security parameter contacted with a U64 (which is a
     // bound on the log of DIMENSION)
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: ConcatMixed<
-        <StatisticalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput,
-        MixedOutput = Uint<MASK_LIMBS>,
-    >,
+        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: ConcatMixed<
+            <StatisticalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput,
+            MixedOutput=Uint<MASK_LIMBS>,
+        >,
 {
     fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextSpaceGroupElement {
         self.decrypt(&ciphertext.into()).into()
