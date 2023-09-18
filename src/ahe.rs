@@ -10,6 +10,21 @@ use crate::{
     group::{GroupElement, KnownOrderGroupElement, Samplable},
 };
 
+/// An error in encryption key instantiation [`AdditivelyHomomorphicEncryptionKey::new()`]
+#[derive(thiserror::Error, Clone, Debug, PartialEq)]
+pub enum Error {
+    #[error(
+    "unsafe public parameters: circuit-privacy cannot be ensured by this scheme using these public parameters."
+    )]
+    UnsafePublicParametersError,
+    #[error("group error")]
+    GroupError(#[from] group::Error),
+}
+
+/// The Result of the `new()` operation of types implementing the
+/// `AdditivelyHomomorphicEncryptionKey` trait
+pub type Result<T> = std::result::Result<T, Error>;
+
 /// An Encryption Key of an Additively Homomorphic Encryption scheme.
 pub trait AdditivelyHomomorphicEncryptionKey<
     const MASK_LIMBS: usize,
@@ -19,7 +34,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     PlaintextSpaceGroupElement,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
->: PartialEq where
+>: PartialEq + Sized where
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     RandomnessSpaceGroupElement:
@@ -50,7 +65,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         plaintext_group_public_parameters: &PlaintextSpaceGroupElement::PublicParameters,
         randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
         ciphertext_group_public_parameters: &CiphertextSpaceGroupElement::PublicParameters,
-    ) -> Self;
+    ) -> Result<Self>;
 
     /// $\Enc(pk, \pt; \eta_{\sf enc}) \to \ct$: Encrypt `plaintext` to `self` using
     /// `randomness`.
