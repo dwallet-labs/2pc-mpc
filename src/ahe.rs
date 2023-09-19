@@ -347,7 +347,7 @@ mod tests {
         assert_eq!(
             decryption_key.decrypt(&evaluted_ciphertext),
             decryption_key.decrypt(&privately_evaluted_ciphertext),
-            "decryptions of privately evaluted linear combinations should match straightforward ones"
+            "decryptions of privately evaluated linear combinations should match straightforward ones"
         );
     }
 }
