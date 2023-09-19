@@ -290,6 +290,7 @@ mod tests {
     multiplicative_group_of_integers_modulu_n::PublicParameters::new(N)
     )]
     #[allow(clippy::erasing_op)]
+    #[allow(clippy::identity_op)]
     fn evaluates<
         const MASK_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
