@@ -18,6 +18,7 @@ use crate::{
     StatisticalSecuritySizedNumber,
 };
 
+/// An Encryption Key of the Paillier Additively Homomorphic Encryption Scheme.
 #[derive(PartialEq, Clone)]
 pub struct EncryptionKey<
     const MASK_LIMBS: usize,
@@ -28,6 +29,7 @@ pub struct EncryptionKey<
     PhantomData<PlaintextSpaceGroupElement>,
 );
 
+/// An Decryption Key of the Paillier Additively Homomorphic Encryption Scheme.
 #[derive(PartialEq)]
 pub struct DecryptionKey<
     const MASK_LIMBS: usize,
