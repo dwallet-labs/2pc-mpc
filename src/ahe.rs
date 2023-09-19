@@ -289,6 +289,7 @@ mod tests {
     tiresias::DecryptionKey::new(tiresias::EncryptionKey::new(N), SECRET_KEY)),
     multiplicative_group_of_integers_modulu_n::PublicParameters::new(N)
     )]
+    #[allow(clippy::erasing_op)]
     fn evaluates<
         const MASK_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
@@ -359,7 +360,6 @@ mod tests {
             + encrypted_seven.scalar_mul(&U64::from(0u64))
             + encrypted_two.scalar_mul(&U64::from(73u64));
 
-        #[allow(clippy::erasing_op)]
         let expected_evaluation_result: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> =
             (&U64::from(1u64 * 5 + 0 * 7 + 73 * 2)).into();
         let expected_evaluation_result: PlaintextSpaceGroupElement =
