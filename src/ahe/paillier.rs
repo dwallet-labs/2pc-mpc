@@ -111,9 +111,6 @@ where
         }
     }
 
-    // TODO: so long as we use tiresias types, we can't assure that the encryption key will be
-    // created by calling `new()`. This might cause situations in which circuit-privacy is
-    // compromised. We should either use new types or move this code to tirseias.
     fn new(
         encryption_scheme_public_parameters: &Self::PublicParameters,
         _plaintext_group_public_parameters: &PlaintextSpaceGroupElement::PublicParameters,
@@ -187,7 +184,11 @@ where
         ciphertexts: &[CiphertextGroupElement; DIMENSION],
         mask: &Uint<MASK_LIMBS>,
         randomness: &RandomnessGroupElement,
-    ) -> CiphertextGroupElement {
+    ) -> super::Result<CiphertextGroupElement> {
+        if DIMENSION == 0 {
+            return Err(super::Error::ZeroDimensionError);
+        }
+
         // Compute:
         //
         // $\ct = \Enc(pk, \omega q; \eta) \bigoplus_{i=1}^\ell \left(  a_i \odot \ct_i
@@ -211,10 +212,10 @@ where
         )
         .unwrap();
 
-        coefficients.iter().zip(ciphertexts.iter()).fold(
+        Ok(coefficients.iter().zip(ciphertexts.iter()).fold(
             encryption_of_mask_with_fresh_randomness,
             |curr, (coefficient, ciphertext)| curr + ciphertext.scalar_mul(&coefficient.into()),
-        )
+        ))
     }
 }
 
