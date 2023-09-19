@@ -29,7 +29,14 @@ pub struct EncryptionKey<
 );
 
 #[derive(PartialEq)]
-pub struct DecryptionKey(tiresias::DecryptionKey);
+pub struct DecryptionKey<
+    const MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    PlaintextSpaceGroupElement,
+>(
+    tiresias::DecryptionKey,
+    PhantomData<PlaintextSpaceGroupElement>,
+);
 
 /// The Public Parameters of the Paillier Additively Homomorphic Encryption Scheme.
 #[derive(PartialEq, Clone, Serialize, Deserialize)]
@@ -83,7 +90,8 @@ impl<
 where
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
-    PlaintextSpaceGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
+    PlaintextSpaceGroupElement:
+        From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>> + From<LargeBiPrimeSizedNumber>,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
     // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
     // plaintext concated with the statistical security parameter contacted with a U64 (which is a
@@ -192,8 +200,8 @@ where
 
         let plaintext_order = LargeBiPrimeSizedNumber::from(&coefficients[0].order());
 
-        // \Enc(pk, \omega q; \eta): An encryption of a masked multiplication of the order $q$ with
-        // fresh randomness.
+        // \Enc(pk, \omega q; \eta): An encryption of a masked multiplication of the order $q$
+        // with fresh randomness.
         let encryption_of_mask_with_fresh_randomness = CiphertextGroupElement::new(
             self.0.encrypt_with_randomness(
                 &LargeBiPrimeSizedNumber::from(mask).wrapping_mul(&plaintext_order),
@@ -223,7 +231,7 @@ impl<
         PlaintextSpaceGroupElement,
         RandomnessGroupElement,
         CiphertextGroupElement,
-    > for DecryptionKey
+    > for DecryptionKey<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>
 where
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
@@ -240,5 +248,17 @@ where
 {
     fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextSpaceGroupElement {
         self.0.decrypt(&ciphertext.into()).into()
+    }
+}
+
+impl<
+        const MASK_LIMBS: usize,
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        PlaintextSpaceGroupElement,
+    > From<tiresias::DecryptionKey>
+    for DecryptionKey<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>
+{
+    fn from(value: tiresias::DecryptionKey) -> Self {
+        Self(value, PhantomData)
     }
 }

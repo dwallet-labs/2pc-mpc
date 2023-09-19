@@ -1,6 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
-mod ahe;
+pub mod ahe;
 pub mod commitments;
 pub mod group;
 pub(crate) mod helpers;

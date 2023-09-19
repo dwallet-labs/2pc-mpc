@@ -89,15 +89,15 @@ impl<const LIMBS: usize> From<&Uint<LIMBS>> for Scalar {
     }
 }
 
-impl<const LIMBS: usize> From<Scalar> for Uint<LIMBS> {
+impl From<Scalar> for U256 {
     fn from(value: Scalar) -> Self {
-        todo!()
+        value.0.into()
     }
 }
 
-impl<const LIMBS: usize> From<&Scalar> for Uint<LIMBS> {
+impl From<&Scalar> for U256 {
     fn from(value: &Scalar) -> Self {
-        todo!()
+        value.0.into()
     }
 }
 

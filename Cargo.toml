@@ -16,6 +16,7 @@ tiresias = { git = "https://github.com/odsy-network/tiresias.git" }
 
 [dev-dependencies]
 rstest = "0.18.2"
+rand_core = { version = "0.6.4", features = ["std"] }
 
 [patch.crates-io]
 crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint.git" }
