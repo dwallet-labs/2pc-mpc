@@ -359,6 +359,7 @@ mod tests {
             + encrypted_seven.scalar_mul(&U64::from(0u64))
             + encrypted_two.scalar_mul(&U64::from(73u64));
 
+        #[allow(clippy::erasing_op)]
         let expected_evaluation_result: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> =
             (&U64::from(1u64 * 5 + 0 * 7 + 73 * 2)).into();
         let expected_evaluation_result: PlaintextSpaceGroupElement =
