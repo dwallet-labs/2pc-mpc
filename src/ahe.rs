@@ -16,11 +16,11 @@ pub enum Error {
     #[error(
     "unsafe public parameters: circuit-privacy cannot be ensured by this scheme using these public parameters."
     )]
-    UnsafePublicParametersError,
+    UnsafePublicParameters,
     #[error("group error")]
-    GroupError(#[from] group::Error),
+    GroupInstantiation(#[from] group::Error),
     #[error("zero dimension: cannot evalute a zero-dimension linear combination")]
-    ZeroDimensionError,
+    ZeroDimension,
 }
 
 /// The Result of the `new()` operation of types implementing the
@@ -143,7 +143,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         CiphertextSpaceGroupElement,
     )> {
         if DIMENSION == 0 {
-            return Err(Error::ZeroDimensionError);
+            return Err(Error::ZeroDimension);
         }
 
         let mask = Uint::<MASK_LIMBS>::random(rng);

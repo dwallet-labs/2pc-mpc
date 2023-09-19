@@ -156,7 +156,7 @@ where
             }
         }
 
-        Err(super::Error::UnsafePublicParametersError)
+        Err(super::Error::UnsafePublicParameters)
     }
 
     fn encrypt_with_randomness(
@@ -188,7 +188,7 @@ where
         randomness: &RandomnessGroupElement,
     ) -> super::Result<CiphertextGroupElement> {
         if DIMENSION == 0 {
-            return Err(super::Error::ZeroDimensionError);
+            return Err(super::Error::ZeroDimension);
         }
 
         // Compute:
