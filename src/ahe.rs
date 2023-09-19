@@ -18,6 +18,8 @@ pub enum Error {
     UnsafePublicParametersError,
     #[error("group error")]
     GroupError(#[from] group::Error),
+    #[error("zero dimension: cannot evalute a zero-dimension linear combination")]
+    ZeroDimensionError,
 }
 
 /// The Result of the `new()` operation of types implementing the
@@ -89,7 +91,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         plaintext: &PlaintextSpaceGroupElement,
         randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
         rng: &mut impl CryptoRngCore,
-    ) -> group::Result<(RandomnessSpaceGroupElement, CiphertextSpaceGroupElement)> {
+    ) -> Result<(RandomnessSpaceGroupElement, CiphertextSpaceGroupElement)> {
         let randomness =
             RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters)?;
 
@@ -114,7 +116,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
         mask: &Uint<MASK_LIMBS>,
         randomness: &RandomnessSpaceGroupElement,
-    ) -> CiphertextSpaceGroupElement;
+    ) -> Result<CiphertextSpaceGroupElement>;
 
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
     /// linear combination defined by `coefficients` and `ciphertexts`.
@@ -132,11 +134,15 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
         randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
         rng: &mut impl CryptoRngCore,
-    ) -> group::Result<(
+    ) -> Result<(
         Uint<MASK_LIMBS>,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
     )> {
+        if DIMENSION == 0 {
+            return Err(Error::ZeroDimensionError);
+        }
+
         let mask = Uint::<MASK_LIMBS>::random(rng);
 
         let randomness =
@@ -149,7 +155,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
             &randomness,
         );
 
-        Ok((mask, randomness, evaluated_ciphertext))
+        Ok((mask, randomness, evaluated_ciphertext?))
     }
 }
 
