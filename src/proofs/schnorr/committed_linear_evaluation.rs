@@ -14,6 +14,7 @@ use crate::{
         CyclicGroupElement, KnownOrderGroupElement, Samplable,
     },
     helpers::const_generic_array_serialization,
+    proofs,
     proofs::schnorr,
     AdditivelyHomomorphicEncryptionKey,
 };
@@ -82,6 +83,8 @@ pub struct PublicParameters<
     CommitmentScheme,
 > where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
+    Scalar: From<Uint<SCALAR_LIMBS>>,
+    Uint<SCALAR_LIMBS>: for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
@@ -169,6 +172,8 @@ impl<
     >
 where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
+    Scalar: From<Uint<SCALAR_LIMBS>>,
+    Uint<SCALAR_LIMBS>: for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
@@ -250,7 +255,7 @@ where
             CiphertextSpaceGroupElement,
             GroupElement,
         >,
-    ) -> group::Result<
+    ) -> proofs::Result<
         direct_product::GroupElement<
             PUBLIC_VALUE_SCALAR_LIMBS,
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
@@ -272,7 +277,7 @@ where
             scalar_group_public_parameters,
             randomness_group_public_parameters,
             ciphertext_group_public_parameters,
-        );
+        )?;
 
         let commitment_scheme = CommitmentScheme::new(
             &language_public_parameters.commitment_scheme_public_parameters,
@@ -288,7 +293,7 @@ where
 
         // Then return the first error you encounter, or create a valid group element and return it
         if let Some(Err(err)) = ciphertexts.iter().find(|res| res.is_err()) {
-            return Err(err.clone());
+            return Err(err.clone().into());
         }
 
         let ciphertexts = ciphertexts.map(|res| res.unwrap());
@@ -299,7 +304,7 @@ where
                 &ciphertexts,
                 &mask.retrieve(),
                 encryption_randomness,
-            ),
+            )?,
             commitment_scheme.commit(coefficients, commitment_randomness),
         )
             .into())

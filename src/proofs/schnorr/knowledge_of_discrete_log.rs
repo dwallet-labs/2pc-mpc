@@ -5,7 +5,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 use serde::Serialize;
 
-use crate::{group, group::Samplable, proofs::schnorr};
+use crate::{group, group::Samplable, proofs, proofs::schnorr};
 
 /// Knowledge of Discrete Log Schnorr Language.
 pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
@@ -56,7 +56,7 @@ where
         language_public_parameters: &Self::PublicParameters,
         _witness_space_public_parameters: &Scalar::PublicParameters,
         public_value_space_public_parameters: &GroupElement::PublicParameters,
-    ) -> group::Result<GroupElement> {
+    ) -> proofs::Result<GroupElement> {
         let generator = GroupElement::new(
             language_public_parameters.generator.clone(),
             public_value_space_public_parameters,

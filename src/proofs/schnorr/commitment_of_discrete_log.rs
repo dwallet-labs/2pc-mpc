@@ -8,6 +8,7 @@ use serde::Serialize;
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group::{self_product_group, CyclicGroupElement, KnownOrderGroupElement, Samplable},
+    proofs,
     proofs::schnorr,
 };
 
@@ -89,7 +90,7 @@ where
             SCALAR_LIMBS,
             GroupElement,
         >,
-    ) -> crate::group::Result<self_product_group::GroupElement<2, SCALAR_LIMBS, GroupElement>> {
+    ) -> proofs::Result<self_product_group::GroupElement<2, SCALAR_LIMBS, GroupElement>> {
         let [value, randomness]: &[Scalar; 2] = witness.into();
 
         let base = GroupElement::new(

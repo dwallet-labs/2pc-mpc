@@ -9,6 +9,7 @@ use serde::Serialize;
 use crate::{
     group,
     group::{direct_product, CyclicGroupElement, KnownOrderGroupElement, Samplable},
+    proofs,
     proofs::schnorr,
     AdditivelyHomomorphicEncryptionKey,
 };
@@ -17,17 +18,16 @@ use crate::{
 ///
 /// SECURITY NOTICE:
 /// Because correctness and zero-knowledge is guaranteed for any group and additively homomorphic
-/// encryption scheme (TODO: right?) in this language, we choose to provide a fully generic
+/// encryption scheme in this language, we choose to provide a fully generic
 /// implementation.
 ///
 /// However knowledge-soundness proofs are group and encryption scheme dependent, and thus we can
 /// only assure security for groups and encryption schemes for which we know how to prove it.
 ///
 /// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
-/// `PrimeOrderGroupElement`. (TODO: still ?)
+/// `PrimeOrderGroupElement`.
 ///
 /// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
-// also TODO: for commitments, say the same?
 pub struct Language<
     const MASK_LIMBS: usize,
     const SCALAR_LIMBS: usize,
@@ -64,6 +64,8 @@ pub struct PublicParameters<
     EncryptionKey,
 > where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
+    Scalar: From<Uint<SCALAR_LIMBS>>,
+    Uint<SCALAR_LIMBS>: for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
@@ -132,6 +134,8 @@ impl<
     >
 where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
+    Scalar: From<Uint<SCALAR_LIMBS>>,
+    Uint<SCALAR_LIMBS>: for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
@@ -186,7 +190,7 @@ where
             CiphertextSpaceGroupElement,
             GroupElement,
         >,
-    ) -> group::Result<
+    ) -> proofs::Result<
         direct_product::GroupElement<
             PUBLIC_VALUE_SCALAR_LIMBS,
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
@@ -211,7 +215,7 @@ where
             scalar_group_public_parameters,
             &language_public_parameters.randomness_group_public_parameters,
             &language_public_parameters.ciphertext_group_public_parameters,
-        );
+        )?;
 
         Ok((
             encryption_key.encrypt_with_randomness(discrete_log, randomness),
