@@ -187,6 +187,8 @@ pub trait AdditivelyHomomorphicDecryptionKey<
 }
 
 #[cfg(test)]
+#[allow(clippy::erasing_op)]
+#[allow(clippy::identity_op)]
 mod tests {
     use crypto_bigint::{Uint, U256, U384, U64};
     use rand_core::OsRng;
@@ -289,8 +291,6 @@ mod tests {
     tiresias::DecryptionKey::new(tiresias::EncryptionKey::new(N), SECRET_KEY)),
     multiplicative_group_of_integers_modulu_n::PublicParameters::new(N)
     )]
-    #[allow(clippy::erasing_op)]
-    #[allow(clippy::identity_op)]
     fn evaluates<
         const MASK_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
