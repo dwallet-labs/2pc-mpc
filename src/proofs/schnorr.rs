@@ -49,7 +49,7 @@ pub trait Language<
     /// Group public parameters are encoded separately in
     /// `WitnessSpaceGroupElement::PublicParameters` and
     /// `PublicValueSpaceGroupElement::PublicParameters`.
-    type PublicParameters: Serialize + PartialEq;
+    type PublicParameters: Serialize + PartialEq + Clone;
 
     /// A unique string representing the name of this language; will be inserted to the Fiat-Shamir
     /// transcript.
@@ -483,7 +483,7 @@ mod tests {
         );
     }
 
-    pub(crate) fn invalid_proof_does_not_verify<
+    pub(crate) fn invalid_proof_fails_verification<
         const WITNESS_SCALAR_LIMBS: usize,
         const PUBLIC_VALUE_SCALAR_LIMBS: usize,
         WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
@@ -495,8 +495,8 @@ mod tests {
             PublicValueSpaceGroupElement,
         > + Clone,
     >(
-        invalid_witness_space_value: WitnessSpaceGroupElement::Value,
-        invalid_public_value_space_value: PublicValueSpaceGroupElement::Value,
+        invalid_witness_space_value: Option<WitnessSpaceGroupElement::Value>,
+        invalid_public_value_space_value: Option<PublicValueSpaceGroupElement::Value>,
         language_public_parameters: Lang::PublicParameters,
         witness_space_public_parameters: WitnessSpaceGroupElement::PublicParameters,
         public_value_space_public_parameters: PublicValueSpaceGroupElement::PublicParameters,
@@ -528,7 +528,7 @@ mod tests {
             witnesses_and_statements.clone(),
         );
 
-        let (witnesses, statements): (
+        let (_, statements): (
             Vec<WitnessSpaceGroupElement>,
             Vec<PublicValueSpaceGroupElement>,
         ) = witnesses_and_statements.into_iter().unzip();
@@ -564,10 +564,28 @@ mod tests {
         );
 
         let mut invalid_proof = valid_proof.clone();
+        invalid_proof.response = wrong_witness.value();
+
+        assert!(matches!(
+            invalid_proof
+                .verify(
+                    PhantomData,
+                    &language_public_parameters,
+                    &witness_space_public_parameters,
+                    &public_value_space_public_parameters,
+                    statements.clone(),
+                )
+                .err()
+                .unwrap(),
+            Error::ProofVerification),
+                "proof with a wrong response shouldn't verify"
+        );
+
+        let mut invalid_proof = valid_proof.clone();
         invalid_proof.statement_mask = wrong_statement.neutral().value();
 
         assert!(matches!(
-            valid_proof
+            invalid_proof
                 .verify(
                     PhantomData,
                     &language_public_parameters,
@@ -585,7 +603,7 @@ mod tests {
         invalid_proof.response = wrong_witness.neutral().value();
 
         assert!(matches!(
-            valid_proof
+            invalid_proof
                 .verify(
                     PhantomData,
                     &language_public_parameters,
@@ -599,11 +617,12 @@ mod tests {
                 "proof with a neutral response shouldn't verify"
         );
 
-        let mut invalid_proof = valid_proof.clone();
-        invalid_proof.statement_mask = invalid_public_value_space_value;
+        if let Some(invalid_public_value_space_value) = invalid_public_value_space_value {
+            let mut invalid_proof = valid_proof.clone();
+            invalid_proof.statement_mask = invalid_public_value_space_value;
 
-        assert!(matches!(
-            valid_proof
+            assert!(matches!(
+            invalid_proof
                 .verify(
                     PhantomData,
                     &language_public_parameters,
@@ -614,14 +633,16 @@ mod tests {
                 .err()
                 .unwrap(),
             Error::GroupInstantiation(group::Error::InvalidGroupElementError)),
-                "proof with an invalid statement_mask value should generate an invalid parameter error when checking the element is not in the group"
-        );
+                    "proof with an invalid statement_mask value should generate an invalid parameter error when checking the element is not in the group"
+            );
+        }
 
-        let mut invalid_proof = valid_proof.clone();
-        invalid_proof.response = invalid_witness_space_value;
+        if let Some(invalid_witness_space_value) = invalid_witness_space_value {
+            let mut invalid_proof = valid_proof.clone();
+            invalid_proof.response = invalid_witness_space_value;
 
-        assert!(matches!(
-            valid_proof
+            assert!(matches!(
+            invalid_proof
                 .verify(
                     PhantomData,
                     &language_public_parameters,
@@ -632,13 +653,83 @@ mod tests {
                 .err()
                 .unwrap(),
             Error::GroupInstantiation(group::Error::InvalidGroupElementError)),
-                "proof with an invalid response value should generate an invalid parameter error when checking the element is not in the group"
-        );
+                    "proof with an invalid response value should generate an invalid parameter error when checking the element is not in the group"
+            );
+        }
 
         // TODO: make cases for elliptic curve with not on group values and make sure they fail and
         // for the right reason!
 
         // TODO: generate a valid proof with wrong public parameters and assure it isn't valid -
         // that can only be done for Paillier, and we should just add a case for it
+    }
+
+    pub(crate) fn proof_over_invalid_public_parameters_fails_verification<
+        const WITNESS_SCALAR_LIMBS: usize,
+        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+        WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
+        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+        Lang: Language<
+            WITNESS_SCALAR_LIMBS,
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            WitnessSpaceGroupElement,
+            PublicValueSpaceGroupElement,
+        > + Clone,
+    >(
+        prover_language_public_parameters: Option<Lang::PublicParameters>,
+        prover_witness_space_public_parameters: Option<WitnessSpaceGroupElement::PublicParameters>,
+        prover_public_value_space_public_parameters: Option<PublicValueSpaceGroupElement::PublicParameters>,
+        verifier_language_public_parameters: Lang::PublicParameters,
+        verifier_witness_space_public_parameters: WitnessSpaceGroupElement::PublicParameters,
+        verifier_public_value_space_public_parameters: PublicValueSpaceGroupElement::PublicParameters,
+        batch_size: usize,
+    ) {
+        let prover_language_public_parameters = prover_language_public_parameters.unwrap_or(verifier_language_public_parameters.clone());
+        let prover_witness_space_public_parameters = prover_witness_space_public_parameters.unwrap_or(verifier_witness_space_public_parameters.clone());
+        let prover_public_value_space_public_parameters = prover_public_value_space_public_parameters.unwrap_or(verifier_public_value_space_public_parameters.clone());
+
+        let witnesses_and_statements = generate_witnesses_and_statements::<
+            WITNESS_SCALAR_LIMBS,
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            WitnessSpaceGroupElement,
+            PublicValueSpaceGroupElement,
+            Lang,
+        >(
+            &verifier_language_public_parameters,
+            &verifier_witness_space_public_parameters,
+            &verifier_public_value_space_public_parameters,
+            batch_size,
+        );
+
+        let proof = generate_valid_proof::<
+            WITNESS_SCALAR_LIMBS,
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            WitnessSpaceGroupElement,
+            PublicValueSpaceGroupElement,
+            Lang,
+        >(
+            &prover_language_public_parameters,
+            &prover_witness_space_public_parameters,
+            &prover_public_value_space_public_parameters,
+            witnesses_and_statements.clone(),
+        );
+
+        let (_, statements): (
+            Vec<WitnessSpaceGroupElement>,
+            Vec<PublicValueSpaceGroupElement>,
+        ) = witnesses_and_statements.into_iter().unzip();
+
+        assert!(matches!(
+            proof
+                .verify(
+                    PhantomData,
+                    &verifier_language_public_parameters,
+                    &verifier_witness_space_public_parameters,
+                    &verifier_public_value_space_public_parameters,
+                    statements,
+                ).err().unwrap(),
+                Error::ProofVerification),
+                "proof over wrong public parameters shouldn't verify"
+        );
     }
 }

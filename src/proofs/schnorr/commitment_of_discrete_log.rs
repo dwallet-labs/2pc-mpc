@@ -30,7 +30,7 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentS
 }
 
 /// The Public Parameters of the Commitment of Discrete Log Schnorr Language
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
 where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,

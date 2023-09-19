@@ -31,7 +31,7 @@ impl ConstantTimeEq for Scalar {
 impl Samplable<{ U256::LIMBS }> for Scalar {
     fn sample(
         rng: &mut impl CryptoRngCore,
-        public_parameters: &Self::PublicParameters,
+        _public_parameters: &Self::PublicParameters,
     ) -> group::Result<Self> {
         Ok(Self(k256::Scalar::random(rng)))
     }

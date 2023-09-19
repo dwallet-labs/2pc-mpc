@@ -15,7 +15,7 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
 }
 
 /// The Public Parameters of the Knowledge of Discrete Log Schnorr Language.
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<const SCALAR_LIMBS: usize, Scalar, GroupElement>
 where
     Scalar: group::GroupElement<SCALAR_LIMBS> + Samplable<SCALAR_LIMBS>,
@@ -96,7 +96,7 @@ mod tests {
     use super::*;
     use crate::{group::secp256k1, proofs::schnorr};
 
-    const SECP256K1_SCALAR_LIMBS: usize = { U256::LIMBS };
+    const SECP256K1_SCALAR_LIMBS: usize = U256::LIMBS;
 
     #[rstest]
     #[case(1)]
@@ -115,6 +115,35 @@ mod tests {
             secp256k1::GroupElement,
             Language<SECP256K1_SCALAR_LIMBS, secp256k1::Scalar, secp256k1::GroupElement>,
         >(
+            PublicParameters::new(secp256k1_group_public_parameters.generator),
+            secp256k1_scalar_public_parameters,
+            secp256k1_group_public_parameters,
+            batch_size,
+        )
+    }
+
+    #[rstest]
+    #[case(1)]
+    #[case(2)]
+    #[case(3)]
+    fn invalid_proof_fails_verification(#[case] batch_size: usize) {
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
+
+        // No invalid values as secp256k1 statically defines group,
+        // `k256::AffinePoint` assures deserialized values are on curve,
+        // and `Value` can only be instantiated through deserialization
+        schnorr::tests::invalid_proof_fails_verification::<
+            SECP256K1_SCALAR_LIMBS,
+            SECP256K1_SCALAR_LIMBS,
+            secp256k1::Scalar,
+            secp256k1::GroupElement,
+            Language<SECP256K1_SCALAR_LIMBS, secp256k1::Scalar, secp256k1::GroupElement>,
+        >(
+            None,
+            None,
             PublicParameters::new(secp256k1_group_public_parameters.generator),
             secp256k1_scalar_public_parameters,
             secp256k1_group_public_parameters,

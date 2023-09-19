@@ -66,7 +66,7 @@ pub struct Language<
 ///
 /// In order to prove an affine transformation, set `ciphertexts[0]` to an encryption of one with
 /// randomness zero ($\Enc(1; 0)$).
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
     const MASK_LIMBS: usize,
     const SCALAR_LIMBS: usize,

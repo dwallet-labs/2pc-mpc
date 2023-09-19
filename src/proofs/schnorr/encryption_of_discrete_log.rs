@@ -49,7 +49,7 @@ pub struct Language<
 }
 
 /// The Public Parameters of the Encryption of Discrete Log Schnorr Language
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
     const MASK_LIMBS: usize,
     const SCALAR_LIMBS: usize,
