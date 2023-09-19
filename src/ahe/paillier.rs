@@ -41,14 +41,16 @@ pub struct DecryptionKey<
 );
 
 /// The Public Parameters of the Paillier Additively Homomorphic Encryption Scheme.
+///
+/// Empty - the only public parameter of this scheme, the Paillier modulus, is already defined in
+/// the public parameters of the randomness and ciphertext groups (and these should be encryption
+/// scheme specific parameters, and not repeat group parameters.)
 #[derive(PartialEq, Clone, Serialize, Deserialize)]
 pub struct PublicParameters<
     const MASK_LIMBS: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     PlaintextSpaceGroupElement,
 > {
-    // The Paillier associated bi-prime $N$
-    associated_bi_prime: LargeBiPrimeSizedNumber,
     #[serde(skip_serializing)]
     _plaintext_group_element_choice: PhantomData<PlaintextSpaceGroupElement>,
 }
@@ -59,11 +61,20 @@ impl<
         PlaintextSpaceGroupElement,
     > PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>
 {
-    pub fn new(associated_bi_prime: LargeBiPrimeSizedNumber) -> Self {
-        Self {
-            associated_bi_prime,
-            _plaintext_group_element_choice: PhantomData,
-        }
+    pub const DEFAULT: Self = Self {
+        _plaintext_group_element_choice: PhantomData,
+    };
+}
+
+impl<
+        const MASK_LIMBS: usize,
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        PlaintextSpaceGroupElement,
+    > Default
+    for PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>
+{
+    fn default() -> Self {
+        Self::DEFAULT
     }
 }
 
@@ -107,16 +118,13 @@ where
         PublicParameters<MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>;
 
     fn public_parameters(&self) -> Self::PublicParameters {
-        Self::PublicParameters {
-            associated_bi_prime: self.0.n,
-            _plaintext_group_element_choice: PhantomData,
-        }
+        Self::PublicParameters::default()
     }
 
     fn new(
-        encryption_scheme_public_parameters: &Self::PublicParameters,
+        _encryption_scheme_public_parameters: &Self::PublicParameters,
         _plaintext_group_public_parameters: &PlaintextSpaceGroupElement::PublicParameters,
-        _randomness_group_public_parameters: &RandomnessPublicParameters,
+        randomness_group_public_parameters: &RandomnessPublicParameters,
         _ciphertext_group_public_parameters: &CiphertextPublicParameters,
     ) -> super::Result<Self> {
         // In order to assure circuit-privacy, the computation in
@@ -148,9 +156,7 @@ where
         {
             if evaluation_upper_bound < LargeBiPrimeSizedNumber::LIMBS {
                 return Ok(Self(
-                    tiresias::EncryptionKey::new(
-                        encryption_scheme_public_parameters.associated_bi_prime,
-                    ),
+                    tiresias::EncryptionKey::new(randomness_group_public_parameters.modulus),
                     PhantomData,
                 ));
             }
