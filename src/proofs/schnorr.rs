@@ -295,7 +295,7 @@ mod tests {
     use rand_core::OsRng;
     use crate::group;
 
-    // use rstest::rstest;
+    use rstest::rstest;
     use super::*;
 
     fn generate_witnesses_and_statements<
@@ -422,7 +422,14 @@ mod tests {
             .unwrap()
     }
 
-    // #[rstest]
+    fn bla() {
+        valid_proof_verifies()
+        secp256k1::GroupElement::PublicParameters::default(),
+        knowledge_of_discrete_log::PublicParameters<{U256::LIMBS}, secp256k1::Scalar, secp256k1::GroupElement,>::new(secp256k1::GroupElement::PublicParameters::default().generator),
+
+    }
+
+    #[rstest]
     // #[case(1)]
     // #[case(2)]
     // #[case(3)]
@@ -438,10 +445,10 @@ mod tests {
             PublicValueSpaceGroupElement,
         > + Clone,
     >(
-        language_public_parameters: Lang::PublicParameters,
-        witness_space_public_parameters: WitnessSpaceGroupElement::PublicParameters,
-        public_value_space_public_parameters: PublicValueSpaceGroupElement::PublicParameters,
-        batch_size: usize, // TODO: #[case]
+        #[case] language_public_parameters: Lang::PublicParameters,
+        #[case] witness_space_public_parameters: WitnessSpaceGroupElement::PublicParameters,
+        #[case] public_value_space_public_parameters: PublicValueSpaceGroupElement::PublicParameters,
+        #[default(1)] batch_size: usize,
     ) {
         let witnesses_and_statements = generate_witnesses_and_statements::<
             WITNESS_SCALAR_LIMBS,
@@ -623,7 +630,7 @@ mod tests {
                 .err()
                 .unwrap(),
             Error::GroupInstantiation(group::Error::InvalidGroupElementError)),
-                   "proof with an invalid statement_mask value should generate an invalid parameter error when checking the element is not in the group"
+                "proof with an invalid statement_mask value should generate an invalid parameter error when checking the element is not in the group"
         );
 
         let mut invalid_proof = valid_proof.clone();
@@ -641,7 +648,7 @@ mod tests {
                 .err()
                 .unwrap(),
             Error::GroupInstantiation(group::Error::InvalidGroupElementError)),
-            "proof with an invalid response value should generate an invalid parameter error when checking the element is not in the group"
+                "proof with an invalid response value should generate an invalid parameter error when checking the element is not in the group"
         );
 
         // TODO: make cases for elliptic curve with not on group values and make sure they fail and

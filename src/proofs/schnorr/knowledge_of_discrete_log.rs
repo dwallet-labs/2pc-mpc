@@ -28,6 +28,17 @@ where
     _scalar_choice: PhantomData<Scalar>,
 }
 
+impl<const SCALAR_LIMBS: usize, Scalar, GroupElement>
+    PublicParameters<SCALAR_LIMBS, Scalar, GroupElement>
+{
+    pub fn new(generator: GroupElement::Value) -> Self {
+        Self {
+            generator,
+            _scalar_choice: PhantomData,
+        }
+    }
+}
+
 /// Knowledge of Discrete Log Schnorr Language.
 ///
 /// SECURITY NOTICE:
