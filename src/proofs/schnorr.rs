@@ -16,7 +16,6 @@ use serde::{Deserialize, Serialize};
 
 use super::{Error, Result, TranscriptProtocol};
 use crate::{
-    group,
     group::{GroupElement, Samplable},
     ComputationalSecuritySizedNumber,
 };
@@ -62,7 +61,7 @@ pub trait Language<
         language_public_parameters: &Self::PublicParameters,
         witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
         public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
-    ) -> group::Result<PublicValueSpaceGroupElement>;
+    ) -> Result<PublicValueSpaceGroupElement>;
 }
 
 /// An Enhanced Batched Schnorr Zero-Knowledge Proof.
@@ -226,7 +225,7 @@ impl<
         if response_statement == reconstructed_response_statement {
             return Ok(());
         }
-        Err(Error::ProofVerificationError)
+        Err(Error::ProofVerification)
     }
 
     fn setup_protocol(

@@ -9,6 +9,7 @@ use serde::Serialize;
 use crate::{
     group,
     group::{direct_product, CyclicGroupElement, KnownOrderGroupElement, Samplable},
+    proofs,
     proofs::schnorr,
     AdditivelyHomomorphicEncryptionKey,
 };
@@ -59,6 +60,8 @@ pub struct PublicParameters<
     EncryptionKey,
 > where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
+    Scalar: From<Uint<SCALAR_LIMBS>>,
+    Uint<SCALAR_LIMBS>: for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
@@ -123,6 +126,8 @@ impl<
     >
 where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
+    Scalar: From<Uint<SCALAR_LIMBS>>,
+    Uint<SCALAR_LIMBS>: for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
@@ -176,7 +181,7 @@ where
             CiphertextSpaceGroupElement,
             GroupElement,
         >,
-    ) -> group::Result<
+    ) -> proofs::Result<
         direct_product::GroupElement<
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
@@ -200,7 +205,7 @@ where
             scalar_group_public_parameters,
             &language_public_parameters.randomness_group_public_parameters,
             &language_public_parameters.ciphertext_group_public_parameters,
-        );
+        )?;
 
         Ok((
             encryption_key.encrypt_with_randomness(discrete_log, randomness),
