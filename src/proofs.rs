@@ -6,13 +6,24 @@ use crypto_bigint::{Encoding, Limb, Uint};
 use merlin::Transcript;
 use serde::Serialize;
 
-#[derive(thiserror::Error, Debug, PartialEq)]
+use crate::{ahe, group};
+
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("invalid parameters")]
     InvalidParameters,
 
+    #[error("serialization/deserialization error")]
+    Serialization(#[from] serde_json::Error),
+
     #[error("invalid proof - did not satisfy the verification equation")]
-    ProofVerificationError,
+    ProofVerification,
+
+    #[error("group error")]
+    GroupInstantiation(#[from] group::Error),
+
+    #[error("additively homomorphic encryption scheme error")]
+    AdditivelyHomomorphicEncryptionScheme(#[from] ahe::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
