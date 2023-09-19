@@ -295,7 +295,6 @@ mod tests {
     use rand_core::OsRng;
     use crate::group;
 
-    use rstest::rstest;
     use super::*;
 
     fn generate_witnesses_and_statements<
@@ -422,18 +421,7 @@ mod tests {
             .unwrap()
     }
 
-    fn bla() {
-        valid_proof_verifies()
-        secp256k1::GroupElement::PublicParameters::default(),
-        knowledge_of_discrete_log::PublicParameters<{U256::LIMBS}, secp256k1::Scalar, secp256k1::GroupElement,>::new(secp256k1::GroupElement::PublicParameters::default().generator),
-
-    }
-
-    #[rstest]
-    // #[case(1)]
-    // #[case(2)]
-    // #[case(3)]
-    fn valid_proof_verifies<
+    pub(crate) fn valid_proof_verifies<
         const WITNESS_SCALAR_LIMBS: usize,
         const PUBLIC_VALUE_SCALAR_LIMBS: usize,
         WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
@@ -445,10 +433,10 @@ mod tests {
             PublicValueSpaceGroupElement,
         > + Clone,
     >(
-        #[case] language_public_parameters: Lang::PublicParameters,
-        #[case] witness_space_public_parameters: WitnessSpaceGroupElement::PublicParameters,
-        #[case] public_value_space_public_parameters: PublicValueSpaceGroupElement::PublicParameters,
-        #[default(1)] batch_size: usize,
+        language_public_parameters: Lang::PublicParameters,
+        witness_space_public_parameters: WitnessSpaceGroupElement::PublicParameters,
+        public_value_space_public_parameters: PublicValueSpaceGroupElement::PublicParameters,
+        batch_size: usize,
     ) {
         let witnesses_and_statements = generate_witnesses_and_statements::<
             WITNESS_SCALAR_LIMBS,
@@ -488,18 +476,14 @@ mod tests {
                     &language_public_parameters,
                     &witness_space_public_parameters,
                     &public_value_space_public_parameters,
-                    statements.into_iter().take(1).collect(),
+                    statements,
                 )
                 .is_ok(),
-            "valid proof should verify"
+            "valid proofs should verify"
         );
     }
 
-    // #[rstest]
-    // #[case(1)]
-    // #[case(2)]
-    // #[case(3)]
-    fn invalid_proof_does_not_verify<
+    pub(crate) fn invalid_proof_does_not_verify<
         const WITNESS_SCALAR_LIMBS: usize,
         const PUBLIC_VALUE_SCALAR_LIMBS: usize,
         WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
@@ -516,7 +500,7 @@ mod tests {
         language_public_parameters: Lang::PublicParameters,
         witness_space_public_parameters: WitnessSpaceGroupElement::PublicParameters,
         public_value_space_public_parameters: PublicValueSpaceGroupElement::PublicParameters,
-        batch_size: usize, // TODO: #[case]
+        batch_size: usize,
     ) {
         let witnesses_and_statements = generate_witnesses_and_statements::<
             WITNESS_SCALAR_LIMBS,

@@ -3,7 +3,7 @@
 
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use crypto_bigint::{NonZero, Uint, U256};
+use crypto_bigint::{rand_core::CryptoRngCore, NonZero, Uint, U256};
 use k256::elliptic_curve::{scalar::FromUintUnchecked, Field};
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
@@ -12,7 +12,7 @@ use crate::{
     group,
     group::{
         secp256k1::ORDER, CyclicGroupElement, KnownOrderGroupElement, MulByGenerator,
-        PrimeGroupElement,
+        PrimeGroupElement, Samplable,
     },
     traits::Reduce,
 };
@@ -25,6 +25,15 @@ pub struct Scalar(pub(super) k256::Scalar);
 impl ConstantTimeEq for Scalar {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.0.ct_eq(&other.0)
+    }
+}
+
+impl Samplable<{ U256::LIMBS }> for Scalar {
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+    ) -> group::Result<Self> {
+        Ok(Self(k256::Scalar::random(rng)))
     }
 }
 

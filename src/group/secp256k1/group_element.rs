@@ -28,11 +28,11 @@ pub struct GroupElement(ProjectivePoint);
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct PublicParameters {
     name: String,
-    order: U256,
-    modulus: U256,
-    generator: Value,
-    curve_equation_a: U256,
-    curve_equation_b: U256,
+    pub order: U256,
+    pub modulus: U256,
+    pub generator: Value,
+    pub curve_equation_a: U256,
+    pub curve_equation_b: U256,
 }
 
 impl Default for PublicParameters {
@@ -53,7 +53,7 @@ impl Default for PublicParameters {
 /// This is a `newtype` around `AffinePoint` used to control instantiation;
 /// the only way to instantiate this type from outside this module is through deserialization,
 /// which in turn will invoke `AffinePoint`'s deserialization which assures the point is on curve.
-#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Clone, Debug, Copy, Serialize, Deserialize)]
 pub struct Value(AffinePoint);
 
 impl ConstantTimeEq for Value {
