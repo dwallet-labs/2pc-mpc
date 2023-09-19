@@ -13,7 +13,7 @@ use crate::{
         additive_group_of_integers_modulu_n, direct_product, self_product_group,
         CyclicGroupElement, KnownOrderGroupElement, Samplable,
     },
-    helpers::const_generic_array_serialization,
+    helpers::{const_generic_array_serialization, flat_map_results},
     proofs,
     proofs::schnorr,
     AdditivelyHomomorphicEncryptionKey,
@@ -284,19 +284,10 @@ where
             group_public_parameters,
         )?;
 
-        // TODO: DRY-out
-        // Any one of these values could be invalid and thus return an error upon instantiation
-        // First, get all the `Result<>`s from `new()`
-        let ciphertexts = language_public_parameters.ciphertexts.clone().map(|value| {
-            CiphertextSpaceGroupElement::new(value, ciphertext_group_public_parameters)
-        });
-
-        // Then return the first error you encounter, or create a valid group element and return it
-        if let Some(Err(err)) = ciphertexts.iter().find(|res| res.is_err()) {
-            return Err(err.clone().into());
-        }
-
-        let ciphertexts = ciphertexts.map(|res| res.unwrap());
+        let ciphertexts =
+            flat_map_results(language_public_parameters.ciphertexts.clone().map(|value| {
+                CiphertextSpaceGroupElement::new(value, ciphertext_group_public_parameters)
+            }))?;
 
         Ok((
             encryption_key.evaluate_linear_combination_with_randomness(

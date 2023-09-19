@@ -13,7 +13,7 @@ use subtle::{Choice, ConstantTimeEq};
 use crate::{
     group,
     group::{GroupElement as GroupElementTrait, Samplable},
-    helpers::const_generic_array_serialization,
+    helpers::{const_generic_array_serialization, flat_map_results},
 };
 
 /// An element of the Self Product of the Group `G` by Itself.
@@ -36,15 +36,9 @@ where
             return Err(group::Error::InvalidPublicParametersError);
         }
 
-        // Any one of these values could be invalid and thus return an error upon instantiation
-        // First, get all the `Result<>`s from `new()`
-        let results = array::from_fn(|_| G::sample(rng, public_parameters));
-
-        // Then return the first error you encounter, or create a valid group element and return it
-        if let Some(Err(err)) = results.iter().find(|res| res.is_err()) {
-            return Err(err.clone());
-        }
-        Ok(Self(results.map(|res| res.unwrap())))
+        Ok(Self(flat_map_results(array::from_fn(|_| {
+            G::sample(rng, public_parameters)
+        }))?))
     }
 }
 
@@ -110,15 +104,9 @@ impl<const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMB
             return Err(group::Error::InvalidPublicParametersError);
         }
 
-        // Any one of these values could be invalid and thus return an error upon instantiation
-        // First, get all the `Result<>`s from `new()`
-        let results = value.0.map(|value| G::new(value, public_parameters));
-
-        // Then return the first error you encounter, or create a valid group element and return it
-        if let Some(Err(err)) = results.iter().find(|res| res.is_err()) {
-            return Err(err.clone());
-        }
-        Ok(Self(results.map(|res| res.unwrap())))
+        Ok(Self(flat_map_results(
+            value.0.map(|value| G::new(value, public_parameters)),
+        )?))
     }
 
     fn neutral(&self) -> Self {
