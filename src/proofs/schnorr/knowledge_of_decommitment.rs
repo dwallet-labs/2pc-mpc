@@ -109,3 +109,77 @@ pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme
         Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
         ProtocolContext,
     >;
+
+#[cfg(test)]
+mod tests {
+    use crypto_bigint::U256;
+    use rstest::rstest;
+
+    use super::*;
+    use crate::{group::{Samplable, secp256k1}, proofs::schnorr};
+    use crate::commitments::pedersen;
+
+    const SECP256K1_SCALAR_LIMBS: usize = U256::LIMBS;
+
+    #[rstest]
+    #[case(1)]
+    #[case(2)]
+    #[case(3)]
+    fn valid_proof_verifies(#[case] batch_size: usize) {
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
+
+        secp256k1::scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
+
+        // TODO: this might not be safe; we need a proper way to derive generators
+        let pedersen_public_parameters = pedersen::PublicParameters<1, SECP256K1_SCALAR_LIMBS,  secp256k1::GroupElement,>{
+            message_generators: [secp256k1_group_public_parameters.generator],
+            randomness_generator: todo
+        };
+
+
+        schnorr::tests::valid_proof_verifies::<
+            SECP256K1_SCALAR_LIMBS,
+            SECP256K1_SCALAR_LIMBS,
+            secp256k1::Scalar,
+            secp256k1::GroupElement,
+            Language<SECP256K1_SCALAR_LIMBS, secp256k1::Scalar, secp256k1::GroupElement>,
+        >(
+            PublicParameters::new(secp256k1_group_public_parameters.generator),
+            secp256k1_scalar_public_parameters,
+            secp256k1_group_public_parameters,
+            batch_size,
+        )
+    }
+
+    #[rstest]
+    #[case(1)]
+    #[case(2)]
+    #[case(3)]
+    fn invalid_proof_fails_verification(#[case] batch_size: usize) {
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
+
+        // No invalid values as secp256k1 statically defines group,
+        // `k256::AffinePoint` assures deserialized values are on curve,
+        // and `Value` can only be instantiated through deserialization
+        schnorr::tests::invalid_proof_fails_verification::<
+            SECP256K1_SCALAR_LIMBS,
+            SECP256K1_SCALAR_LIMBS,
+            secp256k1::Scalar,
+            secp256k1::GroupElement,
+            Language<SECP256K1_SCALAR_LIMBS, secp256k1::Scalar, secp256k1::GroupElement>,
+        >(
+            None,
+            None,
+            PublicParameters::new(secp256k1_group_public_parameters.generator),
+            secp256k1_scalar_public_parameters,
+            secp256k1_group_public_parameters,
+            batch_size,
+        )
+    }
+}

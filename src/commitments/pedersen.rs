@@ -20,8 +20,8 @@ pub struct PublicParameters<
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>,
 > {
     #[serde(with = "const_generic_array_serialization")]
-    message_generators: [GroupElement::Value; BATCH_SIZE],
-    randomness_generator: GroupElement::Value,
+    pub message_generators: [GroupElement::Value; BATCH_SIZE],
+    pub randomness_generator: GroupElement::Value,
 }
 
 /// A Batched Pedersen Commitment
