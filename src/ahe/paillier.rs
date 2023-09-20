@@ -105,7 +105,8 @@ where
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     PlaintextSpaceGroupElement:
         From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>> + From<LargeBiPrimeSizedNumber>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
+        From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
     // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
     // plaintext concated with the statistical security parameter contacted with a U64 (which is a
     // bound on the log of DIMENSION)
@@ -246,7 +247,8 @@ where
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     PlaintextSpaceGroupElement:
         From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>> + From<LargeBiPrimeSizedNumber>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
+        From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
     // In order to ensure circuit-privacy we assure that the mask is a number of the size of the
     // plaintext concated with the statistical security parameter contacted with a U64 (which is a
     // bound on the log of DIMENSION)

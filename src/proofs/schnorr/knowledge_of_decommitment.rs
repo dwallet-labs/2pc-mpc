@@ -3,6 +3,7 @@
 
 use std::{marker::PhantomData, ops::Mul};
 
+use crypto_bigint::Uint;
 use serde::Serialize;
 
 use crate::{
@@ -34,7 +35,9 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentS
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
 where
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar>
+        + Samplable<SCALAR_LIMBS>
+        + Into<Uint<SCALAR_LIMBS>>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
@@ -61,7 +64,9 @@ impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
         GroupElement,
     > for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
 where
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar>
+        + Samplable<SCALAR_LIMBS>
+        + Into<Uint<SCALAR_LIMBS>>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,

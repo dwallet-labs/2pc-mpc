@@ -271,6 +271,12 @@ impl KnownOrderGroupElement<{ U256::LIMBS }, Scalar> for GroupElement {
     fn order(&self) -> Uint<{ U256::LIMBS }> {
         ORDER
     }
+
+    fn order_from_public_parameters(
+        public_parameters: &Self::PublicParameters,
+    ) -> Uint<{ U256::LIMBS }> {
+        ORDER
+    }
 }
 
 impl MulByGenerator<Scalar> for GroupElement {

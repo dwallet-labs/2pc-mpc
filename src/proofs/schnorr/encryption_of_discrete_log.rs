@@ -65,7 +65,7 @@ pub struct PublicParameters<
 > where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
     Scalar: From<Uint<SCALAR_LIMBS>>,
-    Uint<SCALAR_LIMBS>: for<'a> From<&'a Scalar>,
+    Uint<SCALAR_LIMBS>: From<Scalar> + for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
@@ -135,7 +135,7 @@ impl<
 where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
     Scalar: From<Uint<SCALAR_LIMBS>>,
-    Uint<SCALAR_LIMBS>: for<'a> From<&'a Scalar>,
+    Uint<SCALAR_LIMBS>: From<Scalar> + for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
@@ -225,8 +225,108 @@ where
     }
 }
 
+impl<
+        const MASK_LIMBS: usize,
+        const SCALAR_LIMBS: usize,
+        const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
+        const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
+        const WITNESS_SCALAR_LIMBS: usize,
+        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+        Scalar,
+        RandomnessSpaceGroupElement,
+        CiphertextSpaceGroupElement,
+        GroupElement,
+        EncryptionKey,
+    >
+    schnorr::EnhancedLanguage<
+        2,
+        SCALAR_LIMBS,
+        WITNESS_SCALAR_LIMBS,
+        PUBLIC_VALUE_SCALAR_LIMBS,
+        direct_product::GroupElement<
+            WITNESS_SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            RANDOMNESS_SPACE_SCALAR_LIMBS,
+            Scalar,
+            RandomnessSpaceGroupElement,
+        >,
+        direct_product::GroupElement<
+            PUBLIC_VALUE_SCALAR_LIMBS,
+            CIPHERTEXT_SPACE_SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            CiphertextSpaceGroupElement,
+            GroupElement,
+        >,
+    >
+    for Language<
+        MASK_LIMBS,
+        SCALAR_LIMBS,
+        RANDOMNESS_SPACE_SCALAR_LIMBS,
+        CIPHERTEXT_SPACE_SCALAR_LIMBS,
+        WITNESS_SCALAR_LIMBS,
+        PUBLIC_VALUE_SCALAR_LIMBS,
+        Scalar,
+        RandomnessSpaceGroupElement,
+        CiphertextSpaceGroupElement,
+        GroupElement,
+        EncryptionKey,
+    >
+where
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
+    Scalar: From<Uint<SCALAR_LIMBS>>,
+    Uint<SCALAR_LIMBS>: From<Scalar> + for<'a> From<&'a Scalar>,
+    GroupElement: CyclicGroupElement<SCALAR_LIMBS>
+        + Mul<Scalar, Output = GroupElement>
+        + for<'r> Mul<&'r Scalar, Output = GroupElement>,
+    RandomnessSpaceGroupElement: group::GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>
+        + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
+    CiphertextSpaceGroupElement: group::GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<
+        MASK_LIMBS,
+        SCALAR_LIMBS,
+        RANDOMNESS_SPACE_SCALAR_LIMBS,
+        CIPHERTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        RandomnessSpaceGroupElement,
+        CiphertextSpaceGroupElement,
+    >,
+{
+    fn range_claims(
+        language_public_parameters: &Self::PublicParameters,
+        witness_space_public_parameters: &direct_product::PublicParameters<
+            WITNESS_SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            RANDOMNESS_SPACE_SCALAR_LIMBS,
+            Scalar,
+            RandomnessSpaceGroupElement,
+        >,
+    ) -> [Option<Uint<SCALAR_LIMBS>>; 2] {
+        let (scalar_public_parameters, _) = witness_space_public_parameters.into();
+
+        [
+            Some(Scalar::order_from_public_parameters(
+                scalar_public_parameters,
+            )),
+            None,
+        ]
+    }
+
+    fn from(
+        value: GroupElement<
+            WITNESS_SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            RANDOMNESS_SPACE_SCALAR_LIMBS,
+            Scalar,
+            RandomnessSpaceGroupElement,
+        >,
+    ) -> Self {
+        let (scalar, _) = value.into();
+
+        [Some(scalar.into()), None]
+    }
+}
+
 /// An Encryption of Discrete Log Schnorr Proof
-#[allow(dead_code)]
 pub type Proof<
     const MASK_LIMBS: usize,
     const SCALAR_LIMBS: usize,

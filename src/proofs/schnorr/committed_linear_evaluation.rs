@@ -84,7 +84,7 @@ pub struct PublicParameters<
 > where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
     Scalar: From<Uint<SCALAR_LIMBS>>,
-    Uint<SCALAR_LIMBS>: for<'a> From<&'a Scalar>,
+    Uint<SCALAR_LIMBS>: From<Scalar> + for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
@@ -173,7 +173,7 @@ impl<
 where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
     Scalar: From<Uint<SCALAR_LIMBS>>,
-    Uint<SCALAR_LIMBS>: for<'a> From<&'a Scalar>,
+    Uint<SCALAR_LIMBS>: From<Scalar> + for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
@@ -293,7 +293,7 @@ where
             encryption_key.evaluate_linear_combination_with_randomness(
                 coefficients.into(),
                 &ciphertexts,
-                &mask.retrieve(),
+                &mask.into(),
                 encryption_randomness,
             )?,
             commitment_scheme.commit(coefficients, commitment_randomness),

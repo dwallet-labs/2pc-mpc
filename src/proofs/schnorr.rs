@@ -11,7 +11,7 @@ pub mod knowledge_of_decommitment;
 
 use std::marker::PhantomData;
 
-use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, U64};
+use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, U64, Uint};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
@@ -63,6 +63,35 @@ pub trait Language<
         witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
         public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
     ) -> Result<PublicValueSpaceGroupElement>;
+}
+
+/// An Enhacned Schnorr Zero-Knowledge Proof Language
+/// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`
+/// As defined in Appendix B. Schnorr Protocols in the paper
+pub trait EnhancedLanguage<
+    // todo: doc & name
+    const WITNESS_SIZE: usize,
+    // The size of the unsigned integer that holds the maximal range claim by this language
+    const RANGE_CLAIM_LIMBS: usize,
+    // The upper bound for the scalar size of the witness group
+    const WITNESS_SCALAR_LIMBS: usize,
+    // The upper bound for the scalar size of the associated public-value space group
+    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+    // An element of the witness space $(\HH_\pp, +)$
+    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS> + Into<[Option<Uint<RANGE_CLAIM_LIMBS>>; WITNESS_SIZE]>,
+    // An element in the associated public-value space $(\GG_\pp, \cdot)$,
+    PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+>: Language<WITNESS_SCALAR_LIMBS, PUBLIC_VALUE_SCALAR_LIMBS, WitnessSpaceGroupElement, PublicValueSpaceGroupElement>
+{
+    /// Returns the range claims this language proves.
+    /// Each element corresponds to the upper bound of the range for its corresponding witness (`Some(range_upper_bound)`).
+    /// None signifies no range check is to be performed on the corresponding witness.
+    fn range_claims(
+        language_public_parameters: &Self::PublicParameters,
+        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
+    ) -> [Option<Uint<RANGE_CLAIM_LIMBS>>; WITNESS_SIZE];
+
+    fn disassemble_witness_for_range_check(witness: &WitnessSpaceGroupElement,) -> [Option<Uint<RANGE_CLAIM_LIMBS>>; WITNESS_SIZE];
 }
 
 /// An Enhanced Batched Schnorr Zero-Knowledge Proof.

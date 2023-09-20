@@ -9,7 +9,7 @@ use subtle::{Choice, ConstantTimeEq};
 
 use crate::{
     group,
-    group::{GroupElement as GroupElementTrait, Samplable},
+    group::{GroupElement as GroupElementTrait, KnownOrderGroupElement, Samplable},
 };
 
 /// An element of the Direct Product of the two Groups `FirstGroupElement` and `SecondGroupElement`.

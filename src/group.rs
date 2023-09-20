@@ -141,7 +141,7 @@ pub trait CyclicGroupElement<const SCALAR_LIMBS: usize>:
 /// An element of a known-order abelian group, in additive notation.
 pub trait KnownOrderGroupElement<
     const SCALAR_LIMBS: usize,
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar>,
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Into<Uint<SCALAR_LIMBS>>,
 >:
     GroupElement<SCALAR_LIMBS>
     + Mul<Scalar, Output = Self>
@@ -149,7 +149,13 @@ pub trait KnownOrderGroupElement<
     + MulAssign<Scalar>
     + for<'r> MulAssign<&'r Scalar>
 {
-    fn order(&self) -> Uint<SCALAR_LIMBS>;
+    fn order(&self) -> Uint<SCALAR_LIMBS> {
+        Self::order_from_public_parameters(&self.public_parameters())
+    }
+
+    fn order_from_public_parameters(
+        public_parameters: &Self::PublicParameters,
+    ) -> Uint<SCALAR_LIMBS>;
 }
 
 /// A marker trait for elements of a (known) prime-order group.
@@ -157,7 +163,7 @@ pub trait KnownOrderGroupElement<
 /// In additive notation.
 pub trait PrimeGroupElement<
     const SCALAR_LIMBS: usize,
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar>,
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Into<Uint<SCALAR_LIMBS>>,
 >:
     KnownOrderGroupElement<SCALAR_LIMBS, Scalar>
     + CyclicGroupElement<SCALAR_LIMBS>

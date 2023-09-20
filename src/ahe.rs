@@ -40,7 +40,8 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     PlaintextSpaceGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
+        From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
     RandomnessSpaceGroupElement:
         GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
@@ -175,7 +176,8 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     PlaintextSpaceGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
+        From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
     RandomnessSpaceGroupElement:
         GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
@@ -216,7 +218,8 @@ mod tests {
         PlaintextSpaceGroupElement:
             KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
         PlaintextSpaceGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>> + std::fmt::Debug,
-        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
+            From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
         RandomnessSpaceGroupElement:
             GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
         CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
@@ -271,7 +274,8 @@ mod tests {
         PlaintextSpaceGroupElement:
             KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
         PlaintextSpaceGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>> + std::fmt::Debug,
-        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
+            From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
         RandomnessSpaceGroupElement:
             GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
         CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS> + std::fmt::Debug,
