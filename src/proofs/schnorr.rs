@@ -27,9 +27,9 @@ use crate::{
 // as does 64-bit architectures in which the memory won't even be addressable.)
 type ChallengeSizedNumber = <ComputationalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput;
 
-/// A Schnorr Zero-Knowledge Proof Language
-/// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`
-/// As defined in Appendix B. Schnorr Protocols in the paper
+/// A Schnorr Zero-Knowledge Proof Language.
+/// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`.
+/// As defined in Appendix B. Schnorr Protocols in the paper.
 pub trait Language<
     // The upper bound for the scalar size of the witness group
     const WITNESS_SCALAR_LIMBS: usize,
@@ -41,7 +41,7 @@ pub trait Language<
     PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
 >
 {
-    /// Public parameters for a language family $\pp \gets \Setup(1^\kappa)$
+    /// Public parameters for a language family $\pp \gets \Setup(1^\kappa)$.
     ///
     /// Used for language-specific parameters (e.g., the public parameters of the commitment scheme
     /// used for proving knowledge of decommitment - the bases $g$, $h$ in the case of Pedersen).
@@ -65,9 +65,9 @@ pub trait Language<
     ) -> Result<PublicValueSpaceGroupElement>;
 }
 
-/// An Enhacned Schnorr Zero-Knowledge Proof Language
-/// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`
-/// As defined in Appendix B. Schnorr Protocols in the paper
+/// An Enhacned Schnorr Zero-Knowledge Proof Language.
+/// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.
+/// As defined in Appendix B. Schnorr Protocols in the paper.
 pub trait EnhancedLanguage<
     // todo: doc & name
     const WITNESS_SIZE: usize,
@@ -78,20 +78,11 @@ pub trait EnhancedLanguage<
     // The upper bound for the scalar size of the associated public-value space group
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     // An element of the witness space $(\HH_\pp, +)$
-    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS> + Into<[Option<Uint<RANGE_CLAIM_LIMBS>>; WITNESS_SIZE]>,
+    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
     // An element in the associated public-value space $(\GG_\pp, \cdot)$,
     PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
 >: Language<WITNESS_SCALAR_LIMBS, PUBLIC_VALUE_SCALAR_LIMBS, WitnessSpaceGroupElement, PublicValueSpaceGroupElement>
 {
-    /// Returns the range claims this language proves.
-    /// Each element corresponds to the upper bound of the range for its corresponding witness (`Some(range_upper_bound)`).
-    /// None signifies no range check is to be performed on the corresponding witness.
-    fn range_claims(
-        language_public_parameters: &Self::PublicParameters,
-        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
-    ) -> [Option<Uint<RANGE_CLAIM_LIMBS>>; WITNESS_SIZE];
-
-    fn disassemble_witness_for_range_check(witness: &WitnessSpaceGroupElement,) -> [Option<Uint<RANGE_CLAIM_LIMBS>>; WITNESS_SIZE];
 }
 
 /// An Enhanced Batched Schnorr Zero-Knowledge Proof.

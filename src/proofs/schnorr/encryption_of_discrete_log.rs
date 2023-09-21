@@ -291,39 +291,6 @@ where
         CiphertextSpaceGroupElement,
     >,
 {
-    fn range_claims(
-        language_public_parameters: &Self::PublicParameters,
-        witness_space_public_parameters: &direct_product::PublicParameters<
-            WITNESS_SCALAR_LIMBS,
-            SCALAR_LIMBS,
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
-            Scalar,
-            RandomnessSpaceGroupElement,
-        >,
-    ) -> [Option<Uint<SCALAR_LIMBS>>; 2] {
-        let (scalar_public_parameters, _) = witness_space_public_parameters.into();
-
-        [
-            Some(Scalar::order_from_public_parameters(
-                scalar_public_parameters,
-            )),
-            None,
-        ]
-    }
-
-    fn from(
-        value: GroupElement<
-            WITNESS_SCALAR_LIMBS,
-            SCALAR_LIMBS,
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
-            Scalar,
-            RandomnessSpaceGroupElement,
-        >,
-    ) -> Self {
-        let (scalar, _) = value.into();
-
-        [Some(scalar.into()), None]
-    }
 }
 
 /// An Encryption of Discrete Log Schnorr Proof
