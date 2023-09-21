@@ -91,10 +91,14 @@ pub type Proof<const SCALAR_LIMBS: usize, S, G, ProtocolContext> =
 #[cfg(test)]
 mod tests {
     use crypto_bigint::U256;
+    use rand_core::OsRng;
     use rstest::rstest;
 
     use super::*;
-    use crate::{group::secp256k1, proofs::schnorr};
+    use crate::{
+        group::{secp256k1, GroupElement},
+        proofs::schnorr,
+    };
 
     const SECP256K1_SCALAR_LIMBS: usize = U256::LIMBS;
 

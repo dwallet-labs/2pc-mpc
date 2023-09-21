@@ -178,7 +178,7 @@ mod tests {
         schnorr::tests::valid_proof_verifies::<
             SECP256K1_SCALAR_LIMBS,
             SECP256K1_SCALAR_LIMBS,
-            secp256k1::Scalar,
+            self_product_group::GroupElement<2, SECP256K1_SCALAR_LIMBS, secp256k1::Scalar>,
             secp256k1::GroupElement,
             Language<
                 SECP256K1_SCALAR_LIMBS,
@@ -187,8 +187,11 @@ mod tests {
                 Pedersen<1, SECP256K1_SCALAR_LIMBS, secp256k1::Scalar, secp256k1::GroupElement>,
             >,
         >(
-            PublicParameters::new(secp256k1_group_public_parameters.generator),
-            secp256k1_scalar_public_parameters,
+            PublicParameters::new(pedersen_public_parameters),
+            self_product_group::PublicParameters {
+                public_parameters: secp256k1_scalar_public_parameters,
+                size: 2,
+            },
             secp256k1_group_public_parameters,
             batch_size,
         )
@@ -204,13 +207,28 @@ mod tests {
         let secp256k1_group_public_parameters =
             secp256k1::group_element::PublicParameters::default();
 
+        let generator = secp256k1::GroupElement::new(
+            secp256k1_group_public_parameters.generator,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
+        let randomness_generator = generator
+            * secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap();
+
+        // TODO: this might not be safe; we need a proper way to derive generators
+        let pedersen_public_parameters =
+            pedersen::PublicParameters::<1, SECP256K1_SCALAR_LIMBS, secp256k1::GroupElement> {
+                message_generators: [secp256k1_group_public_parameters.generator],
+                randomness_generator: randomness_generator.value(),
+            };
+
         // No invalid values as secp256k1 statically defines group,
         // `k256::AffinePoint` assures deserialized values are on curve,
         // and `Value` can only be instantiated through deserialization
         schnorr::tests::invalid_proof_fails_verification::<
             SECP256K1_SCALAR_LIMBS,
             SECP256K1_SCALAR_LIMBS,
-            secp256k1::Scalar,
+            self_product_group::GroupElement<2, SECP256K1_SCALAR_LIMBS, secp256k1::Scalar>,
             secp256k1::GroupElement,
             Language<
                 SECP256K1_SCALAR_LIMBS,
@@ -221,8 +239,11 @@ mod tests {
         >(
             None,
             None,
-            PublicParameters::new(secp256k1_group_public_parameters.generator),
-            secp256k1_scalar_public_parameters,
+            PublicParameters::new(pedersen_public_parameters),
+            self_product_group::PublicParameters {
+                public_parameters: secp256k1_scalar_public_parameters,
+                size: 2,
+            },
             secp256k1_group_public_parameters,
             batch_size,
         )
