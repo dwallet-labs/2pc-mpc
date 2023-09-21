@@ -293,7 +293,7 @@ where
             encryption_key.evaluate_linear_combination_with_randomness(
                 coefficients.into(),
                 &ciphertexts,
-                &mask.into(),
+                &mask.retrieve(),
                 encryption_randomness,
             )?,
             commitment_scheme.commit(coefficients, commitment_randomness),

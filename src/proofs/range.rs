@@ -1,8 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto_bigint::{Encoding, Uint};
-use rand_core::CryptoRngCore;
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 
 use crate::{
     commitments::HomomorphicCommitmentScheme,
