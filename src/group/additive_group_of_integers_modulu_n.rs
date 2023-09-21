@@ -6,7 +6,7 @@
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
     rand_core::CryptoRngCore,
-    Encoding, NonZero, Random, Uint,
+    Encoding, NonZero, Random, Uint, Wrapping,
 };
 use serde::{Deserialize, Serialize};
 
@@ -16,11 +16,20 @@ use crate::{
     traits::Reduce,
 };
 
+// Crypto-bigint has two structures we can work with for modular arithmetics;
+// 1. DynResidue - uses Montgomery and works for odd moduli only
+// 2. Wrapping<Uint<>> - works for moduli which is a multiple of the LIMB size 2^64, and is much
+//    more efficient.
+//
+// For groups like the Paillier plaintext space, 1 is more appropriate.
+// For groups that should behave like the integers group $Z$ but bounded by some upper bound, 2. is
+// more appropriate.
+
 /// An element of the additive group of integers modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
 pub type GroupElement<const LIMBS: usize> = DynResidue<LIMBS>;
 
-impl<const LIMBS: usize> Samplable<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> Samplable<LIMBS> for DynResidue<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -28,10 +37,22 @@ where
         rng: &mut impl CryptoRngCore,
         public_parameters: &Self::PublicParameters,
     ) -> group::Result<Self> {
-        <GroupElement<LIMBS> as group::GroupElement<LIMBS>>::new(
+        <DynResidue<LIMBS> as group::GroupElement<LIMBS>>::new(
             Uint::<LIMBS>::random(rng),
             public_parameters,
         )
+    }
+}
+
+impl<const LIMBS: usize> Samplable<LIMBS> for Wrapping<Uint<LIMBS>>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        _public_parameters: &Self::PublicParameters,
+    ) -> group::Result<Self> {
+        Ok(Wrapping(Uint::<LIMBS>::random(rng)))
     }
 }
 
@@ -54,7 +75,41 @@ where
     }
 }
 
-impl<const LIMBS: usize> group::GroupElement<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> group::GroupElement<LIMBS> for Wrapping<Uint<LIMBS>>
+where
+    Uint<LIMBS>: Encoding,
+{
+    type Value = Uint<LIMBS>;
+
+    fn value(&self) -> Self::Value {
+        self.0
+    }
+
+    type PublicParameters = ();
+
+    fn public_parameters(&self) -> Self::PublicParameters {}
+
+    fn new(
+        value: Self::Value,
+        _public_parameters: &Self::PublicParameters,
+    ) -> crate::group::Result<Self> {
+        Ok(Wrapping(value))
+    }
+
+    fn neutral(&self) -> Self {
+        Wrapping(Uint::<LIMBS>::ZERO)
+    }
+
+    fn scalar_mul<const RHS_LIMBS: usize>(&self, scalar: &Uint<RHS_LIMBS>) -> Self {
+        Wrapping(self.0.wrapping_mul(scalar))
+    }
+
+    fn double(&self) -> Self {
+        self + self
+    }
+}
+
+impl<const LIMBS: usize> group::GroupElement<LIMBS> for DynResidue<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -103,6 +158,33 @@ where
     }
 }
 
+impl<const LIMBS: usize> MulByGenerator<Uint<LIMBS>> for Wrapping<Uint<LIMBS>>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn mul_by_generator(&self, scalar: Uint<LIMBS>) -> Self {
+        self.mul_by_generator(&scalar)
+    }
+}
+
+impl<const LIMBS: usize> MulByGenerator<&Uint<LIMBS>> for Wrapping<Uint<LIMBS>>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn mul_by_generator(&self, scalar: &Uint<LIMBS>) -> Self {
+        Wrapping(scalar.into())
+    }
+}
+
+impl<const LIMBS: usize> CyclicGroupElement<LIMBS> for Wrapping<Uint<LIMBS>>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn generator(&self) -> Self {
+        Wrapping(Uint::<LIMBS>::ONE)
+    }
+}
+
 impl<const LIMBS: usize> MulByGenerator<Uint<LIMBS>> for DynResidue<LIMBS>
 where
     Uint<LIMBS>: Encoding,
@@ -123,7 +205,7 @@ where
     }
 }
 
-impl<const LIMBS: usize> CyclicGroupElement<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> CyclicGroupElement<LIMBS> for DynResidue<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -132,7 +214,7 @@ where
     }
 }
 
-impl<const LIMBS: usize> KnownOrderGroupElement<LIMBS, Self> for GroupElement<LIMBS>
+impl<const LIMBS: usize> KnownOrderGroupElement<LIMBS, Self> for DynResidue<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
