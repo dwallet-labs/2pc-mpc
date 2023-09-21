@@ -6,7 +6,7 @@
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
     rand_core::CryptoRngCore,
-    Encoding, NonZero, Random, Uint, Wrapping,
+    Encoding, NonZero, Random, Uint, Wrapping, Zero,
 };
 use serde::{Deserialize, Serialize};
 
@@ -48,7 +48,7 @@ where
         rng: &mut impl CryptoRngCore,
         _public_parameters: &Self::PublicParameters,
     ) -> group::Result<Self> {
-        Ok(Wrapping(Uint::<LIMBS>::random(rng)))
+        Ok(Self::random(rng))
     }
 }
 
@@ -93,7 +93,7 @@ where
     }
 
     fn neutral(&self) -> Self {
-        Wrapping(Uint::<LIMBS>::ZERO)
+        Self::ZERO
     }
 
     fn scalar_mul<const RHS_LIMBS: usize>(&self, scalar: &Uint<RHS_LIMBS>) -> Self {
