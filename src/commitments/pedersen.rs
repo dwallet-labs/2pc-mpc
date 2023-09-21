@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group,
-    group::{self_product_group, CyclicGroupElement},
+    group::{self_product, CyclicGroupElement},
     helpers::const_generic_array_serialization,
 };
 
@@ -41,7 +41,7 @@ impl<const BATCH_SIZE: usize, const SCALAR_LIMBS: usize, Scalar, GroupElement>
         SCALAR_LIMBS,
         SCALAR_LIMBS,
         SCALAR_LIMBS,
-        self_product_group::GroupElement<BATCH_SIZE, SCALAR_LIMBS, Scalar>,
+        self_product::GroupElement<BATCH_SIZE, SCALAR_LIMBS, Scalar>,
         Scalar,
         GroupElement,
     > for Pedersen<BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement>
@@ -93,7 +93,7 @@ where
 
     fn commit(
         &self,
-        message: &self_product_group::GroupElement<BATCH_SIZE, SCALAR_LIMBS, Scalar>,
+        message: &self_product::GroupElement<BATCH_SIZE, SCALAR_LIMBS, Scalar>,
         randomness: &Scalar,
     ) -> GroupElement {
         self.message_generators

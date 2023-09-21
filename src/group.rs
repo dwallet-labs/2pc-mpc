@@ -11,7 +11,7 @@ pub mod direct_product;
 
 pub mod secp256k1;
 
-pub mod self_product_group;
+pub mod self_product;
 
 pub mod paillier;
 

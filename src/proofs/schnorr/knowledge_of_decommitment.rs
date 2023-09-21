@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use crate::{
     commitments::HomomorphicCommitmentScheme,
-    group::{self_product_group, CyclicGroupElement, KnownOrderGroupElement, Samplable},
+    group::{self_product, CyclicGroupElement, KnownOrderGroupElement, Samplable},
     proofs,
     proofs::schnorr,
 };
@@ -60,7 +60,7 @@ impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
     schnorr::Language<
         SCALAR_LIMBS,
         SCALAR_LIMBS,
-        self_product_group::GroupElement<2, SCALAR_LIMBS, Scalar>,
+        self_product::GroupElement<2, SCALAR_LIMBS, Scalar>,
         GroupElement,
     > for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
 where
@@ -83,13 +83,9 @@ where
     const NAME: &'static str = "Knowledge of Decommitment";
 
     fn group_homomorphism(
-        witness: &self_product_group::GroupElement<2, SCALAR_LIMBS, Scalar>,
+        witness: &self_product::GroupElement<2, SCALAR_LIMBS, Scalar>,
         language_public_parameters: &Self::PublicParameters,
-        _witness_space_public_parameters: &self_product_group::PublicParameters<
-            2,
-            SCALAR_LIMBS,
-            Scalar,
-        >,
+        _witness_space_public_parameters: &self_product::PublicParameters<2, SCALAR_LIMBS, Scalar>,
         public_value_space_public_parameters: &GroupElement::PublicParameters,
     ) -> proofs::Result<GroupElement> {
         let [value, randomness]: &[Scalar; 2] = witness.into();
@@ -109,7 +105,7 @@ pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme
     schnorr::Proof<
         SCALAR_LIMBS,
         SCALAR_LIMBS,
-        self_product_group::GroupElement<2, SCALAR_LIMBS, Scalar>,
+        self_product::GroupElement<2, SCALAR_LIMBS, Scalar>,
         GroupElement,
         Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
         ProtocolContext,
