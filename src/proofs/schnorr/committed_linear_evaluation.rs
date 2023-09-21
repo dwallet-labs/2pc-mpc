@@ -3,7 +3,7 @@
 
 use std::{marker::PhantomData, ops::Mul};
 
-use crypto_bigint::{ConcatMixed, Encoding, Uint};
+use crypto_bigint::{ConcatMixed, Encoding, Uint, Wrapping};
 use serde::Serialize;
 
 use crate::{
@@ -144,7 +144,7 @@ impl<
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             self_product::GroupElement<DIMENSION, SCALAR_LIMBS, Scalar>,
             Scalar,
-            additive_group_of_integers_modulu_n::GroupElement<MASK_LIMBS>,
+            Wrapping<Uint<MASK_LIMBS>>,
             RandomnessSpaceGroupElement,
         >,
         direct_product::GroupElement<
@@ -231,7 +231,7 @@ where
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             self_product::GroupElement<DIMENSION, SCALAR_LIMBS, Scalar>,
             Scalar,
-            additive_group_of_integers_modulu_n::GroupElement<MASK_LIMBS>,
+            Wrapping<Uint<MASK_LIMBS>>,
             RandomnessSpaceGroupElement,
         >,
         language_public_parameters: &Self::PublicParameters,
@@ -245,7 +245,7 @@ where
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             self_product::GroupElement<DIMENSION, SCALAR_LIMBS, Scalar>,
             Scalar,
-            additive_group_of_integers_modulu_n::GroupElement<MASK_LIMBS>,
+           Wrapping<Uint<MASK_LIMBS>>,
             RandomnessSpaceGroupElement,
         > as group::GroupElement<WITNESS_SCALAR_LIMBS>>::PublicParameters,
         public_value_space_public_parameters: &direct_product::PublicParameters<
@@ -293,7 +293,7 @@ where
             encryption_key.evaluate_linear_combination_with_randomness(
                 coefficients.into(),
                 &ciphertexts,
-                &mask.retrieve(),
+                &mask.0,
                 encryption_randomness,
             )?,
             commitment_scheme.commit(coefficients, commitment_randomness),

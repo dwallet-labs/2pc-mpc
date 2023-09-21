@@ -1,7 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, Wrapping};
 
 use crate::{
     commitments::HomomorphicCommitmentScheme,
@@ -29,7 +29,7 @@ pub trait RangeProof<
         self_product::GroupElement<
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
-            additive_group_of_integers_modulu_n::GroupElement<RANGE_CLAIM_LIMBS>,
+            Wrapping<Uint<RANGE_CLAIM_LIMBS>>,
         >,
         RandomnessSpaceGroupElement,
         CommitmentSpaceGroupElement,

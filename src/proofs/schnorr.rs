@@ -11,7 +11,7 @@ pub mod knowledge_of_decommitment;
 
 use std::marker::PhantomData;
 
-use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, Encoding, Uint, U64};
+use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, Encoding, Uint, Wrapping, U64};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
@@ -91,7 +91,7 @@ pub trait EnhancedLanguage<
     direct_product::GroupElement<
         WITNESS_SCALAR_LIMBS, RANGE_CLAIM_LIMBS, UNBOUNDED_WITNESS_SCALAR_LIMBS,
         self_product::GroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
-            additive_group_of_integers_modulu_n::GroupElement<RANGE_CLAIM_LIMBS>>,
+           Wrapping<Uint<RANGE_CLAIM_LIMBS>>>,
         UnboundedWitnessSpaceGroupElement>, PublicValueSpaceGroupElement>
     where
  UnboundedWitnessSpaceGroupElement: GroupElement<UNBOUNDED_WITNESS_SCALAR_LIMBS> +
