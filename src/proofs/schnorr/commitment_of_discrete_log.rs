@@ -23,6 +23,7 @@ use crate::{
 ///
 /// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
 /// `PrimeOrderGroupElement`.
+#[derive(Clone)]
 pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> {
     _scalar_choice: PhantomData<Scalar>,
     _group_element_choice: PhantomData<GroupElement>,
@@ -46,11 +47,39 @@ where
         GroupElement,
     >,
 {
-    commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
-    generator: GroupElement::Value, // The base of discrete log
+    pub commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
+    pub generator: GroupElement::Value, // The base of discrete log
 
     #[serde(skip_serializing)]
     _scalar_choice: PhantomData<Scalar>,
+}
+
+impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
+    PublicParameters<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
+where
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
+    GroupElement: CyclicGroupElement<SCALAR_LIMBS>
+        + Mul<Scalar, Output = GroupElement>
+        + for<'r> Mul<&'r Scalar, Output = GroupElement>,
+    CommitmentScheme: HomomorphicCommitmentScheme<
+        SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        Scalar,
+        Scalar,
+        GroupElement,
+    >,
+{
+    pub fn new(
+        commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
+        generator: GroupElement::Value,
+    ) -> Self {
+        Self {
+            commitment_scheme_public_parameters,
+            generator,
+            _scalar_choice: PhantomData,
+        }
+    }
 }
 
 impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>

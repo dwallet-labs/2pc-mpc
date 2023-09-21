@@ -24,6 +24,7 @@ use crate::{
 /// In the paper, we have prove (or cited a proof) it for any prime known-order group or for
 /// Paillier groups based on safe-primes; so it is safe to use with a `PrimeOrderGroupElement` or
 /// `PaillierGroupElement`.
+#[derive(Clone)]
 pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> {
     _scalar_choice: PhantomData<Scalar>,
     _group_element_choice: PhantomData<GroupElement>,
@@ -42,15 +43,39 @@ where
         SCALAR_LIMBS,
         SCALAR_LIMBS,
         SCALAR_LIMBS,
-        Scalar,
+        self_product_group::GroupElement<1, SCALAR_LIMBS, Scalar>,
         Scalar,
         GroupElement,
     >,
 {
-    commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
+    pub commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
 
     #[serde(skip_serializing)]
     _scalar_choice: PhantomData<Scalar>,
+}
+
+impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
+    PublicParameters<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
+where
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
+    GroupElement: CyclicGroupElement<SCALAR_LIMBS>
+        + Mul<Scalar, Output = GroupElement>
+        + for<'r> Mul<&'r Scalar, Output = GroupElement>,
+    CommitmentScheme: HomomorphicCommitmentScheme<
+        SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        self_product_group::GroupElement<1, SCALAR_LIMBS, Scalar>,
+        Scalar,
+        GroupElement,
+    >,
+{
+    pub fn new(commitment_scheme_public_parameters: CommitmentScheme::PublicParameters) -> Self {
+        Self {
+            commitment_scheme_public_parameters,
+            _scalar_choice: PhantomData,
+        }
+    }
 }
 
 impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
@@ -69,7 +94,7 @@ where
         SCALAR_LIMBS,
         SCALAR_LIMBS,
         SCALAR_LIMBS,
-        Scalar,
+        self_product_group::GroupElement<1, SCALAR_LIMBS, Scalar>,
         Scalar,
         GroupElement,
     >,
@@ -94,7 +119,7 @@ where
             public_value_space_public_parameters,
         )?;
 
-        Ok(commitment_scheme.commit(value, randomness))
+        Ok(commitment_scheme.commit(&[value].into(), randomness))
     }
 }
 
@@ -113,11 +138,15 @@ pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme
 #[cfg(test)]
 mod tests {
     use crypto_bigint::U256;
+    use rand_core::OsRng;
     use rstest::rstest;
 
     use super::*;
-    use crate::{group::{Samplable, secp256k1}, proofs::schnorr};
-    use crate::commitments::pedersen;
+    use crate::{
+        commitments::{pedersen, Pedersen},
+        group::{secp256k1, GroupElement, Samplable},
+        proofs::schnorr,
+    };
 
     const SECP256K1_SCALAR_LIMBS: usize = U256::LIMBS;
 
@@ -131,21 +160,32 @@ mod tests {
         let secp256k1_group_public_parameters =
             secp256k1::group_element::PublicParameters::default();
 
-        secp256k1::scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
+        let generator = secp256k1::GroupElement::new(
+            secp256k1_group_public_parameters.generator,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
+        let randomness_generator = generator
+            * secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap();
 
         // TODO: this might not be safe; we need a proper way to derive generators
-        let pedersen_public_parameters = pedersen::PublicParameters<1, SECP256K1_SCALAR_LIMBS,  secp256k1::GroupElement,>{
-            message_generators: [secp256k1_group_public_parameters.generator],
-            randomness_generator: todo
-        };
-
+        let pedersen_public_parameters =
+            pedersen::PublicParameters::<1, SECP256K1_SCALAR_LIMBS, secp256k1::GroupElement> {
+                message_generators: [secp256k1_group_public_parameters.generator],
+                randomness_generator: randomness_generator.value(),
+            };
 
         schnorr::tests::valid_proof_verifies::<
             SECP256K1_SCALAR_LIMBS,
             SECP256K1_SCALAR_LIMBS,
             secp256k1::Scalar,
             secp256k1::GroupElement,
-            Language<SECP256K1_SCALAR_LIMBS, secp256k1::Scalar, secp256k1::GroupElement>,
+            Language<
+                SECP256K1_SCALAR_LIMBS,
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                Pedersen<1, SECP256K1_SCALAR_LIMBS, secp256k1::Scalar, secp256k1::GroupElement>,
+            >,
         >(
             PublicParameters::new(secp256k1_group_public_parameters.generator),
             secp256k1_scalar_public_parameters,
@@ -172,7 +212,12 @@ mod tests {
             SECP256K1_SCALAR_LIMBS,
             secp256k1::Scalar,
             secp256k1::GroupElement,
-            Language<SECP256K1_SCALAR_LIMBS, secp256k1::Scalar, secp256k1::GroupElement>,
+            Language<
+                SECP256K1_SCALAR_LIMBS,
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                Pedersen<1, SECP256K1_SCALAR_LIMBS, secp256k1::Scalar, secp256k1::GroupElement>,
+            >,
         >(
             None,
             None,

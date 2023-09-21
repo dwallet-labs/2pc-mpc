@@ -327,3 +327,11 @@ impl<const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMB
         GroupElement::<N, SCALAR_LIMBS, G>(value)
     }
 }
+
+impl<'r, const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMBS>>
+    From<[&'r G; N]> for GroupElement<N, SCALAR_LIMBS, G>
+{
+    fn from(value: [&'r G; N]) -> Self {
+        GroupElement::<N, SCALAR_LIMBS, G>(value.map(|x| x.clone()))
+    }
+}

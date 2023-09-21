@@ -28,6 +28,7 @@ use crate::{
 /// `PrimeOrderGroupElement`.
 ///
 /// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
+#[derive(Clone)]
 pub struct Language<
     const MASK_LIMBS: usize,
     const SCALAR_LIMBS: usize,
@@ -82,10 +83,10 @@ pub struct PublicParameters<
         CiphertextSpaceGroupElement,
     >,
 {
-    encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    randomness_group_public_parameters: RandomnessSpaceGroupElement::PublicParameters,
-    ciphertext_group_public_parameters: CiphertextSpaceGroupElement::PublicParameters,
-    generator: GroupElement::Value, // The base of discrete log
+    pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
+    pub randomness_group_public_parameters: RandomnessSpaceGroupElement::PublicParameters,
+    pub ciphertext_group_public_parameters: CiphertextSpaceGroupElement::PublicParameters,
+    pub generator: GroupElement::Value, // The base of discrete log
 }
 
 impl<

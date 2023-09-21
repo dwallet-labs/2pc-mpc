@@ -23,7 +23,7 @@ where
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
 {
-    generator: GroupElement::Value,
+    pub generator: GroupElement::Value,
 
     #[serde(skip_serializing)]
     _scalar_choice: PhantomData<Scalar>,
