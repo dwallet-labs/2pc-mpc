@@ -29,10 +29,6 @@ use crate::{
 // For groups that should behave like the integers group $Z$ but bounded by some upper bound, 2. is
 // more appropriate.
 
-/// An element of the additive group of integers modulo `n = modulus`
-/// $\mathbb{Z}_n^+$
-pub type GroupElement<const LIMBS: usize> = DynResidue<LIMBS>;
-
 impl<const LIMBS: usize> Samplable<LIMBS> for DynResidue<LIMBS>
 where
     Uint<LIMBS>: Encoding,
