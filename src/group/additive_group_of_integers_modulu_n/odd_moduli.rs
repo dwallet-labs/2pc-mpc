@@ -47,7 +47,7 @@ pub struct PublicParameters<const LIMBS: usize>
 where
     Uint<LIMBS>: Encoding,
 {
-    modulus: NonZero<Uint<LIMBS>>,
+    pub modulus: NonZero<Uint<LIMBS>>,
 }
 
 impl<const LIMBS: usize> PublicParameters<LIMBS>
