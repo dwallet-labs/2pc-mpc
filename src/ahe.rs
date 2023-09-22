@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::ops::Mul;
+
 use crypto_bigint::{rand_core::CryptoRngCore, Random, Uint};
 use serde::{Deserialize, Serialize};
 
@@ -37,9 +39,12 @@ pub trait AdditivelyHomomorphicEncryptionKey<
 >: PartialEq + Sized where
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
+    PlaintextSpaceGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
     RandomnessSpaceGroupElement:
         GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+    for<'a> &'a CiphertextSpaceGroupElement:
+        Mul<&'a PlaintextSpaceGroupElement, Output = CiphertextSpaceGroupElement>,
 {
     /// The public parameters of the encryption scheme.
     ///
@@ -98,15 +103,37 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
     /// linear combination defined by `coefficients` and `ciphertexts`.
     ///
+    /// This method *does not assure circuit privacy*.
+    fn evaluate_linear_combination<const DIMENSION: usize>(
+        &self,
+        coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
+        ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
+    ) -> Result<CiphertextSpaceGroupElement> {
+        if DIMENSION == 0 {
+            return Err(Error::ZeroDimension);
+        }
+
+        Ok(coefficients.iter().zip(ciphertexts.iter()).fold(
+            ciphertexts[0].neutral(),
+            |curr, (coefficient, ciphertext)| curr + (ciphertext * coefficient),
+        ))
+    }
+
+    /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
+    /// linear combination defined by `coefficients` and `ciphertexts`.
+    ///
     /// In order to perform an affine evaluation, the free variable should be paired with an
     /// encryption of one.
     ///
-    /// Circuit-privacy is generically assured via the following:
+    /// This method ensures circuit privacy by masking the linear combination with a random (`mask`)
+    /// multiplication of the `modulus` $q$ using fresh `randomness`:
+    ///
+    /// $\ct = \Enc(pk, \omega q; \eta) \bigoplus_{i=1}^\ell \left(  a_i \odot \ct_i \right)$
+    ///
+    /// In more detail, these steps are taken to genrically assure circuit privacy:
     /// 1. Rerandomization. This should be done by adding an encryption of zero with fresh
     ///    randomness to the outputted ciphertext.
     ///
-    ///    In the (common) case in which the homomorphic evaluation should be done in a different
-    ///    group, two extra steps are required:
     /// 2. Masking. Our evaluation should be masked by a random multiplication of the homomorphic
     ///    evaluation group order $q$.
     ///
@@ -134,6 +161,9 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// 3. No modulations. The size of our evaluation $l*B^2$ should be smaller than the order of
     ///    the encryption plaintext group $N$ in order to assure it does not go through modulation
     ///    in the plaintext space.
+    ///
+    /// In the case that the plaintext order is the same as the evaluation `modulus`, steps 2, 3 are
+    /// skipped.
     fn evaluate_circuit_private_linear_combination_with_randomness<
         const DIMENSION: usize,
         const MODULUS_LIMBS: usize,
@@ -152,7 +182,22 @@ pub trait AdditivelyHomomorphicEncryptionKey<
             return Err(Error::ZeroDimension);
         }
 
-        todo!()
+        let plaintext_order: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = coefficients[0].order().into();
+
+        let linear_combination = self.evaluate_linear_combination(coefficients, ciphertexts)?;
+
+        // Rerandomization is performed in any case, and a masked multiplication of the modulus is
+        // added only if the order of the plaintext space differs from `modulus`.
+        let plaintext =
+            if PLAINTEXT_SPACE_SCALAR_LIMBS == MODULUS_LIMBS && plaintext_order == modulus.into() {
+                coefficients[0].neutral()
+            } else {
+                (Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(mask).wrapping_mul(modulus)).into()
+            };
+
+        let encryption_with_fresh_randomness = self.encrypt_with_randomness(&plaintext, randomness);
+
+        Ok(linear_combination + encryption_with_fresh_randomness)
     }
 
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
