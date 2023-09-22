@@ -185,7 +185,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         let plaintext_order: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = coefficients[0].order().into();
 
         if (PLAINTEXT_SPACE_SCALAR_LIMBS != MODULUS_LIMBS || plaintext_order != modulus.into()) {
-            todo!()
+            // TODO: do checks here
         }
 
         let linear_combination = self.evaluate_linear_combination(coefficients, ciphertexts)?;
