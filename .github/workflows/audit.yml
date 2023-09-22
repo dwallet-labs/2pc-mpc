@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
       - name: Audit Rust Dependencies
         uses: actions-rust-lang/audit@v1
