@@ -235,6 +235,7 @@ mod tests {
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
+            secp256k1::Scalar,
             PlaintextGroupElement,
             RandomnessGroupElement,
             CiphertextGroupElement,
@@ -243,7 +244,7 @@ mod tests {
         >(
             encryption_key,
             decryption_key,
-            secp256k1::ORDER,
+            secp256k1::scalar::PublicParameters::default(),
             plaintext_public_parameters,
             RANDOMNESS_PUBLIC_PARAMETERS,
         )

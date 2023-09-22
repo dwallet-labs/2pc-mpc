@@ -340,10 +340,11 @@ mod tests {
 
     pub(crate) fn evaluates<
         const MASK_LIMBS: usize,
-        const MODULUS_LIMBS: usize,
+        const EVALUATION_GROUP_SCALAR_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
         const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
+        EvaluationGroupElement,
         PlaintextSpaceGroupElement,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
@@ -352,7 +353,7 @@ mod tests {
     >(
         encryption_key: EncryptionKey,
         decryption_key: DecryptionKey,
-        modulus: Uint<MODULUS_LIMBS>,
+        evaluation_group_public_parameters: EvaluationGroupElement::PublicParameters,
         plaintext_group_public_parameters: PlaintextSpaceGroupElement::PublicParameters,
         randomness_group_public_parameters: RandomnessSpaceGroupElement::PublicParameters,
     ) where
@@ -364,6 +365,9 @@ mod tests {
         CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS> + std::fmt::Debug,
         Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
         From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
+        EvaluationGroupElement:
+        KnownOrderGroupElement<EVALUATION_GROUP_SCALAR_LIMBS, EvaluationGroupElement> + std::fmt::Debug,
+        EvaluationGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
@@ -438,7 +442,7 @@ mod tests {
             .evaluate_circuit_private_linear_combination(
                 &[one, zero, seventy_three],
                 &[encrypted_five, encrypted_seven, encrypted_two],
-                &modulus,
+                &EvaluationGroupElement::order_from_public_parameters(&evaluation_group_public_parameters),
                 &randomness_group_public_parameters,
                 &mut OsRng,
             )
@@ -449,7 +453,13 @@ mod tests {
         assert_eq!(
             decryption_key.decrypt(&evaluted_ciphertext),
             decryption_key.decrypt(&privately_evaluted_ciphertext),
-            "decryptions of privately evaluated linear combinations should match straightforward ones"
+            "decryptions of privately evaluated linear combinations should be statistically indistinguishable from straightforward ones"
+        );
+
+        assert_eq!(
+            EvaluationGroupElement::from(decryption_key.decrypt(&evaluted_ciphertext)),
+            EvaluationGroupElement::from(decryption_key.decrypt(&privately_evaluted_ciphertext)),
+            "decryptions of privately evaluated linear combinations should match straightforward ones modulu the evaluation group order"
         );
     }
 }
