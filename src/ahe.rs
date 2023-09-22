@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pub mod paillier;
 
+use std::ops::Mul;
+
 use crypto_bigint::{rand_core::CryptoRngCore, Random, Uint};
 use serde::{Deserialize, Serialize};
 
@@ -29,7 +31,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// An Encryption Key of an Additively Homomorphic Encryption scheme.
 pub trait AdditivelyHomomorphicEncryptionKey<
-    const MASK_LIMBS: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
@@ -44,6 +45,8 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     RandomnessSpaceGroupElement:
         GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+    for<'a> &'a CiphertextSpaceGroupElement:
+        Mul<&'a PlaintextSpaceGroupElement, Output = CiphertextSpaceGroupElement>,
 {
     /// The public parameters of the encryption scheme.
     ///
@@ -76,19 +79,15 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     ///
     /// A deterministic algorithm that on input a public key $pk$, a plaintext $\pt \in \calP_{pk}$
     /// and randomness $\eta_{\sf enc} \in \calR_{pk}$, outputs a ciphertext $\ct \in \calC_{pk}$.
-    /// We define $\Enc(pk, \pt)$ as a probabilistic algorithm that first uniformly samples
-    /// $\eta_{\sf enc} \in \calR_{pk}$ and then outputs $\ct=\Enc(pk, \pt; \eta_{\sf
-    /// enc})\in\calC_{pk}$.
     fn encrypt_with_randomness(
         &self,
         plaintext: &PlaintextSpaceGroupElement,
         randomness: &RandomnessSpaceGroupElement,
     ) -> CiphertextSpaceGroupElement;
 
-    /// Encrypt `plaintext` to `self`.
-    ///
-    /// This is the probabilistic encryption algorithm which samples randomness
-    /// from `rng`.    
+    /// $\Enc(pk, \pt)$: a probabilistic algorithm that first uniformly samples `randomness`
+    /// $\eta_{\sf enc} \in \calR_{pk}$ from `rng` and then calls [`Self::
+    /// encrypt_with_randomness()`] to encrypt `plaintext` to `self` using the sampled randomness.
     fn encrypt(
         &self,
         plaintext: &PlaintextSpaceGroupElement,
@@ -106,35 +105,123 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
     /// linear combination defined by `coefficients` and `ciphertexts`.
     ///
-    /// To ensure circuit-privacy, one must assure that `ciphertexts` are encryptions of plaintext
-    /// group elements (and thus their message is bounded by the plaintext group order) either by
-    /// generating them via ['Self::encrypt()'] or verifying appropriate zero-knowledge proofs from
-    /// encryptors.
-    ///
-    /// To ensure circuit-privacy, the `mask` and `randmomness` to parameters may be used by
-    /// implementers.
-    fn evaluate_linear_combination_with_randomness<const DIMENSION: usize>(
+    /// This method *does not assure circuit privacy*.
+    fn evaluate_linear_combination<const DIMENSION: usize>(
         &self,
         coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
         ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
+    ) -> Result<CiphertextSpaceGroupElement> {
+        if DIMENSION == 0 {
+            return Err(Error::ZeroDimension);
+        }
+
+        Ok(coefficients.iter().zip(ciphertexts.iter()).fold(
+            ciphertexts[0].neutral(),
+            |curr, (coefficient, ciphertext)| curr + (ciphertext * coefficient),
+        ))
+    }
+
+    /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
+    /// linear combination defined by `coefficients` and `ciphertexts`.
+    ///
+    /// In order to perform an affine evaluation, the free variable should be paired with an
+    /// encryption of one.
+    ///
+    /// This method ensures circuit privacy by masking the linear combination with a random (`mask`)
+    /// multiplication of the `modulus` $q$ using fresh `randomness`:
+    ///
+    /// $\ct = \Enc(pk, \omega q; \eta) \bigoplus_{i=1}^\ell \left(  a_i \odot \ct_i \right)$
+    ///
+    /// In more detail, these steps are taken to genrically assure circuit privacy:
+    /// 1. Rerandomization. This should be done by adding an encryption of zero with fresh
+    ///    randomness to the outputted ciphertext.
+    ///
+    /// 2. Masking. Our evaluation should be masked by a random multiplication of the homomorphic
+    ///    evaluation group order $q$.
+    ///
+    ///    While the decryption modulo $q$ will remain correct,
+    ///    assuming that the mask was "big enough", it will be statistically indistinguishable from
+    ///    random.    
+    ///
+    ///    "Big enough" here means bigger by the statistical security parameter than the size of the
+    ///    evaluation.
+    ///
+    ///    Assuming a bound $B$ on both the coefficients and the (encrypted) messages, the
+    ///    evaluation is bounded by the number of coefficients $l$ by $B^2$.
+    ///
+    ///    In order to mask that, we need to add a mask that is bigger by the statistical security
+    ///    parameter. Since we multiply our mask by $q$, we need our mask to be of size $(l*B^2 / q)
+    ///    + s$.
+    ///
+    ///   Note that (unless we trust the encryptor) it is important to assure these bounds on
+    ///   the ciphertexts by verifying appropriate zero-knowledge proofs.
+    ///
+    ///    TODO: I wanted to say the coefficients are bounded to $q$ because we create them, but in
+    ///    fact when we prove in zero-knowledge that they are, we're going to have a gap here
+    ///    too right? and so the verifier should check we didn't go through modulation using
+    ///    that bound and not q.)
+    /// 3. No modulations. The size of our evaluation $l*B^2$ should be smaller than the order of
+    ///    the encryption plaintext group $N$ in order to assure it does not go through modulation
+    ///    in the plaintext space.
+    ///
+    /// In the case that the plaintext order is the same as the evaluation `modulus`, steps 2, 3 are
+    /// skipped.
+    fn evaluate_circuit_private_linear_combination_with_randomness<
+        const DIMENSION: usize,
+        const MODULUS_LIMBS: usize,
+        const BOUND_LIMBS: usize,
+        const MASK_LIMBS: usize,
+    >(
+        &self,
+        coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
+        ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
+        modulus: &Uint<MODULUS_LIMBS>,
+        coefficients_ciphertexts_upper_bound: &Uint<BOUND_LIMBS>,
         mask: &Uint<MASK_LIMBS>,
         randomness: &RandomnessSpaceGroupElement,
-    ) -> Result<CiphertextSpaceGroupElement>;
+    ) -> Result<CiphertextSpaceGroupElement> {
+        if DIMENSION == 0 {
+            return Err(Error::ZeroDimension);
+        }
+
+        let plaintext_order: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = coefficients[0].order().into();
+
+        if (PLAINTEXT_SPACE_SCALAR_LIMBS != MODULUS_LIMBS || plaintext_order != modulus.into()) {
+            // TODO: do checks here
+        }
+
+        let linear_combination = self.evaluate_linear_combination(coefficients, ciphertexts)?;
+
+        // Rerandomization is performed in any case, and a masked multiplication of the modulus is
+        // added only if the order of the plaintext space differs from `modulus`.
+        let plaintext =
+            if PLAINTEXT_SPACE_SCALAR_LIMBS == MODULUS_LIMBS && plaintext_order == modulus.into() {
+                coefficients[0].neutral()
+            } else {
+                (Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(mask).wrapping_mul(modulus)).into()
+            };
+
+        let encryption_with_fresh_randomness = self.encrypt_with_randomness(&plaintext, randomness);
+
+        Ok(linear_combination + encryption_with_fresh_randomness)
+    }
 
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
     /// linear combination defined by `coefficients` and `ciphertexts`.
     ///
     /// This is the probabilistic linear combination algorithm which samples `mask` and `randomness`
     /// from `rng` and calls [`Self::linear_combination_with_randomness()`].
-    ///
-    /// To ensure circuit-privacy, one must assure that `ciphertexts` are encryptions of plaintext
-    /// group elements (and thus their message is bounded by the plaintext group order) either by
-    /// generating them via ['Self::encrypt()'] or verifying appropriate zero-knowledge proofs from
-    /// encryptors.
-    fn evaluate_linear_combination<const DIMENSION: usize>(
+    fn evaluate_circuit_private_linear_combination<
+        const DIMENSION: usize,
+        const MODULUS_LIMBS: usize,
+        const BOUND_LIMBS: usize,
+        const MASK_LIMBS: usize,
+    >(
         &self,
         coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
         ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
+        modulus: &Uint<MODULUS_LIMBS>,
+        coefficients_ciphertexts_upper_bound: &Uint<BOUND_LIMBS>,
         randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
         rng: &mut impl CryptoRngCore,
     ) -> Result<(
@@ -142,23 +229,22 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
     )> {
-        if DIMENSION == 0 {
-            return Err(Error::ZeroDimension);
-        }
-
         let mask = Uint::<MASK_LIMBS>::random(rng);
 
         let randomness =
             RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters)?;
 
-        let evaluated_ciphertext = self.evaluate_linear_combination_with_randomness(
-            coefficients,
-            ciphertexts,
-            &mask,
-            &randomness,
-        );
+        let evaluated_ciphertext = self
+            .evaluate_circuit_private_linear_combination_with_randomness(
+                coefficients,
+                ciphertexts,
+                modulus,
+                coefficients_ciphertexts_upper_bound,
+                &mask,
+                &randomness,
+            )?;
 
-        Ok((mask, randomness, evaluated_ciphertext?))
+        Ok((mask, randomness, evaluated_ciphertext))
     }
 }
 
