@@ -28,7 +28,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// An Encryption Key of an Additively Homomorphic Encryption scheme.
 pub trait AdditivelyHomomorphicEncryptionKey<
-    const MASK_LIMBS: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
@@ -138,7 +137,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     ///    fact when we prove in zero-knowledge that they are, we're going to have a gap here
     ///    too right? and so the verifier should check we didn't go through modulation using
     ///    that bound and not q.)
-    /// 3. No modulations. The size of our evaluation $2*l*B^2$ should be smaller than the order of
+    /// 3. No modulations. The size of our evaluation $l*B^2$ should be smaller than the order of
     ///    the encryption plaintext group $N$ in order to assure it does not go through modulation
     ///    in the plaintext space.
     ///
@@ -146,20 +145,72 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// fresh randomness, instead of having to do these weird requirements that I can't enforce?
     ///
     /// a0 * E(x0; r1) => (a0 + w*q) * E(x0; r1 + r2) => E(a0*x0 + w*q*x0; r1 + r2).
-    fn evaluate_linear_combination_with_randomness<const DIMENSION: usize>(
+    ///
+    /// now we prove in zk that coefficients divided into parts of RANGE_CLAIM_LIMBS are of that
+    /// range. so we have:
+    /// each coefficient divided into d=round_up(coefficient/RANGE_CLAIM_LIMBS) parts
+    /// RANGE_CLAIM_LIMBS => coefficient <= RANGE_CLAIM_LIMBS*d + gap the mask divided into
+    /// RANGE_CLAIM_LIMBS =>
+    ///
+    /// range interface: get commitment,m, randomness => m <= b.
+    /// For bulletproofs, b = U64.
+    /// For Pedersen, pick b < 2048 => for m < b + statistical + computational, prove m < b.
+    ///
+    /// So you have WITNESS_LIMBS and RANGE_CLAIM_LIMBS.
+    ///
+    /// others: prove E(x1)...E(xl) where xi < RANGE_CLAIM_LIMBS = SCALAR_LIMBS + STATISTICAL +
+    /// COMPUTATIONAL
+    ///
+    /// You: prove a0, ... , al where ai < d*RANGE_CLAIM_LIMBS <= SCALAR_LIMBS + STATISTICAL +
+    /// COMPUTATIONAL
+    ///
+    /// and: w < d*RANGE_CLAIM_LIMBS*l*s
+    ///
+    /// the evaluation
+    ///
+    /// in bulletproofs everything simply works
+    ///
+    /// in pedersen,
+    /// ai < SCALAR_LIMBS + STATISTICAL + COMPUTATIONAL
+    ///
+    /// w = SCALAR_LIMBS + STATISTICAL + COMPUTATIONAL + l < --- not really, because we need to
+    /// divide w to parts even in pedersan ---- SCALAR_LIMBS + 2*STATISTICAL + 2*COMPUTATIONAL + l
+    ///
+    /// So we need to assure:
+    /// SCALAR_LIMBS^2 < N - (2*STATISTICAL + 2*COMPUTATIONAL + l)SCALAR_LIMBS
+    ///
+    /// more generally,
+    /// d*RANGE_CLAIM_LIMBS
+    ///
+    /// If we put an encryption of q with randomness 0 in the last ciphertext, then its a public
+    /// parameter and we don't need to prove range for it.
+    fn evaluate_linear_combination_with_randomness<
+        const DIMENSION: usize,
+        const MODULUS_LIMBS: usize,
+        const BOUND_LIMBS: usize,
+        const MASK_LIMBS: usize,
+    >(
         &self,
         coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
         ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
+        modulus: &Uint<MODULUS_LIMBS>,
+        coefficients_ciphertexts_upper_bound: &Uint<BOUND_LIMBS>,
         mask: &Uint<MASK_LIMBS>,
         randomness: &RandomnessSpaceGroupElement,
-    ) -> Result<CiphertextSpaceGroupElement>;
+    ) -> Result<CiphertextSpaceGroupElement> {
+        todo!()
+    }
 
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
     /// linear combination defined by `coefficients` and `ciphertexts`.
     ///
     /// This is the probabilistic linear combination algorithm which samples `mask` and `randomness`
     /// from `rng` and calls [`Self::linear_combination_with_randomness()`].
-    fn evaluate_linear_combination<const DIMENSION: usize>(
+    fn evaluate_linear_combination<
+        const DIMENSION: usize,
+        const BOUND_LIMBS: usize,
+        const MASK_LIMBS: usize,
+    >(
         &self,
         coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
         ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
