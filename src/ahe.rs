@@ -167,14 +167,12 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     fn evaluate_circuit_private_linear_combination_with_randomness<
         const DIMENSION: usize,
         const MODULUS_LIMBS: usize,
-        const BOUND_LIMBS: usize,
         const MASK_LIMBS: usize,
     >(
         &self,
         coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
         ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
         modulus: &Uint<MODULUS_LIMBS>,
-        coefficients_ciphertexts_upper_bound: &Uint<BOUND_LIMBS>,
         mask: &Uint<MASK_LIMBS>,
         randomness: &RandomnessSpaceGroupElement,
     ) -> Result<CiphertextSpaceGroupElement> {
@@ -184,8 +182,8 @@ pub trait AdditivelyHomomorphicEncryptionKey<
 
         let plaintext_order: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = coefficients[0].order().into();
 
-        if (PLAINTEXT_SPACE_SCALAR_LIMBS != MODULUS_LIMBS || plaintext_order != modulus.into()) {
-            // TODO: do checks here
+        if PLAINTEXT_SPACE_SCALAR_LIMBS != MODULUS_LIMBS || plaintext_order != modulus.into() {
+            // TODO: do checks here, BOUND_LIMBS?
         }
 
         let linear_combination = self.evaluate_linear_combination(coefficients, ciphertexts)?;
@@ -212,14 +210,12 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     fn evaluate_circuit_private_linear_combination<
         const DIMENSION: usize,
         const MODULUS_LIMBS: usize,
-        const BOUND_LIMBS: usize,
         const MASK_LIMBS: usize,
     >(
         &self,
         coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
         ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
         modulus: &Uint<MODULUS_LIMBS>,
-        coefficients_ciphertexts_upper_bound: &Uint<BOUND_LIMBS>,
         randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
         rng: &mut impl CryptoRngCore,
     ) -> Result<(
@@ -237,7 +233,6 @@ pub trait AdditivelyHomomorphicEncryptionKey<
                 coefficients,
                 ciphertexts,
                 modulus,
-                coefficients_ciphertexts_upper_bound,
                 &mask,
                 &randomness,
             )?;
