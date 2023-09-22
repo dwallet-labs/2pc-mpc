@@ -13,7 +13,9 @@ use tiresias::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 
 use crate::{
     group,
-    group::{GroupElement, KnownOrderGroupElement},
+    group::{
+        additive_group_of_integers_modulu_n::odd_moduli, GroupElement, KnownOrderGroupElement,
+    },
     AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
     StatisticalSecuritySizedNumber,
 };
@@ -134,7 +136,11 @@ impl
     > for DecryptionKey
 {
     fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextGroupElement {
-        self.0.decrypt(&ciphertext.into()).into()
+        PlaintextGroupElement::new(
+            self.0.decrypt(&ciphertext.into()),
+            odd_moduli::PublicParameters::new(self.0.encryption_key.n),
+        )
+        .unwrap()
     }
 }
 
