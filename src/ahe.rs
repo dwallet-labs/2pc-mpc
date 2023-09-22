@@ -262,9 +262,5 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     /// $\Dec(sk, \ct) \to \pt$: Decrypt `ciphertext` using `decryption_key`.
     /// A deterministic algorithm that on input a secret key $sk$ and a ciphertext $\ct \in
     /// \calC_{pk}$ outputs a plaintext $\pt \in \calP_{pk}$.
-    fn decrypt(
-        &self,
-        plaintext_group_public_parameters: &PlaintextSpaceGroupElement::PublicParameters,
-        ciphertext: &CiphertextSpaceGroupElement,
-    ) -> PlaintextSpaceGroupElement;
+    fn decrypt(&self, ciphertext: &CiphertextSpaceGroupElement) -> PlaintextSpaceGroupElement;
 }
