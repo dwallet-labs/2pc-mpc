@@ -99,26 +99,20 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// linear combination defined by `coefficients` and `ciphertexts`.
     ///
     /// In order to perform an affine evaluation, the free variable should be paired with an
-    /// encryption of one. If we wish to re-randomize the outputted ciphertext, this encryption of
-    /// one could use fresh randomness. Otherwise, randomness zero can be used.
+    /// encryption of one.
     ///
-    /// SECURITY NOTICE: circuit-privacy is not assured by default. If circuit-privacy is required,
-    /// several steps must be carefully taken.
-    ///
+    /// Circuit-privacy is generically assured via the following:
     /// 1. Rerandomization. This should be done by adding an encryption of zero with fresh
-    ///    randomness to the ciphertexts. In the case of an affine evaluation, this could be merged
-    ///    with the encryption of one added for the free variable, yielding a single encrytpion of
-    ///    one with fresh randomness that would be multiplied by the free variable.
+    ///    randomness to the outputted ciphertext.
     ///
     ///    In the (common) case in which the homomorphic evaluation should be done in a different
     ///    group, two extra steps are required:
     /// 2. Masking. Our evaluation should be masked by a random multiplication of the homomorphic
-    ///    evaluation group order $q$. This should be done by adding the masked multiplication to
-    ///    the free variable (taking it to be zero if unspecified.)
+    ///    evaluation group order $q$.
     ///
-    ///    While the decryption modulo $q$
-    ///    will remain correct, assuming that the mask was "big enough", it will be statistically
-    ///    indistinguishable from random.
+    ///    While the decryption modulo $q$ will remain correct,
+    ///    assuming that the mask was "big enough", it will be statistically indistinguishable from
+    ///    random.    
     ///
     ///    "Big enough" here means bigger by the statistical security parameter than the size of the
     ///    evaluation.
@@ -128,7 +122,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     ///
     ///    In order to mask that, we need to add a mask that is bigger by the statistical security
     ///    parameter. Since we multiply our mask by $q$, we need our mask to be of size $(l*B^2 / q)
-    ///   + s$.
+    ///    + s$.
     ///
     ///   Note that (unless we trust the encryptor) it is important to assure these bounds on
     ///   the ciphertexts by verifying appropriate zero-knowledge proofs.
@@ -140,51 +134,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// 3. No modulations. The size of our evaluation $l*B^2$ should be smaller than the order of
     ///    the encryption plaintext group $N$ in order to assure it does not go through modulation
     ///    in the plaintext space.
-    ///
-    /// TODO: can't I simply re-randomize the first ciphertext by adding an encryption of zero with
-    /// fresh randomness, instead of having to do these weird requirements that I can't enforce?
-    ///
-    /// a0 * E(x0; r1) => (a0 + w*q) * E(x0; r1 + r2) => E(a0*x0 + w*q*x0; r1 + r2).
-    ///
-    /// now we prove in zk that coefficients divided into parts of RANGE_CLAIM_LIMBS are of that
-    /// range. so we have:
-    /// each coefficient divided into d=round_up(coefficient/RANGE_CLAIM_LIMBS) parts
-    /// RANGE_CLAIM_LIMBS => coefficient <= RANGE_CLAIM_LIMBS*d + gap the mask divided into
-    /// RANGE_CLAIM_LIMBS =>
-    ///
-    /// range interface: get commitment,m, randomness => m <= b.
-    /// For bulletproofs, b = U64.
-    /// For Pedersen, pick b < 2048 => for m < b + statistical + computational, prove m < b.
-    ///
-    /// So you have WITNESS_LIMBS and RANGE_CLAIM_LIMBS.
-    ///
-    /// others: prove E(x1)...E(xl) where xi < RANGE_CLAIM_LIMBS = SCALAR_LIMBS + STATISTICAL +
-    /// COMPUTATIONAL
-    ///
-    /// You: prove a0, ... , al where ai < d*RANGE_CLAIM_LIMBS <= SCALAR_LIMBS + STATISTICAL +
-    /// COMPUTATIONAL
-    ///
-    /// and: w < d*RANGE_CLAIM_LIMBS*l*s
-    ///
-    /// the evaluation
-    ///
-    /// in bulletproofs everything simply works
-    ///
-    /// in pedersen,
-    /// ai < SCALAR_LIMBS + STATISTICAL + COMPUTATIONAL
-    ///
-    /// w = SCALAR_LIMBS + STATISTICAL + COMPUTATIONAL + l < --- not really, because we need to
-    /// divide w to parts even in pedersan ---- SCALAR_LIMBS + 2*STATISTICAL + 2*COMPUTATIONAL + l
-    ///
-    /// So we need to assure:
-    /// SCALAR_LIMBS^2 < N - (2*STATISTICAL + 2*COMPUTATIONAL + l)SCALAR_LIMBS
-    ///
-    /// more generally,
-    /// d*RANGE_CLAIM_LIMBS
-    ///
-    /// If we put an encryption of q with randomness 0 in the last ciphertext, then its a public
-    /// parameter and we don't need to prove range for it.
-    fn evaluate_linear_combination_with_randomness<
+    fn evaluate_circuit_private_linear_combination_with_randomness<
         const DIMENSION: usize,
         const MODULUS_LIMBS: usize,
         const BOUND_LIMBS: usize,
@@ -198,6 +148,10 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         mask: &Uint<MASK_LIMBS>,
         randomness: &RandomnessSpaceGroupElement,
     ) -> Result<CiphertextSpaceGroupElement> {
+        if DIMENSION == 0 {
+            return Err(Error::ZeroDimension);
+        }
+
         todo!()
     }
 
@@ -206,14 +160,17 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     ///
     /// This is the probabilistic linear combination algorithm which samples `mask` and `randomness`
     /// from `rng` and calls [`Self::linear_combination_with_randomness()`].
-    fn evaluate_linear_combination<
+    fn evaluate_circuit_private_linear_combination<
         const DIMENSION: usize,
+        const MODULUS_LIMBS: usize,
         const BOUND_LIMBS: usize,
         const MASK_LIMBS: usize,
     >(
         &self,
         coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
         ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
+        modulus: &Uint<MODULUS_LIMBS>,
+        coefficients_ciphertexts_upper_bound: &Uint<BOUND_LIMBS>,
         randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
         rng: &mut impl CryptoRngCore,
     ) -> Result<(
@@ -221,23 +178,22 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
     )> {
-        if DIMENSION == 0 {
-            return Err(Error::ZeroDimension);
-        }
-
         let mask = Uint::<MASK_LIMBS>::random(rng);
 
         let randomness =
             RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters)?;
 
-        let evaluated_ciphertext = self.evaluate_linear_combination_with_randomness(
-            coefficients,
-            ciphertexts,
-            &mask,
-            &randomness,
-        );
+        let evaluated_ciphertext = self
+            .evaluate_circuit_private_linear_combination_with_randomness(
+                coefficients,
+                ciphertexts,
+                modulus,
+                coefficients_ciphertexts_upper_bound,
+                &mask,
+                &randomness,
+            )?;
 
-        Ok((mask, randomness, evaluated_ciphertext?))
+        Ok((mask, randomness, evaluated_ciphertext))
     }
 }
 
