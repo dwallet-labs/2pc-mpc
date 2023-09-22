@@ -1,8 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ops::Mul;
-
 use crypto_bigint::{rand_core::CryptoRngCore, Random, Uint};
 use serde::{Deserialize, Serialize};
 
@@ -39,12 +37,12 @@ pub trait AdditivelyHomomorphicEncryptionKey<
 >: PartialEq + Sized where
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
-    PlaintextSpaceGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
+    PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
     RandomnessSpaceGroupElement:
         GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
-    for<'a> &'a CiphertextSpaceGroupElement:
-        Mul<&'a PlaintextSpaceGroupElement, Output = CiphertextSpaceGroupElement>,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
+        From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
 {
     /// The public parameters of the encryption scheme.
     ///
@@ -105,7 +103,6 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     ///
     /// This method *does not assure circuit privacy*.
     fn evaluate_linear_combination<const DIMENSION: usize>(
-        &self,
         coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
         ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
     ) -> Result<CiphertextSpaceGroupElement> {
@@ -115,7 +112,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
 
         Ok(coefficients.iter().zip(ciphertexts.iter()).fold(
             ciphertexts[0].neutral(),
-            |curr, (coefficient, ciphertext)| curr + (ciphertext * coefficient),
+            |curr, (coefficient, ciphertext)| curr + ciphertext.scalar_mul(&coefficient.into()),
         ))
     }
 
@@ -186,7 +183,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
             // TODO: do checks here, BOUND_LIMBS?
         }
 
-        let linear_combination = self.evaluate_linear_combination(coefficients, ciphertexts)?;
+        let linear_combination = Self::evaluate_linear_combination(coefficients, ciphertexts)?;
 
         // Rerandomization is performed in any case, and a masked multiplication of the modulus is
         // added only if the order of the plaintext space differs from `modulus`.
@@ -194,7 +191,10 @@ pub trait AdditivelyHomomorphicEncryptionKey<
             if PLAINTEXT_SPACE_SCALAR_LIMBS == MODULUS_LIMBS && plaintext_order == modulus.into() {
                 coefficients[0].neutral()
             } else {
-                (Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(mask).wrapping_mul(modulus)).into()
+                PlaintextSpaceGroupElement::new(
+                    (Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(mask).wrapping_mul(modulus)).into(),
+                    &coefficients[0].public_parameters(),
+                )?
             };
 
         let encryption_with_fresh_randomness = self.encrypt_with_randomness(&plaintext, randomness);
