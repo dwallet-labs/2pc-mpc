@@ -450,15 +450,15 @@ mod tests {
 
         assert_ne!(evaluted_ciphertext, privately_evaluted_ciphertext, "privately evaluating the linear combination should result in a different ciphertext due to added randomness");
 
-        assert_eq!(
+        assert_ne!(
             decryption_key.decrypt(&evaluted_ciphertext),
             decryption_key.decrypt(&privately_evaluted_ciphertext),
             "decryptions of privately evaluated linear combinations should be statistically indistinguishable from straightforward ones"
         );
 
         assert_eq!(
-            EvaluationGroupElement::from(decryption_key.decrypt(&evaluted_ciphertext)),
-            EvaluationGroupElement::from(decryption_key.decrypt(&privately_evaluted_ciphertext)),
+            EvaluationGroupElement::from(decryption_key.decrypt(&evaluted_ciphertext).into()),
+            EvaluationGroupElement::from(decryption_key.decrypt(&privately_evaluted_ciphertext).into()),
             "decryptions of privately evaluated linear combinations should match straightforward ones modulu the evaluation group order"
         );
     }

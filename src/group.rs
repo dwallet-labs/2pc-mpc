@@ -149,7 +149,13 @@ pub trait KnownOrderGroupElement<
     + MulAssign<Scalar>
     + for<'r> MulAssign<&'r Scalar>
 {
-    fn order(&self) -> Uint<SCALAR_LIMBS>;
+    fn order(&self) -> Uint<SCALAR_LIMBS> {
+        Self::order_from_public_parameters(&self.public_parameters())
+    }
+
+    fn order_from_public_parameters(
+        public_parameters: &Self::PublicParameters,
+    ) -> Uint<SCALAR_LIMBS>;
 }
 
 /// A marker trait for elements of a (known) prime-order group.
