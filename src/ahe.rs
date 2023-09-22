@@ -295,11 +295,12 @@ mod tests {
     ) where
         PlaintextSpaceGroupElement:
             KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
-        PlaintextSpaceGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>> + std::fmt::Debug,
-        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+        PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
         RandomnessSpaceGroupElement:
             GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
         CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
+            From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
@@ -348,11 +349,12 @@ mod tests {
     ) where
         PlaintextSpaceGroupElement:
             KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
-        PlaintextSpaceGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>> + std::fmt::Debug,
-        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: for<'a> From<&'a PlaintextSpaceGroupElement>,
+        PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
         RandomnessSpaceGroupElement:
             GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-        CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS> + std::fmt::Debug,
+        CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
+            From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,

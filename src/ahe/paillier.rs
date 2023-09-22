@@ -92,10 +92,9 @@ impl
             .and_then(|x| x.checked_add(U64::LIMBS))
         {
             if evaluation_upper_bound < LargeBiPrimeSizedNumber::LIMBS {
-                return Ok(Self(
-                    tiresias::EncryptionKey::new(randomness_group_public_parameters.modulus),
-                    PhantomData,
-                ));
+                return Ok(Self(tiresias::EncryptionKey::new(
+                    randomness_group_public_parameters.modulus,
+                )));
             }
         }
         // TODO: this is a wrong computation, we need to check it is smaller than the modulus N.
@@ -124,7 +123,7 @@ impl
     }
 }
 
-impl<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, PlaintextGroupElement>
+impl
     AdditivelyHomomorphicDecryptionKey<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
