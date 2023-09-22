@@ -12,5 +12,5 @@
 // For groups that should behave like the integers group $Z$ but bounded by some upper bound, 2. is
 // more appropriate.
 
-pub mod odd_modulu;
-pub mod power_of_two_modulu;
+pub mod odd_moduli;
+pub mod power_of_two_moduli;

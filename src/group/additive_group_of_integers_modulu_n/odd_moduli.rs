@@ -20,7 +20,7 @@ use crate::{
     traits::Reduce,
 };
 
-/// An element of the additive group of integers modulo `n = modulus`
+/// An element of the additive group of integers for an odd modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct GroupElement<const LIMBS: usize>(DynResidue<LIMBS>);
