@@ -245,7 +245,6 @@ pub trait AdditivelyHomomorphicEncryptionKey<
 
 /// A Decryption Key of an Additively Homomorphic Encryption scheme
 pub trait AdditivelyHomomorphicDecryptionKey<
-    const MASK_LIMBS: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
@@ -302,7 +301,6 @@ mod tests {
             GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
         CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<
-            MASK_LIMBS,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
@@ -311,7 +309,6 @@ mod tests {
             CiphertextSpaceGroupElement,
         >,
         DecryptionKey: AdditivelyHomomorphicDecryptionKey<
-            MASK_LIMBS,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
@@ -357,7 +354,6 @@ mod tests {
             GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
         CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS> + std::fmt::Debug,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<
-            MASK_LIMBS,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
@@ -366,7 +362,6 @@ mod tests {
             CiphertextSpaceGroupElement,
         >,
         DecryptionKey: AdditivelyHomomorphicDecryptionKey<
-            MASK_LIMBS,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             CIPHERTEXT_SPACE_SCALAR_LIMBS,
@@ -415,7 +410,7 @@ mod tests {
         );
 
         let (_, _, privately_evaluted_ciphertext) = encryption_key
-            .evaluate_linear_combination(
+            .evaluate_circuit_private_linear_combination(
                 &[one, zero, seventy_three],
                 &[encrypted_five, encrypted_seven, encrypted_two],
                 &randomness_group_public_parameters,
