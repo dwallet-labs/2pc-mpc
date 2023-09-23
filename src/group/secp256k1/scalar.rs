@@ -11,8 +11,8 @@ use subtle::{Choice, ConstantTimeEq};
 use crate::{
     group,
     group::{
-        secp256k1::ORDER, CyclicGroupElement, KnownOrderGroupElement, MulByGenerator,
-        PrimeGroupElement,
+        secp256k1::ORDER, BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement,
+        MulByGenerator, PrimeGroupElement,
     },
     traits::Reduce,
 };
@@ -44,7 +44,7 @@ impl Default for PublicParameters {
     }
 }
 
-impl group::GroupElement<{ U256::LIMBS }> for Scalar {
+impl group::GroupElement for Scalar {
     type Value = Self;
 
     fn value(&self) -> Self::Value {
@@ -74,6 +74,8 @@ impl group::GroupElement<{ U256::LIMBS }> for Scalar {
         Self(<k256::Scalar as Field>::double(&self.0))
     }
 }
+
+impl BoundedGroupElement<{ U256::LIMBS }> for Scalar {}
 
 impl<const LIMBS: usize> From<Uint<LIMBS>> for Scalar {
     fn from(value: Uint<LIMBS>) -> Self {
@@ -226,7 +228,7 @@ impl<'r> MulByGenerator<&'r U256> for Scalar {
     }
 }
 
-impl CyclicGroupElement<{ U256::LIMBS }> for Scalar {
+impl CyclicGroupElement for Scalar {
     fn generator(&self) -> Self {
         Scalar(k256::Scalar::ONE)
     }
@@ -238,7 +240,7 @@ impl KnownOrderGroupElement<{ U256::LIMBS }, Self> for Scalar {
     }
 
     fn order_from_public_parameters(
-        public_parameters: &Self::PublicParameters,
+        _public_parameters: &Self::PublicParameters,
     ) -> Uint<{ U256::LIMBS }> {
         ORDER
     }

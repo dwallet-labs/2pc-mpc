@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
-    group::{CyclicGroupElement, GroupElement as _, MulByGenerator, Samplable},
+    group::{
+        BoundedGroupElement, CyclicGroupElement, GroupElement as _, MulByGenerator, Samplable,
+    },
 };
 
 /// An element of the additive group of integers for a power-of-two modulo `n = modulus`
@@ -13,7 +15,7 @@ use crate::{
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct GroupElement<const LIMBS: usize>(Wrapping<Uint<LIMBS>>);
 
-impl<const LIMBS: usize> Samplable<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -44,7 +46,7 @@ where
     }
 }
 
-impl<const LIMBS: usize> group::GroupElement<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> group::GroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -292,7 +294,11 @@ impl<'r, const LIMBS: usize> From<&'r Uint<LIMBS>> for GroupElement<LIMBS> {
     }
 }
 
-impl<const LIMBS: usize> CyclicGroupElement<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> where
+    Uint<LIMBS>: Encoding
+{
+}
+impl<const LIMBS: usize> CyclicGroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {

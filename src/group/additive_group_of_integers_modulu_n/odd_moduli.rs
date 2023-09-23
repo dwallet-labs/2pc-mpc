@@ -1,8 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-// This should be called Z module?
-
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use crypto_bigint::{
@@ -15,7 +13,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     group,
     group::{
-        CyclicGroupElement, GroupElement as _, KnownOrderGroupElement, MulByGenerator, Samplable,
+        BoundedGroupElement, CyclicGroupElement, GroupElement as _, KnownOrderGroupElement,
+        MulByGenerator, Samplable,
     },
     traits::Reduce,
 };
@@ -25,7 +24,7 @@ use crate::{
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct GroupElement<const LIMBS: usize>(DynResidue<LIMBS>);
 
-impl<const LIMBS: usize> Samplable<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -33,10 +32,7 @@ where
         rng: &mut impl CryptoRngCore,
         public_parameters: &Self::PublicParameters,
     ) -> group::Result<Self> {
-        <GroupElement<LIMBS> as group::GroupElement<LIMBS>>::new(
-            Uint::<LIMBS>::random(rng),
-            public_parameters,
-        )
+        GroupElement::<LIMBS>::new(Uint::<LIMBS>::random(rng), public_parameters)
     }
 }
 
@@ -59,7 +55,7 @@ where
     }
 }
 
-impl<const LIMBS: usize> group::GroupElement<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> group::GroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -192,7 +188,12 @@ where
     }
 }
 
-impl<const LIMBS: usize> CyclicGroupElement<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> where
+    Uint<LIMBS>: Encoding
+{
+}
+
+impl<const LIMBS: usize> CyclicGroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {

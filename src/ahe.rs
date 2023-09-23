@@ -30,18 +30,15 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// An Encryption Key of an Additively Homomorphic Encryption scheme.
 pub trait AdditivelyHomomorphicEncryptionKey<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-    const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
     PlaintextSpaceGroupElement,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
 >: PartialEq + Sized where
     PlaintextSpaceGroupElement:
-    KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
+        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
-    RandomnessSpaceGroupElement:
-    GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-    CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+    RandomnessSpaceGroupElement: GroupElement + Samplable,
+    CiphertextSpaceGroupElement: GroupElement,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
     From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
 {
@@ -245,8 +242,6 @@ pub trait AdditivelyHomomorphicEncryptionKey<
 /// A Decryption Key of an Additively Homomorphic Encryption scheme
 pub trait AdditivelyHomomorphicDecryptionKey<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-    const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
     PlaintextSpaceGroupElement,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
@@ -254,9 +249,8 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     PlaintextSpaceGroupElement:
     KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
-    RandomnessSpaceGroupElement:
-    GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-    CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+    RandomnessSpaceGroupElement: GroupElement + Samplable,
+    CiphertextSpaceGroupElement: GroupElement,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
     From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
 {
@@ -274,8 +268,7 @@ mod tests {
     use rand_core::OsRng;
 
     use crate::{
-        group::{
-            paillier::PlaintextPublicParameters, GroupElement, KnownOrderGroupElement, Samplable,
+        group::{GroupElement, KnownOrderGroupElement, Samplable,
         },
         AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
     };
@@ -283,8 +276,6 @@ mod tests {
     pub(crate) fn encrypt_decrypts<
         const MASK_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-        const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
         PlaintextSpaceGroupElement,
         RandomnessSpaceGroupElement,
         CiphertextSpaceGroupElement,
@@ -301,22 +292,18 @@ mod tests {
         PlaintextSpaceGroupElement::Value:
         From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
         RandomnessSpaceGroupElement:
-        GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-        CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+        GroupElement + Samplable,
+        CiphertextSpaceGroupElement: GroupElement,
         Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
         From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
-            CIPHERTEXT_SPACE_SCALAR_LIMBS,
             PlaintextSpaceGroupElement,
             RandomnessSpaceGroupElement,
             CiphertextSpaceGroupElement,
         >,
         DecryptionKey: AdditivelyHomomorphicDecryptionKey<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
-            CIPHERTEXT_SPACE_SCALAR_LIMBS,
             PlaintextSpaceGroupElement,
             RandomnessSpaceGroupElement,
             CiphertextSpaceGroupElement,
@@ -342,8 +329,6 @@ mod tests {
         const MASK_LIMBS: usize,
         const EVALUATION_GROUP_SCALAR_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-        const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
         EvaluationGroupElement,
         PlaintextSpaceGroupElement,
         RandomnessSpaceGroupElement,
@@ -361,8 +346,8 @@ mod tests {
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement> + std::fmt::Debug,
         PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
         RandomnessSpaceGroupElement:
-        GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-        CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS> + std::fmt::Debug,
+        GroupElement + Samplable,
+        CiphertextSpaceGroupElement: GroupElement + std::fmt::Debug,
         Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
         From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
         EvaluationGroupElement:
@@ -370,16 +355,12 @@ mod tests {
         EvaluationGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
-            CIPHERTEXT_SPACE_SCALAR_LIMBS,
             PlaintextSpaceGroupElement,
             RandomnessSpaceGroupElement,
             CiphertextSpaceGroupElement,
         >,
         DecryptionKey: AdditivelyHomomorphicDecryptionKey<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
-            CIPHERTEXT_SPACE_SCALAR_LIMBS,
             PlaintextSpaceGroupElement,
             RandomnessSpaceGroupElement,
             CiphertextSpaceGroupElement,
