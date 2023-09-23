@@ -60,15 +60,6 @@ where
     pub modulus: Uint<LIMBS>,
 }
 
-impl<const LIMBS: usize> PublicParameters<LIMBS>
-where
-    Uint<LIMBS>: Encoding,
-{
-    pub const fn new(modulus: Uint<LIMBS>) -> Self {
-        Self { modulus }
-    }
-}
-
 impl<const LIMBS: usize> group::GroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
