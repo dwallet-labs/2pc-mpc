@@ -14,7 +14,11 @@ use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use super::{Error, Result, TranscriptProtocol};
-use crate::{group, group::GroupElement, traits::Samplable, ComputationalSecuritySizedNumber};
+use crate::{
+    group,
+    group::{GroupElement, Samplable},
+    ComputationalSecuritySizedNumber,
+};
 
 // For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
 // Setting it to be 64-bit larger than the computational security parameter $\kappa$ allows us to
@@ -123,7 +127,7 @@ impl<
             statements,
         )?;
 
-        let randomizer = WitnessSpaceGroupElement::sample(rng);
+        let randomizer = WitnessSpaceGroupElement::sample(rng, witness_space_public_parameters)?;
 
         let statement_mask = Lang::group_homomorphism(
             &randomizer,

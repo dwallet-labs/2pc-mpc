@@ -8,8 +8,7 @@ use serde::Serialize;
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group::{self_product, CyclicGroupElement, KnownOrderGroupElement},
-    proofs::schnorr,
-    traits::Samplable,
+    proofs::{schnorr, schnorr::Samplable},
 };
 
 /// Knowledge of Decommitment Schnorr Language.

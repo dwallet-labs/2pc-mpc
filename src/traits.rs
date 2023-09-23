@@ -1,15 +1,11 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto_bigint::{rand_core::CryptoRngCore, NonZero, Uint};
-
-pub trait Samplable: Sized {
-    /// Uniformly sample a random value.
-    fn sample(rng: &mut impl CryptoRngCore) -> Self;
-}
+use crypto_bigint::{NonZero, Uint};
 
 pub(crate) trait Reduce<const MODULUS_LIMBS: usize> {
     /// Reduces `self` by `modulus`.
+
     fn reduce(&self, modulus: &NonZero<Uint<MODULUS_LIMBS>>) -> Uint<MODULUS_LIMBS>;
 }
 

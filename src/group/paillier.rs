@@ -3,7 +3,11 @@
 
 use tiresias::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 
-use crate::group::multiplicative_group_of_integers_modulu_n;
+use crate::group::{
+    additive_group_of_integers_modulu_n::odd_moduli, multiplicative_group_of_integers_modulu_n,
+};
+
+pub type PlaintextGroupElement = odd_moduli::GroupElement<{ LargeBiPrimeSizedNumber::LIMBS }>;
 
 pub type CiphertextGroupElement =
     multiplicative_group_of_integers_modulu_n::GroupElement<{ PaillierModulusSizedNumber::LIMBS }>;

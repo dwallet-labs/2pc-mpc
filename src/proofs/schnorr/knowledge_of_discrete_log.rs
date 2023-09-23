@@ -5,7 +5,11 @@ use std::{marker::PhantomData, ops::Mul};
 
 use serde::Serialize;
 
-use crate::{group, group::BoundedGroupElement, proofs::schnorr, traits::Samplable};
+use crate::{
+    group,
+    group::BoundedGroupElement,
+    proofs::{schnorr, schnorr::Samplable},
+};
 
 /// Knowledge of Discrete Log Schnorr Language.
 pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {

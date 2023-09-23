@@ -193,7 +193,7 @@ impl<'r> MulAssign<&'r Self> for Scalar {
 }
 
 impl MulByGenerator<U256> for Scalar {
-    fn mul_by_generator(scalar: U256) -> Self {
+    fn mul_by_generator(&self, scalar: U256) -> Self {
         // In the additive scalar group, our generator is 1 and multiplying a group element by it
         // results in that same element. However, a `U256` might be bigger than the field
         // order, so we must first reduce it by the modulus to get a valid element.
@@ -204,25 +204,25 @@ impl MulByGenerator<U256> for Scalar {
 }
 
 impl<'r> MulByGenerator<&'r U256> for Scalar {
-    fn mul_by_generator(scalar: &'r U256) -> Self {
-        Self::mul_by_generator(*scalar)
+    fn mul_by_generator(&self, scalar: &'r U256) -> Self {
+        self.mul_by_generator(*scalar)
     }
 }
 
 impl CyclicGroupElement for Scalar {
-    fn generator() -> Self {
+    fn generator(&self) -> Self {
         Scalar(k256::Scalar::ONE)
     }
 }
 
 impl KnownOrderGroupElement<{ U256::LIMBS }, Self> for Scalar {
-    fn order() -> Uint<{ U256::LIMBS }> {
+    fn order(&self) -> Uint<{ U256::LIMBS }> {
         ORDER
     }
 }
 
 impl MulByGenerator<Scalar> for Scalar {
-    fn mul_by_generator(scalar: Scalar) -> Self {
+    fn mul_by_generator(&self, scalar: Scalar) -> Self {
         // In the additive scalar group, our generator is 1 and multiplying a group element by it
         // results in that same element.
         scalar
@@ -230,8 +230,8 @@ impl MulByGenerator<Scalar> for Scalar {
 }
 
 impl<'r> MulByGenerator<&'r Scalar> for Scalar {
-    fn mul_by_generator(scalar: &'r Scalar) -> Self {
-        Self::mul_by_generator(*scalar)
+    fn mul_by_generator(&self, scalar: &'r Scalar) -> Self {
+        self.mul_by_generator(*scalar)
     }
 }
 

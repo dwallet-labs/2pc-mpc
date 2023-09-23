@@ -1,4 +1,4 @@
-use crypto_bigint::U128;
+use crypto_bigint::{U128, U64};
 
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
@@ -9,5 +9,9 @@ pub mod proofs;
 mod traits;
 
 /// Represents an unsigned integer sized based on the computation security parameter, denoted as
-/// $\kappa$. Configured for 128-bit security using U128.
+/// $\kappa$. Configured for 128-bit computational security using U128.
 pub type ComputationalSecuritySizedNumber = U128;
+
+/// Represents an unsigned integer sized based on the statistical security parameter, denoted as
+/// $s$. Configured for 64-bit statistical security using U64.
+pub type StatisticalSecuritySizedNumber = U64;

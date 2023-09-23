@@ -6,17 +6,49 @@ use std::ops::Mul;
 
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Encoding, Integer, Uint,
+    rand_core::CryptoRngCore,
+    Encoding, Integer, Random, Uint,
 };
 use group::GroupElement as _;
 use serde::{Deserialize, Serialize};
 
-use crate::{group, group::BoundedGroupElement};
+use crate::{
+    group,
+    group::{BoundedGroupElement, Samplable},
+};
 
 /// An element of the multiplicative group of integers modulo `n` $\mathbb{Z}_n^*$
 /// [Multiplicative group of integers modulo n](https://en.wikipedia.org/wiki/Multiplicative_group_of_integers_modulo_n)
 #[derive(PartialEq, Eq, Clone, Debug, Copy)]
 pub struct GroupElement<const LIMBS: usize>(DynResidue<LIMBS>);
+
+impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+    ) -> group::Result<Self> {
+        // Classic rejection-sampling technique.
+        loop {
+            match Self::new(Uint::<LIMBS>::random(rng), public_parameters) {
+                Err(group::Error::UnsupportedPublicParametersError) => {
+                    return Err(group::Error::UnsupportedPublicParametersError);
+                }
+                Err(group::Error::InvalidPublicParametersError) => {
+                    return Err(group::Error::InvalidPublicParametersError);
+                }
+                Err(group::Error::InvalidGroupElementError) => {
+                    continue;
+                }
+                Ok(sampled_element) => {
+                    return Ok(sampled_element);
+                }
+            }
+        }
+    }
+}
 
 /// The public parameters of the multiplicative group of integers modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
@@ -26,6 +58,15 @@ where
     Uint<LIMBS>: Encoding,
 {
     modulus: Uint<LIMBS>,
+}
+
+impl<const LIMBS: usize> PublicParameters<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    pub fn new(modulus: Uint<LIMBS>) -> Self {
+        Self { modulus }
+    }
 }
 
 impl<const LIMBS: usize> group::GroupElement for GroupElement<LIMBS>
@@ -217,5 +258,17 @@ where
 
     fn mul(self, rhs: &Uint<RHS_LIMBS>) -> Self::Output {
         self.scalar_mul(rhs)
+    }
+}
+
+impl<const LIMBS: usize> From<GroupElement<LIMBS>> for Uint<LIMBS> {
+    fn from(value: GroupElement<LIMBS>) -> Self {
+        value.0.retrieve()
+    }
+}
+
+impl<'r, const LIMBS: usize> From<&'r GroupElement<LIMBS>> for Uint<LIMBS> {
+    fn from(value: &'r GroupElement<LIMBS>) -> Self {
+        value.0.retrieve()
     }
 }
