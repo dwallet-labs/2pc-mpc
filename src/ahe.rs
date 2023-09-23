@@ -247,7 +247,7 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     CiphertextSpaceGroupElement,
 > where
     PlaintextSpaceGroupElement:
-    KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
+        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
     RandomnessSpaceGroupElement: GroupElement + Samplable,
     CiphertextSpaceGroupElement: GroupElement,
