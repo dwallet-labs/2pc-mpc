@@ -5,7 +5,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 use serde::Serialize;
 
-use crate::{group, proofs::schnorr, traits::Samplable};
+use crate::{group, group::BoundedGroupElement, proofs::schnorr, traits::Samplable};
 
 /// Knowledge of Discrete Log Schnorr Language.
 pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
@@ -17,8 +17,8 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
 #[derive(Debug, PartialEq, Serialize)]
 pub struct PublicParameters<const SCALAR_LIMBS: usize, Scalar, GroupElement>
 where
-    Scalar: group::GroupElement<SCALAR_LIMBS> + Samplable,
-    GroupElement: group::GroupElement<SCALAR_LIMBS>
+    Scalar: BoundedGroupElement<SCALAR_LIMBS> + Samplable,
+    GroupElement: BoundedGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
 {
@@ -39,12 +39,11 @@ where
 ///
 /// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
 /// `PrimeOrderGroupElement`.
-impl<const SCALAR_LIMBS: usize, Scalar, GroupElement>
-    schnorr::Language<SCALAR_LIMBS, SCALAR_LIMBS, Scalar, GroupElement>
+impl<const SCALAR_LIMBS: usize, Scalar, GroupElement> schnorr::Language<Scalar, GroupElement>
     for Language<SCALAR_LIMBS, Scalar, GroupElement>
 where
-    Scalar: group::GroupElement<SCALAR_LIMBS> + Samplable,
-    GroupElement: group::GroupElement<SCALAR_LIMBS>
+    Scalar: BoundedGroupElement<SCALAR_LIMBS> + Samplable,
+    GroupElement: BoundedGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
 {
@@ -69,4 +68,4 @@ where
 /// A Knowledge of Discrete Log Schnorr Proof.
 #[allow(dead_code)]
 pub type Proof<const SCALAR_LIMBS: usize, S, G, ProtocolContext> =
-    schnorr::Proof<SCALAR_LIMBS, SCALAR_LIMBS, S, G, Language<SCALAR_LIMBS, S, G>, ProtocolContext>;
+    schnorr::Proof<S, G, Language<SCALAR_LIMBS, S, G>, ProtocolContext>;

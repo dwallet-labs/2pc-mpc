@@ -8,10 +8,10 @@ use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
     Encoding, Integer, Uint,
 };
-use group::GroupElement as GroupElementTrait;
+use group::GroupElement as _;
 use serde::{Deserialize, Serialize};
 
-use crate::group;
+use crate::{group, group::BoundedGroupElement};
 
 /// An element of the multiplicative group of integers modulo `n` $\mathbb{Z}_n^*$
 /// [Multiplicative group of integers modulo n](https://en.wikipedia.org/wiki/Multiplicative_group_of_integers_modulo_n)
@@ -28,7 +28,7 @@ where
     modulus: Uint<LIMBS>,
 }
 
-impl<const LIMBS: usize> GroupElementTrait<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> group::GroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -80,6 +80,11 @@ where
     fn double(&self) -> Self {
         Self(self.0.square())
     }
+}
+
+impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> where
+    Uint<LIMBS>: Encoding
+{
 }
 
 impl<const LIMBS: usize> Neg for GroupElement<LIMBS> {

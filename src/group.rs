@@ -4,12 +4,11 @@
 pub mod direct_product;
 
 pub mod secp256k1;
-
-pub mod self_product_group;
+pub mod self_product;
 
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 pub mod paillier;
-use crypto_bigint::Uint;
+use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
@@ -37,14 +36,13 @@ pub enum Error {
 /// The Result of the `new()` operation of types implementing the `GroupElement` trait
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// An element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in additive
-/// notation.
+/// An element of an abelian group, in additive notation.
 ///
 /// Group operations are only valid between elements within the group (otherwise the result is
 /// undefined.)
 ///
 /// All group operations are guaranteed to be constant time
-pub trait GroupElement<const SCALAR_LIMBS: usize>:
+pub trait GroupElement:
     PartialEq
     + Clone
     + Neg<Output = Self>
@@ -116,6 +114,10 @@ pub trait GroupElement<const SCALAR_LIMBS: usize>:
     fn double(&self) -> Self;
 }
 
+/// An element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in additive
+/// notation.
+pub trait BoundedGroupElement<const SCALAR_LIMBS: usize>: GroupElement {}
+
 /// Constant-time multiplication by the generator.
 ///
 /// May use optimizations (e.g. precomputed tables) when available.
@@ -127,11 +129,7 @@ pub trait MulByGenerator<T> {
 
 /// An element of an abelian, cyclic group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in
 /// additive notation.
-pub trait CyclicGroupElement<const SCALAR_LIMBS: usize>:
-    GroupElement<SCALAR_LIMBS>
-    + MulByGenerator<Uint<SCALAR_LIMBS>>
-    + for<'r> MulByGenerator<&'r Uint<SCALAR_LIMBS>>
-{
+pub trait CyclicGroupElement: GroupElement {
     fn generator() -> Self;
 }
 
@@ -140,7 +138,7 @@ pub trait KnownOrderGroupElement<
     const SCALAR_LIMBS: usize,
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar>,
 >:
-    GroupElement<SCALAR_LIMBS>
+    BoundedGroupElement<SCALAR_LIMBS>
     + Mul<Scalar, Output = Self>
     + for<'r> Mul<&'r Scalar, Output = Self>
     + MulAssign<Scalar>
@@ -157,8 +155,16 @@ pub trait PrimeGroupElement<
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar>,
 >:
     KnownOrderGroupElement<SCALAR_LIMBS, Scalar>
-    + CyclicGroupElement<SCALAR_LIMBS>
+    + CyclicGroupElement
     + MulByGenerator<Scalar>
     + for<'r> MulByGenerator<&'r Scalar>
 {
+}
+
+pub trait Samplable: GroupElement {
+    /// Uniformly sample a random value.
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+    ) -> Result<Self>;
 }

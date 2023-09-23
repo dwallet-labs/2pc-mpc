@@ -8,17 +8,13 @@ use serde::{Deserialize, Serialize};
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group,
-    group::{self_product_group, CyclicGroupElement},
+    group::{self_product, CyclicGroupElement},
     helpers::const_generic_array_serialization,
 };
 
 /// The Public Parameters of a Pedersen Commitment
 #[derive(PartialEq, Clone, Serialize, Deserialize)]
-pub struct PublicParameters<
-    const BATCH_SIZE: usize,
-    const SCALAR_LIMBS: usize,
-    GroupElement: CyclicGroupElement<SCALAR_LIMBS>,
-> {
+pub struct PublicParameters<const BATCH_SIZE: usize, GroupElement: CyclicGroupElement> {
     #[serde(with = "const_generic_array_serialization")]
     message_generators: [GroupElement::Value; BATCH_SIZE],
     randomness_generator: GroupElement::Value,
@@ -27,7 +23,7 @@ pub struct PublicParameters<
 /// A Batched Pedersen Commitment
 /// The public parameters ['PublicParameters'] for this commitment should be carefully constructed.
 #[derive(PartialEq, Clone)]
-pub struct Pedersen<const BATCH_SIZE: usize, const SCALAR_LIMBS: usize, Scalar, GroupElement> {
+pub struct Pedersen<const BATCH_SIZE: usize, Scalar, GroupElement> {
     /// The generators used for the messages
     message_generators: [GroupElement; BATCH_SIZE],
     /// The generator used for the randomness
@@ -36,22 +32,19 @@ pub struct Pedersen<const BATCH_SIZE: usize, const SCALAR_LIMBS: usize, Scalar, 
     _scalar_choice: PhantomData<Scalar>,
 }
 
-impl<const BATCH_SIZE: usize, const SCALAR_LIMBS: usize, Scalar, GroupElement>
+impl<const BATCH_SIZE: usize, Scalar, GroupElement>
     HomomorphicCommitmentScheme<
-        SCALAR_LIMBS,
-        SCALAR_LIMBS,
-        SCALAR_LIMBS,
-        self_product_group::GroupElement<BATCH_SIZE, SCALAR_LIMBS, Scalar>,
+        self_product::GroupElement<BATCH_SIZE, Scalar>,
         Scalar,
         GroupElement,
-    > for Pedersen<BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement>
+    > for Pedersen<BATCH_SIZE, Scalar, GroupElement>
 where
-    Scalar: CyclicGroupElement<SCALAR_LIMBS>,
-    GroupElement: CyclicGroupElement<SCALAR_LIMBS>
+    Scalar: CyclicGroupElement,
+    GroupElement: CyclicGroupElement
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
 {
-    type PublicParameters = PublicParameters<BATCH_SIZE, SCALAR_LIMBS, GroupElement>;
+    type PublicParameters = PublicParameters<BATCH_SIZE, GroupElement>;
 
     fn public_parameters(&self) -> Self::PublicParameters {
         Self::PublicParameters {
@@ -93,7 +86,7 @@ where
 
     fn commit(
         &self,
-        message: &self_product_group::GroupElement<BATCH_SIZE, SCALAR_LIMBS, Scalar>,
+        message: &self_product::GroupElement<BATCH_SIZE, Scalar>,
         randomness: &Scalar,
     ) -> GroupElement {
         self.message_generators
