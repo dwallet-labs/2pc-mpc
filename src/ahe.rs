@@ -174,7 +174,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
             return Err(Error::ZeroDimension);
         }
 
-        let plaintext_order: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = coefficients[0].order().into();
+        let plaintext_order: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = coefficients[0].order();
 
         if PLAINTEXT_SPACE_SCALAR_LIMBS != MODULUS_LIMBS || plaintext_order != modulus.into() {
             // TODO: do checks here, BOUND_LIMBS?
