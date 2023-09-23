@@ -7,8 +7,8 @@ use serde::Serialize;
 
 use crate::{
     commitments::HomomorphicCommitmentScheme,
-    group::{self_product_group, CyclicGroupElement, KnownOrderGroupElement, Samplable},
-    proofs::schnorr,
+    group::{self_product, CyclicGroupElement, KnownOrderGroupElement},
+    proofs::{schnorr, schnorr::Samplable},
 };
 
 /// Knowledge of Decommitment Schnorr Language.
@@ -33,18 +33,11 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentS
 #[derive(Debug, PartialEq, Serialize)]
 pub struct PublicParameters<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
 where
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
-    GroupElement: CyclicGroupElement<SCALAR_LIMBS>
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable,
+    GroupElement: CyclicGroupElement
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
-    CommitmentScheme: HomomorphicCommitmentScheme<
-        SCALAR_LIMBS,
-        SCALAR_LIMBS,
-        SCALAR_LIMBS,
-        Scalar,
-        Scalar,
-        GroupElement,
-    >,
+    CommitmentScheme: HomomorphicCommitmentScheme<Scalar, Scalar, GroupElement>,
 {
     commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
 
@@ -53,37 +46,22 @@ where
 }
 
 impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
-    schnorr::Language<
-        SCALAR_LIMBS,
-        SCALAR_LIMBS,
-        self_product_group::GroupElement<2, SCALAR_LIMBS, Scalar>,
-        GroupElement,
-    > for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
+    schnorr::Language<self_product::GroupElement<2, Scalar>, GroupElement>
+    for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
 where
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
-    GroupElement: CyclicGroupElement<SCALAR_LIMBS>
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable,
+    GroupElement: CyclicGroupElement
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
-    CommitmentScheme: HomomorphicCommitmentScheme<
-        SCALAR_LIMBS,
-        SCALAR_LIMBS,
-        SCALAR_LIMBS,
-        Scalar,
-        Scalar,
-        GroupElement,
-    >,
+    CommitmentScheme: HomomorphicCommitmentScheme<Scalar, Scalar, GroupElement>,
 {
     type PublicParameters = PublicParameters<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>;
     const NAME: &'static str = "Knowledge of Decommitment";
 
     fn group_homomorphism(
-        witness: &self_product_group::GroupElement<2, SCALAR_LIMBS, Scalar>,
+        witness: &self_product::GroupElement<2, Scalar>,
         language_public_parameters: &Self::PublicParameters,
-        _witness_space_public_parameters: &self_product_group::PublicParameters<
-            2,
-            SCALAR_LIMBS,
-            Scalar,
-        >,
+        _witness_space_public_parameters: &self_product::PublicParameters<2, Scalar>,
         public_value_space_public_parameters: &GroupElement::PublicParameters,
     ) -> crate::group::Result<GroupElement> {
         let [value, randomness]: &[Scalar; 2] = witness.into();
@@ -101,9 +79,7 @@ where
 #[allow(dead_code)]
 pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme, ProtocolContext> =
     schnorr::Proof<
-        SCALAR_LIMBS,
-        SCALAR_LIMBS,
-        self_product_group::GroupElement<2, SCALAR_LIMBS, Scalar>,
+        self_product::GroupElement<2, Scalar>,
         GroupElement,
         Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
         ProtocolContext,

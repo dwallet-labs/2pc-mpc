@@ -9,17 +9,20 @@ use crypto_bigint::{
     rand_core::CryptoRngCore,
     Encoding, Integer, Random, Uint,
 };
-use group::GroupElement as GroupElementTrait;
+use group::GroupElement as _;
 use serde::{Deserialize, Serialize};
 
-use crate::{group, group::Samplable};
+use crate::{
+    group,
+    group::{BoundedGroupElement, Samplable},
+};
 
 /// An element of the multiplicative group of integers modulo `n` $\mathbb{Z}_n^*$
 /// [Multiplicative group of integers modulo n](https://en.wikipedia.org/wiki/Multiplicative_group_of_integers_modulo_n)
 #[derive(PartialEq, Eq, Clone, Debug, Copy)]
 pub struct GroupElement<const LIMBS: usize>(DynResidue<LIMBS>);
 
-impl<const LIMBS: usize> Samplable<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -66,7 +69,7 @@ where
     }
 }
 
-impl<const LIMBS: usize> GroupElementTrait<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> group::GroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -118,6 +121,11 @@ where
     fn double(&self) -> Self {
         Self(self.0.square())
     }
+}
+
+impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> where
+    Uint<LIMBS>: Encoding
+{
 }
 
 impl<const LIMBS: usize> Neg for GroupElement<LIMBS> {

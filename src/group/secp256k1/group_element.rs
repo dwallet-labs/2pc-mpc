@@ -16,7 +16,8 @@ use crate::{
     group,
     group::{
         secp256k1::{scalar::Scalar, CURVE_EQUATION_A, CURVE_EQUATION_B, MODULUS, ORDER},
-        CyclicGroupElement, KnownOrderGroupElement, MulByGenerator, PrimeGroupElement,
+        BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement, MulByGenerator,
+        PrimeGroupElement,
     },
 };
 
@@ -62,7 +63,7 @@ impl ConstantTimeEq for Value {
     }
 }
 
-impl group::GroupElement<{ U256::LIMBS }> for GroupElement {
+impl group::GroupElement for GroupElement {
     type Value = Value;
 
     fn value(&self) -> Self::Value {
@@ -261,11 +262,13 @@ impl<'r> MulByGenerator<&'r U256> for GroupElement {
     }
 }
 
-impl CyclicGroupElement<{ U256::LIMBS }> for GroupElement {
+impl CyclicGroupElement for GroupElement {
     fn generator(&self) -> Self {
         Self(ProjectivePoint::GENERATOR)
     }
 }
+
+impl BoundedGroupElement<{ U256::LIMBS }> for GroupElement {}
 
 impl KnownOrderGroupElement<{ U256::LIMBS }, Scalar> for GroupElement {
     fn order(&self) -> Uint<{ U256::LIMBS }> {

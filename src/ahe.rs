@@ -29,8 +29,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// An Encryption Key of an Additively Homomorphic Encryption scheme.
 pub trait AdditivelyHomomorphicEncryptionKey<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-    const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
     PlaintextSpaceGroupElement,
     RandomnessSpaceGroupElement,
     CiphertextSpaceGroupElement,
@@ -38,9 +36,8 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
-    RandomnessSpaceGroupElement:
-        GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-    CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+    RandomnessSpaceGroupElement: GroupElement + Samplable,
+    CiphertextSpaceGroupElement: GroupElement,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
         From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
 {
@@ -253,9 +250,8 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     PlaintextSpaceGroupElement:
         KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
     PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
-    RandomnessSpaceGroupElement:
-        GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-    CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
+    RandomnessSpaceGroupElement: GroupElement + Samplable,
+    CiphertextSpaceGroupElement: GroupElement,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
         From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
 {

@@ -21,12 +21,9 @@ pub mod pedersen;
 ///
 /// As defined in Definitions 2.4, 2.5 in the paper.
 pub trait HomomorphicCommitmentScheme<
-    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
-    const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-    const COMMITMENT_SPACE_SCALAR_LIMBS: usize,
-    MessageSpaceGroupElement: GroupElement<MESSAGE_SPACE_SCALAR_LIMBS>,
-    RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-    CommitmentSpaceGroupElement: GroupElement<COMMITMENT_SPACE_SCALAR_LIMBS>,
+    MessageSpaceGroupElement: GroupElement,
+    RandomnessSpaceGroupElement: GroupElement,
+    CommitmentSpaceGroupElement: GroupElement,
 >: PartialEq + Clone
 {
     /// The public parameters of the commitment scheme $\Com_{\pp}$.

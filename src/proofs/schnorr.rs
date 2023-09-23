@@ -30,14 +30,10 @@ type ChallengeSizedNumber = <ComputationalSecuritySizedNumber as ConcatMixed<U64
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`
 /// As defined in Appendix B. Schnorr Protocols in the paper
 pub trait Language<
-    // The upper bound for the scalar size of the witness group
-    const WITNESS_SCALAR_LIMBS: usize,
-    // The upper bound for the scalar size of the associated public-value space group
-    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     // An element of the witness space $(\HH_\pp, +)$
-    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
+    WitnessSpaceGroupElement: GroupElement + Samplable,
     // An element in the associated public-value space $(\GG_\pp, \cdot)$,
-    PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+    PublicValueSpaceGroupElement: GroupElement,
 >
 {
     /// Public parameters for a language family $\pp \gets \Setup(1^\kappa)$
@@ -68,10 +64,8 @@ pub trait Language<
 /// Implements Appendix B. Schnorr Protocols in the paper.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Proof<
-    const WITNESS_SCALAR_LIMBS: usize,
-    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
-    PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+    WitnessSpaceGroupElement: GroupElement,
+    PublicValueSpaceGroupElement: GroupElement,
     Lang,
     // A struct used by the protocol using this proof,
     // used to provide extra necessary context that will parameterize the proof (and thus verifier
@@ -86,26 +80,11 @@ pub struct Proof<
 }
 
 impl<
-        const WITNESS_SCALAR_LIMBS: usize,
-        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement: Samplable<WITNESS_SCALAR_LIMBS>,
-        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
-        Lang: Language<
-            WITNESS_SCALAR_LIMBS,
-            PUBLIC_VALUE_SCALAR_LIMBS,
-            WitnessSpaceGroupElement,
-            PublicValueSpaceGroupElement,
-        >,
+        WitnessSpaceGroupElement: GroupElement + Samplable,
+        PublicValueSpaceGroupElement: GroupElement,
+        Lang: Language<WitnessSpaceGroupElement, PublicValueSpaceGroupElement>,
         ProtocolContext: Serialize,
-    >
-    Proof<
-        WITNESS_SCALAR_LIMBS,
-        PUBLIC_VALUE_SCALAR_LIMBS,
-        WitnessSpaceGroupElement,
-        PublicValueSpaceGroupElement,
-        Lang,
-        ProtocolContext,
-    >
+    > Proof<WitnessSpaceGroupElement, PublicValueSpaceGroupElement, Lang, ProtocolContext>
 {
     fn new(
         statement_mask: PublicValueSpaceGroupElement,
