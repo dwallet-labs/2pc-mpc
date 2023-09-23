@@ -40,6 +40,8 @@ use crate::{
 /// `PrimeOrderGroupElement`.
 ///
 /// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
+#[derive(Clone)]
+
 pub struct Language<
     const MASK_LIMBS: usize,
     const SCALAR_LIMBS: usize,
@@ -109,11 +111,11 @@ pub struct PublicParameters<
         GroupElement,
     >,
 {
-    encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
+    pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
+    pub commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
 
     #[serde(with = "const_generic_array_serialization")]
-    ciphertexts: [CiphertextSpaceGroupElement::Value; DIMENSION],
+    pub ciphertexts: [CiphertextSpaceGroupElement::Value; DIMENSION],
 }
 
 impl<

@@ -49,8 +49,8 @@ pub struct PublicParameters<
     const SCALAR_LIMBS: usize,
     G: GroupElementTrait<SCALAR_LIMBS>,
 > {
-    pub(crate) public_parameters: G::PublicParameters,
-    size: usize,
+    pub public_parameters: G::PublicParameters,
+    pub size: usize,
 }
 
 /// The value of the Self Product of the Group `G` by Itself.
@@ -97,6 +97,10 @@ impl<const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMB
     }
 
     fn new(value: Self::Value, public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        if public_parameters.size != N {
+            return Err(group::Error::InvalidPublicParametersError);
+        }
+
         let public_parameters = &public_parameters.public_parameters;
 
         if N < 2 {
@@ -325,5 +329,13 @@ impl<const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMB
 {
     fn from(value: [G; N]) -> Self {
         GroupElement::<N, SCALAR_LIMBS, G>(value)
+    }
+}
+
+impl<'r, const N: usize, const SCALAR_LIMBS: usize, G: GroupElementTrait<SCALAR_LIMBS>>
+    From<[&'r G; N]> for GroupElement<N, SCALAR_LIMBS, G>
+{
+    fn from(value: [&'r G; N]) -> Self {
+        GroupElement::<N, SCALAR_LIMBS, G>(value.map(|x| x.clone()))
     }
 }
