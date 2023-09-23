@@ -108,7 +108,7 @@ impl
                     .into(),
                 &randomness.into(),
             ),
-            &CiphertextPublicParameters::new(self.0.n2),
+            &CiphertextPublicParameters { modulus: self.0.n2 },
         )
         .unwrap()
     }
@@ -157,11 +157,11 @@ mod tests {
     const RANDOMNESS_PUBLIC_PARAMETERS:
         multiplicative_group_of_integers_modulu_n::PublicParameters<
             { LargeBiPrimeSizedNumber::LIMBS },
-        > = multiplicative_group_of_integers_modulu_n::PublicParameters::new(N);
+        > = multiplicative_group_of_integers_modulu_n::PublicParameters { modulus: N };
     const CIPHERTEXT_PUBLIC_PARAMETERS:
         multiplicative_group_of_integers_modulu_n::PublicParameters<
             { PaillierModulusSizedNumber::LIMBS },
-        > = multiplicative_group_of_integers_modulu_n::PublicParameters::new(N2);
+        > = multiplicative_group_of_integers_modulu_n::PublicParameters { modulus: N2 };
 
     const SECP256K1_ORDER_LIMBS: usize = U256::LIMBS;
 
