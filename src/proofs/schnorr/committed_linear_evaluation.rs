@@ -325,8 +325,8 @@ pub type Proof<
     CommitmentScheme,
     ProtocolContext,
 > = schnorr::Proof<
-    SCALAR_LIMBS,
-    SCALAR_LIMBS,
+    WITNESS_SCALAR_LIMBS,
+    PUBLIC_VALUE_SCALAR_LIMBS,
     direct_product::GroupElement<
         WITNESS_SCALAR_LIMBS,
         SCALAR_LIMBS,
