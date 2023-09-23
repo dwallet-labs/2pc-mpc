@@ -7,7 +7,9 @@ use serde::Serialize;
 
 use crate::{
     commitments::HomomorphicCommitmentScheme,
-    group::{self_product, CyclicGroupElement, KnownOrderGroupElement},
+    group,
+    group::{self_product, CyclicGroupElement},
+    proofs,
     proofs::{schnorr, schnorr::Samplable},
 };
 
@@ -23,47 +25,40 @@ use crate::{
 /// In the paper, we have prove (or cited a proof) it for any prime known-order group or for
 /// Paillier groups based on safe-primes; so it is safe to use with a `PrimeOrderGroupElement` or
 /// `PaillierGroupElement`.
-pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> {
-    _scalar_choice: PhantomData<Scalar>,
-    _point_choice: PhantomData<GroupElement>,
+#[derive(Clone)]
+pub struct Language<CommitmentScheme> {
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
 /// The Public Parameters of the Knowledge of Decommitment Schnorr Language.
-#[derive(Debug, PartialEq, Serialize)]
-pub struct PublicParameters<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
-where
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable,
-    GroupElement: CyclicGroupElement
-        + Mul<Scalar, Output = GroupElement>
-        + for<'r> Mul<&'r Scalar, Output = GroupElement>,
-    CommitmentScheme: HomomorphicCommitmentScheme<Scalar, Scalar, GroupElement>,
-{
-    commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
-
-    #[serde(skip_serializing)]
-    _scalar_choice: PhantomData<Scalar>,
+#[derive(Debug, PartialEq, Serialize, Clone)]
+pub struct PublicParameters<CommitmentSchemePublicParameters> {
+    pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
 }
 
-impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
+impl<Scalar, GroupElement, CommitmentScheme>
     schnorr::Language<self_product::GroupElement<2, Scalar>, GroupElement>
-    for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
+    for Language<CommitmentScheme>
 where
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable,
+    Scalar: group::GroupElement + Samplable,
     GroupElement: CyclicGroupElement
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
-    CommitmentScheme: HomomorphicCommitmentScheme<Scalar, Scalar, GroupElement>,
+    CommitmentScheme:
+        HomomorphicCommitmentScheme<self_product::GroupElement<1, Scalar>, Scalar, GroupElement>,
 {
-    type PublicParameters = PublicParameters<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>;
+    type PublicParameters = PublicParameters<CommitmentScheme::PublicParameters>;
     const NAME: &'static str = "Knowledge of Decommitment";
 
     fn group_homomorphism(
         witness: &self_product::GroupElement<2, Scalar>,
         language_public_parameters: &Self::PublicParameters,
-        _witness_space_public_parameters: &self_product::PublicParameters<2, Scalar>,
+        _witness_space_public_parameters: &self_product::PublicParameters<
+            2,
+            Scalar::PublicParameters,
+        >,
         public_value_space_public_parameters: &GroupElement::PublicParameters,
-    ) -> crate::group::Result<GroupElement> {
+    ) -> proofs::Result<GroupElement> {
         let [value, randomness]: &[Scalar; 2] = witness.into();
 
         let commitment_scheme = CommitmentScheme::new(
@@ -71,16 +66,15 @@ where
             public_value_space_public_parameters,
         )?;
 
-        Ok(commitment_scheme.commit(value, randomness))
+        Ok(commitment_scheme.commit(&[value.clone()].into(), randomness))
     }
 }
 
 /// A Knowledge of Decommitment Schnorr Proof.
 #[allow(dead_code)]
-pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme, ProtocolContext> =
-    schnorr::Proof<
-        self_product::GroupElement<2, Scalar>,
-        GroupElement,
-        Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
-        ProtocolContext,
-    >;
+pub type Proof<Scalar, GroupElement, CommitmentScheme, ProtocolContext> = schnorr::Proof<
+    self_product::GroupElement<2, Scalar>,
+    GroupElement,
+    Language<CommitmentScheme>,
+    ProtocolContext,
+>;
