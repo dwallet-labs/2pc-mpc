@@ -6,7 +6,6 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, Wrapping};
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group::{
-        additive_group_of_integers_modulu_n,
         additive_group_of_integers_modulu_n::power_of_two_moduli, self_product, GroupElement,
     },
     proofs::Result,
@@ -39,17 +38,23 @@ pub trait RangeProof<
     >,
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
 {
-    /// Proves that all `witnesses` committed in `commitment` are bounded by their corresponding
-    /// range upper bound in `range_claims`.
+    // TODO: protocol context? needed or not?
+
+    /// Proves in zero-knowledge that all witnesses committed in `commitment` are bounded by their corresponding
+    /// range upper bound in range_claims.
     fn prove(
-        witnesses: [Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS], // TODO: batching?
-        range_claims: [Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS],
-        randomness: &RandomnessSpaceGroupElement,
-        commitment: &CommitmentSpaceGroupElement,
+        witnesses_and_range_claims: Vec<[(power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>, Uint<RANGE_CLAIM_LIMBS>); NUM_RANGE_CLAIMS]>,
+        commitment_randomness: &RandomnessSpaceGroupElement, // TODO: one for all?
+        commitment: &CommitmentSpaceGroupElement, // TODO: one for all?
         rng: &mut impl CryptoRngCore,
     ) -> Result<Self>;
-}
 
-// TODO: actually, additive_group_modulu_n is not what I need here; I need group over
-// Wrapped<Uint<>> and not over DynResidue. As my modulus is 2^n which is not odd so can't use
-// DynResidue, also operations are much cheaper with Uint.
+    /// Verifies that all witnesses committed in `commitment` are bounded by their corresponding
+    /// range upper bound in range_claims.
+    fn verify(
+        &self,
+        range_claims: Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
+        commitment: &CommitmentSpaceGroupElement,
+        rng: &mut impl CryptoRngCore,
+    ) -> Result<()>;
+}
