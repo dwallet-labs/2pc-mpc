@@ -40,7 +40,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     RandomnessSpaceGroupElement: GroupElement + Samplable,
     CiphertextSpaceGroupElement: GroupElement,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
-    From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
+        From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
 {
     /// The public parameters of the encryption scheme.
     ///
@@ -252,7 +252,7 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     RandomnessSpaceGroupElement: GroupElement + Samplable,
     CiphertextSpaceGroupElement: GroupElement,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
-    From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
+        From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
 {
     /// $\Dec(sk, \ct) \to \pt$: Decrypt `ciphertext` using `decryption_key`.
     /// A deterministic algorithm that on input a secret key $sk$ and a ciphertext $\ct \in
@@ -268,8 +268,7 @@ mod tests {
     use rand_core::OsRng;
 
     use crate::{
-        group::{GroupElement, KnownOrderGroupElement, Samplable,
-        },
+        group::{GroupElement, KnownOrderGroupElement, Samplable},
         AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
     };
 
@@ -288,14 +287,13 @@ mod tests {
         randomness_group_public_parameters: RandomnessSpaceGroupElement::PublicParameters,
     ) where
         PlaintextSpaceGroupElement:
-        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement> + std::fmt::Debug,
-        PlaintextSpaceGroupElement::Value:
-        From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
-        RandomnessSpaceGroupElement:
-        GroupElement + Samplable,
+            KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
+        PlaintextSpaceGroupElement: std::fmt::Debug,
+        PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
+        RandomnessSpaceGroupElement: GroupElement + Samplable,
         CiphertextSpaceGroupElement: GroupElement,
         Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
-        From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
+            From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             PlaintextSpaceGroupElement,
@@ -343,16 +341,16 @@ mod tests {
         randomness_group_public_parameters: RandomnessSpaceGroupElement::PublicParameters,
     ) where
         PlaintextSpaceGroupElement:
-        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement> + std::fmt::Debug,
+            KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
+        PlaintextSpaceGroupElement: std::fmt::Debug,
         PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
-        RandomnessSpaceGroupElement:
-        GroupElement + Samplable,
+        RandomnessSpaceGroupElement: GroupElement + Samplable,
         CiphertextSpaceGroupElement: GroupElement + std::fmt::Debug,
         Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
-        From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
+            From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
         EvaluationGroupElement:
-        KnownOrderGroupElement<EVALUATION_GROUP_SCALAR_LIMBS, EvaluationGroupElement> + std::fmt::Debug,
-        EvaluationGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
+            KnownOrderGroupElement<EVALUATION_GROUP_SCALAR_LIMBS, EvaluationGroupElement>,
+        EvaluationGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>> + std::fmt::Debug,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             PlaintextSpaceGroupElement,
@@ -367,30 +365,28 @@ mod tests {
         >,
     {
         let zero: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(0u64)).into();
-        let zero =
-            PlaintextSpaceGroupElement::new(zero.into(), &plaintext_group_public_parameters)
-                .unwrap();
+        let zero = PlaintextSpaceGroupElement::new(zero.into(), &plaintext_group_public_parameters)
+            .unwrap();
 
         let one: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(1u64)).into();
-        let one =
-            PlaintextSpaceGroupElement::new(one.into(), &plaintext_group_public_parameters)
-                .unwrap();
+        let one = PlaintextSpaceGroupElement::new(one.into(), &plaintext_group_public_parameters)
+            .unwrap();
         let two: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(2u64)).into();
-        let two =
-            PlaintextSpaceGroupElement::new(two.into(), &plaintext_group_public_parameters)
-                .unwrap();
+        let two = PlaintextSpaceGroupElement::new(two.into(), &plaintext_group_public_parameters)
+            .unwrap();
         let five: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(5u64)).into();
-        let five =
-            PlaintextSpaceGroupElement::new(five.into(), &plaintext_group_public_parameters)
-                .unwrap();
+        let five = PlaintextSpaceGroupElement::new(five.into(), &plaintext_group_public_parameters)
+            .unwrap();
         let seven: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(7u64)).into();
         let seven =
             PlaintextSpaceGroupElement::new(seven.into(), &plaintext_group_public_parameters)
                 .unwrap();
         let seventy_three: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(73u64)).into();
-        let seventy_three =
-            PlaintextSpaceGroupElement::new(seventy_three.into(), &plaintext_group_public_parameters)
-                .unwrap();
+        let seventy_three = PlaintextSpaceGroupElement::new(
+            seventy_three.into(),
+            &plaintext_group_public_parameters,
+        )
+        .unwrap();
 
         let (_, encrypted_two) = encryption_key
             .encrypt(&two, &randomness_group_public_parameters, &mut OsRng)
@@ -410,20 +406,28 @@ mod tests {
 
         let expected_evaluation_result: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> =
             (&U64::from(1u64 * 5 + 0 * 7 + 73 * 2)).into();
-        let expected_evaluation_result =
-            PlaintextSpaceGroupElement::new(expected_evaluation_result.into(), &plaintext_group_public_parameters)
-                .unwrap();
+        let expected_evaluation_result = PlaintextSpaceGroupElement::new(
+            expected_evaluation_result.into(),
+            &plaintext_group_public_parameters,
+        )
+        .unwrap();
 
         assert_eq!(
             expected_evaluation_result,
             decryption_key.decrypt(&evaluted_ciphertext)
         );
 
-        let (_, _, privately_evaluted_ciphertext): (Uint<MASK_LIMBS>, RandomnessSpaceGroupElement, CiphertextSpaceGroupElement) = encryption_key
+        let (_, _, privately_evaluted_ciphertext): (
+            Uint<MASK_LIMBS>,
+            RandomnessSpaceGroupElement,
+            CiphertextSpaceGroupElement,
+        ) = encryption_key
             .evaluate_circuit_private_linear_combination(
                 &[one, zero, seventy_three],
                 &[encrypted_five, encrypted_seven, encrypted_two],
-                &EvaluationGroupElement::order_from_public_parameters(&evaluation_group_public_parameters),
+                &EvaluationGroupElement::order_from_public_parameters(
+                    &evaluation_group_public_parameters,
+                ),
                 &randomness_group_public_parameters,
                 &mut OsRng,
             )
@@ -438,8 +442,12 @@ mod tests {
         );
 
         assert_eq!(
-            EvaluationGroupElement::from(decryption_key.decrypt(&evaluted_ciphertext).into()),
-            EvaluationGroupElement::from(decryption_key.decrypt(&privately_evaluted_ciphertext).into()),
+            EvaluationGroupElement::from(
+                decryption_key.decrypt(&evaluted_ciphertext).into()
+            ),
+            EvaluationGroupElement::from(
+                decryption_key.decrypt(&privately_evaluted_ciphertext).into()
+            ),
             "decryptions of privately evaluated linear combinations should match straightforward ones modulu the evaluation group order"
         );
     }
