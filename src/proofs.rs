@@ -5,6 +5,7 @@ pub mod schnorr;
 
 use crypto_bigint::{Encoding, Limb, Uint};
 use merlin::Transcript;
+pub use range::RangeProof;
 use serde::Serialize;
 
 use crate::{ahe, group};

@@ -17,12 +17,13 @@ use serde::{Deserialize, Serialize};
 
 use super::{Error, Result, TranscriptProtocol};
 use crate::{
+    commitments::HomomorphicCommitmentScheme,
     group::{
         additive_group_of_integers_modulu_n,
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
         GroupElement, Samplable,
     },
-    ComputationalSecuritySizedNumber,
+    proofs, ComputationalSecuritySizedNumber,
 };
 
 // For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
@@ -83,10 +84,24 @@ pub trait EnhancedLanguage<
     const UNBOUNDED_WITNESS_SCALAR_LIMBS: usize,
     // The upper bound for the scalar size of the associated public-value space group
     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
+    // The upper bound for the scalar size of the non-commitment public-value space group
+    const REMAINING_PUBLIC_VALUE_SCALAR_LIMBS: usize,
+    // The upper bound for the scalar size of the commitment scheme's randomness group
+    const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
+    // The upper bound for the scalar size of the commitment scheme's commitment group
+    const COMMITMENT_SPACE_SCALAR_LIMBS: usize,
     // An element of the witness space $(\HH_\pp, +)$
     UnboundedWitnessSpaceGroupElement,
-    // An element in the associated public-value space $(\GG_\pp, \cdot)$,
-    PublicValueSpaceGroupElement,
+    // An element in the non-commitment associated public-value space $(\GG_\pp, \cdot)$,
+    RemainingPublicValueSpaceGroupElement,
+    // The commitment scheme's randomness group element
+    RandomnessSpaceGroupElement,
+    // The commitment scheme's commitment group element
+    CommitmentSpaceGroupElement,
+    // The commitment scheme used for the range proof
+    RangeProofCommitmentScheme,
+    // The range proof used to prove bounded values are within the range specified in the public parameters
+    RangeProof,
 >: Language<
     WITNESS_SCALAR_LIMBS,
     PUBLIC_VALUE_SCALAR_LIMBS,
@@ -94,13 +109,30 @@ pub trait EnhancedLanguage<
         WITNESS_SCALAR_LIMBS, RANGE_CLAIM_LIMBS, UNBOUNDED_WITNESS_SCALAR_LIMBS,
         self_product::GroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
            power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>>,
-        UnboundedWitnessSpaceGroupElement>, PublicValueSpaceGroupElement>
+        UnboundedWitnessSpaceGroupElement>,
+    direct_product::GroupElement<PUBLIC_VALUE_SCALAR_LIMBS, COMMITMENT_SPACE_SCALAR_LIMBS, REMAINING_PUBLIC_VALUE_SCALAR_LIMBS,
+        CommitmentSpaceGroupElement
+    , RemainingPublicValueSpaceGroupElement>>
     where
  UnboundedWitnessSpaceGroupElement: GroupElement<UNBOUNDED_WITNESS_SCALAR_LIMBS> +
  Samplable<UNBOUNDED_WITNESS_SCALAR_LIMBS>,
- PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+ RemainingPublicValueSpaceGroupElement: GroupElement<REMAINING_PUBLIC_VALUE_SCALAR_LIMBS>,
  Uint<RANGE_CLAIM_LIMBS>: Encoding,
-
+ RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
+ CommitmentSpaceGroupElement: GroupElement<COMMITMENT_SPACE_SCALAR_LIMBS>,
+ RangeProofCommitmentScheme: HomomorphicCommitmentScheme<
+     RANGE_CLAIM_LIMBS,
+     RANDOMNESS_SPACE_SCALAR_LIMBS,
+     COMMITMENT_SPACE_SCALAR_LIMBS,
+     self_product::GroupElement<
+         NUM_RANGE_CLAIMS,
+         RANGE_CLAIM_LIMBS,
+         power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>,
+     >,
+     RandomnessSpaceGroupElement,
+     CommitmentSpaceGroupElement,
+ >,
+RangeProof: proofs::RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, RANDOMNESS_SPACE_SCALAR_LIMBS, COMMITMENT_SPACE_SCALAR_LIMBS, RandomnessSpaceGroupElement, CommitmentSpaceGroupElement, RangeProofCommitmentScheme>
 {
 }
 

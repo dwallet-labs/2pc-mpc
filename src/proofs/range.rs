@@ -16,10 +16,15 @@ pub trait RangeProof<
     const NUM_RANGE_CLAIMS: usize,
     // An upper bound over the range claims
     const RANGE_CLAIM_LIMBS: usize,
+    // The upper bound for the scalar size of the commitment scheme's randomness group
     const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
+    // The upper bound for the scalar size of the commitment scheme's commitment group
     const COMMITMENT_SPACE_SCALAR_LIMBS: usize,
+    // The commitment scheme's randomness group element
     RandomnessSpaceGroupElement,
+    // The commitment scheme's commitment group element
     CommitmentSpaceGroupElement,
+    // The commitment scheme used for the range proof
     CommitmentScheme,
 >: PartialEq + Clone where
     RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
