@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 
 use super::{Error, Result, TranscriptProtocol};
 use crate::{
-    group,
     group::{GroupElement, Samplable},
     ComputationalSecuritySizedNumber,
 };
@@ -34,7 +33,7 @@ pub trait Language<
     WitnessSpaceGroupElement: GroupElement + Samplable,
     // An element in the associated public-value space $(\GG_\pp, \cdot)$,
     PublicValueSpaceGroupElement: GroupElement,
->
+>: Clone
 {
     /// Public parameters for a language family $\pp \gets \Setup(1^\kappa)$
     ///
@@ -44,7 +43,7 @@ pub trait Language<
     /// Group public parameters are encoded separately in
     /// `WitnessSpaceGroupElement::PublicParameters` and
     /// `PublicValueSpaceGroupElement::PublicParameters`.
-    type PublicParameters: Serialize + PartialEq;
+    type PublicParameters: Serialize + PartialEq + Clone;
 
     /// A unique string representing the name of this language; will be inserted to the Fiat-Shamir
     /// transcript.
@@ -57,7 +56,7 @@ pub trait Language<
         language_public_parameters: &Self::PublicParameters,
         witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
         public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
-    ) -> group::Result<PublicValueSpaceGroupElement>;
+    ) -> Result<PublicValueSpaceGroupElement>;
 }
 
 /// An Enhanced Batched Schnorr Zero-Knowledge Proof.
@@ -66,11 +65,11 @@ pub trait Language<
 pub struct Proof<
     WitnessSpaceGroupElement: GroupElement,
     PublicValueSpaceGroupElement: GroupElement,
-    Lang,
+    Lang: Clone,
     // A struct used by the protocol using this proof,
     // used to provide extra necessary context that will parameterize the proof (and thus verifier
     // code) and be inserted to the Fiat-Shamir transcript
-    ProtocolContext,
+    ProtocolContext: Clone,
 > {
     statement_mask: PublicValueSpaceGroupElement::Value,
     response: WitnessSpaceGroupElement::Value,
@@ -83,7 +82,7 @@ impl<
         WitnessSpaceGroupElement: GroupElement + Samplable,
         PublicValueSpaceGroupElement: GroupElement,
         Lang: Language<WitnessSpaceGroupElement, PublicValueSpaceGroupElement>,
-        ProtocolContext: Serialize,
+        ProtocolContext: Clone + Serialize,
     > Proof<WitnessSpaceGroupElement, PublicValueSpaceGroupElement, Lang, ProtocolContext>
 {
     fn new(
@@ -204,7 +203,7 @@ impl<
         if response_statement == reconstructed_response_statement {
             return Ok(());
         }
-        Err(Error::ProofVerificationError)
+        Err(Error::ProofVerification)
     }
 
     fn setup_protocol(

@@ -8,28 +8,22 @@ use serde::Serialize;
 
 use crate::group;
 
-#[derive(thiserror::Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("invalid parameters")]
     InvalidParameters,
 
+    #[error("serialization/deserialization error")]
+    Serialization(#[from] serde_json::Error),
+
     #[error("invalid proof - did not satisfy the verification equation")]
-    ProofVerificationError,
+    ProofVerification,
+
+    #[error("group error")]
+    GroupInstantiation(#[from] group::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
-
-impl From<serde_json::Error> for Error {
-    fn from(_: serde_json::Error) -> Self {
-        Error::InvalidParameters
-    }
-}
-
-impl From<group::Error> for Error {
-    fn from(_: group::Error) -> Self {
-        Error::InvalidParameters
-    }
-}
 
 /// A transcript protocol for fiat-shamir transforms of interactive to non-interactive proofs.
 trait TranscriptProtocol {
