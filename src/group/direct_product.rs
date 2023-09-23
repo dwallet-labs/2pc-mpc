@@ -49,8 +49,7 @@ impl<
 }
 
 /// The public parameters of the Direct Product of the two Groups `FirstGroupElement` and
-/// `SecondGroupElement`. The public parameters of the Direct Product of the two Groups
-/// `FirstGroupElement` and `SecondGroupElement`.
+/// `SecondGroupElement`.
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct PublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters>(
     FirstGroupPublicParameters,
