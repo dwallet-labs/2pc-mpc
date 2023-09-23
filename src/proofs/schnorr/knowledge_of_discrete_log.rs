@@ -14,7 +14,7 @@ use crate::{
 /// Knowledge of Discrete Log Schnorr Language.
 pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
     _scalar_choice: PhantomData<Scalar>,
-    _point_choice: PhantomData<GroupElement>,
+    _group_element_choice: PhantomData<GroupElement>,
 }
 
 /// The Public Parameters of the Knowledge of Discrete Log Schnorr Language.

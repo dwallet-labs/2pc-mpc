@@ -43,7 +43,7 @@ pub struct PublicParameters<const LIMBS: usize>
 where
     Uint<LIMBS>: Encoding,
 {
-    modulus: NonZero<Uint<LIMBS>>,
+    pub modulus: NonZero<Uint<LIMBS>>,
 }
 
 impl<const LIMBS: usize> PublicParameters<LIMBS>
@@ -324,7 +324,7 @@ impl<const LIMBS: usize> KnownOrderGroupElement<LIMBS, Self> for GroupElement<LI
 where
     Uint<LIMBS>: Encoding,
 {
-    fn order(&self) -> Uint<LIMBS> {
-        *self.public_parameters().modulus
+    fn order_from_public_parameters(public_parameters: &Self::PublicParameters) -> Uint<LIMBS> {
+        *public_parameters.modulus
     }
 }

@@ -6,6 +6,7 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use crypto_bigint::{NonZero, Uint, U256};
 use k256::elliptic_curve::{scalar::FromUintUnchecked, Field};
 use serde::{Deserialize, Serialize};
+use subtle::{Choice, ConstantTimeEq};
 
 use crate::{
     group,
@@ -18,8 +19,14 @@ use crate::{
 
 /// A Scalar of the prime field $\mathbb{Z}_p$ over which the secp256k1 prime group is
 /// defined.
-#[derive(PartialEq, Eq, Clone, Debug, Copy)]
+#[derive(PartialEq, Eq, Clone, Debug, Copy, Serialize, Deserialize)]
 pub struct Scalar(pub(super) k256::Scalar);
+
+impl ConstantTimeEq for Scalar {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        self.0.ct_eq(&other.0)
+    }
+}
 
 /// The public parameters of the secp256k1 scalar field.
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
@@ -38,10 +45,10 @@ impl Default for PublicParameters {
 }
 
 impl group::GroupElement for Scalar {
-    type Value = k256::Scalar;
+    type Value = Self;
 
     fn value(&self) -> Self::Value {
-        self.0
+        *self
     }
 
     type PublicParameters = PublicParameters;
@@ -52,7 +59,7 @@ impl group::GroupElement for Scalar {
 
     fn new(value: Self::Value, _public_parameters: &Self::PublicParameters) -> group::Result<Self> {
         // Since `k256::Scalar` assures deserialized values are valid, this is always safe.
-        Ok(Self(value))
+        Ok(value)
     }
 
     fn neutral(&self) -> Self {
@@ -81,6 +88,18 @@ impl<const LIMBS: usize> From<Uint<LIMBS>> for Scalar {
 impl<const LIMBS: usize> From<&Uint<LIMBS>> for Scalar {
     fn from(value: &Uint<LIMBS>) -> Self {
         Self::from(*value)
+    }
+}
+
+impl From<Scalar> for U256 {
+    fn from(value: Scalar) -> Self {
+        value.0.into()
+    }
+}
+
+impl From<&Scalar> for U256 {
+    fn from(value: &Scalar) -> Self {
+        value.0.into()
     }
 }
 
@@ -217,6 +236,12 @@ impl CyclicGroupElement for Scalar {
 
 impl KnownOrderGroupElement<{ U256::LIMBS }, Self> for Scalar {
     fn order(&self) -> Uint<{ U256::LIMBS }> {
+        ORDER
+    }
+
+    fn order_from_public_parameters(
+        _public_parameters: &Self::PublicParameters,
+    ) -> Uint<{ U256::LIMBS }> {
         ORDER
     }
 }

@@ -57,14 +57,14 @@ pub struct PublicParameters<const LIMBS: usize>
 where
     Uint<LIMBS>: Encoding,
 {
-    modulus: Uint<LIMBS>,
+    pub modulus: Uint<LIMBS>,
 }
 
 impl<const LIMBS: usize> PublicParameters<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
-    pub fn new(modulus: Uint<LIMBS>) -> Self {
+    pub const fn new(modulus: Uint<LIMBS>) -> Self {
         Self { modulus }
     }
 }

@@ -3,11 +3,14 @@
 
 use std::ops::{Add, AddAssign, BitAnd, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use crypto_bigint::Uint;
+use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
-use crate::{group, group::GroupElement as _};
+use crate::{
+    group,
+    group::{GroupElement as _, Samplable},
+};
 
 /// An element of the Direct Product of the two Groups `FirstGroupElement` and `SecondGroupElement`.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -15,6 +18,22 @@ pub struct GroupElement<FirstGroupElement, SecondGroupElement>(
     FirstGroupElement,
     SecondGroupElement,
 );
+
+impl<
+        FirstGroupElement: group::GroupElement + Samplable,
+        SecondGroupElement: group::GroupElement + Samplable,
+    > Samplable for GroupElement<FirstGroupElement, SecondGroupElement>
+{
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+    ) -> group::Result<Self> {
+        Ok(Self(
+            FirstGroupElement::sample(rng, &public_parameters.0)?,
+            SecondGroupElement::sample(rng, &public_parameters.1)?,
+        ))
+    }
+}
 
 /// The public parameters of the Direct Product of the two Groups `FirstGroupElement` and
 /// `SecondGroupElement`.
@@ -244,5 +263,72 @@ impl<
 {
     fn mul_assign(&mut self, rhs: &'r Uint<LIMBS>) {
         *self = self.scalar_mul(rhs)
+    }
+}
+
+impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
+    From<GroupElement<FirstGroupElement, SecondGroupElement>>
+    for (FirstGroupElement, SecondGroupElement)
+{
+    fn from(value: GroupElement<FirstGroupElement, SecondGroupElement>) -> Self {
+        (value.0, value.1)
+    }
+}
+
+impl<'r, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
+    From<&'r GroupElement<FirstGroupElement, SecondGroupElement>>
+    for (&'r FirstGroupElement, &'r SecondGroupElement)
+{
+    fn from(value: &'r GroupElement<FirstGroupElement, SecondGroupElement>) -> Self {
+        (&value.0, &value.1)
+    }
+}
+
+impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
+    From<(FirstGroupElement, SecondGroupElement)>
+    for GroupElement<FirstGroupElement, SecondGroupElement>
+{
+    fn from(value: (FirstGroupElement, SecondGroupElement)) -> Self {
+        Self(value.0, value.1)
+    }
+}
+
+impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
+    From<PublicParameters<FirstGroupElement, SecondGroupElement>>
+    for (
+        FirstGroupElement::PublicParameters,
+        SecondGroupElement::PublicParameters,
+    )
+{
+    fn from(value: PublicParameters<FirstGroupElement, SecondGroupElement>) -> Self {
+        (value.0, value.1)
+    }
+}
+
+impl<'r, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
+    From<&'r PublicParameters<FirstGroupElement, SecondGroupElement>>
+    for (
+        &'r FirstGroupElement::PublicParameters,
+        &'r SecondGroupElement::PublicParameters,
+    )
+{
+    fn from(value: &'r PublicParameters<FirstGroupElement, SecondGroupElement>) -> Self {
+        (&value.0, &value.1)
+    }
+}
+
+impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
+    From<(
+        FirstGroupElement::PublicParameters,
+        SecondGroupElement::PublicParameters,
+    )> for PublicParameters<FirstGroupElement, SecondGroupElement>
+{
+    fn from(
+        value: (
+            FirstGroupElement::PublicParameters,
+            SecondGroupElement::PublicParameters,
+        ),
+    ) -> Self {
+        Self(value.0, value.1)
     }
 }

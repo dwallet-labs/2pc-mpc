@@ -24,7 +24,7 @@ use crate::{
 /// `PrimeOrderGroupElement`.
 pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> {
     _scalar_choice: PhantomData<Scalar>,
-    _point_choice: PhantomData<GroupElement>,
+    _group_element_choice: PhantomData<GroupElement>,
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
