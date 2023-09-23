@@ -64,7 +64,7 @@ pub struct PublicParameters<
     EncryptionKey,
 > where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
-    Scalar: From<Uint<SCALAR_LIMBS>>,
+    Scalar::Value: From<Uint<SCALAR_LIMBS>>,
     Uint<SCALAR_LIMBS>: From<Scalar> + for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
@@ -73,7 +73,6 @@ pub struct PublicParameters<
         + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: group::GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<
-        MASK_LIMBS,
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
@@ -134,7 +133,7 @@ impl<
     >
 where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
-    Scalar: From<Uint<SCALAR_LIMBS>>,
+    Scalar::Value: From<Uint<SCALAR_LIMBS>>,
     Uint<SCALAR_LIMBS>: From<Scalar> + for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
@@ -143,7 +142,6 @@ where
         + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: group::GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<
-        MASK_LIMBS,
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,

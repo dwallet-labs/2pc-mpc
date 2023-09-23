@@ -5,7 +5,10 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, Wrapping};
 
 use crate::{
     commitments::HomomorphicCommitmentScheme,
-    group::{additive_group_of_integers_modulu_n, self_product, GroupElement},
+    group::{
+        additive_group_of_integers_modulu_n,
+        additive_group_of_integers_modulu_n::power_of_two_moduli, self_product, GroupElement,
+    },
     proofs::Result,
 };
 
@@ -29,7 +32,7 @@ pub trait RangeProof<
         self_product::GroupElement<
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
-            Wrapping<Uint<RANGE_CLAIM_LIMBS>>,
+            power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>,
         >,
         RandomnessSpaceGroupElement,
         CommitmentSpaceGroupElement,

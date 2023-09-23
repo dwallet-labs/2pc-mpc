@@ -3,15 +3,16 @@
 
 use std::{marker::PhantomData, ops::Mul};
 
-use crypto_bigint::{ConcatMixed, Encoding, Uint, Wrapping};
+use crypto_bigint::{ConcatMixed, Encoding, Uint};
 use serde::Serialize;
 
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group,
     group::{
-        additive_group_of_integers_modulu_n, direct_product, self_product, CyclicGroupElement,
-        KnownOrderGroupElement, Samplable,
+        additive_group_of_integers_modulu_n,
+        additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
+        CyclicGroupElement, KnownOrderGroupElement, Samplable,
     },
     helpers::{const_generic_array_serialization, flat_map_results},
     proofs,
@@ -83,7 +84,7 @@ pub struct PublicParameters<
     CommitmentScheme,
 > where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
-    Scalar: From<Uint<SCALAR_LIMBS>>,
+    Scalar::Value: From<Uint<SCALAR_LIMBS>>,
     Uint<SCALAR_LIMBS>: From<Scalar> + for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
@@ -92,7 +93,6 @@ pub struct PublicParameters<
         + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
     CiphertextSpaceGroupElement: group::GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<
-        MASK_LIMBS,
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
@@ -144,7 +144,7 @@ impl<
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             self_product::GroupElement<DIMENSION, SCALAR_LIMBS, Scalar>,
             Scalar,
-            Wrapping<Uint<MASK_LIMBS>>,
+            power_of_two_moduli::GroupElement<MASK_LIMBS>,
             RandomnessSpaceGroupElement,
         >,
         direct_product::GroupElement<
@@ -172,7 +172,7 @@ impl<
     >
 where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar> + Samplable<SCALAR_LIMBS>,
-    Scalar: From<Uint<SCALAR_LIMBS>>,
+    Scalar::Value: From<Uint<SCALAR_LIMBS>>,
     Uint<SCALAR_LIMBS>: From<Scalar> + for<'a> From<&'a Scalar>,
     GroupElement: CyclicGroupElement<SCALAR_LIMBS>
         + Mul<Scalar, Output = GroupElement>
@@ -186,7 +186,6 @@ where
     Uint<CIPHERTEXT_SPACE_SCALAR_LIMBS>:
         ConcatMixed<Uint<SCALAR_LIMBS>, MixedOutput = Uint<PUBLIC_VALUE_SCALAR_LIMBS>>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<
-        MASK_LIMBS,
         SCALAR_LIMBS,
         RANDOMNESS_SPACE_SCALAR_LIMBS,
         CIPHERTEXT_SPACE_SCALAR_LIMBS,
@@ -231,7 +230,7 @@ where
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             self_product::GroupElement<DIMENSION, SCALAR_LIMBS, Scalar>,
             Scalar,
-            Wrapping<Uint<MASK_LIMBS>>,
+            power_of_two_moduli::GroupElement<MASK_LIMBS>,
             RandomnessSpaceGroupElement,
         >,
         language_public_parameters: &Self::PublicParameters,
@@ -245,7 +244,7 @@ where
             RANDOMNESS_SPACE_SCALAR_LIMBS,
             self_product::GroupElement<DIMENSION, SCALAR_LIMBS, Scalar>,
             Scalar,
-           Wrapping<Uint<MASK_LIMBS>>,
+            power_of_two_moduli::GroupElement<MASK_LIMBS>,
             RandomnessSpaceGroupElement,
         > as group::GroupElement<WITNESS_SCALAR_LIMBS>>::PublicParameters,
         public_value_space_public_parameters: &direct_product::PublicParameters<
@@ -269,6 +268,9 @@ where
         let (_, scalar_group_public_parameters, _, randomness_group_public_parameters) =
             witness_space_public_parameters.into();
 
+        let scalar_group_order =
+            Scalar::order_from_public_parameters(&scalar_group_public_parameters);
+
         let (ciphertext_group_public_parameters, group_public_parameters) =
             public_value_space_public_parameters.into();
 
@@ -290,10 +292,11 @@ where
             }))?;
 
         Ok((
-            encryption_key.evaluate_linear_combination_with_randomness(
+            encryption_key.evaluate_circuit_private_linear_combination_with_randomness(
                 coefficients.into(),
                 &ciphertexts,
-                &mask.0,
+                &scalar_group_order,
+                &mask.into(),
                 encryption_randomness,
             )?,
             commitment_scheme.commit(coefficients, commitment_randomness),

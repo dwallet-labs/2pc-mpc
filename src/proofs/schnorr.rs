@@ -18,7 +18,9 @@ use serde::{Deserialize, Serialize};
 use super::{Error, Result, TranscriptProtocol};
 use crate::{
     group::{
-        additive_group_of_integers_modulu_n, direct_product, self_product, GroupElement, Samplable,
+        additive_group_of_integers_modulu_n,
+        additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
+        GroupElement, Samplable,
     },
     ComputationalSecuritySizedNumber,
 };
@@ -91,7 +93,7 @@ pub trait EnhancedLanguage<
     direct_product::GroupElement<
         WITNESS_SCALAR_LIMBS, RANGE_CLAIM_LIMBS, UNBOUNDED_WITNESS_SCALAR_LIMBS,
         self_product::GroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
-           Wrapping<Uint<RANGE_CLAIM_LIMBS>>>,
+           power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>>,
         UnboundedWitnessSpaceGroupElement>, PublicValueSpaceGroupElement>
     where
  UnboundedWitnessSpaceGroupElement: GroupElement<UNBOUNDED_WITNESS_SCALAR_LIMBS> +
