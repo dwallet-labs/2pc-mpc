@@ -1,35 +1,23 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{marker::PhantomData, ops::Mul};
+use std::ops::Mul;
 
 use serde::Serialize;
 
 use crate::{
-    group,
-    group::BoundedGroupElement,
+    group, proofs,
     proofs::{schnorr, schnorr::Samplable},
 };
 
 /// Knowledge of Discrete Log Schnorr Language.
-pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
-    _scalar_choice: PhantomData<Scalar>,
-    _group_element_choice: PhantomData<GroupElement>,
-}
+#[derive(Clone)]
+pub struct Language {}
 
 /// The Public Parameters of the Knowledge of Discrete Log Schnorr Language.
-#[derive(Debug, PartialEq, Serialize)]
-pub struct PublicParameters<const SCALAR_LIMBS: usize, Scalar, GroupElement>
-where
-    Scalar: BoundedGroupElement<SCALAR_LIMBS> + Samplable,
-    GroupElement: BoundedGroupElement<SCALAR_LIMBS>
-        + Mul<Scalar, Output = GroupElement>
-        + for<'r> Mul<&'r Scalar, Output = GroupElement>,
-{
-    generator: GroupElement::Value,
-
-    #[serde(skip_serializing)]
-    _scalar_choice: PhantomData<Scalar>,
+#[derive(Debug, PartialEq, Serialize, Clone)]
+pub struct PublicParameters<GroupElementValue> {
+    pub generator: GroupElementValue,
 }
 
 /// Knowledge of Discrete Log Schnorr Language.
@@ -43,15 +31,14 @@ where
 ///
 /// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
 /// `PrimeOrderGroupElement`.
-impl<const SCALAR_LIMBS: usize, Scalar, GroupElement> schnorr::Language<Scalar, GroupElement>
-    for Language<SCALAR_LIMBS, Scalar, GroupElement>
+impl<Scalar, GroupElement> schnorr::Language<Scalar, GroupElement> for Language
 where
-    Scalar: BoundedGroupElement<SCALAR_LIMBS> + Samplable,
-    GroupElement: BoundedGroupElement<SCALAR_LIMBS>
+    Scalar: group::GroupElement + Samplable,
+    GroupElement: group::GroupElement
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
 {
-    type PublicParameters = PublicParameters<SCALAR_LIMBS, Scalar, GroupElement>;
+    type PublicParameters = PublicParameters<GroupElement::Value>;
     const NAME: &'static str = "Knowledge of the Discrete Log";
 
     fn group_homomorphism(
@@ -59,7 +46,7 @@ where
         language_public_parameters: &Self::PublicParameters,
         _witness_space_public_parameters: &Scalar::PublicParameters,
         public_value_space_public_parameters: &GroupElement::PublicParameters,
-    ) -> group::Result<GroupElement> {
+    ) -> proofs::Result<GroupElement> {
         let generator = GroupElement::new(
             language_public_parameters.generator.clone(),
             public_value_space_public_parameters,
@@ -71,5 +58,4 @@ where
 
 /// A Knowledge of Discrete Log Schnorr Proof.
 #[allow(dead_code)]
-pub type Proof<const SCALAR_LIMBS: usize, S, G, ProtocolContext> =
-    schnorr::Proof<S, G, Language<SCALAR_LIMBS, S, G>, ProtocolContext>;
+pub type Proof<S, G, ProtocolContext> = schnorr::Proof<S, G, Language, ProtocolContext>;

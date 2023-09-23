@@ -43,9 +43,9 @@ where
 
 /// The public parameters of the Self Product of the Group `G` by Itself.
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct PublicParameters<const N: usize, G: group::GroupElement> {
-    pub(crate) public_parameters: G::PublicParameters,
-    size: usize,
+pub struct PublicParameters<const N: usize, PP> {
+    pub public_parameters: PP,
+    pub size: usize,
 }
 
 /// The value of the Self Product of the Group `G` by Itself.
@@ -75,7 +75,7 @@ impl<const N: usize, G: group::GroupElement> group::GroupElement for GroupElemen
         Value(self.0.clone().map(|element| element.value()))
     }
 
-    type PublicParameters = PublicParameters<N, G>;
+    type PublicParameters = PublicParameters<N, G::PublicParameters>;
 
     fn public_parameters(&self) -> Self::PublicParameters {
         // in [`Self::new()`] we used the same public parameters for all elements, so we just pick

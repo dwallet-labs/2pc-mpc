@@ -13,11 +13,11 @@ use crate::{
 };
 
 /// The Public Parameters of a Pedersen Commitment
-#[derive(PartialEq, Clone, Serialize, Deserialize)]
-pub struct PublicParameters<const BATCH_SIZE: usize, GroupElement: CyclicGroupElement> {
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct PublicParameters<const BATCH_SIZE: usize, GroupElementValue> {
     #[serde(with = "const_generic_array_serialization")]
-    message_generators: [GroupElement::Value; BATCH_SIZE],
-    randomness_generator: GroupElement::Value,
+    pub message_generators: [GroupElementValue; BATCH_SIZE],
+    pub randomness_generator: GroupElementValue,
 }
 
 /// A Batched Pedersen Commitment
@@ -44,7 +44,7 @@ where
         + Mul<Scalar, Output = GroupElement>
         + for<'r> Mul<&'r Scalar, Output = GroupElement>,
 {
-    type PublicParameters = PublicParameters<BATCH_SIZE, GroupElement>;
+    type PublicParameters = PublicParameters<BATCH_SIZE, GroupElement::Value>;
 
     fn public_parameters(&self) -> Self::PublicParameters {
         Self::PublicParameters {
