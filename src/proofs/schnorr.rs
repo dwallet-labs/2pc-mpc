@@ -71,45 +71,24 @@ pub trait Language<
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.
 /// As defined in Appendix B. Schnorr Protocols in the paper.
 pub trait EnhancedLanguage<
-    // The upper bound for the scalar size of the witness group
-    const WITNESS_SCALAR_LIMBS: usize,
     // The number of witnesses with range claims
     const NUM_RANGE_CLAIMS: usize,
     // An upper bound over the range claims
     const RANGE_CLAIM_LIMBS: usize,
-    // The upper bound for the scalar size of the non-range bounded witness group
-    const UNBOUNDED_WITNESS_SCALAR_LIMBS: usize,
-    // The upper bound for the scalar size of the associated public-value space group
-    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-    // The upper bound for the scalar size of the non-commitment public-value space group
-    const REMAINING_PUBLIC_VALUE_SCALAR_LIMBS: usize,
-    // The upper bound for the scalar size of the commitment scheme's randomness group
-    const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-    // The upper bound for the scalar size of the commitment scheme's commitment group
-    const COMMITMENT_SPACE_SCALAR_LIMBS: usize,
     // An element of the witness space $(\HH_\pp, +)$
-    UnboundedWitnessSpaceGroupElement,
+    UnboundedWitnessSpaceGroupElement: GroupElement,
     // An element in the non-commitment associated public-value space $(\GG_\pp, \cdot)$,
-    RemainingPublicValueSpaceGroupElement,
-    // The commitment scheme's randomness group element
-    RandomnessSpaceGroupElement,
-    // The commitment scheme's commitment group element
-    CommitmentSpaceGroupElement,
-    // The commitment scheme used for the range proof
-    RangeProofCommitmentScheme,
+    RemainingPublicValueSpaceGroupElement: GroupElement,
     // The range proof used to prove bounded values are within the range specified in the public parameters
-    RangeProof,
+    RangeProof: proofs::RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>,
 >: Language<
-    WITNESS_SCALAR_LIMBS,
-    PUBLIC_VALUE_SCALAR_LIMBS,
     direct_product::GroupElement<
-        WITNESS_SCALAR_LIMBS, RANGE_CLAIM_LIMBS, UNBOUNDED_WITNESS_SCALAR_LIMBS,
-        self_product::GroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
+        self_product::GroupElement<NUM_RANGE_CLAIMS,
             power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>>,
         UnboundedWitnessSpaceGroupElement>,
-    direct_product::GroupElement<PUBLIC_VALUE_SCALAR_LIMBS, COMMITMENT_SPACE_SCALAR_LIMBS, REMAINING_PUBLIC_VALUE_SCALAR_LIMBS,
-        CommitmentSpaceGroupElement
-        , RemainingPublicValueSpaceGroupElement>>
+    direct_product::GroupElement<
+        RangeProof::CommitmentScheme,
+         RemainingPublicValueSpaceGroupElement>>
     where
         UnboundedWitnessSpaceGroupElement: GroupElement<UNBOUNDED_WITNESS_SCALAR_LIMBS> +
         Samplable<UNBOUNDED_WITNESS_SCALAR_LIMBS>,
