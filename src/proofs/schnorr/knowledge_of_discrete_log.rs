@@ -33,10 +33,12 @@ pub struct PublicParameters<GroupElementValue> {
 /// `PrimeOrderGroupElement`.
 impl<Scalar, GroupElement> schnorr::Language<Scalar, GroupElement> for Language
 where
-    Scalar: group::GroupElement + Samplable,
-    GroupElement: group::GroupElement
-        + Mul<Scalar, Output = GroupElement>
-        + for<'r> Mul<&'r Scalar, Output = GroupElement>,
+    Scalar: group::GroupElement
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy,
+    GroupElement: group::GroupElement,
 {
     type PublicParameters = PublicParameters<GroupElement::Value>;
     const NAME: &'static str = "Knowledge of the Discrete Log";
@@ -52,7 +54,7 @@ where
             public_value_space_public_parameters,
         )?;
 
-        Ok(generator * witness)
+        Ok(*witness * generator)
     }
 }
 

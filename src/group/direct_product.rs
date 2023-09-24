@@ -1,7 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ops::{Add, AddAssign, BitAnd, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, BitAnd, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
@@ -275,29 +275,6 @@ impl<
 
     fn mul(self, rhs: &'r Uint<LIMBS>) -> Self::Output {
         self.scalar_mul(rhs)
-    }
-}
-
-impl<
-        const LIMBS: usize,
-        FirstGroupElement: group::GroupElement,
-        SecondGroupElement: group::GroupElement,
-    > MulAssign<Uint<LIMBS>> for GroupElement<FirstGroupElement, SecondGroupElement>
-{
-    fn mul_assign(&mut self, rhs: Uint<LIMBS>) {
-        *self = self.scalar_mul(&rhs)
-    }
-}
-
-impl<
-        'r,
-        const LIMBS: usize,
-        FirstGroupElement: group::GroupElement,
-        SecondGroupElement: group::GroupElement,
-    > MulAssign<&'r Uint<LIMBS>> for GroupElement<FirstGroupElement, SecondGroupElement>
-{
-    fn mul_assign(&mut self, rhs: &'r Uint<LIMBS>) {
-        *self = self.scalar_mul(rhs)
     }
 }
 
