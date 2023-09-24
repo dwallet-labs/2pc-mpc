@@ -18,7 +18,7 @@ use crate::{
 };
 
 /// An Encryption Key of the Paillier Additively Homomorphic Encryption Scheme.
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct EncryptionKey(tiresias::EncryptionKey);
 
 /// An Decryption Key of the Paillier Additively Homomorphic Encryption Scheme.
@@ -111,7 +111,10 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
     }
 }
 
-impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for DecryptionKey {
+impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>
+    for DecryptionKey
+{
+    // todo: new()
     fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextGroupElement {
         PlaintextGroupElement::new(
             self.0.decrypt(&ciphertext.into()),
@@ -124,6 +127,12 @@ impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Decryp
 impl From<tiresias::DecryptionKey> for DecryptionKey {
     fn from(value: tiresias::DecryptionKey) -> Self {
         Self(value)
+    }
+}
+
+impl Into<EncryptionKey> for DecryptionKey {
+    fn into(self) -> EncryptionKey {
+        EncryptionKey(self.0.encryption_key)
     }
 }
 
