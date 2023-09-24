@@ -1,7 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 
 use crypto_bigint::{Uint, U256};
 use k256::{
@@ -23,7 +23,7 @@ use crate::{
 
 /// An element of the secp256k1 prime group.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub struct GroupElement(ProjectivePoint);
+pub struct GroupElement(pub(super) ProjectivePoint);
 
 /// The public parameters of the secp256k1 group.
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
@@ -90,7 +90,7 @@ impl group::GroupElement for GroupElement {
     }
 
     fn scalar_mul<const LIMBS: usize>(&self, scalar: &Uint<LIMBS>) -> Self {
-        self * scalar
+        Scalar::from(scalar) * self
     }
 
     fn double(&self) -> Self {
@@ -162,94 +162,6 @@ impl<'r> SubAssign<&'r Self> for GroupElement {
     }
 }
 
-impl Mul<Scalar> for GroupElement {
-    type Output = Self;
-
-    fn mul(self, rhs: Scalar) -> Self::Output {
-        Self(self.0.mul(rhs.0))
-    }
-}
-
-impl<'r> Mul<&'r Scalar> for GroupElement {
-    type Output = Self;
-
-    fn mul(self, rhs: &'r Scalar) -> Self::Output {
-        Self(self.0.mul(rhs.0))
-    }
-}
-
-impl MulAssign<Scalar> for GroupElement {
-    fn mul_assign(&mut self, rhs: Scalar) {
-        self.0.mul_assign(rhs.0)
-    }
-}
-
-impl<'r> MulAssign<&'r Scalar> for GroupElement {
-    fn mul_assign(&mut self, rhs: &'r Scalar) {
-        self.0.mul_assign(rhs.0)
-    }
-}
-
-impl<'r> Mul<Scalar> for &'r GroupElement {
-    type Output = GroupElement;
-
-    fn mul(self, rhs: Scalar) -> Self::Output {
-        GroupElement(self.0.mul(rhs.0))
-    }
-}
-
-impl<'r> Mul<&'r Scalar> for &'r GroupElement {
-    type Output = GroupElement;
-
-    fn mul(self, rhs: &'r Scalar) -> Self::Output {
-        GroupElement(self.0.mul(rhs.0))
-    }
-}
-
-impl<const LIMBS: usize> Mul<Uint<LIMBS>> for GroupElement {
-    type Output = Self;
-
-    fn mul(self, rhs: Uint<LIMBS>) -> Self::Output {
-        self * Scalar::from(rhs)
-    }
-}
-
-impl<'r, const LIMBS: usize> Mul<&'r Uint<LIMBS>> for GroupElement {
-    type Output = Self;
-
-    fn mul(self, rhs: &'r Uint<LIMBS>) -> Self::Output {
-        self * Scalar::from(rhs)
-    }
-}
-
-impl<'r, const LIMBS: usize> Mul<Uint<LIMBS>> for &'r GroupElement {
-    type Output = GroupElement;
-
-    fn mul(self, rhs: Uint<LIMBS>) -> Self::Output {
-        self * Scalar::from(rhs)
-    }
-}
-
-impl<'r, const LIMBS: usize> Mul<&'r Uint<LIMBS>> for &'r GroupElement {
-    type Output = GroupElement;
-
-    fn mul(self, rhs: &'r Uint<LIMBS>) -> Self::Output {
-        self * Scalar::from(rhs)
-    }
-}
-
-impl<const LIMBS: usize> MulAssign<Uint<LIMBS>> for GroupElement {
-    fn mul_assign(&mut self, rhs: Uint<LIMBS>) {
-        *self = *self * Scalar::from(rhs)
-    }
-}
-
-impl<'r, const LIMBS: usize> MulAssign<&'r Uint<LIMBS>> for GroupElement {
-    fn mul_assign(&mut self, rhs: &'r Uint<LIMBS>) {
-        *self = *self * Scalar::from(rhs)
-    }
-}
-
 impl MulByGenerator<U256> for GroupElement {
     fn mul_by_generator(&self, scalar: U256) -> Self {
         self.mul_by_generator(Scalar::from(scalar))
@@ -270,7 +182,9 @@ impl CyclicGroupElement for GroupElement {
 
 impl BoundedGroupElement<{ U256::LIMBS }> for GroupElement {}
 
-impl KnownOrderGroupElement<{ U256::LIMBS }, Scalar> for GroupElement {
+impl KnownOrderGroupElement<{ U256::LIMBS }> for GroupElement {
+    type Scalar = Scalar;
+
     fn order(&self) -> Uint<{ U256::LIMBS }> {
         ORDER
     }
@@ -296,4 +210,4 @@ impl<'r> MulByGenerator<&'r Scalar> for GroupElement {
     }
 }
 
-impl PrimeGroupElement<{ U256::LIMBS }, Scalar> for GroupElement {}
+impl PrimeGroupElement<{ U256::LIMBS }> for GroupElement {}

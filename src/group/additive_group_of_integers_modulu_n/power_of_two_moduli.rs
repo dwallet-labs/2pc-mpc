@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, NonZero, Random, Uint, Wrapping, Zero};
 use serde::{Deserialize, Serialize};
@@ -180,18 +180,6 @@ impl<'r, const LIMBS: usize> Mul<&'r Self> for GroupElement<LIMBS> {
     }
 }
 
-impl<const LIMBS: usize> MulAssign<Self> for GroupElement<LIMBS> {
-    fn mul_assign(&mut self, rhs: Self) {
-        self.0.mul_assign(rhs.0)
-    }
-}
-
-impl<'r, const LIMBS: usize> MulAssign<&'r Self> for GroupElement<LIMBS> {
-    fn mul_assign(&mut self, rhs: &'r Self) {
-        self.0.mul_assign(rhs.0)
-    }
-}
-
 impl<'r, const LIMBS: usize> Mul<Self> for &'r GroupElement<LIMBS> {
     type Output = GroupElement<LIMBS>;
 
@@ -252,24 +240,6 @@ where
     }
 }
 
-impl<const LIMBS: usize> MulAssign<Uint<LIMBS>> for GroupElement<LIMBS>
-where
-    Uint<LIMBS>: Encoding,
-{
-    fn mul_assign(&mut self, rhs: Uint<LIMBS>) {
-        *self = self.scalar_mul(&rhs)
-    }
-}
-
-impl<'r, const LIMBS: usize> MulAssign<&'r Uint<LIMBS>> for GroupElement<LIMBS>
-where
-    Uint<LIMBS>: Encoding,
-{
-    fn mul_assign(&mut self, rhs: &'r Uint<LIMBS>) {
-        *self = self.scalar_mul(rhs)
-    }
-}
-
 impl<const LIMBS: usize> From<GroupElement<LIMBS>> for Uint<LIMBS> {
     fn from(value: GroupElement<LIMBS>) -> Self {
         value.0 .0
@@ -298,6 +268,7 @@ impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> wher
     Uint<LIMBS>: Encoding
 {
 }
+
 impl<const LIMBS: usize> CyclicGroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,

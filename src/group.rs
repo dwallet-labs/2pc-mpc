@@ -1,16 +1,18 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
+
+use crypto_bigint::{rand_core::CryptoRngCore, Uint};
+use serde::{Deserialize, Serialize};
+use subtle::{Choice, ConstantTimeEq};
+
 pub mod direct_product;
 
 pub mod secp256k1;
 pub mod self_product;
 
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 pub mod paillier;
-use crypto_bigint::{rand_core::CryptoRngCore, Uint};
-use serde::{Deserialize, Serialize};
-use subtle::{Choice, ConstantTimeEq};
 
 pub mod additive_group_of_integers_modulu_n;
 pub mod multiplicative_group_of_integers_modulu_n;
@@ -115,6 +117,8 @@ pub trait GroupElement:
     fn double(&self) -> Self;
 }
 
+pub type PublicParameters<G> = <G as GroupElement>::PublicParameters;
+
 /// An element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in additive
 /// notation.
 pub trait BoundedGroupElement<const SCALAR_LIMBS: usize>: GroupElement {}
@@ -135,16 +139,15 @@ pub trait CyclicGroupElement: GroupElement {
 }
 
 /// An element of a known-order abelian group, in additive notation.
-pub trait KnownOrderGroupElement<
-    const SCALAR_LIMBS: usize,
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar>,
->:
+pub trait KnownOrderGroupElement<const SCALAR_LIMBS: usize>:
     BoundedGroupElement<SCALAR_LIMBS>
-    + Mul<Scalar, Output = Self>
-    + for<'r> Mul<&'r Scalar, Output = Self>
-    + MulAssign<Scalar>
-    + for<'r> MulAssign<&'r Scalar>
 {
+    type Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar = Self::Scalar>
+        + Mul<Self, Output = Self>
+        + for<'r> Mul<&'r Self, Output = Self>
+        + Samplable
+        + Copy;
+
     fn order(&self) -> Uint<SCALAR_LIMBS> {
         Self::order_from_public_parameters(&self.public_parameters())
     }
@@ -154,17 +157,16 @@ pub trait KnownOrderGroupElement<
     ) -> Uint<SCALAR_LIMBS>;
 }
 
+pub type Scalar<G, const SCALAR_LIMBS: usize> = <G as KnownOrderGroupElement<SCALAR_LIMBS>>::Scalar;
+
 /// A marker trait for elements of a (known) prime-order group.
 /// Any prime-order group is also cyclic.
 /// In additive notation.
-pub trait PrimeGroupElement<
-    const SCALAR_LIMBS: usize,
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar>,
->:
-    KnownOrderGroupElement<SCALAR_LIMBS, Scalar>
+pub trait PrimeGroupElement<const SCALAR_LIMBS: usize>:
+    KnownOrderGroupElement<SCALAR_LIMBS>
     + CyclicGroupElement
-    + MulByGenerator<Scalar>
-    + for<'r> MulByGenerator<&'r Scalar>
+    + MulByGenerator<Self::Scalar>
+    + for<'r> MulByGenerator<&'r Self::Scalar>
 {
 }
 

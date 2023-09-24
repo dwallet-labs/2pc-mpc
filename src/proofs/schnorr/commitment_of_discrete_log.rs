@@ -42,12 +42,17 @@ impl<Scalar, GroupElement, CommitmentScheme>
         self_product::GroupElement<2, GroupElement>,
     > for Language<CommitmentScheme>
 where
-    Scalar: group::GroupElement + Samplable,
-    GroupElement: CyclicGroupElement
-        + Mul<Scalar, Output = GroupElement>
-        + for<'r> Mul<&'r Scalar, Output = GroupElement>,
-    CommitmentScheme:
-        HomomorphicCommitmentScheme<self_product::GroupElement<1, Scalar>, Scalar, GroupElement>,
+    Scalar: group::GroupElement
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy,
+    GroupElement: CyclicGroupElement,
+    CommitmentScheme: HomomorphicCommitmentScheme<
+        MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+        RandomnessSpaceGroupElement = Scalar,
+        CommitmentSpaceGroupElement = GroupElement,
+    >,
 {
     type PublicParameters =
         PublicParameters<GroupElement::Value, CommitmentScheme::PublicParameters>;
@@ -78,8 +83,8 @@ where
         )?;
 
         Ok([
-            commitment_scheme.commit(&[value.clone()].into(), randomness),
-            base * value,
+            commitment_scheme.commit(&[*value].into(), randomness),
+            *value * base,
         ]
         .into())
     }
