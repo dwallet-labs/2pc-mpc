@@ -57,7 +57,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
     /// Returns the public parameters of this encryption scheme.
     fn public_parameters(&self) -> Self::PublicParameters;
 
-    /// Instantiate the encryption scheme from the public parameters of the encryption scheme,
+    /// Instantiate the encryption key from the public parameters of the encryption scheme,
     /// plaintext, randomness and ciphertext groups.
     fn new(
         encryption_scheme_public_parameters: &Self::PublicParameters,
@@ -248,6 +248,24 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
 >: Into<EncryptionKey> + Clone + PartialEq
 {
+    type Secret;
+
+    /// Instantiate the decryption key from the public parameters of the encryption scheme,
+    /// plaintext, randomness, ciphertext groups and the secret.
+    fn new(
+        encryption_scheme_public_parameters: &EncryptionKey::PublicParameters,
+        plaintext_group_public_parameters: &PublicParameters<
+            EncryptionKey::PlaintextSpaceGroupElement,
+        >,
+        randomness_group_public_parameters: &PublicParameters<
+            EncryptionKey::RandomnessSpaceGroupElement,
+        >,
+        ciphertext_group_public_parameters: &PublicParameters<
+            EncryptionKey::CiphertextSpaceGroupElement,
+        >,
+        secret: Self::Secret,
+    ) -> Result<Self>;
+
     /// $\Dec(sk, \ct) \to \pt$: Decrypt `ciphertext` using `decryption_key`.
     /// A deterministic algorithm that on input a secret key $sk$ and a ciphertext $\ct \in
     /// \calC_{pk}$ outputs a plaintext $\pt \in \calP_{pk}$.
