@@ -31,14 +31,11 @@ pub const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize = PaillierModulusSizedNumber::LIM
 
 /// Emulate a circuit-privacy conserving additively homomorphic encryption with
 /// `PlaintextGroupElement` as the plaintext group using the Paillier encryption scheme.
-impl
-    AdditivelyHomomorphicEncryptionKey<
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        PlaintextGroupElement,
-        RandomnessGroupElement,
-        CiphertextGroupElement,
-    > for EncryptionKey
-{
+impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for EncryptionKey {
+    type PlaintextSpaceGroupElement = PlaintextGroupElement;
+    type RandomnessSpaceGroupElement = RandomnessGroupElement;
+    type CiphertextSpaceGroupElement = CiphertextGroupElement;
+
     type PublicParameters = ();
 
     fn public_parameters(&self) -> Self::PublicParameters {
@@ -114,14 +111,7 @@ impl
     }
 }
 
-impl
-    AdditivelyHomomorphicDecryptionKey<
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        PlaintextGroupElement,
-        RandomnessGroupElement,
-        CiphertextGroupElement,
-    > for DecryptionKey
-{
+impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for DecryptionKey {
     fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextGroupElement {
         PlaintextGroupElement::new(
             self.0.decrypt(&ciphertext.into()),
