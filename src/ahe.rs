@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
-    group::{GroupElement, KnownOrderGroupElement, PublicParameters, Samplable},
+    group::{GroupElement, KnownOrderGroupElement, Samplable},
 };
 
 /// An error in encryption key instantiation [`AdditivelyHomomorphicEncryptionKey::new()`]
@@ -27,6 +27,19 @@ pub enum Error {
 /// The Result of the `new()` operation of types implementing the
 /// `AdditivelyHomomorphicEncryptionKey` trait
 pub type Result<T> = std::result::Result<T, Error>;
+
+pub type PlaintextSpaceGroupElement<E, const PLAINTEXT_SPACE_SCALAR_LIMBS: usize> = <
+E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
+>::PlaintextSpaceGroupElement;
+
+pub type RandomnessSpaceGroupElement<E, const PLAINTEXT_SPACE_SCALAR_LIMBS: usize> = <
+E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
+>::RandomnessSpaceGroupElement;
+pub type CiphertextSpaceGroupElement<E, const PLAINTEXT_SPACE_SCALAR_LIMBS: usize> = <
+E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
+>::CiphertextSpaceGroupElement;
+pub type PublicParameters<E, const PLAINTEXT_SPACE_SCALAR_LIMBS: usize> =
+    <E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::PublicParameters;
 
 /// An Encryption Key of an Additively Homomorphic Encryption scheme.
 pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize>:
@@ -61,9 +74,15 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
     /// plaintext, randomness and ciphertext groups.
     fn new(
         encryption_scheme_public_parameters: &Self::PublicParameters,
-        plaintext_group_public_parameters: &PublicParameters<Self::PlaintextSpaceGroupElement>,
-        randomness_group_public_parameters: &PublicParameters<Self::RandomnessSpaceGroupElement>,
-        ciphertext_group_public_parameters: &PublicParameters<Self::CiphertextSpaceGroupElement>,
+        plaintext_group_public_parameters: &group::PublicParameters<
+            Self::PlaintextSpaceGroupElement,
+        >,
+        randomness_group_public_parameters: &group::PublicParameters<
+            Self::RandomnessSpaceGroupElement,
+        >,
+        ciphertext_group_public_parameters: &group::PublicParameters<
+            Self::CiphertextSpaceGroupElement,
+        >,
     ) -> Result<Self>;
 
     /// $\Enc(pk, \pt; \eta_{\sf enc}) \to \ct$: Encrypt `plaintext` to `self` using
@@ -83,7 +102,9 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
     fn encrypt(
         &self,
         plaintext: &Self::PlaintextSpaceGroupElement,
-        randomness_group_public_parameters: &PublicParameters<Self::RandomnessSpaceGroupElement>,
+        randomness_group_public_parameters: &group::PublicParameters<
+            Self::RandomnessSpaceGroupElement,
+        >,
         rng: &mut impl CryptoRngCore,
     ) -> Result<(
         Self::RandomnessSpaceGroupElement,
@@ -217,7 +238,9 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
         coefficients: &[Self::PlaintextSpaceGroupElement; DIMENSION],
         ciphertexts: &[Self::CiphertextSpaceGroupElement; DIMENSION],
         modulus: &Uint<MODULUS_LIMBS>,
-        randomness_group_public_parameters: &PublicParameters<Self::RandomnessSpaceGroupElement>,
+        randomness_group_public_parameters: &group::PublicParameters<
+            Self::RandomnessSpaceGroupElement,
+        >,
         rng: &mut impl CryptoRngCore,
     ) -> Result<(
         Uint<MASK_LIMBS>,
@@ -254,13 +277,13 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     /// plaintext, randomness, ciphertext groups and the secret key.
     fn new(
         encryption_scheme_public_parameters: &EncryptionKey::PublicParameters,
-        plaintext_group_public_parameters: &PublicParameters<
+        plaintext_group_public_parameters: &group::PublicParameters<
             EncryptionKey::PlaintextSpaceGroupElement,
         >,
-        randomness_group_public_parameters: &PublicParameters<
+        randomness_group_public_parameters: &group::PublicParameters<
             EncryptionKey::RandomnessSpaceGroupElement,
         >,
-        ciphertext_group_public_parameters: &PublicParameters<
+        ciphertext_group_public_parameters: &group::PublicParameters<
             EncryptionKey::CiphertextSpaceGroupElement,
         >,
         secret_key: Self::SecretKey,
@@ -284,7 +307,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        group::{GroupElement, KnownOrderGroupElement},
+        group::{GroupElement, KnownOrderGroupElement, Value},
         AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
     };
 
@@ -295,10 +318,10 @@ mod tests {
         DecryptionKey,
     >(
         decryption_key: DecryptionKey,
-        plaintext_group_public_parameters: PublicParameters<
+        plaintext_group_public_parameters: group::PublicParameters<
             EncryptionKey::PlaintextSpaceGroupElement,
         >,
-        randomness_group_public_parameters: PublicParameters<
+        randomness_group_public_parameters: group::PublicParameters<
             EncryptionKey::RandomnessSpaceGroupElement,
         >,
     ) where
@@ -336,11 +359,11 @@ mod tests {
         DecryptionKey,
     >(
         decryption_key: DecryptionKey,
-        evaluation_group_public_parameters: PublicParameters<EvaluationGroupElement>,
-        plaintext_group_public_parameters: PublicParameters<
+        evaluation_group_public_parameters: group::PublicParameters<EvaluationGroupElement>,
+        plaintext_group_public_parameters: group::PublicParameters<
             EncryptionKey::PlaintextSpaceGroupElement,
         >,
-        randomness_group_public_parameters: PublicParameters<
+        randomness_group_public_parameters: group::PublicParameters<
             EncryptionKey::RandomnessSpaceGroupElement,
         >,
     ) where
@@ -348,7 +371,7 @@ mod tests {
             AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         EncryptionKey::PlaintextSpaceGroupElement: Debug,
         EncryptionKey::CiphertextSpaceGroupElement: Debug,
-        EvaluationGroupElement: From<EncryptionKey::PlaintextSpaceGroupElement> + Debug,
+        EvaluationGroupElement: From<Value<EncryptionKey::PlaintextSpaceGroupElement>> + Debug,
     {
         let encryption_key: EncryptionKey = decryption_key.clone().into();
 
@@ -445,10 +468,10 @@ mod tests {
 
         assert_eq!(
             EvaluationGroupElement::from(
-                decryption_key.decrypt(&evaluted_ciphertext).into()
+                decryption_key.decrypt(&evaluted_ciphertext).value().into()
             ),
             EvaluationGroupElement::from(
-                decryption_key.decrypt(&privately_evaluted_ciphertext).into()
+                decryption_key.decrypt(&privately_evaluted_ciphertext).value().into()
             ),
             "decryptions of privately evaluated linear combinations should match straightforward ones modulu the evaluation group order"
         );
