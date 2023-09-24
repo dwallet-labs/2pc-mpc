@@ -14,10 +14,14 @@ use crate::{
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
-        CyclicGroupElement, KnownOrderGroupElement, Samplable,
+        GroupElement as _, Samplable,
     },
     proofs,
-    proofs::{schnorr, schnorr::HomomorphicCommitmentScheme},
+    proofs::{
+        range::CommitmentScheme,
+        schnorr,
+        schnorr::{EnhancedLanguage, HomomorphicCommitmentScheme},
+    },
     AdditivelyHomomorphicEncryptionKey,
 };
 
@@ -52,6 +56,7 @@ pub struct Language<
     _range_proof_choice: PhantomData<RangeProof>,
 }
 
+// TODO: do type aliases of type aliases: public parameters of randomness of ...
 // TODO: should I unite now the public parameters of the groups with commitment & encryption
 // schemes?
 /// The Public Parameters of the Encryption of Discrete Log Schnorr Language
@@ -84,17 +89,18 @@ impl<
         const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
         const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar: group::GroupElement,
+        Scalar,
         GroupElement: group::GroupElement,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         RangeProof: proofs::RangeProof<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>,
     >
     schnorr::Language<
-        direct_product::GroupElement<
+        direct_product::ThreeWayGroupElement<
             self_product::GroupElement<
                 RANGE_CLAIMS_PER_SCALAR,
                 power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>,
             >,
+            commitments::RandomnessSpaceGroupElement<RangeProof::CommitmentScheme>,
             ahe::RandomnessSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
         >,
         direct_product::GroupElement<
@@ -117,7 +123,13 @@ impl<
     >
 where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
+    Scalar: group::GroupElement
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy,
     Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
 {
     type PublicParameters = PublicParameters<
         commitments::PublicParameters<RangeProof::CommitmentScheme>,
@@ -140,18 +152,22 @@ where
     const NAME: &'static str = "Encryption of Discrete Log";
 
     fn group_homomorphism(
-        witness: &direct_product::GroupElement<
+        witness: &direct_product::ThreeWayGroupElement<
             self_product::GroupElement<
                 RANGE_CLAIMS_PER_SCALAR,
                 power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>,
             >,
+            commitments::RandomnessSpaceGroupElement<RangeProof::CommitmentScheme>,
             ahe::RandomnessSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
         >,
         language_public_parameters: &Self::PublicParameters,
-        witness_space_public_parameters: &direct_product::PublicParameters<
+        _witness_space_public_parameters: &direct_product::ThreeWayPublicParameters<
             self_product::PublicParameters<
                 RANGE_CLAIMS_PER_SCALAR,
                 group::PublicParameters<power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>>,
+            >,
+            group::PublicParameters<
+                commitments::RandomnessSpaceGroupElement<RangeProof::CommitmentScheme>,
             >,
             group::PublicParameters<
                 ahe::RandomnessSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
@@ -175,7 +191,7 @@ where
             >,
         >,
     > {
-        let (discrete_log_parts, encryption_randomness) = witness.into();
+        let (discrete_log_parts, commitment_randomness, encryption_randomness) = witness.into();
 
         let (commitment_public_parameters, group_public_parameters) =
             public_value_space_public_parameters.into();
@@ -198,9 +214,9 @@ where
             commitment_public_parameters,
         )?;
 
-        let discrete_log_parts: [power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>;
+        let discrete_log_parts_array: [power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>;
             RANGE_CLAIMS_PER_SCALAR] = (*discrete_log_parts).into();
-        let discrete_log: Scalar::Value = discrete_log_parts
+        let discrete_log: Scalar::Value = discrete_log_parts_array
             .map(|element| Uint::<RANGE_CLAIM_LIMBS>::from(element))
             .into();
 
@@ -209,55 +225,108 @@ where
             &language_public_parameters.scalar_group_public_parameters,
         )?;
 
-        // Ok((commitment_scheme.commit(&[value].into(), commitment_randomness),
-        //                 (
-        //     encryption_key.encrypt_with_randomness(discrete_log, encryption_randomness),
-        //     base * discrete_log,
-        // )
-        //     .into()).into()
+        let discrete_log_plaintext =
+            PlaintextSpaceGroupElement::<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>::new(
+                Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(discrete_log),
+                &language_public_parameters.plaintext_group_public_parameters,
+            )?;
 
-        todo!()
+        Ok((
+            commitment_scheme.commit(&discrete_log_parts, commitment_randomness),
+            (
+                encryption_key
+                    .encrypt_with_randomness(&discrete_log_plaintext, encryption_randomness),
+                discrete_log * base,
+            )
+                .into(),
+        )
+            .into())
     }
 }
-// /// An Encryption of Discrete Log Schnorr Proof
-// pub type Proof<
-//     const MASK_LIMBS: usize,
-//     const RANGE_CLAIMS_PER_SCALAR: usize,
-//     const RANGE_CLAIM_LIMBS: usize,
-//     const SCALAR_LIMBS: usize,
-//     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-//     const ENCRYPTION_RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-//     const COMMITMENT_RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-//     const COMMITMENT_SPACE_SCALAR_LIMBS: usize,
-//     const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-//     const REMAINING_PUBLIC_VALUE_SCALAR_LIMBS: usize,
-//     const WITNESS_SCALAR_LIMBS: usize,
-//     const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-//     Scalar,
-//     PlaintextSpaceGroupElement,
-//     EncryptionRandomnessSpaceGroupElement,
-//     CiphertextSpaceGroupElement,
-//     GroupElement,
-//     EncryptionKey,
-//     CommitmentRandomnessSpaceGroupElement,
-//     CommitmentSpaceGroupElement,
-//     RangeProofCommitmentScheme,
-//     RangeProof,
-//     ProtocolContext,
-// > = schnorr::Proof< WITNESS_SCALAR_LIMBS, PUBLIC_VALUE_SCALAR_LIMBS,
-// > direct_product::GroupElement< WITNESS_SCALAR_LIMBS, RANGE_CLAIM_LIMBS,
-// > ENCRYPTION_RANDOMNESS_SPACE_SCALAR_LIMBS, self_product::GroupElement< RANGE_CLAIMS_PER_SCALAR,
-// > RANGE_CLAIM_LIMBS, power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>, >,
-// > EncryptionRandomnessSpaceGroupElement, >, direct_product::GroupElement<
-// > PUBLIC_VALUE_SCALAR_LIMBS, COMMITMENT_SPACE_SCALAR_LIMBS, REMAINING_PUBLIC_VALUE_SCALAR_LIMBS,
-// > CommitmentSpaceGroupElement, direct_product::GroupElement< REMAINING_PUBLIC_VALUE_SCALAR_LIMBS,
-// > CIPHERTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, CiphertextSpaceGroupElement, GroupElement, >, >,
-// > Language< MASK_LIMBS, RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, SCALAR_LIMBS,
-// > PLAINTEXT_SPACE_SCALAR_LIMBS, ENCRYPTION_RANDOMNESS_SPACE_SCALAR_LIMBS,
-// > COMMITMENT_RANDOMNESS_SPACE_SCALAR_LIMBS, COMMITMENT_SPACE_SCALAR_LIMBS,
-// > CIPHERTEXT_SPACE_SCALAR_LIMBS, REMAINING_PUBLIC_VALUE_SCALAR_LIMBS, WITNESS_SCALAR_LIMBS,
-// > PUBLIC_VALUE_SCALAR_LIMBS, Scalar, PlaintextSpaceGroupElement,
-// > EncryptionRandomnessSpaceGroupElement, CiphertextSpaceGroupElement, GroupElement,
-// > EncryptionKey, CommitmentRandomnessSpaceGroupElement, CommitmentSpaceGroupElement,
-// > RangeProofCommitmentScheme, RangeProof, >, ProtocolContext,
-// >;
+
+impl<
+        const MASK_LIMBS: usize,
+        const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
+        const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        Scalar: group::GroupElement,
+        GroupElement: group::GroupElement,
+        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        RangeProof: proofs::RangeProof<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>,
+    >
+    EnhancedLanguage<
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        ahe::RandomnessSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        direct_product::GroupElement<
+            CiphertextSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
+            GroupElement,
+        >,
+        RangeProof,
+    >
+    for Language<
+        MASK_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        RangeProof,
+    >
+where
+    Uint<RANGE_CLAIM_LIMBS>: Encoding,
+    Scalar: group::GroupElement
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy,
+    Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
+{
+}
+
+/// An Encryption of Discrete Log Schnorr Proof
+// TODO: enhanced proof.
+pub type Proof<
+    const MASK_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    EncryptionKey,
+    RangeProof,
+    ProtocolContext,
+> = schnorr::Proof<
+    direct_product::ThreeWayGroupElement<
+        self_product::GroupElement<
+            RANGE_CLAIMS_PER_SCALAR,
+            power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>,
+        >,
+        commitments::RandomnessSpaceGroupElement<
+            CommitmentScheme<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, RangeProof>,
+        >,
+        ahe::RandomnessSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    >,
+    direct_product::GroupElement<
+        CommitmentSpaceGroupElement<
+            CommitmentScheme<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, RangeProof>,
+        >,
+        direct_product::GroupElement<
+            CiphertextSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
+            GroupElement,
+        >,
+    >,
+    Language<
+        MASK_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        RangeProof,
+    >,
+    ProtocolContext,
+>;

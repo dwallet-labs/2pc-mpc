@@ -11,15 +11,16 @@ pub mod knowledge_of_decommitment;
 
 use std::marker::PhantomData;
 
-use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, Encoding, Uint, Wrapping, U64};
+use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, Encoding, Uint, U64};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use super::{Error, Result, TranscriptProtocol};
 use crate::{
-    commitments::{CommitmentSpaceGroupElement, HomomorphicCommitmentScheme},
+    commitments::{
+        CommitmentSpaceGroupElement, HomomorphicCommitmentScheme, RandomnessSpaceGroupElement,
+    },
     group::{
-        additive_group_of_integers_modulu_n,
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
         GroupElement, Samplable,
     },
@@ -75,15 +76,16 @@ pub trait EnhancedLanguage<
     // An upper bound over the range claims
     const RANGE_CLAIM_LIMBS: usize,
     // An element of the witness space $(\HH_\pp, +)$
-    UnboundedWitnessSpaceGroupElement: GroupElement + Samplable,
+    UnboundedWitnessSpaceGroupElement: GroupElement + Samplable, // TODO: name
     // An element in the non-commitment associated public-value space $(\GG_\pp, \cdot)$,
     RemainingPublicValueSpaceGroupElement: GroupElement,
     // The range proof used to prove bounded values are within the range specified in the public parameters
     RangeProof: proofs::RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>,
 >: Language<
-    direct_product::GroupElement<
+    direct_product::ThreeWayGroupElement<
         self_product::GroupElement<NUM_RANGE_CLAIMS,
             power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>>,
+        RandomnessSpaceGroupElement<RangeProof::CommitmentScheme>,
         UnboundedWitnessSpaceGroupElement>,
     direct_product::GroupElement<
         CommitmentSpaceGroupElement<RangeProof::CommitmentScheme>,

@@ -10,6 +10,10 @@ use crate::{
 };
 use crate::commitments::{CommitmentSpaceGroupElement, RandomnessSpaceGroupElement};
 
+pub type CommitmentScheme<
+const NUM_RANGE_CLAIMS: usize,
+const RANGE_CLAIM_LIMBS: usize, Proof> = <Proof as RangeProof<NUM_RANGE_CLAIMS,RANGE_CLAIM_LIMBS>>::CommitmentScheme;
+
 pub trait RangeProof<
     // The number of witnesses with range claims
     const NUM_RANGE_CLAIMS: usize,

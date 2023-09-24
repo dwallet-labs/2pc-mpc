@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group,
-    group::{self_product, CyclicGroupElement},
+    group::{self_product, CyclicGroupElement, Samplable},
     helpers::const_generic_array_serialization,
 };
 
@@ -38,6 +38,7 @@ where
     Scalar: CyclicGroupElement
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Samplable
         + Copy,
     GroupElement: CyclicGroupElement,
 {

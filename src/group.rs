@@ -148,7 +148,8 @@ pub trait KnownOrderGroupElement<const SCALAR_LIMBS: usize>:
         + Mul<Self, Output = Self>
         + for<'r> Mul<&'r Self, Output = Self>
         + Samplable
-        + Copy;
+        + Copy
+        + Into<Uint<SCALAR_LIMBS>>;
 
     fn order(&self) -> Uint<SCALAR_LIMBS> {
         Self::order_from_public_parameters(&self.public_parameters())

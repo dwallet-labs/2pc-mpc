@@ -4,7 +4,10 @@
 pub use pedersen::Pedersen;
 use serde::{Deserialize, Serialize};
 
-use crate::{group, group::GroupElement};
+use crate::{
+    group,
+    group::{GroupElement, Samplable},
+};
 
 pub mod pedersen;
 
@@ -31,7 +34,7 @@ pub trait HomomorphicCommitmentScheme: PartialEq + Clone {
     /// The Message space group element of the commitment scheme
     type MessageSpaceGroupElement: GroupElement;
     /// The Randomness space group element of the commitment scheme
-    type RandomnessSpaceGroupElement: GroupElement;
+    type RandomnessSpaceGroupElement: GroupElement + Samplable;
     /// The Commitment space group element of the commitment scheme
     type CommitmentSpaceGroupElement: GroupElement;
 

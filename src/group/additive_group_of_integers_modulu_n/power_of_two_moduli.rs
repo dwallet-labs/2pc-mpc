@@ -1,7 +1,6 @@
 use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
-use crypto_bigint::{rand_core::CryptoRngCore, Encoding, NonZero, Random, Uint, Wrapping, Zero};
-use serde::{Deserialize, Serialize};
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Random, Uint, Wrapping, Zero};
 
 use crate::{
     group,
@@ -15,6 +14,7 @@ use crate::{
 #[derive(PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(test, derive(Debug))]
 pub struct GroupElement<const LIMBS: usize>(Wrapping<Uint<LIMBS>>);
+
 impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
