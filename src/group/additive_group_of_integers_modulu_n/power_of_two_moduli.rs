@@ -15,7 +15,6 @@ use crate::{
 #[derive(PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(test, derive(Debug))]
 pub struct GroupElement<const LIMBS: usize>(Wrapping<Uint<LIMBS>>);
-
 impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,

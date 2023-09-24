@@ -53,8 +53,8 @@ impl<
 /// `SecondGroupElement`.
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct PublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters>(
-    FirstGroupPublicParameters,
-    SecondGroupPublicParameters,
+    pub FirstGroupPublicParameters,
+    pub SecondGroupPublicParameters,
 );
 
 pub type ThreeWayPublicParameters<
