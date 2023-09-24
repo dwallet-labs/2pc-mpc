@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pub mod paillier;
 
+use std::fmt::Debug;
+
 use crypto_bigint::{rand_core::CryptoRngCore, Random, Uint};
 use serde::{Deserialize, Serialize};
 
@@ -29,7 +31,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// An Encryption Key of an Additively Homomorphic Encryption scheme.
 pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize>:
-    PartialEq + Sized
+    PartialEq + Clone + Debug
 {
     type PlaintextSpaceGroupElement: GroupElement<Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>
         + KnownOrderGroupElement<
@@ -242,16 +244,18 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
 }
 
 /// A Decryption Key of an Additively Homomorphic Encryption scheme
-pub trait AdditivelyHomomorphicDecryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize>:
-    AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
+pub trait AdditivelyHomomorphicDecryptionKey<
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+>: Into<EncryptionKey> + Clone + PartialEq
 {
     /// $\Dec(sk, \ct) \to \pt$: Decrypt `ciphertext` using `decryption_key`.
     /// A deterministic algorithm that on input a secret key $sk$ and a ciphertext $\ct \in
     /// \calC_{pk}$ outputs a plaintext $\pt \in \calP_{pk}$.
     fn decrypt(
         &self,
-        ciphertext: &Self::CiphertextSpaceGroupElement,
-    ) -> Self::PlaintextSpaceGroupElement;
+        ciphertext: &EncryptionKey::CiphertextSpaceGroupElement,
+    ) -> EncryptionKey::PlaintextSpaceGroupElement;
 }
 
 #[cfg(test)]
@@ -261,27 +265,37 @@ mod tests {
     use crypto_bigint::{Uint, U64};
     use rand_core::OsRng;
 
+    use super::*;
     use crate::{
-        group::{GroupElement, KnownOrderGroupElement, Samplable},
+        group::{GroupElement, KnownOrderGroupElement},
         AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
     };
 
     pub(crate) fn encrypt_decrypts<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        DecryptionKey: AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        DecryptionKey,
     >(
         decryption_key: DecryptionKey,
         plaintext_group_public_parameters: PublicParameters<
-            DecryptionKey::PlaintextSpaceGroupElement,
+            EncryptionKey::PlaintextSpaceGroupElement,
         >,
         randomness_group_public_parameters: PublicParameters<
-            DecryptionKey::RandomnessSpaceGroupElement,
+            EncryptionKey::RandomnessSpaceGroupElement,
         >,
-    ) {
+    ) where
+        DecryptionKey:
+            AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        EncryptionKey::PlaintextSpaceGroupElement: Debug,
+    {
+        let encryption_key: EncryptionKey = decryption_key.clone().into();
         let plaintext: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(42u64)).into();
-        let plaintext: PlaintextSpaceGroupElement =
-            PlaintextSpaceGroupElement::new(plaintext.into(), &plaintext_group_public_parameters)
-                .unwrap();
+        let plaintext: EncryptionKey::PlaintextSpaceGroupElement =
+            EncryptionKey::PlaintextSpaceGroupElement::new(
+                plaintext.into(),
+                &plaintext_group_public_parameters,
+            )
+            .unwrap();
 
         let (_, ciphertext) = encryption_key
             .encrypt(&plaintext, &randomness_group_public_parameters, &mut OsRng)
@@ -298,37 +312,60 @@ mod tests {
         const MASK_LIMBS: usize,
         const EVALUATION_GROUP_SCALAR_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        EvaluationGroupElement,
-        DecryptionKey: AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        EvaluationGroupElement: KnownOrderGroupElement<EVALUATION_GROUP_SCALAR_LIMBS>,
+        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        DecryptionKey,
     >(
         decryption_key: DecryptionKey,
         evaluation_group_public_parameters: PublicParameters<EvaluationGroupElement>,
         plaintext_group_public_parameters: PublicParameters<
-            DecryptionKey::PlaintextSpaceGroupElement,
+            EncryptionKey::PlaintextSpaceGroupElement,
         >,
         randomness_group_public_parameters: PublicParameters<
-            DecryptionKey::RandomnessSpaceGroupElement,
+            EncryptionKey::RandomnessSpaceGroupElement,
         >,
-    ) {
+    ) where
+        DecryptionKey:
+            AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        EncryptionKey::PlaintextSpaceGroupElement: Debug,
+        EncryptionKey::CiphertextSpaceGroupElement: Debug,
+        EvaluationGroupElement: From<EncryptionKey::PlaintextSpaceGroupElement> + Debug,
+    {
+        let encryption_key: EncryptionKey = decryption_key.clone().into();
+
         let zero: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(0u64)).into();
-        let zero = PlaintextSpaceGroupElement::new(zero.into(), &plaintext_group_public_parameters)
-            .unwrap();
+        let zero = EncryptionKey::PlaintextSpaceGroupElement::new(
+            zero.into(),
+            &plaintext_group_public_parameters,
+        )
+        .unwrap();
 
         let one: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(1u64)).into();
-        let one = PlaintextSpaceGroupElement::new(one.into(), &plaintext_group_public_parameters)
-            .unwrap();
+        let one = EncryptionKey::PlaintextSpaceGroupElement::new(
+            one.into(),
+            &plaintext_group_public_parameters,
+        )
+        .unwrap();
         let two: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(2u64)).into();
-        let two = PlaintextSpaceGroupElement::new(two.into(), &plaintext_group_public_parameters)
-            .unwrap();
+        let two = EncryptionKey::PlaintextSpaceGroupElement::new(
+            two.into(),
+            &plaintext_group_public_parameters,
+        )
+        .unwrap();
         let five: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(5u64)).into();
-        let five = PlaintextSpaceGroupElement::new(five.into(), &plaintext_group_public_parameters)
-            .unwrap();
+        let five = EncryptionKey::PlaintextSpaceGroupElement::new(
+            five.into(),
+            &plaintext_group_public_parameters,
+        )
+        .unwrap();
         let seven: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(7u64)).into();
-        let seven =
-            PlaintextSpaceGroupElement::new(seven.into(), &plaintext_group_public_parameters)
-                .unwrap();
+        let seven = EncryptionKey::PlaintextSpaceGroupElement::new(
+            seven.into(),
+            &plaintext_group_public_parameters,
+        )
+        .unwrap();
         let seventy_three: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(73u64)).into();
-        let seventy_three = PlaintextSpaceGroupElement::new(
+        let seventy_three = EncryptionKey::PlaintextSpaceGroupElement::new(
             seventy_three.into(),
             &plaintext_group_public_parameters,
         )
@@ -352,7 +389,7 @@ mod tests {
 
         let expected_evaluation_result: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> =
             (&U64::from(1u64 * 5 + 0 * 7 + 73 * 2)).into();
-        let expected_evaluation_result = PlaintextSpaceGroupElement::new(
+        let expected_evaluation_result = EncryptionKey::PlaintextSpaceGroupElement::new(
             expected_evaluation_result.into(),
             &plaintext_group_public_parameters,
         )
@@ -365,8 +402,8 @@ mod tests {
 
         let (_, _, privately_evaluted_ciphertext): (
             Uint<MASK_LIMBS>,
-            RandomnessSpaceGroupElement,
-            CiphertextSpaceGroupElement,
+            EncryptionKey::RandomnessSpaceGroupElement,
+            EncryptionKey::CiphertextSpaceGroupElement,
         ) = encryption_key
             .evaluate_circuit_private_linear_combination(
                 &[one, zero, seventy_three],
