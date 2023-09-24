@@ -12,7 +12,6 @@ thiserror = "1.0.47"
 k256 = { version = "0.13.1", features = ["arithmetic", "critical-section", "precomputed-tables", "serde"], default-features = false }
 merlin = { version = "3.0.0", default-features = false }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-tiresias = { git = "https://github.com/odsy-network/tiresias.git" }
 
 [dev-dependencies]
 rstest = "0.18.2"
