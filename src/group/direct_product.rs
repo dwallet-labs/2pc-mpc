@@ -13,7 +13,8 @@ use crate::{
 };
 
 /// An element of the Direct Product of the two Groups `FirstGroupElement` and `SecondGroupElement`.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(test, derive(Debug))]
 pub struct GroupElement<FirstGroupElement, SecondGroupElement>(
     FirstGroupElement,
     SecondGroupElement,

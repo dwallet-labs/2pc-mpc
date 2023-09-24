@@ -17,7 +17,8 @@ use crate::{
 };
 
 /// An element of the Self Product of the Group `G` by Itself.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(test, derive(Debug))]
 pub struct GroupElement<const N: usize, G>([G; N]);
 
 impl<const N: usize, G: group::GroupElement> Samplable for GroupElement<N, G>

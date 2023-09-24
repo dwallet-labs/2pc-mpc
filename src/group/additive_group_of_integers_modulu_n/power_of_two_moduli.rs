@@ -12,7 +12,8 @@ use crate::{
 
 /// An element of the additive group of integers for a power-of-two modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(test, derive(Debug))]
 pub struct GroupElement<const LIMBS: usize>(Wrapping<Uint<LIMBS>>);
 
 impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
