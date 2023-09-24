@@ -21,7 +21,8 @@ use crate::{
 
 /// An element of the additive group of integers for an odd modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(test, derive(Deserialize))]
 pub struct GroupElement<const LIMBS: usize>(DynResidue<LIMBS>);
 
 impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
@@ -38,7 +39,8 @@ where
 
 /// The public parameters of the additive group of integers modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
-#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug))]
 pub struct PublicParameters<const LIMBS: usize>
 where
     Uint<LIMBS>: Encoding,

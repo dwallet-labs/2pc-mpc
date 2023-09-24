@@ -20,7 +20,8 @@ use crate::{
 
 /// A Scalar of the prime field $\mathbb{Z}_p$ over which the secp256k1 prime group is
 /// defined.
-#[derive(PartialEq, Eq, Clone, Debug, Copy, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Scalar(pub(super) k256::Scalar);
 
 impl ConstantTimeEq for Scalar {
