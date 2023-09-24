@@ -4,13 +4,11 @@
 pub use pedersen::Pedersen;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    group,
-    group::{GroupElement, PublicParameters},
-};
+use crate::{group, group::GroupElement};
 
 pub mod pedersen;
 
+pub type PublicParameters<C> = <C as HomomorphicCommitmentScheme>::PublicParameters;
 pub type MessageSpaceGroupElement<C> = <C as HomomorphicCommitmentScheme>::MessageSpaceGroupElement;
 pub type RandomnessSpaceGroupElement<C> =
     <C as HomomorphicCommitmentScheme>::RandomnessSpaceGroupElement;
@@ -59,7 +57,9 @@ pub trait HomomorphicCommitmentScheme: PartialEq + Clone {
     /// public parameters.
     fn new(
         commitment_public_parameters: &Self::PublicParameters,
-        commitment_space_public_parameters: &PublicParameters<Self::CommitmentSpaceGroupElement>,
+        commitment_space_public_parameters: &group::PublicParameters<
+            Self::CommitmentSpaceGroupElement,
+        >,
     ) -> group::Result<Self>;
 
     fn commit(

@@ -8,6 +8,7 @@ use crate::{
     group::{additive_group_of_integers_modulu_n::power_of_two_moduli, self_product},
     proofs::Result,
 };
+use crate::commitments::{CommitmentSpaceGroupElement, RandomnessSpaceGroupElement};
 
 pub trait RangeProof<
     // The number of witnesses with range claims
@@ -30,8 +31,8 @@ pub trait RangeProof<
     /// range upper bound in range_claims.
     fn prove(
         witnesses_and_range_claims: Vec<[(power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>, Uint<RANGE_CLAIM_LIMBS>); NUM_RANGE_CLAIMS]>,
-        commitment_randomness: &Self::CommitmentScheme::RandomnessSpaceGroupElement, // TODO: one for all?
-        commitment: &Self::CommitmentScheme::CommitmentSpaceGroupElement, // TODO: one for all?
+        commitment_randomness: &RandomnessSpaceGroupElement<Self::CommitmentScheme>, // TODO: one for all?
+        commitment: &CommitmentSpaceGroupElement<Self::CommitmentScheme>, // TODO: one for all?
         rng: &mut impl CryptoRngCore,
     ) -> Result<Self>;
 
@@ -40,7 +41,7 @@ pub trait RangeProof<
     fn verify(
         &self,
         range_claims: Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
-        commitment: &Self::CommitmentScheme::CommitmentSpaceGroupElement,
+        commitment: &CommitmentSpaceGroupElement<Self::CommitmentScheme>,
         rng: &mut impl CryptoRngCore,
     ) -> Result<()>;
 }

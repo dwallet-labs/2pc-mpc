@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{Error, Result, TranscriptProtocol};
 use crate::{
-    commitments::HomomorphicCommitmentScheme,
+    commitments::{CommitmentSpaceGroupElement, HomomorphicCommitmentScheme},
     group::{
         additive_group_of_integers_modulu_n,
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
@@ -75,7 +75,7 @@ pub trait EnhancedLanguage<
     // An upper bound over the range claims
     const RANGE_CLAIM_LIMBS: usize,
     // An element of the witness space $(\HH_\pp, +)$
-    UnboundedWitnessSpaceGroupElement: GroupElement,
+    UnboundedWitnessSpaceGroupElement: GroupElement + Samplable,
     // An element in the non-commitment associated public-value space $(\GG_\pp, \cdot)$,
     RemainingPublicValueSpaceGroupElement: GroupElement,
     // The range proof used to prove bounded values are within the range specified in the public parameters
@@ -86,10 +86,10 @@ pub trait EnhancedLanguage<
             power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>>,
         UnboundedWitnessSpaceGroupElement>,
     direct_product::GroupElement<
-        RangeProof::CommitmentScheme,
-         RemainingPublicValueSpaceGroupElement>>
-{
-}
+        CommitmentSpaceGroupElement<RangeProof::CommitmentScheme>,
+        RemainingPublicValueSpaceGroupElement>>
+    where Uint<RANGE_CLAIM_LIMBS>: Encoding,
+{}
 
 /// An Enhanced Batched Schnorr Zero-Knowledge Proof.
 /// Implements Appendix B. Schnorr Protocols in the paper.

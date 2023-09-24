@@ -151,7 +151,9 @@ impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, Encryption
     fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextGroupElement {
         PlaintextGroupElement::new(
             self.0.decrypt(&ciphertext.into()),
-            &odd_moduli::PublicParameters::new(NonZero::new(self.0.encryption_key.n).unwrap()),
+            &odd_moduli::PublicParameters {
+                modulus: NonZero::new(self.0.encryption_key.n).unwrap(),
+            },
         )
         .unwrap()
     }
@@ -196,7 +198,9 @@ mod tests {
     fn encrypt_decrypts() {
         let plaintext_public_parameters: odd_moduli::PublicParameters<
             { LargeBiPrimeSizedNumber::LIMBS },
-        > = odd_moduli::PublicParameters::new(NonZero::new(N).unwrap());
+        > = odd_moduli::PublicParameters {
+            modulus: NonZero::new(N).unwrap(),
+        };
 
         let decryption_key = DecryptionKey::from(tiresias::DecryptionKey::new(
             tiresias::EncryptionKey::new(N),
@@ -214,7 +218,9 @@ mod tests {
     fn evaluates() {
         let plaintext_public_parameters: odd_moduli::PublicParameters<
             { LargeBiPrimeSizedNumber::LIMBS },
-        > = odd_moduli::PublicParameters::new(NonZero::new(N).unwrap());
+        > = odd_moduli::PublicParameters {
+            modulus: NonZero::new(N).unwrap(),
+        };
 
         let decryption_key = DecryptionKey::from(tiresias::DecryptionKey::new(
             tiresias::EncryptionKey::new(N),
