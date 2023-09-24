@@ -22,7 +22,7 @@ use crate::{
 pub struct EncryptionKey(tiresias::EncryptionKey);
 
 /// An Decryption Key of the Paillier Additively Homomorphic Encryption Scheme.
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub struct DecryptionKey(tiresias::DecryptionKey);
 
 pub const PLAINTEXT_SPACE_SCALAR_LIMBS: usize = LargeBiPrimeSizedNumber::LIMBS;
@@ -114,6 +114,31 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
 impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>
     for DecryptionKey
 {
+    type SecretKey = PaillierModulusSizedNumber;
+
+    fn new(
+        encryption_scheme_public_parameters: &EncryptionKey::PublicParameters,
+        plaintext_group_public_parameters: &PublicParameters<
+            EncryptionKey::PlaintextSpaceGroupElement,
+        >,
+        randomness_group_public_parameters: &PublicParameters<
+            EncryptionKey::RandomnessSpaceGroupElement,
+        >,
+        ciphertext_group_public_parameters: &PublicParameters<
+            EncryptionKey::CiphertextSpaceGroupElement,
+        >,
+        secret_key: Self::SecretKey,
+    ) -> Result<Self> {
+        let encryption_key = EncryptionKey::new(
+            encryption_scheme_public_parameters,
+            plaintext_group_public_parameters,
+            randomness_group_public_parameters,
+            ciphertext_group_public_parameters,
+        )?;
+
+        Self(DecryptionKey::new(encryption_key.0, secret_key))
+    }
+
     // todo: new()
     fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextGroupElement {
         PlaintextGroupElement::new(
