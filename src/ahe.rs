@@ -249,10 +249,10 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
 >: Into<EncryptionKey> + Clone + PartialEq
 {
-    type Secret;
+    type SecretKey;
 
     /// Instantiate the decryption key from the public parameters of the encryption scheme,
-    /// plaintext, randomness, ciphertext groups and the secret.
+    /// plaintext, randomness, ciphertext groups and the secret key.
     fn new(
         encryption_scheme_public_parameters: &EncryptionKey::PublicParameters,
         plaintext_group_public_parameters: &PublicParameters<
@@ -264,7 +264,7 @@ pub trait AdditivelyHomomorphicDecryptionKey<
         ciphertext_group_public_parameters: &PublicParameters<
             EncryptionKey::CiphertextSpaceGroupElement,
         >,
-        secret: Self::Secret,
+        secret_key: Self::SecretKey,
     ) -> Result<Self>;
 
     /// $\Dec(sk, \ct) \to \pt$: Decrypt `ciphertext` using `decryption_key`.
