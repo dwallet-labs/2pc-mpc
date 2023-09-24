@@ -22,7 +22,7 @@ use crate::{
 /// An element of the additive group of integers for an odd modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
 #[derive(PartialEq, Eq, Clone, Copy)]
-#[cfg_attr(test, derive(Deserialize))]
+#[cfg_attr(test, derive(Debug))]
 pub struct GroupElement<const LIMBS: usize>(DynResidue<LIMBS>);
 
 impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
