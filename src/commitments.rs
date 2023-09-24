@@ -11,6 +11,12 @@ use crate::{
 
 pub mod pedersen;
 
+pub type MessageSpaceGroupElement<C> = <C as HomomorphicCommitmentScheme>::MessageSpaceGroupElement;
+pub type RandomnessSpaceGroupElement<C> =
+    <C as HomomorphicCommitmentScheme>::RandomnessSpaceGroupElement;
+pub type CommitmentSpaceGroupElement<C> =
+    <C as HomomorphicCommitmentScheme>::CommitmentSpaceGroupElement;
+
 /// A Homomorphic Commitment Scheme
 ///
 /// The commitment algorithm of a non-interactive commitment scheme $\Com_{\pp}$
