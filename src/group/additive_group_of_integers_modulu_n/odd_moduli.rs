@@ -39,8 +39,7 @@ where
 
 /// The public parameters of the additive group of integers modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
-#[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
-#[cfg_attr(test, derive(Debug))]
+#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct PublicParameters<const LIMBS: usize>
 where
     Uint<LIMBS>: Encoding,
