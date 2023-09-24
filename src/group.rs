@@ -117,6 +117,8 @@ pub trait GroupElement:
     fn double(&self) -> Self;
 }
 
+pub type Value<G> = <G as GroupElement>::Value;
+
 pub type PublicParameters<G> = <G as GroupElement>::PublicParameters;
 
 /// An element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in additive
