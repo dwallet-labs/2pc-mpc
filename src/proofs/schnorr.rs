@@ -36,15 +36,11 @@ type ChallengeSizedNumber = <ComputationalSecuritySizedNumber as ConcatMixed<U64
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`.
 /// As defined in Appendix B. Schnorr Protocols in the paper.
 pub trait Language<
-    // The upper bound for the scalar size of the witness group
-    const WITNESS_SCALAR_LIMBS: usize,
-    // The upper bound for the scalar size of the associated public-value space group
-    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
     // An element of the witness space $(\HH_\pp, +)$
-    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
+    WitnessSpaceGroupElement: GroupElement + Samplable,
     // An element in the associated public-value space $(\GG_\pp, \cdot)$,
-    PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
->
+    PublicValueSpaceGroupElement: GroupElement,
+>: Clone
 {
     /// Public parameters for a language family $\pp \gets \Setup(1^\kappa)$.
     ///
@@ -69,6 +65,7 @@ pub trait Language<
         public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
     ) -> Result<PublicValueSpaceGroupElement>;
 }
+
 
 /// An Enhacned Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.
@@ -108,31 +105,31 @@ pub trait EnhancedLanguage<
     direct_product::GroupElement<
         WITNESS_SCALAR_LIMBS, RANGE_CLAIM_LIMBS, UNBOUNDED_WITNESS_SCALAR_LIMBS,
         self_product::GroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
-           power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>>,
+            power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>>,
         UnboundedWitnessSpaceGroupElement>,
     direct_product::GroupElement<PUBLIC_VALUE_SCALAR_LIMBS, COMMITMENT_SPACE_SCALAR_LIMBS, REMAINING_PUBLIC_VALUE_SCALAR_LIMBS,
         CommitmentSpaceGroupElement
-    , RemainingPublicValueSpaceGroupElement>>
+        , RemainingPublicValueSpaceGroupElement>>
     where
- UnboundedWitnessSpaceGroupElement: GroupElement<UNBOUNDED_WITNESS_SCALAR_LIMBS> +
- Samplable<UNBOUNDED_WITNESS_SCALAR_LIMBS>,
- RemainingPublicValueSpaceGroupElement: GroupElement<REMAINING_PUBLIC_VALUE_SCALAR_LIMBS>,
- Uint<RANGE_CLAIM_LIMBS>: Encoding,
- RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
- CommitmentSpaceGroupElement: GroupElement<COMMITMENT_SPACE_SCALAR_LIMBS>,
- RangeProofCommitmentScheme: HomomorphicCommitmentScheme<
-     RANGE_CLAIM_LIMBS,
-     RANDOMNESS_SPACE_SCALAR_LIMBS,
-     COMMITMENT_SPACE_SCALAR_LIMBS,
-     self_product::GroupElement<
-         NUM_RANGE_CLAIMS,
-         RANGE_CLAIM_LIMBS,
-         power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>,
-     >,
-     RandomnessSpaceGroupElement,
-     CommitmentSpaceGroupElement,
- >,
-RangeProof: proofs::RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, RANDOMNESS_SPACE_SCALAR_LIMBS, COMMITMENT_SPACE_SCALAR_LIMBS, RandomnessSpaceGroupElement, CommitmentSpaceGroupElement, RangeProofCommitmentScheme>
+        UnboundedWitnessSpaceGroupElement: GroupElement<UNBOUNDED_WITNESS_SCALAR_LIMBS> +
+        Samplable<UNBOUNDED_WITNESS_SCALAR_LIMBS>,
+        RemainingPublicValueSpaceGroupElement: GroupElement<REMAINING_PUBLIC_VALUE_SCALAR_LIMBS>,
+        Uint<RANGE_CLAIM_LIMBS>: Encoding,
+        RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
+        CommitmentSpaceGroupElement: GroupElement<COMMITMENT_SPACE_SCALAR_LIMBS>,
+        RangeProofCommitmentScheme: HomomorphicCommitmentScheme<
+            RANGE_CLAIM_LIMBS,
+            RANDOMNESS_SPACE_SCALAR_LIMBS,
+            COMMITMENT_SPACE_SCALAR_LIMBS,
+            self_product::GroupElement<
+                NUM_RANGE_CLAIMS,
+                RANGE_CLAIM_LIMBS,
+                power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>,
+            >,
+            RandomnessSpaceGroupElement,
+            CommitmentSpaceGroupElement,
+        >,
+        RangeProof: proofs::RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, RANDOMNESS_SPACE_SCALAR_LIMBS, COMMITMENT_SPACE_SCALAR_LIMBS, RandomnessSpaceGroupElement, CommitmentSpaceGroupElement, RangeProofCommitmentScheme>
 {
 }
 
@@ -140,10 +137,8 @@ RangeProof: proofs::RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, RANDOMNESS_S
 /// Implements Appendix B. Schnorr Protocols in the paper.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Proof<
-    const WITNESS_SCALAR_LIMBS: usize,
-    const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-    WitnessSpaceGroupElement: GroupElement<WITNESS_SCALAR_LIMBS>,
-    PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
+    WitnessSpaceGroupElement: GroupElement,
+    PublicValueSpaceGroupElement: GroupElement,
     Lang: Clone,
     // A struct used by the protocol using this proof,
     // used to provide extra necessary context that will parameterize the proof (and thus verifier
@@ -158,26 +153,11 @@ pub struct Proof<
 }
 
 impl<
-        const WITNESS_SCALAR_LIMBS: usize,
-        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement: Samplable<WITNESS_SCALAR_LIMBS>,
-        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
-        Lang: Language<
-                WITNESS_SCALAR_LIMBS,
-                PUBLIC_VALUE_SCALAR_LIMBS,
-                WitnessSpaceGroupElement,
-                PublicValueSpaceGroupElement,
-            > + Clone,
+        WitnessSpaceGroupElement: GroupElement + Samplable,
+        PublicValueSpaceGroupElement: GroupElement,
+        Lang: Language<WitnessSpaceGroupElement, PublicValueSpaceGroupElement>,
         ProtocolContext: Clone + Serialize,
-    >
-    Proof<
-        WITNESS_SCALAR_LIMBS,
-        PUBLIC_VALUE_SCALAR_LIMBS,
-        WitnessSpaceGroupElement,
-        PublicValueSpaceGroupElement,
-        Lang,
-        ProtocolContext,
-    >
+    > Proof<WitnessSpaceGroupElement, PublicValueSpaceGroupElement, Lang, ProtocolContext>
 {
     fn new(
         statement_mask: PublicValueSpaceGroupElement,
@@ -356,500 +336,5 @@ impl<
                 challenge
             })
             .collect())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::iter;
-
-    use rand_core::OsRng;
-
-    use super::*;
-    use crate::group;
-
-    fn generate_witnesses_and_statements<
-        const WITNESS_SCALAR_LIMBS: usize,
-        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement,
-        PublicValueSpaceGroupElement,
-        Lang: Language<
-            WITNESS_SCALAR_LIMBS,
-            PUBLIC_VALUE_SCALAR_LIMBS,
-            WitnessSpaceGroupElement,
-            PublicValueSpaceGroupElement,
-        >,
-    >(
-        language_public_parameters: &Lang::PublicParameters,
-        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
-        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
-        batch_size: usize,
-    ) -> Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>
-    where
-        WitnessSpaceGroupElement:
-            GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
-        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
-    {
-        let witnesses: Vec<WitnessSpaceGroupElement> = iter::repeat_with(|| {
-            WitnessSpaceGroupElement::sample(&mut OsRng, witness_space_public_parameters).unwrap()
-        })
-        .take(batch_size)
-        .collect();
-
-        let statements: Vec<PublicValueSpaceGroupElement> = witnesses
-            .iter()
-            .map(|witness| {
-                Lang::group_homomorphism(
-                    &witness,
-                    &language_public_parameters,
-                    &witness_space_public_parameters,
-                    &public_value_space_public_parameters,
-                )
-                .unwrap()
-            })
-            .collect();
-
-        witnesses
-            .clone()
-            .into_iter()
-            .zip(statements.into_iter())
-            .collect()
-    }
-
-    fn generate_witness_and_statement<
-        const WITNESS_SCALAR_LIMBS: usize,
-        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement,
-        PublicValueSpaceGroupElement,
-        Lang: Language<
-            WITNESS_SCALAR_LIMBS,
-            PUBLIC_VALUE_SCALAR_LIMBS,
-            WitnessSpaceGroupElement,
-            PublicValueSpaceGroupElement,
-        >,
-    >(
-        language_public_parameters: &Lang::PublicParameters,
-        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
-        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
-    ) -> (WitnessSpaceGroupElement, PublicValueSpaceGroupElement)
-    where
-        WitnessSpaceGroupElement:
-            GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
-        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
-    {
-        let (witnesses, statements): (
-            Vec<WitnessSpaceGroupElement>,
-            Vec<PublicValueSpaceGroupElement>,
-        ) = generate_witnesses_and_statements::<
-            WITNESS_SCALAR_LIMBS,
-            PUBLIC_VALUE_SCALAR_LIMBS,
-            WitnessSpaceGroupElement,
-            PublicValueSpaceGroupElement,
-            Lang,
-        >(
-            &language_public_parameters,
-            &witness_space_public_parameters,
-            &public_value_space_public_parameters,
-            1,
-        )
-        .into_iter()
-        .unzip();
-
-        (
-            witnesses.first().unwrap().clone(),
-            statements.first().unwrap().clone(),
-        )
-    }
-
-    fn generate_valid_proof<
-        const WITNESS_SCALAR_LIMBS: usize,
-        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement,
-        PublicValueSpaceGroupElement,
-        Lang: Language<
-                WITNESS_SCALAR_LIMBS,
-                PUBLIC_VALUE_SCALAR_LIMBS,
-                WitnessSpaceGroupElement,
-                PublicValueSpaceGroupElement,
-            > + Clone,
-    >(
-        language_public_parameters: &Lang::PublicParameters,
-        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
-        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
-        witnesses_and_statements: Vec<(WitnessSpaceGroupElement, PublicValueSpaceGroupElement)>,
-    ) -> Proof<
-        WITNESS_SCALAR_LIMBS,
-        PUBLIC_VALUE_SCALAR_LIMBS,
-        WitnessSpaceGroupElement,
-        PublicValueSpaceGroupElement,
-        Lang,
-        PhantomData<()>,
-    >
-    where
-        WitnessSpaceGroupElement:
-            GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
-        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
-    {
-        Proof::<
-            WITNESS_SCALAR_LIMBS,
-            PUBLIC_VALUE_SCALAR_LIMBS,
-            WitnessSpaceGroupElement,
-            PublicValueSpaceGroupElement,
-            Lang,
-            PhantomData<()>,
-        >::prove(
-            PhantomData,
-            &language_public_parameters,
-            &witness_space_public_parameters,
-            &public_value_space_public_parameters,
-            witnesses_and_statements,
-            &mut OsRng,
-        )
-        .unwrap()
-    }
-
-    pub(crate) fn valid_proof_verifies<
-        const WITNESS_SCALAR_LIMBS: usize,
-        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement,
-        PublicValueSpaceGroupElement,
-        Lang: Language<
-                WITNESS_SCALAR_LIMBS,
-                PUBLIC_VALUE_SCALAR_LIMBS,
-                WitnessSpaceGroupElement,
-                PublicValueSpaceGroupElement,
-            > + Clone,
-    >(
-        language_public_parameters: Lang::PublicParameters,
-        witness_space_public_parameters: WitnessSpaceGroupElement::PublicParameters,
-        public_value_space_public_parameters: PublicValueSpaceGroupElement::PublicParameters,
-        batch_size: usize,
-    ) where
-        WitnessSpaceGroupElement:
-            GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
-        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
-    {
-        let witnesses_and_statements = generate_witnesses_and_statements::<
-            WITNESS_SCALAR_LIMBS,
-            PUBLIC_VALUE_SCALAR_LIMBS,
-            WitnessSpaceGroupElement,
-            PublicValueSpaceGroupElement,
-            Lang,
-        >(
-            &language_public_parameters,
-            &witness_space_public_parameters,
-            &public_value_space_public_parameters,
-            batch_size,
-        );
-
-        let proof = generate_valid_proof::<
-            WITNESS_SCALAR_LIMBS,
-            PUBLIC_VALUE_SCALAR_LIMBS,
-            WitnessSpaceGroupElement,
-            PublicValueSpaceGroupElement,
-            Lang,
-        >(
-            &language_public_parameters,
-            &witness_space_public_parameters,
-            &public_value_space_public_parameters,
-            witnesses_and_statements.clone(),
-        );
-
-        let (_, statements): (
-            Vec<WitnessSpaceGroupElement>,
-            Vec<PublicValueSpaceGroupElement>,
-        ) = witnesses_and_statements.into_iter().unzip();
-
-        assert!(
-            proof
-                .verify(
-                    PhantomData,
-                    &language_public_parameters,
-                    &witness_space_public_parameters,
-                    &public_value_space_public_parameters,
-                    statements,
-                )
-                .is_ok(),
-            "valid proofs should verify"
-        );
-    }
-
-    pub(crate) fn invalid_proof_fails_verification<
-        const WITNESS_SCALAR_LIMBS: usize,
-        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement,
-        PublicValueSpaceGroupElement,
-        Lang: Language<
-                WITNESS_SCALAR_LIMBS,
-                PUBLIC_VALUE_SCALAR_LIMBS,
-                WitnessSpaceGroupElement,
-                PublicValueSpaceGroupElement,
-            > + Clone,
-    >(
-        invalid_witness_space_value: Option<WitnessSpaceGroupElement::Value>,
-        invalid_public_value_space_value: Option<PublicValueSpaceGroupElement::Value>,
-        language_public_parameters: Lang::PublicParameters,
-        witness_space_public_parameters: WitnessSpaceGroupElement::PublicParameters,
-        public_value_space_public_parameters: PublicValueSpaceGroupElement::PublicParameters,
-        batch_size: usize,
-    ) where
-        WitnessSpaceGroupElement:
-            GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
-        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
-    {
-        let witnesses_and_statements = generate_witnesses_and_statements::<
-            WITNESS_SCALAR_LIMBS,
-            PUBLIC_VALUE_SCALAR_LIMBS,
-            WitnessSpaceGroupElement,
-            PublicValueSpaceGroupElement,
-            Lang,
-        >(
-            &language_public_parameters,
-            &witness_space_public_parameters,
-            &public_value_space_public_parameters,
-            batch_size,
-        );
-
-        let valid_proof = generate_valid_proof::<
-            WITNESS_SCALAR_LIMBS,
-            PUBLIC_VALUE_SCALAR_LIMBS,
-            WitnessSpaceGroupElement,
-            PublicValueSpaceGroupElement,
-            Lang,
-        >(
-            &language_public_parameters,
-            &witness_space_public_parameters,
-            &public_value_space_public_parameters,
-            witnesses_and_statements.clone(),
-        );
-
-        let (_, statements): (
-            Vec<WitnessSpaceGroupElement>,
-            Vec<PublicValueSpaceGroupElement>,
-        ) = witnesses_and_statements.into_iter().unzip();
-
-        let (wrong_witness, wrong_statement) = generate_witness_and_statement::<
-            WITNESS_SCALAR_LIMBS,
-            PUBLIC_VALUE_SCALAR_LIMBS,
-            WitnessSpaceGroupElement,
-            PublicValueSpaceGroupElement,
-            Lang,
-        >(
-            &language_public_parameters,
-            &witness_space_public_parameters,
-            &public_value_space_public_parameters,
-        );
-
-        assert!(
-            matches!(
-                valid_proof
-                    .verify(
-                        PhantomData,
-                        &language_public_parameters,
-                        &witness_space_public_parameters,
-                        &public_value_space_public_parameters,
-                        statements
-                            .clone()
-                            .into_iter()
-                            .take(batch_size - 1)
-                            .chain(vec![wrong_statement.clone()])
-                            .collect(),
-                    )
-                    .err()
-                    .unwrap(),
-                Error::ProofVerification
-            ),
-            "valid proof shouldn't verify against wrong statements"
-        );
-
-        let mut invalid_proof = valid_proof.clone();
-        invalid_proof.response = wrong_witness.value();
-
-        assert!(
-            matches!(
-                invalid_proof
-                    .verify(
-                        PhantomData,
-                        &language_public_parameters,
-                        &witness_space_public_parameters,
-                        &public_value_space_public_parameters,
-                        statements.clone(),
-                    )
-                    .err()
-                    .unwrap(),
-                Error::ProofVerification
-            ),
-            "proof with a wrong response shouldn't verify"
-        );
-
-        let mut invalid_proof = valid_proof.clone();
-        invalid_proof.statement_mask = wrong_statement.neutral().value();
-
-        assert!(
-            matches!(
-                invalid_proof
-                    .verify(
-                        PhantomData,
-                        &language_public_parameters,
-                        &witness_space_public_parameters,
-                        &public_value_space_public_parameters,
-                        statements.clone(),
-                    )
-                    .err()
-                    .unwrap(),
-                Error::ProofVerification
-            ),
-            "proof with a neutral statement_mask shouldn't verify"
-        );
-
-        let mut invalid_proof = valid_proof.clone();
-        invalid_proof.response = wrong_witness.neutral().value();
-
-        assert!(
-            matches!(
-                invalid_proof
-                    .verify(
-                        PhantomData,
-                        &language_public_parameters,
-                        &witness_space_public_parameters,
-                        &public_value_space_public_parameters,
-                        statements.clone(),
-                    )
-                    .err()
-                    .unwrap(),
-                Error::ProofVerification
-            ),
-            "proof with a neutral response shouldn't verify"
-        );
-
-        if let Some(invalid_public_value_space_value) = invalid_public_value_space_value {
-            let mut invalid_proof = valid_proof.clone();
-            invalid_proof.statement_mask = invalid_public_value_space_value;
-
-            assert!(matches!(
-            invalid_proof
-                .verify(
-                    PhantomData,
-                    &language_public_parameters,
-                    &witness_space_public_parameters,
-                    &public_value_space_public_parameters,
-                    statements.clone(),
-                )
-                .err()
-                .unwrap(),
-            Error::GroupInstantiation(group::Error::InvalidGroupElementError)),
-                    "proof with an invalid statement_mask value should generate an invalid parameter error when checking the element is not in the group"
-            );
-        }
-
-        if let Some(invalid_witness_space_value) = invalid_witness_space_value {
-            let mut invalid_proof = valid_proof.clone();
-            invalid_proof.response = invalid_witness_space_value;
-
-            assert!(matches!(
-            invalid_proof
-                .verify(
-                    PhantomData,
-                    &language_public_parameters,
-                    &witness_space_public_parameters,
-                    &public_value_space_public_parameters,
-                    statements.clone(),
-                )
-                .err()
-                .unwrap(),
-            Error::GroupInstantiation(group::Error::InvalidGroupElementError)),
-                    "proof with an invalid response value should generate an invalid parameter error when checking the element is not in the group"
-            );
-        }
-
-        // TODO: make cases for elliptic curve with not on group values and make sure they fail and
-        // for the right reason!
-
-        // TODO: generate a valid proof with wrong public parameters and assure it isn't valid -
-        // that can only be done for Paillier, and we should just add a case for it
-    }
-
-    pub(crate) fn proof_over_invalid_public_parameters_fails_verification<
-        const WITNESS_SCALAR_LIMBS: usize,
-        const PUBLIC_VALUE_SCALAR_LIMBS: usize,
-        WitnessSpaceGroupElement,
-        PublicValueSpaceGroupElement,
-        Lang: Language<
-                WITNESS_SCALAR_LIMBS,
-                PUBLIC_VALUE_SCALAR_LIMBS,
-                WitnessSpaceGroupElement,
-                PublicValueSpaceGroupElement,
-            > + Clone,
-    >(
-        prover_language_public_parameters: Option<Lang::PublicParameters>,
-        prover_witness_space_public_parameters: Option<WitnessSpaceGroupElement::PublicParameters>,
-        prover_public_value_space_public_parameters: Option<
-            PublicValueSpaceGroupElement::PublicParameters,
-        >,
-        verifier_language_public_parameters: Lang::PublicParameters,
-        verifier_witness_space_public_parameters: WitnessSpaceGroupElement::PublicParameters,
-        verifier_public_value_space_public_parameters:
-        PublicValueSpaceGroupElement::PublicParameters,
-        batch_size: usize,
-    ) where
-        WitnessSpaceGroupElement:
-            GroupElement<WITNESS_SCALAR_LIMBS> + Samplable<WITNESS_SCALAR_LIMBS>,
-        PublicValueSpaceGroupElement: GroupElement<PUBLIC_VALUE_SCALAR_LIMBS>,
-    {
-        let prover_language_public_parameters = prover_language_public_parameters
-            .unwrap_or(verifier_language_public_parameters.clone());
-        let prover_witness_space_public_parameters = prover_witness_space_public_parameters
-            .unwrap_or(verifier_witness_space_public_parameters.clone());
-        let prover_public_value_space_public_parameters =
-            prover_public_value_space_public_parameters
-                .unwrap_or(verifier_public_value_space_public_parameters.clone());
-
-        let witnesses_and_statements = generate_witnesses_and_statements::<
-            WITNESS_SCALAR_LIMBS,
-            PUBLIC_VALUE_SCALAR_LIMBS,
-            WitnessSpaceGroupElement,
-            PublicValueSpaceGroupElement,
-            Lang,
-        >(
-            &verifier_language_public_parameters,
-            &verifier_witness_space_public_parameters,
-            &verifier_public_value_space_public_parameters,
-            batch_size,
-        );
-
-        let proof = generate_valid_proof::<
-            WITNESS_SCALAR_LIMBS,
-            PUBLIC_VALUE_SCALAR_LIMBS,
-            WitnessSpaceGroupElement,
-            PublicValueSpaceGroupElement,
-            Lang,
-        >(
-            &prover_language_public_parameters,
-            &prover_witness_space_public_parameters,
-            &prover_public_value_space_public_parameters,
-            witnesses_and_statements.clone(),
-        );
-
-        let (_, statements): (
-            Vec<WitnessSpaceGroupElement>,
-            Vec<PublicValueSpaceGroupElement>,
-        ) = witnesses_and_statements.into_iter().unzip();
-
-        assert!(
-            matches!(
-                proof
-                    .verify(
-                        PhantomData,
-                        &verifier_language_public_parameters,
-                        &verifier_witness_space_public_parameters,
-                        &verifier_public_value_space_public_parameters,
-                        statements,
-                    )
-                    .err()
-                    .unwrap(),
-                Error::ProofVerification
-            ),
-            "proof over wrong public parameters shouldn't verify"
-        );
     }
 }

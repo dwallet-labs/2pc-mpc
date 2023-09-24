@@ -1,8 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-// TODO: This should be called Z module?
-
 // Crypto-bigint has two structures we can work with for modular arithmetics;
 // 1. DynResidue - uses Montgomery and works for odd moduli only, used in `odd_modulu`
 // 2. Wrapping<Uint<>> - works for moduli which is a multiple of the LIMB size 2^64, and is much

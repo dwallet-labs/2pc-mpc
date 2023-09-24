@@ -1,9 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-// This should be called Z module?
-
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
@@ -15,17 +13,19 @@ use serde::{Deserialize, Serialize};
 use crate::{
     group,
     group::{
-        CyclicGroupElement, GroupElement as _, KnownOrderGroupElement, MulByGenerator, Samplable,
+        BoundedGroupElement, CyclicGroupElement, GroupElement as _, KnownOrderGroupElement,
+        MulByGenerator, Samplable,
     },
     traits::Reduce,
 };
 
 /// An element of the additive group of integers for an odd modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(test, derive(Debug))]
 pub struct GroupElement<const LIMBS: usize>(DynResidue<LIMBS>);
 
-impl<const LIMBS: usize> Samplable<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -33,10 +33,7 @@ where
         rng: &mut impl CryptoRngCore,
         public_parameters: &Self::PublicParameters,
     ) -> group::Result<Self> {
-        <GroupElement<LIMBS> as group::GroupElement<LIMBS>>::new(
-            Uint::<LIMBS>::random(rng),
-            public_parameters,
-        )
+        GroupElement::<LIMBS>::new(Uint::<LIMBS>::random(rng), public_parameters)
     }
 }
 
@@ -59,7 +56,7 @@ where
     }
 }
 
-impl<const LIMBS: usize> group::GroupElement<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> group::GroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -192,7 +189,12 @@ where
     }
 }
 
-impl<const LIMBS: usize> CyclicGroupElement<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> where
+    Uint<LIMBS>: Encoding
+{
+}
+
+impl<const LIMBS: usize> CyclicGroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -214,18 +216,6 @@ impl<'r, const LIMBS: usize> Mul<&'r Self> for GroupElement<LIMBS> {
 
     fn mul(self, rhs: &'r Self) -> Self::Output {
         Self(self.0.mul(rhs.0))
-    }
-}
-
-impl<const LIMBS: usize> MulAssign<Self> for GroupElement<LIMBS> {
-    fn mul_assign(&mut self, rhs: Self) {
-        self.0.mul_assign(rhs.0)
-    }
-}
-
-impl<'r, const LIMBS: usize> MulAssign<&'r Self> for GroupElement<LIMBS> {
-    fn mul_assign(&mut self, rhs: &'r Self) {
-        self.0.mul_assign(rhs.0)
     }
 }
 
@@ -289,24 +279,6 @@ where
     }
 }
 
-impl<const LIMBS: usize> MulAssign<Uint<LIMBS>> for GroupElement<LIMBS>
-where
-    Uint<LIMBS>: Encoding,
-{
-    fn mul_assign(&mut self, rhs: Uint<LIMBS>) {
-        *self = self.scalar_mul(&rhs)
-    }
-}
-
-impl<'r, const LIMBS: usize> MulAssign<&'r Uint<LIMBS>> for GroupElement<LIMBS>
-where
-    Uint<LIMBS>: Encoding,
-{
-    fn mul_assign(&mut self, rhs: &'r Uint<LIMBS>) {
-        *self = self.scalar_mul(rhs)
-    }
-}
-
 impl<const LIMBS: usize> From<GroupElement<LIMBS>> for Uint<LIMBS> {
     fn from(value: GroupElement<LIMBS>) -> Self {
         value.0.retrieve()
@@ -319,10 +291,12 @@ impl<'r, const LIMBS: usize> From<&'r GroupElement<LIMBS>> for Uint<LIMBS> {
     }
 }
 
-impl<const LIMBS: usize> KnownOrderGroupElement<LIMBS, Self> for GroupElement<LIMBS>
+impl<const LIMBS: usize> KnownOrderGroupElement<LIMBS> for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
+    type Scalar = Self;
+
     fn order_from_public_parameters(public_parameters: &Self::PublicParameters) -> Uint<LIMBS> {
         *public_parameters.modulus
     }

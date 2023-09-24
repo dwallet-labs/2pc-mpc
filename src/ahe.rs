@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pub mod paillier;
 
+use std::fmt::Debug;
+
 use crypto_bigint::{rand_core::CryptoRngCore, Random, Uint};
 use serde::{Deserialize, Serialize};
 
@@ -27,24 +29,31 @@ pub enum Error {
 /// `AdditivelyHomomorphicEncryptionKey` trait
 pub type Result<T> = std::result::Result<T, Error>;
 
+pub type PlaintextSpaceGroupElement<E, const PLAINTEXT_SPACE_SCALAR_LIMBS: usize> = <
+E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
+>::PlaintextSpaceGroupElement;
+
+pub type RandomnessSpaceGroupElement<E, const PLAINTEXT_SPACE_SCALAR_LIMBS: usize> = <
+E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
+>::RandomnessSpaceGroupElement;
+pub type CiphertextSpaceGroupElement<E, const PLAINTEXT_SPACE_SCALAR_LIMBS: usize> = <
+E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
+>::CiphertextSpaceGroupElement;
+pub type PublicParameters<E, const PLAINTEXT_SPACE_SCALAR_LIMBS: usize> =
+    <E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::PublicParameters;
+
 /// An Encryption Key of an Additively Homomorphic Encryption scheme.
-pub trait AdditivelyHomomorphicEncryptionKey<
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-    const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-    PlaintextSpaceGroupElement,
-    RandomnessSpaceGroupElement,
-    CiphertextSpaceGroupElement,
->: PartialEq + Clone where
-    PlaintextSpaceGroupElement:
-        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
-    PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
-    RandomnessSpaceGroupElement:
-        GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-    CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
-        From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
+pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize>:
+    PartialEq + Clone + Debug
 {
+    type PlaintextSpaceGroupElement: GroupElement<Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>
+        + KnownOrderGroupElement<
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            Scalar = Self::PlaintextSpaceGroupElement,
+        >;
+    type RandomnessSpaceGroupElement: GroupElement + Samplable;
+    type CiphertextSpaceGroupElement: GroupElement;
+
     /// The public parameters of the encryption scheme.
     ///
     /// Used for encryption-specific parameters (e.g., the modulus $N$ in case of Paillier.)
@@ -62,13 +71,19 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// Returns the public parameters of this encryption scheme.
     fn public_parameters(&self) -> Self::PublicParameters;
 
-    /// Instantiate the encryption scheme from the public parameters of the encryption scheme,
+    /// Instantiate the encryption key from the public parameters of the encryption scheme,
     /// plaintext, randomness and ciphertext groups.
     fn new(
         encryption_scheme_public_parameters: &Self::PublicParameters,
-        plaintext_group_public_parameters: &PlaintextSpaceGroupElement::PublicParameters,
-        randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
-        ciphertext_group_public_parameters: &CiphertextSpaceGroupElement::PublicParameters,
+        plaintext_group_public_parameters: &group::PublicParameters<
+            Self::PlaintextSpaceGroupElement,
+        >,
+        randomness_group_public_parameters: &group::PublicParameters<
+            Self::RandomnessSpaceGroupElement,
+        >,
+        ciphertext_group_public_parameters: &group::PublicParameters<
+            Self::CiphertextSpaceGroupElement,
+        >,
     ) -> Result<Self>;
 
     /// $\Enc(pk, \pt; \eta_{\sf enc}) \to \ct$: Encrypt `plaintext` to `self` using
@@ -78,21 +93,26 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     /// and randomness $\eta_{\sf enc} \in \calR_{pk}$, outputs a ciphertext $\ct \in \calC_{pk}$.
     fn encrypt_with_randomness(
         &self,
-        plaintext: &PlaintextSpaceGroupElement,
-        randomness: &RandomnessSpaceGroupElement,
-    ) -> CiphertextSpaceGroupElement;
+        plaintext: &Self::PlaintextSpaceGroupElement,
+        randomness: &Self::RandomnessSpaceGroupElement,
+    ) -> Self::CiphertextSpaceGroupElement;
 
     /// $\Enc(pk, \pt)$: a probabilistic algorithm that first uniformly samples `randomness`
     /// $\eta_{\sf enc} \in \calR_{pk}$ from `rng` and then calls [`Self::
     /// encrypt_with_randomness()`] to encrypt `plaintext` to `self` using the sampled randomness.
     fn encrypt(
         &self,
-        plaintext: &PlaintextSpaceGroupElement,
-        randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
+        plaintext: &Self::PlaintextSpaceGroupElement,
+        randomness_group_public_parameters: &group::PublicParameters<
+            Self::RandomnessSpaceGroupElement,
+        >,
         rng: &mut impl CryptoRngCore,
-    ) -> Result<(RandomnessSpaceGroupElement, CiphertextSpaceGroupElement)> {
+    ) -> Result<(
+        Self::RandomnessSpaceGroupElement,
+        Self::CiphertextSpaceGroupElement,
+    )> {
         let randomness =
-            RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters)?;
+            Self::RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters)?;
 
         let ciphertext = self.encrypt_with_randomness(plaintext, &randomness);
 
@@ -104,16 +124,18 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     ///
     /// This method *does not assure circuit privacy*.
     fn evaluate_linear_combination<const DIMENSION: usize>(
-        coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
-        ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
-    ) -> Result<CiphertextSpaceGroupElement> {
+        coefficients: &[Self::PlaintextSpaceGroupElement; DIMENSION],
+        ciphertexts: &[Self::CiphertextSpaceGroupElement; DIMENSION],
+    ) -> Result<Self::CiphertextSpaceGroupElement> {
         if DIMENSION == 0 {
             return Err(Error::ZeroDimension);
         }
 
         Ok(coefficients.iter().zip(ciphertexts.iter()).fold(
             ciphertexts[0].neutral(),
-            |curr, (coefficient, ciphertext)| curr + ciphertext.scalar_mul(&coefficient.into()),
+            |curr, (coefficient, ciphertext)| {
+                curr + ciphertext.scalar_mul(&coefficient.value().into())
+            },
         ))
     }
 
@@ -137,7 +159,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
     ///
     ///    While the decryption modulo $q$ will remain correct,
     ///    assuming that the mask was "big enough", it will be statistically indistinguishable from
-    ///    random.
+    ///    random.    
     ///
     ///    "Big enough" here means bigger by the statistical security parameter than the size of the
     ///    evaluation.
@@ -168,17 +190,17 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         const MASK_LIMBS: usize,
     >(
         &self,
-        coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
-        ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
+        coefficients: &[Self::PlaintextSpaceGroupElement; DIMENSION],
+        ciphertexts: &[Self::CiphertextSpaceGroupElement; DIMENSION],
         modulus: &Uint<MODULUS_LIMBS>,
         mask: &Uint<MASK_LIMBS>,
-        randomness: &RandomnessSpaceGroupElement,
-    ) -> Result<CiphertextSpaceGroupElement> {
+        randomness: &Self::RandomnessSpaceGroupElement,
+    ) -> Result<Self::CiphertextSpaceGroupElement> {
         if DIMENSION == 0 {
             return Err(Error::ZeroDimension);
         }
 
-        let plaintext_order: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = coefficients[0].order().into();
+        let plaintext_order: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = coefficients[0].order();
 
         if PLAINTEXT_SPACE_SCALAR_LIMBS != MODULUS_LIMBS || plaintext_order != modulus.into() {
             // TODO: do checks here, BOUND_LIMBS?
@@ -192,7 +214,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<
             if PLAINTEXT_SPACE_SCALAR_LIMBS == MODULUS_LIMBS && plaintext_order == modulus.into() {
                 coefficients[0].neutral()
             } else {
-                PlaintextSpaceGroupElement::new(
+                Self::PlaintextSpaceGroupElement::new(
                     (Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(mask).wrapping_mul(modulus)).into(),
                     &coefficients[0].public_parameters(),
                 )?
@@ -214,20 +236,22 @@ pub trait AdditivelyHomomorphicEncryptionKey<
         const MASK_LIMBS: usize,
     >(
         &self,
-        coefficients: &[PlaintextSpaceGroupElement; DIMENSION],
-        ciphertexts: &[CiphertextSpaceGroupElement; DIMENSION],
+        coefficients: &[Self::PlaintextSpaceGroupElement; DIMENSION],
+        ciphertexts: &[Self::CiphertextSpaceGroupElement; DIMENSION],
         modulus: &Uint<MODULUS_LIMBS>,
-        randomness_group_public_parameters: &RandomnessSpaceGroupElement::PublicParameters,
+        randomness_group_public_parameters: &group::PublicParameters<
+            Self::RandomnessSpaceGroupElement,
+        >,
         rng: &mut impl CryptoRngCore,
     ) -> Result<(
         Uint<MASK_LIMBS>,
-        RandomnessSpaceGroupElement,
-        CiphertextSpaceGroupElement,
+        Self::RandomnessSpaceGroupElement,
+        Self::CiphertextSpaceGroupElement,
     )> {
         let mask = Uint::<MASK_LIMBS>::random(rng);
 
         let randomness =
-            RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters)?;
+            Self::RandomnessSpaceGroupElement::sample(rng, randomness_group_public_parameters)?;
 
         let evaluated_ciphertext = self
             .evaluate_circuit_private_linear_combination_with_randomness(
@@ -245,25 +269,34 @@ pub trait AdditivelyHomomorphicEncryptionKey<
 /// A Decryption Key of an Additively Homomorphic Encryption scheme
 pub trait AdditivelyHomomorphicDecryptionKey<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-    const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-    PlaintextSpaceGroupElement,
-    RandomnessSpaceGroupElement,
-    CiphertextSpaceGroupElement,
-> where
-    PlaintextSpaceGroupElement:
-        KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>,
-    PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
-    RandomnessSpaceGroupElement:
-        GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-    CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
-        From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+>: Into<EncryptionKey> + Clone + PartialEq
 {
+    type SecretKey;
+
+    /// Instantiate the decryption key from the public parameters of the encryption scheme,
+    /// plaintext, randomness, ciphertext groups and the secret key.
+    fn new(
+        encryption_scheme_public_parameters: &EncryptionKey::PublicParameters,
+        plaintext_group_public_parameters: &group::PublicParameters<
+            EncryptionKey::PlaintextSpaceGroupElement,
+        >,
+        randomness_group_public_parameters: &group::PublicParameters<
+            EncryptionKey::RandomnessSpaceGroupElement,
+        >,
+        ciphertext_group_public_parameters: &group::PublicParameters<
+            EncryptionKey::CiphertextSpaceGroupElement,
+        >,
+        secret_key: Self::SecretKey,
+    ) -> Result<Self>;
+
     /// $\Dec(sk, \ct) \to \pt$: Decrypt `ciphertext` using `decryption_key`.
     /// A deterministic algorithm that on input a secret key $sk$ and a ciphertext $\ct \in
     /// \calC_{pk}$ outputs a plaintext $\pt \in \calP_{pk}$.
-    fn decrypt(&self, ciphertext: &CiphertextSpaceGroupElement) -> PlaintextSpaceGroupElement;
+    fn decrypt(
+        &self,
+        ciphertext: &EncryptionKey::CiphertextSpaceGroupElement,
+    ) -> EncryptionKey::PlaintextSpaceGroupElement;
 }
 
 #[cfg(test)]
@@ -273,58 +306,37 @@ mod tests {
     use crypto_bigint::{Uint, U64};
     use rand_core::OsRng;
 
+    use super::*;
     use crate::{
-        group::{
-            paillier::PlaintextPublicParameters, GroupElement, KnownOrderGroupElement, Samplable,
-        },
+        group::{GroupElement, KnownOrderGroupElement, Value},
         AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
     };
 
     pub(crate) fn encrypt_decrypts<
-        const MASK_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-        const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-        PlaintextSpaceGroupElement,
-        RandomnessSpaceGroupElement,
-        CiphertextSpaceGroupElement,
-        EncryptionKey,
+        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         DecryptionKey,
     >(
-        encryption_key: EncryptionKey,
         decryption_key: DecryptionKey,
-        plaintext_group_public_parameters: PlaintextSpaceGroupElement::PublicParameters,
-        randomness_group_public_parameters: RandomnessSpaceGroupElement::PublicParameters,
+        plaintext_group_public_parameters: group::PublicParameters<
+            EncryptionKey::PlaintextSpaceGroupElement,
+        >,
+        randomness_group_public_parameters: group::PublicParameters<
+            EncryptionKey::RandomnessSpaceGroupElement,
+        >,
     ) where
-        PlaintextSpaceGroupElement: KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>
-            + std::fmt::Debug,
-        PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
-        RandomnessSpaceGroupElement:
-            GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-        CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>,
-        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
-            From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
-        EncryptionKey: AdditivelyHomomorphicEncryptionKey<
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
-            CIPHERTEXT_SPACE_SCALAR_LIMBS,
-            PlaintextSpaceGroupElement,
-            RandomnessSpaceGroupElement,
-            CiphertextSpaceGroupElement,
-        >,
-        DecryptionKey: AdditivelyHomomorphicDecryptionKey<
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
-            CIPHERTEXT_SPACE_SCALAR_LIMBS,
-            PlaintextSpaceGroupElement,
-            RandomnessSpaceGroupElement,
-            CiphertextSpaceGroupElement,
-        >,
+        DecryptionKey:
+            AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        EncryptionKey::PlaintextSpaceGroupElement: Debug,
     {
+        let encryption_key: EncryptionKey = decryption_key.clone().into();
         let plaintext: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(42u64)).into();
-        let plaintext: PlaintextSpaceGroupElement =
-            PlaintextSpaceGroupElement::new(plaintext.into(), &plaintext_group_public_parameters)
-                .unwrap();
+        let plaintext: EncryptionKey::PlaintextSpaceGroupElement =
+            EncryptionKey::PlaintextSpaceGroupElement::new(
+                plaintext.into(),
+                &plaintext_group_public_parameters,
+            )
+            .unwrap();
 
         let (_, ciphertext) = encryption_key
             .encrypt(&plaintext, &randomness_group_public_parameters, &mut OsRng)
@@ -341,68 +353,60 @@ mod tests {
         const MASK_LIMBS: usize,
         const EVALUATION_GROUP_SCALAR_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        const RANDOMNESS_SPACE_SCALAR_LIMBS: usize,
-        const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize,
-        EvaluationGroupElement,
-        PlaintextSpaceGroupElement,
-        RandomnessSpaceGroupElement,
-        CiphertextSpaceGroupElement,
-        EncryptionKey,
+        EvaluationGroupElement: KnownOrderGroupElement<EVALUATION_GROUP_SCALAR_LIMBS>,
+        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         DecryptionKey,
     >(
-        encryption_key: EncryptionKey,
         decryption_key: DecryptionKey,
-        evaluation_group_public_parameters: EvaluationGroupElement::PublicParameters,
-        plaintext_group_public_parameters: PlaintextSpaceGroupElement::PublicParameters,
-        randomness_group_public_parameters: RandomnessSpaceGroupElement::PublicParameters,
+        evaluation_group_public_parameters: group::PublicParameters<EvaluationGroupElement>,
+        plaintext_group_public_parameters: group::PublicParameters<
+            EncryptionKey::PlaintextSpaceGroupElement,
+        >,
+        randomness_group_public_parameters: group::PublicParameters<
+            EncryptionKey::RandomnessSpaceGroupElement,
+        >,
     ) where
-        PlaintextSpaceGroupElement: KnownOrderGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement>
-            + std::fmt::Debug,
-        PlaintextSpaceGroupElement::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
-        RandomnessSpaceGroupElement:
-            GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS> + Samplable<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-        CiphertextSpaceGroupElement: GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS> + std::fmt::Debug,
-        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>:
-            From<PlaintextSpaceGroupElement> + for<'a> From<&'a PlaintextSpaceGroupElement>,
-        EvaluationGroupElement: KnownOrderGroupElement<EVALUATION_GROUP_SCALAR_LIMBS, EvaluationGroupElement>
-            + std::fmt::Debug,
-        EvaluationGroupElement: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
-        EncryptionKey: AdditivelyHomomorphicEncryptionKey<
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
-            CIPHERTEXT_SPACE_SCALAR_LIMBS,
-            PlaintextSpaceGroupElement,
-            RandomnessSpaceGroupElement,
-            CiphertextSpaceGroupElement,
-        >,
-        DecryptionKey: AdditivelyHomomorphicDecryptionKey<
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
-            CIPHERTEXT_SPACE_SCALAR_LIMBS,
-            PlaintextSpaceGroupElement,
-            RandomnessSpaceGroupElement,
-            CiphertextSpaceGroupElement,
-        >,
+        DecryptionKey:
+            AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        EncryptionKey::PlaintextSpaceGroupElement: Debug,
+        EncryptionKey::CiphertextSpaceGroupElement: Debug,
+        EvaluationGroupElement: From<Value<EncryptionKey::PlaintextSpaceGroupElement>> + Debug,
     {
+        let encryption_key: EncryptionKey = decryption_key.clone().into();
+
         let zero: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(0u64)).into();
-        let zero = PlaintextSpaceGroupElement::new(zero.into(), &plaintext_group_public_parameters)
-            .unwrap();
+        let zero = EncryptionKey::PlaintextSpaceGroupElement::new(
+            zero.into(),
+            &plaintext_group_public_parameters,
+        )
+        .unwrap();
 
         let one: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(1u64)).into();
-        let one = PlaintextSpaceGroupElement::new(one.into(), &plaintext_group_public_parameters)
-            .unwrap();
+        let one = EncryptionKey::PlaintextSpaceGroupElement::new(
+            one.into(),
+            &plaintext_group_public_parameters,
+        )
+        .unwrap();
         let two: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(2u64)).into();
-        let two = PlaintextSpaceGroupElement::new(two.into(), &plaintext_group_public_parameters)
-            .unwrap();
+        let two = EncryptionKey::PlaintextSpaceGroupElement::new(
+            two.into(),
+            &plaintext_group_public_parameters,
+        )
+        .unwrap();
         let five: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(5u64)).into();
-        let five = PlaintextSpaceGroupElement::new(five.into(), &plaintext_group_public_parameters)
-            .unwrap();
+        let five = EncryptionKey::PlaintextSpaceGroupElement::new(
+            five.into(),
+            &plaintext_group_public_parameters,
+        )
+        .unwrap();
         let seven: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(7u64)).into();
-        let seven =
-            PlaintextSpaceGroupElement::new(seven.into(), &plaintext_group_public_parameters)
-                .unwrap();
+        let seven = EncryptionKey::PlaintextSpaceGroupElement::new(
+            seven.into(),
+            &plaintext_group_public_parameters,
+        )
+        .unwrap();
         let seventy_three: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(73u64)).into();
-        let seventy_three = PlaintextSpaceGroupElement::new(
+        let seventy_three = EncryptionKey::PlaintextSpaceGroupElement::new(
             seventy_three.into(),
             &plaintext_group_public_parameters,
         )
@@ -426,7 +430,7 @@ mod tests {
 
         let expected_evaluation_result: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> =
             (&U64::from(1u64 * 5 + 0 * 7 + 73 * 2)).into();
-        let expected_evaluation_result = PlaintextSpaceGroupElement::new(
+        let expected_evaluation_result = EncryptionKey::PlaintextSpaceGroupElement::new(
             expected_evaluation_result.into(),
             &plaintext_group_public_parameters,
         )
@@ -439,8 +443,8 @@ mod tests {
 
         let (_, _, privately_evaluted_ciphertext): (
             Uint<MASK_LIMBS>,
-            RandomnessSpaceGroupElement,
-            CiphertextSpaceGroupElement,
+            EncryptionKey::RandomnessSpaceGroupElement,
+            EncryptionKey::CiphertextSpaceGroupElement,
         ) = encryption_key
             .evaluate_circuit_private_linear_combination(
                 &[one, zero, seventy_three],
@@ -462,8 +466,12 @@ mod tests {
         );
 
         assert_eq!(
-            EvaluationGroupElement::from(decryption_key.decrypt(&evaluted_ciphertext).into()),
-            EvaluationGroupElement::from(decryption_key.decrypt(&privately_evaluted_ciphertext).into()),
+            EvaluationGroupElement::from(
+                decryption_key.decrypt(&evaluted_ciphertext).value().into()
+            ),
+            EvaluationGroupElement::from(
+                decryption_key.decrypt(&privately_evaluted_ciphertext).value().into()
+            ),
             "decryptions of privately evaluated linear combinations should match straightforward ones modulu the evaluation group order"
         );
     }

@@ -6,9 +6,7 @@ use tiresias::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 use crate::group::{
     additive_group_of_integers_modulu_n::odd_moduli, multiplicative_group_of_integers_modulu_n,
 };
-
 pub type PlaintextGroupElement = odd_moduli::GroupElement<{ LargeBiPrimeSizedNumber::LIMBS }>;
-
 pub type RandomnessGroupElement =
     multiplicative_group_of_integers_modulu_n::GroupElement<{ LargeBiPrimeSizedNumber::LIMBS }>;
 

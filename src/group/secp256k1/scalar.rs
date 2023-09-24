@@ -1,25 +1,27 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{rand_core::CryptoRngCore, NonZero, Uint, U256};
 use k256::elliptic_curve::{scalar::FromUintUnchecked, Field};
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
+use super::GroupElement;
 use crate::{
     group,
     group::{
-        secp256k1::ORDER, CyclicGroupElement, KnownOrderGroupElement, MulByGenerator,
-        PrimeGroupElement, Samplable,
+        secp256k1::ORDER, BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement,
+        MulByGenerator, PrimeGroupElement, Samplable,
     },
     traits::Reduce,
 };
 
 /// A Scalar of the prime field $\mathbb{Z}_p$ over which the secp256k1 prime group is
 /// defined.
-#[derive(PartialEq, Eq, Clone, Debug, Copy, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Scalar(pub(super) k256::Scalar);
 
 impl ConstantTimeEq for Scalar {
@@ -28,7 +30,7 @@ impl ConstantTimeEq for Scalar {
     }
 }
 
-impl Samplable<{ U256::LIMBS }> for Scalar {
+impl Samplable for Scalar {
     fn sample(
         rng: &mut impl CryptoRngCore,
         _public_parameters: &Self::PublicParameters,
@@ -53,7 +55,7 @@ impl Default for PublicParameters {
     }
 }
 
-impl group::GroupElement<{ U256::LIMBS }> for Scalar {
+impl group::GroupElement for Scalar {
     type Value = Self;
 
     fn value(&self) -> Self::Value {
@@ -83,6 +85,8 @@ impl group::GroupElement<{ U256::LIMBS }> for Scalar {
         Self(<k256::Scalar as Field>::double(&self.0))
     }
 }
+
+impl BoundedGroupElement<{ U256::LIMBS }> for Scalar {}
 
 impl<const LIMBS: usize> From<Uint<LIMBS>> for Scalar {
     fn from(value: Uint<LIMBS>) -> Self {
@@ -206,15 +210,35 @@ impl<'r> Mul<&'r Scalar> for &Scalar {
     }
 }
 
-impl MulAssign<Self> for Scalar {
-    fn mul_assign(&mut self, rhs: Self) {
-        self.0.mul_assign(rhs.0)
+impl Mul<GroupElement> for Scalar {
+    type Output = GroupElement;
+
+    fn mul(self, rhs: GroupElement) -> Self::Output {
+        GroupElement(rhs.0.mul(self.0))
     }
 }
 
-impl<'r> MulAssign<&'r Self> for Scalar {
-    fn mul_assign(&mut self, rhs: &'r Self) {
-        self.0.mul_assign(&rhs.0)
+impl<'r> Mul<&'r GroupElement> for Scalar {
+    type Output = GroupElement;
+
+    fn mul(self, rhs: &'r GroupElement) -> Self::Output {
+        GroupElement(rhs.0.mul(self.0))
+    }
+}
+
+impl<'r> Mul<GroupElement> for &'r Scalar {
+    type Output = GroupElement;
+
+    fn mul(self, rhs: GroupElement) -> Self::Output {
+        GroupElement(rhs.0.mul(self.0))
+    }
+}
+
+impl<'r> Mul<&'r GroupElement> for &'r Scalar {
+    type Output = GroupElement;
+
+    fn mul(self, rhs: &'r GroupElement) -> Self::Output {
+        GroupElement(rhs.0.mul(self.0))
     }
 }
 
@@ -235,19 +259,20 @@ impl<'r> MulByGenerator<&'r U256> for Scalar {
     }
 }
 
-impl CyclicGroupElement<{ U256::LIMBS }> for Scalar {
+impl CyclicGroupElement for Scalar {
     fn generator(&self) -> Self {
         Scalar(k256::Scalar::ONE)
     }
 }
 
-impl KnownOrderGroupElement<{ U256::LIMBS }, Self> for Scalar {
+impl KnownOrderGroupElement<{ U256::LIMBS }> for Scalar {
+    type Scalar = Self;
     fn order(&self) -> Uint<{ U256::LIMBS }> {
         ORDER
     }
 
     fn order_from_public_parameters(
-        public_parameters: &Self::PublicParameters,
+        _public_parameters: &Self::PublicParameters,
     ) -> Uint<{ U256::LIMBS }> {
         ORDER
     }
@@ -267,4 +292,4 @@ impl<'r> MulByGenerator<&'r Scalar> for Scalar {
     }
 }
 
-impl PrimeGroupElement<{ U256::LIMBS }, Self> for Scalar {}
+impl PrimeGroupElement<{ U256::LIMBS }> for Scalar {}

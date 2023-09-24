@@ -1,19 +1,21 @@
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, NonZero, Random, Uint, Wrapping, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
-    group::{CyclicGroupElement, GroupElement as _, MulByGenerator, Samplable},
+    group::{
+        BoundedGroupElement, CyclicGroupElement, GroupElement as _, MulByGenerator, Samplable,
+    },
 };
 
 /// An element of the additive group of integers for a power-of-two modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(test, derive(Debug))]
 pub struct GroupElement<const LIMBS: usize>(Wrapping<Uint<LIMBS>>);
-
-impl<const LIMBS: usize> Samplable<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -32,7 +34,7 @@ pub struct PublicParameters<const LIMBS: usize>
 where
     Uint<LIMBS>: Encoding,
 {
-    modulus: NonZero<Uint<LIMBS>>,
+    pub modulus: NonZero<Uint<LIMBS>>,
 }
 
 impl<const LIMBS: usize> PublicParameters<LIMBS>
@@ -44,7 +46,7 @@ where
     }
 }
 
-impl<const LIMBS: usize> group::GroupElement<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> group::GroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
@@ -178,18 +180,6 @@ impl<'r, const LIMBS: usize> Mul<&'r Self> for GroupElement<LIMBS> {
     }
 }
 
-impl<const LIMBS: usize> MulAssign<Self> for GroupElement<LIMBS> {
-    fn mul_assign(&mut self, rhs: Self) {
-        self.0.mul_assign(rhs.0)
-    }
-}
-
-impl<'r, const LIMBS: usize> MulAssign<&'r Self> for GroupElement<LIMBS> {
-    fn mul_assign(&mut self, rhs: &'r Self) {
-        self.0.mul_assign(rhs.0)
-    }
-}
-
 impl<'r, const LIMBS: usize> Mul<Self> for &'r GroupElement<LIMBS> {
     type Output = GroupElement<LIMBS>;
 
@@ -250,24 +240,6 @@ where
     }
 }
 
-impl<const LIMBS: usize> MulAssign<Uint<LIMBS>> for GroupElement<LIMBS>
-where
-    Uint<LIMBS>: Encoding,
-{
-    fn mul_assign(&mut self, rhs: Uint<LIMBS>) {
-        *self = self.scalar_mul(&rhs)
-    }
-}
-
-impl<'r, const LIMBS: usize> MulAssign<&'r Uint<LIMBS>> for GroupElement<LIMBS>
-where
-    Uint<LIMBS>: Encoding,
-{
-    fn mul_assign(&mut self, rhs: &'r Uint<LIMBS>) {
-        *self = self.scalar_mul(rhs)
-    }
-}
-
 impl<const LIMBS: usize> From<GroupElement<LIMBS>> for Uint<LIMBS> {
     fn from(value: GroupElement<LIMBS>) -> Self {
         value.0 .0
@@ -292,7 +264,12 @@ impl<'r, const LIMBS: usize> From<&'r Uint<LIMBS>> for GroupElement<LIMBS> {
     }
 }
 
-impl<const LIMBS: usize> CyclicGroupElement<LIMBS> for GroupElement<LIMBS>
+impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> where
+    Uint<LIMBS>: Encoding
+{
+}
+
+impl<const LIMBS: usize> CyclicGroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
