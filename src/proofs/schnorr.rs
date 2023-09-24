@@ -66,7 +66,6 @@ pub trait Language<
     ) -> Result<PublicValueSpaceGroupElement>;
 }
 
-
 /// An Enhacned Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.
 /// As defined in Appendix B. Schnorr Protocols in the paper.
@@ -89,26 +88,6 @@ pub trait EnhancedLanguage<
     direct_product::GroupElement<
         RangeProof::CommitmentScheme,
          RemainingPublicValueSpaceGroupElement>>
-    where
-        UnboundedWitnessSpaceGroupElement: GroupElement<UNBOUNDED_WITNESS_SCALAR_LIMBS> +
-        Samplable<UNBOUNDED_WITNESS_SCALAR_LIMBS>,
-        RemainingPublicValueSpaceGroupElement: GroupElement<REMAINING_PUBLIC_VALUE_SCALAR_LIMBS>,
-        Uint<RANGE_CLAIM_LIMBS>: Encoding,
-        RandomnessSpaceGroupElement: GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>,
-        CommitmentSpaceGroupElement: GroupElement<COMMITMENT_SPACE_SCALAR_LIMBS>,
-        RangeProofCommitmentScheme: HomomorphicCommitmentScheme<
-            RANGE_CLAIM_LIMBS,
-            RANDOMNESS_SPACE_SCALAR_LIMBS,
-            COMMITMENT_SPACE_SCALAR_LIMBS,
-            self_product::GroupElement<
-                NUM_RANGE_CLAIMS,
-                RANGE_CLAIM_LIMBS,
-                power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>,
-            >,
-            RandomnessSpaceGroupElement,
-            CommitmentSpaceGroupElement,
-        >,
-        RangeProof: proofs::RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, RANDOMNESS_SPACE_SCALAR_LIMBS, COMMITMENT_SPACE_SCALAR_LIMBS, RandomnessSpaceGroupElement, CommitmentSpaceGroupElement, RangeProofCommitmentScheme>
 {
 }
 

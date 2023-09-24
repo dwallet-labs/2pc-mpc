@@ -30,8 +30,8 @@ pub trait RangeProof<
     /// range upper bound in range_claims.
     fn prove(
         witnesses_and_range_claims: Vec<[(power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>, Uint<RANGE_CLAIM_LIMBS>); NUM_RANGE_CLAIMS]>,
-        commitment_randomness: &CommitmentScheme::RandomnessSpaceGroupElement, // TODO: one for all?
-        commitment: &CommitmentScheme::CommitmentSpaceGroupElement, // TODO: one for all?
+        commitment_randomness: &Self::CommitmentScheme::RandomnessSpaceGroupElement, // TODO: one for all?
+        commitment: &Self::CommitmentScheme::CommitmentSpaceGroupElement, // TODO: one for all?
         rng: &mut impl CryptoRngCore,
     ) -> Result<Self>;
 
@@ -40,7 +40,7 @@ pub trait RangeProof<
     fn verify(
         &self,
         range_claims: Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
-        commitment: &CommitmentScheme::CommitmentSpaceGroupElement,
+        commitment: &Self::CommitmentScheme::CommitmentSpaceGroupElement,
         rng: &mut impl CryptoRngCore,
     ) -> Result<()>;
 }
