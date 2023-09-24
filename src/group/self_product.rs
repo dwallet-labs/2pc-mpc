@@ -45,8 +45,8 @@ where
 /// The public parameters of the Self Product of the Group `G` by Itself.
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct PublicParameters<const N: usize, PP> {
-    pub(crate) public_parameters: PP,
-    size: usize,
+    pub public_parameters: PP,
+    pub size: usize,
 }
 
 /// The value of the Self Product of the Group `G` by Itself.
