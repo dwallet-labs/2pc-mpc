@@ -56,6 +56,7 @@ pub struct Language<
     _range_proof_choice: PhantomData<RangeProof>,
 }
 
+// TODO: Witness, Statement type aliases of Language should simplify things.
 // TODO: do type aliases of type aliases: public parameters of randomness of ...
 // TODO: should I unite now the public parameters of the groups with commitment & encryption
 // schemes?
