@@ -3,7 +3,7 @@
 
 use std::{
     array,
-    ops::{Add, AddAssign, BitAnd, Mul, MulAssign, Neg, Sub, SubAssign},
+    ops::{Add, AddAssign, BitAnd, Mul, Neg, Sub, SubAssign},
 };
 
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
@@ -17,7 +17,8 @@ use crate::{
 };
 
 /// An element of the Self Product of the Group `G` by Itself.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(test, derive(Debug))]
 pub struct GroupElement<const N: usize, G>([G; N]);
 
 impl<const N: usize, G: group::GroupElement> Samplable for GroupElement<N, G>
@@ -44,8 +45,8 @@ where
 /// The public parameters of the Self Product of the Group `G` by Itself.
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct PublicParameters<const N: usize, PP> {
-    pub public_parameters: PP,
-    pub size: usize,
+    pub(crate) public_parameters: PP,
+    size: usize,
 }
 
 /// The value of the Self Product of the Group `G` by Itself.
@@ -230,22 +231,6 @@ impl<'r, const LIMBS: usize, const N: usize, G: group::GroupElement> Mul<&'r Uin
 
     fn mul(self, rhs: &'r Uint<LIMBS>) -> Self::Output {
         self.scalar_mul(rhs)
-    }
-}
-
-impl<const LIMBS: usize, const N: usize, G: group::GroupElement> MulAssign<Uint<LIMBS>>
-    for GroupElement<N, G>
-{
-    fn mul_assign(&mut self, rhs: Uint<LIMBS>) {
-        *self = self.scalar_mul(&rhs)
-    }
-}
-
-impl<'r, const LIMBS: usize, const N: usize, G: group::GroupElement> MulAssign<&'r Uint<LIMBS>>
-    for GroupElement<N, G>
-{
-    fn mul_assign(&mut self, rhs: &'r Uint<LIMBS>) {
-        *self = self.scalar_mul(rhs)
     }
 }
 

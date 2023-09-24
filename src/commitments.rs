@@ -4,7 +4,10 @@
 pub use pedersen::Pedersen;
 use serde::{Deserialize, Serialize};
 
-use crate::{group, group::GroupElement};
+use crate::{
+    group,
+    group::{GroupElement, PublicParameters},
+};
 
 pub mod pedersen;
 
@@ -20,12 +23,14 @@ pub mod pedersen;
 /// \Com(\vec{m}_2; \rho_2) = \Com(\vec{m}_1 + \vec{m}_2; \rho_1 + \rho_2) $$
 ///
 /// As defined in Definitions 2.4, 2.5 in the paper.
-pub trait HomomorphicCommitmentScheme<
-    MessageSpaceGroupElement: GroupElement,
-    RandomnessSpaceGroupElement: GroupElement,
-    CommitmentSpaceGroupElement: GroupElement,
->: PartialEq + Clone
-{
+pub trait HomomorphicCommitmentScheme: PartialEq + Clone {
+    /// The Message space group element of the commitment scheme
+    type MessageSpaceGroupElement: GroupElement;
+    /// The Randomness space group element of the commitment scheme
+    type RandomnessSpaceGroupElement: GroupElement;
+    /// The Commitment space group element of the commitment scheme
+    type CommitmentSpaceGroupElement: GroupElement;
+
     /// The public parameters of the commitment scheme $\Com_{\pp}$.
     ///
     /// Used for commitment-specific parameters (e.g., the bases $g_i$, $h$ in the case of
@@ -48,12 +53,12 @@ pub trait HomomorphicCommitmentScheme<
     /// public parameters.
     fn new(
         commitment_public_parameters: &Self::PublicParameters,
-        commitment_space_public_parameters: &CommitmentSpaceGroupElement::PublicParameters,
+        commitment_space_public_parameters: &PublicParameters<Self::CommitmentSpaceGroupElement>,
     ) -> group::Result<Self>;
 
     fn commit(
         &self,
-        message: &MessageSpaceGroupElement,
-        randomness: &RandomnessSpaceGroupElement,
-    ) -> CommitmentSpaceGroupElement;
+        message: &Self::MessageSpaceGroupElement,
+        randomness: &Self::RandomnessSpaceGroupElement,
+    ) -> Self::CommitmentSpaceGroupElement;
 }

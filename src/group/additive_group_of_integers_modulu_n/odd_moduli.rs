@@ -1,7 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
@@ -21,7 +21,8 @@ use crate::{
 
 /// An element of the additive group of integers for an odd modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(test, derive(Deserialize))]
 pub struct GroupElement<const LIMBS: usize>(DynResidue<LIMBS>);
 
 impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
@@ -38,7 +39,8 @@ where
 
 /// The public parameters of the additive group of integers modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
-#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug))]
 pub struct PublicParameters<const LIMBS: usize>
 where
     Uint<LIMBS>: Encoding,
@@ -218,18 +220,6 @@ impl<'r, const LIMBS: usize> Mul<&'r Self> for GroupElement<LIMBS> {
     }
 }
 
-impl<const LIMBS: usize> MulAssign<Self> for GroupElement<LIMBS> {
-    fn mul_assign(&mut self, rhs: Self) {
-        self.0.mul_assign(rhs.0)
-    }
-}
-
-impl<'r, const LIMBS: usize> MulAssign<&'r Self> for GroupElement<LIMBS> {
-    fn mul_assign(&mut self, rhs: &'r Self) {
-        self.0.mul_assign(rhs.0)
-    }
-}
-
 impl<'r, const LIMBS: usize> Mul<Self> for &'r GroupElement<LIMBS> {
     type Output = GroupElement<LIMBS>;
 
@@ -290,24 +280,6 @@ where
     }
 }
 
-impl<const LIMBS: usize> MulAssign<Uint<LIMBS>> for GroupElement<LIMBS>
-where
-    Uint<LIMBS>: Encoding,
-{
-    fn mul_assign(&mut self, rhs: Uint<LIMBS>) {
-        *self = self.scalar_mul(&rhs)
-    }
-}
-
-impl<'r, const LIMBS: usize> MulAssign<&'r Uint<LIMBS>> for GroupElement<LIMBS>
-where
-    Uint<LIMBS>: Encoding,
-{
-    fn mul_assign(&mut self, rhs: &'r Uint<LIMBS>) {
-        *self = self.scalar_mul(rhs)
-    }
-}
-
 impl<const LIMBS: usize> From<GroupElement<LIMBS>> for Uint<LIMBS> {
     fn from(value: GroupElement<LIMBS>) -> Self {
         value.0.retrieve()
@@ -320,10 +292,12 @@ impl<'r, const LIMBS: usize> From<&'r GroupElement<LIMBS>> for Uint<LIMBS> {
     }
 }
 
-impl<const LIMBS: usize> KnownOrderGroupElement<LIMBS, Self> for GroupElement<LIMBS>
+impl<const LIMBS: usize> KnownOrderGroupElement<LIMBS> for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
+    type Scalar = Self;
+
     fn order_from_public_parameters(public_parameters: &Self::PublicParameters) -> Uint<LIMBS> {
         *public_parameters.modulus
     }

@@ -8,7 +8,7 @@ use serde::Serialize;
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group,
-    group::{self_product, CyclicGroupElement},
+    group::self_product,
     proofs,
     proofs::{schnorr, schnorr::Samplable},
 };
@@ -40,12 +40,17 @@ impl<Scalar, GroupElement, CommitmentScheme>
     schnorr::Language<self_product::GroupElement<2, Scalar>, GroupElement>
     for Language<CommitmentScheme>
 where
-    Scalar: group::GroupElement + Samplable,
-    GroupElement: CyclicGroupElement
-        + Mul<Scalar, Output = GroupElement>
-        + for<'r> Mul<&'r Scalar, Output = GroupElement>,
-    CommitmentScheme:
-        HomomorphicCommitmentScheme<self_product::GroupElement<1, Scalar>, Scalar, GroupElement>,
+    Scalar: group::GroupElement
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy,
+    GroupElement: group::GroupElement,
+    CommitmentScheme: HomomorphicCommitmentScheme<
+        MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+        RandomnessSpaceGroupElement = Scalar,
+        CommitmentSpaceGroupElement = GroupElement,
+    >,
 {
     type PublicParameters = PublicParameters<CommitmentScheme::PublicParameters>;
     const NAME: &'static str = "Knowledge of Decommitment";
@@ -66,7 +71,7 @@ where
             public_value_space_public_parameters,
         )?;
 
-        Ok(commitment_scheme.commit(&[value.clone()].into(), randomness))
+        Ok(commitment_scheme.commit(&[*value].into(), randomness))
     }
 }
 

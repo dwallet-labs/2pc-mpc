@@ -1,13 +1,14 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{rand_core::CryptoRngCore, NonZero, Uint, U256};
 use k256::elliptic_curve::{scalar::FromUintUnchecked, Field};
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
+use super::GroupElement;
 use crate::{
     group,
     group::{
@@ -19,7 +20,8 @@ use crate::{
 
 /// A Scalar of the prime field $\mathbb{Z}_p$ over which the secp256k1 prime group is
 /// defined.
-#[derive(PartialEq, Eq, Clone, Debug, Copy, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Scalar(pub(super) k256::Scalar);
 
 impl ConstantTimeEq for Scalar {
@@ -208,15 +210,35 @@ impl<'r> Mul<&'r Scalar> for &Scalar {
     }
 }
 
-impl MulAssign<Self> for Scalar {
-    fn mul_assign(&mut self, rhs: Self) {
-        self.0.mul_assign(rhs.0)
+impl Mul<GroupElement> for Scalar {
+    type Output = GroupElement;
+
+    fn mul(self, rhs: GroupElement) -> Self::Output {
+        GroupElement(rhs.0.mul(self.0))
     }
 }
 
-impl<'r> MulAssign<&'r Self> for Scalar {
-    fn mul_assign(&mut self, rhs: &'r Self) {
-        self.0.mul_assign(&rhs.0)
+impl<'r> Mul<&'r GroupElement> for Scalar {
+    type Output = GroupElement;
+
+    fn mul(self, rhs: &'r GroupElement) -> Self::Output {
+        GroupElement(rhs.0.mul(self.0))
+    }
+}
+
+impl<'r> Mul<GroupElement> for &'r Scalar {
+    type Output = GroupElement;
+
+    fn mul(self, rhs: GroupElement) -> Self::Output {
+        GroupElement(rhs.0.mul(self.0))
+    }
+}
+
+impl<'r> Mul<&'r GroupElement> for &'r Scalar {
+    type Output = GroupElement;
+
+    fn mul(self, rhs: &'r GroupElement) -> Self::Output {
+        GroupElement(rhs.0.mul(self.0))
     }
 }
 
@@ -243,7 +265,8 @@ impl CyclicGroupElement for Scalar {
     }
 }
 
-impl KnownOrderGroupElement<{ U256::LIMBS }, Self> for Scalar {
+impl KnownOrderGroupElement<{ U256::LIMBS }> for Scalar {
+    type Scalar = Self;
     fn order(&self) -> Uint<{ U256::LIMBS }> {
         ORDER
     }
@@ -269,4 +292,4 @@ impl<'r> MulByGenerator<&'r Scalar> for Scalar {
     }
 }
 
-impl PrimeGroupElement<{ U256::LIMBS }, Self> for Scalar {}
+impl PrimeGroupElement<{ U256::LIMBS }> for Scalar {}
