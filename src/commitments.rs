@@ -23,7 +23,7 @@ pub mod pedersen;
 /// \Com(\vec{m}_2; \rho_2) = \Com(\vec{m}_1 + \vec{m}_2; \rho_1 + \rho_2) $$
 ///
 /// As defined in Definitions 2.4, 2.5 in the paper.
-pub trait HomomorphicCommitmentScheme: AsRef<Self::PublicParameters> + PartialEq + Clone {
+pub trait HomomorphicCommitmentScheme: Into<Self::PublicParameters> + PartialEq + Clone {
     /// The Message space group element of the commitment scheme
     type MessageSpaceGroupElement: GroupElement;
     /// The Randomness space group element of the commitment scheme

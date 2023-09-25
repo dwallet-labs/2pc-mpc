@@ -120,9 +120,6 @@ where
             RangeProof,
         >,
         ahe::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        ahe::PlaintextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        ahe::RandomnessSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        ahe::CiphertextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         Scalar::PublicParameters,
         GroupElement::Value,
     >;
@@ -178,12 +175,8 @@ where
             group_public_parameters,
         )?;
 
-        let encryption_key = EncryptionKey::new(
-            &language_public_parameters.encryption_scheme_public_parameters,
-            &language_public_parameters.plaintext_group_public_parameters,
-            &language_public_parameters.encryption_randomness_group_public_parameters,
-            &language_public_parameters.ciphertext_group_public_parameters,
-        )?;
+        let encryption_key =
+            EncryptionKey::new(&language_public_parameters.encryption_scheme_public_parameters)?;
 
         let commitment_scheme = RangeProof::CommitmentScheme::new(
             &language_public_parameters.commitment_scheme_public_parameters,
@@ -203,7 +196,10 @@ where
         let discrete_log_plaintext =
             ahe::PlaintextSpaceGroupElement::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>::new(
                 Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(discrete_log),
-                &language_public_parameters.plaintext_group_public_parameters,
+                &language_public_parameters
+                    .encryption_scheme_public_parameters
+                    .as_ref()
+                    .plaintext_space_public_parameters,
             )?;
 
         Ok((
@@ -299,17 +295,11 @@ pub struct Language<
 pub struct PublicParameters<
     CommitmentSchemePublicParameters,
     EncryptionKeyPublicParameters,
-    PlaintextPublicParameters,
-    EncryptionRandomnessPublicParameters,
-    CiphertextPublicParameters,
     ScalarPublicParameters,
     GroupElementValue,
 > {
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
-    pub plaintext_group_public_parameters: PlaintextPublicParameters,
-    pub encryption_randomness_group_public_parameters: EncryptionRandomnessPublicParameters,
-    pub ciphertext_group_public_parameters: CiphertextPublicParameters,
     pub scalar_group_public_parameters: ScalarPublicParameters,
     pub generator: GroupElementValue,
     // The base of discrete log */

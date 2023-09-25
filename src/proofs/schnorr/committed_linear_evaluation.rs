@@ -161,9 +161,6 @@ for Language<
             RangeProof,
         >,
         ahe::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        ahe::PlaintextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        ahe::RandomnessSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        ahe::CiphertextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         Scalar::PublicParameters,
         ahe::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
     >;
@@ -264,18 +261,12 @@ pub struct PublicParameters<
     CommitmentSchemePublicParameters,
     ProofCommitmentSchemePublicParameters,
     EncryptionKeyPublicParameters,
-    PlaintextPublicParameters,
-    EncryptionRandomnessPublicParameters,
-    CiphertextPublicParameters,
     ScalarPublicParameters,
     CiphertextSpaceValue: Serialize,
 > {
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
     pub range_proof_commitment_scheme_public_parameters: ProofCommitmentSchemePublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
-    pub plaintext_group_public_parameters: PlaintextPublicParameters,
-    pub encryption_randomness_group_public_parameters: EncryptionRandomnessPublicParameters,
-    pub ciphertext_group_public_parameters: CiphertextPublicParameters,
     pub scalar_group_public_parameters: ScalarPublicParameters,
 
     #[serde(with = "const_generic_array_serialization")]

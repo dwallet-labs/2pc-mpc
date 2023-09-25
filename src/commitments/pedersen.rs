@@ -107,8 +107,8 @@ where
     }
 }
 
-impl<const BATCH_SIZE: usize, Scalar, GroupElement> AsRef<commitments::PublicParameters<Self>>
-    for Pedersen<BATCH_SIZE, Scalar, GroupElement>
+impl<const BATCH_SIZE: usize, Scalar, GroupElement> From<Pedersen<BATCH_SIZE, Scalar, GroupElement>>
+    for commitments::PublicParameters<Pedersen<BATCH_SIZE, Scalar, GroupElement>>
 where
     Scalar: CyclicGroupElement
         + Mul<GroupElement, Output = GroupElement>
@@ -117,8 +117,8 @@ where
         + Copy,
     GroupElement: CyclicGroupElement,
 {
-    fn as_ref(&self) -> &commitments::PublicParameters<Self> {
-        &self.public_parameters
+    fn from(value: Pedersen<BATCH_SIZE, Scalar, GroupElement>) -> Self {
+        value.public_parameters.clone()
     }
 }
 

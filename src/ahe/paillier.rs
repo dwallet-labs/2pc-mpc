@@ -10,7 +10,10 @@ use tiresias::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 
 use crate::{
     ahe,
-    ahe::{CiphertextSpaceGroupElement, PlaintextSpaceGroupElement, RandomnessSpaceGroupElement},
+    ahe::{
+        CiphertextSpaceGroupElement, GroupsPublicParameters, PlaintextSpaceGroupElement,
+        RandomnessSpaceGroupElement,
+    },
     group,
     group::{
         additive_group_of_integers_modulu_n::odd_moduli, paillier::PlaintextPublicParameters,
@@ -37,22 +40,19 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
     type PlaintextSpaceGroupElement = PlaintextGroupElement;
     type RandomnessSpaceGroupElement = RandomnessGroupElement;
     type CiphertextSpaceGroupElement = CiphertextGroupElement;
+    type PublicParameters = GroupsPublicParameters<
+        group::PublicParameters<PlaintextGroupElement>,
+        group::PublicParameters<RandomnessGroupElement>,
+        group::PublicParameters<CiphertextGroupElement>,
+    >;
 
-    type PublicParameters = ();
-
-    fn public_parameters(&self) -> Self::PublicParameters {
-        Self::PublicParameters::default()
-    }
-
-    fn new(
-        _encryption_scheme_public_parameters: &Self::PublicParameters,
-        plaintext_group_public_parameters: &PlaintextPublicParameters,
-        _randomness_group_public_parameters: &RandomnessPublicParameters,
-        _ciphertext_group_public_parameters: &CiphertextPublicParameters,
-    ) -> super::Result<Self> {
+    fn new(encryption_scheme_public_parameters: &Self::PublicParameters) -> super::Result<Self> {
         // TODO: this actually now should always succeed and the check should be in evaluate()
         Ok(Self(tiresias::EncryptionKey::new(
-            *plaintext_group_public_parameters.modulus,
+            *encryption_scheme_public_parameters
+                .as_ref()
+                .plaintext_space_public_parameters
+                .modulus,
         )))
         // // In order to assure circuit-privacy, the computation in
         // // [`Self::evaluate_linear_combination_with_randomness()`] must not overflow the Paillier
@@ -113,6 +113,26 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
     }
 }
 
+impl From<EncryptionKey>
+    for GroupsPublicParameters<
+        PlaintextPublicParameters,
+        RandomnessPublicParameters,
+        CiphertextPublicParameters,
+    >
+{
+    fn from(value: EncryptionKey) -> Self {
+        GroupsPublicParameters {
+            plaintext_space_public_parameters: PlaintextPublicParameters {
+                modulus: NonZero::new(value.0.n).unwrap(),
+            },
+            randomness_space_public_parameters: RandomnessPublicParameters { modulus: value.0.n },
+            ciphertext_space_public_parameters: CiphertextPublicParameters {
+                modulus: value.0.n2,
+            },
+        }
+    }
+}
+
 impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>
     for DecryptionKey
 {
@@ -123,23 +143,9 @@ impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, Encryption
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             EncryptionKey,
         >,
-        plaintext_group_public_parameters: &PublicParameters<
-            PlaintextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        >,
-        randomness_group_public_parameters: &PublicParameters<
-            RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        >,
-        ciphertext_group_public_parameters: &PublicParameters<
-            CiphertextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        >,
         secret_key: Self::SecretKey,
     ) -> super::Result<Self> {
-        let encryption_key = EncryptionKey::new(
-            encryption_scheme_public_parameters,
-            plaintext_group_public_parameters,
-            randomness_group_public_parameters,
-            ciphertext_group_public_parameters,
-        )?;
+        let encryption_key = EncryptionKey::new(encryption_scheme_public_parameters)?;
 
         Ok(Self(tiresias::DecryptionKey::new(
             encryption_key.0,

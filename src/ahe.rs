@@ -30,7 +30,7 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// An Encryption Key of an Additively Homomorphic Encryption scheme.
-pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize>:
+pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize>: Into<Self::PublicParameters> +
 PartialEq + Clone + Debug
 {
     type PlaintextSpaceGroupElement: GroupElement<Value=Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>
@@ -43,34 +43,23 @@ PartialEq + Clone + Debug
 
     /// The public parameters of the encryption scheme.
     ///
-    /// Used for encryption-specific parameters (e.g., the modulus $N$ in case of Paillier.)
-    ///
-    /// Group public parameters are encoded separately in
-    /// `PlaintextSpaceGroupElement::PublicParameters`,
-    /// `RandomnessSpaceGroupElement::PublicParameters`
-    /// `CiphertextSpaceGroupElement::PublicParameters`.
+    /// Includes the public parameters of the plaintext, randomness and ciphertext groups.
     ///
     /// Used in [`Self::encrypt()`] to define the encryption algorithm.
     /// As such, it uniquely identifies the encryption-scheme (alongside the type `Self`) and will
     /// be used for Fiat-Shamir Transcripts).
-    type PublicParameters: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq;
-
-    /// Returns the public parameters of this encryption scheme.
-    fn public_parameters(&self) -> Self::PublicParameters;
+    type PublicParameters: AsRef<
+        GroupsPublicParameters<
+            PlaintextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, Self>,
+            RandomnessSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, Self>,
+            CiphertextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, Self>,
+        >,
+    > + Serialize + for<'r> Deserialize<'r> + Clone + PartialEq;
 
     /// Instantiate the encryption key from the public parameters of the encryption scheme,
     /// plaintext, randomness and ciphertext groups.
     fn new(
         encryption_scheme_public_parameters: &Self::PublicParameters,
-        plaintext_group_public_parameters: &group::PublicParameters<
-            Self::PlaintextSpaceGroupElement,
-        >,
-        randomness_group_public_parameters: &group::PublicParameters<
-            Self::RandomnessSpaceGroupElement,
-        >,
-        ciphertext_group_public_parameters: &group::PublicParameters<
-            Self::CiphertextSpaceGroupElement,
-        >,
     ) -> Result<Self>;
 
     /// $\Enc(pk, \pt; \eta_{\sf enc}) \to \ct$: Encrypt `plaintext` to `self` using
@@ -265,15 +254,6 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     /// plaintext, randomness, ciphertext groups and the secret key.
     fn new(
         encryption_scheme_public_parameters: &EncryptionKey::PublicParameters,
-        plaintext_group_public_parameters: &group::PublicParameters<
-            EncryptionKey::PlaintextSpaceGroupElement,
-        >,
-        randomness_group_public_parameters: &group::PublicParameters<
-            EncryptionKey::RandomnessSpaceGroupElement,
-        >,
-        ciphertext_group_public_parameters: &group::PublicParameters<
-            EncryptionKey::CiphertextSpaceGroupElement,
-        >,
         secret_key: Self::SecretKey,
     ) -> Result<Self>;
 
@@ -285,6 +265,32 @@ pub trait AdditivelyHomomorphicDecryptionKey<
         ciphertext: &EncryptionKey::CiphertextSpaceGroupElement,
     ) -> EncryptionKey::PlaintextSpaceGroupElement;
 }
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct GroupsPublicParameters<
+    PlaintextSpacePublicParameters,
+    RandomnessSpacePublicParameters,
+    CiphertextSpacePublicParameters,
+> {
+    pub plaintext_space_public_parameters: PlaintextSpacePublicParameters,
+    pub randomness_space_public_parameters: RandomnessSpacePublicParameters,
+    pub ciphertext_space_public_parameters: CiphertextSpacePublicParameters,
+}
+
+impl<
+    PlaintextSpacePublicParameters,
+    RandomnessSpacePublicParameters,
+    CiphertextSpacePublicParameters,
+> AsRef<Self> for GroupsPublicParameters<
+    PlaintextSpacePublicParameters,
+    RandomnessSpacePublicParameters,
+    CiphertextSpacePublicParameters,
+> {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
 
 pub type PlaintextSpaceGroupElement<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> = <
 E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
