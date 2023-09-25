@@ -17,14 +17,13 @@ use serde::{Deserialize, Serialize};
 
 use super::{Error, Result, TranscriptProtocol};
 use crate::{
-    commitments::{
-        CommitmentSpaceGroupElement, HomomorphicCommitmentScheme, RandomnessSpaceGroupElement,
-    },
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
         GroupElement, Samplable,
     },
-    proofs, ComputationalSecuritySizedNumber,
+    proofs,
+    proofs::range,
+    ComputationalSecuritySizedNumber,
 };
 
 // For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
@@ -67,6 +66,38 @@ pub trait Language<
     ) -> Result<PublicValueSpaceGroupElement>;
 }
 
+pub type EnhancedLanguageWitness<
+    const NUM_RANGE_CLAIMS: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    UnboundedWitnessSpaceGroupElement,
+    RangeProof,
+> = direct_product::ThreeWayGroupElement<
+    self_product::GroupElement<
+        NUM_RANGE_CLAIMS,
+        power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>,
+    >,
+    range::CommitmentSchemeRandomnessSpaceGroupElement<
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        RangeProof,
+    >,
+    UnboundedWitnessSpaceGroupElement,
+>;
+
+pub type EnhancedLanguagePublicValue<
+    const NUM_RANGE_CLAIMS: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    RemainingPublicValueSpaceGroupElement,
+    RangeProof,
+> = direct_product::GroupElement<
+    range::CommitmentSchemeCommitmentSpaceGroupElement<
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        RangeProof,
+    >,
+    RemainingPublicValueSpaceGroupElement,
+>;
+
 /// An Enhacned Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.
 /// As defined in Appendix B. Schnorr Protocols in the paper.
@@ -82,14 +113,18 @@ pub trait EnhancedLanguage<
     // The range proof used to prove bounded values are within the range specified in the public parameters
     RangeProof: proofs::RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>,
 >: Language<
-    direct_product::ThreeWayGroupElement<
-        self_product::GroupElement<NUM_RANGE_CLAIMS,
-            power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>>,
-        RandomnessSpaceGroupElement<RangeProof::CommitmentScheme>,
-        UnboundedWitnessSpaceGroupElement>,
-    direct_product::GroupElement<
-        CommitmentSpaceGroupElement<RangeProof::CommitmentScheme>,
-        RemainingPublicValueSpaceGroupElement>>
+    EnhancedLanguageWitness<
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+        RangeProof,
+    >,
+    EnhancedLanguagePublicValue<
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        RemainingPublicValueSpaceGroupElement,
+        RangeProof,
+    >>
     where Uint<RANGE_CLAIM_LIMBS>: Encoding,
 {}
 

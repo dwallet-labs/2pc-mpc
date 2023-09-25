@@ -7,83 +7,64 @@ use crypto_bigint::{Encoding, Uint};
 use serde::Serialize;
 
 use crate::{
-    ahe,
-    ahe::{CiphertextSpaceGroupElement, PlaintextSpaceGroupElement},
-    commitments,
-    commitments::CommitmentSpaceGroupElement,
+    ahe, commitments,
+    commitments::HomomorphicCommitmentScheme,
     group,
     group::{
-        additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
+        additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product,
         GroupElement as _, Samplable,
     },
     proofs,
     proofs::{
-        range::CommitmentScheme,
         schnorr,
-        schnorr::{EnhancedLanguage, HomomorphicCommitmentScheme},
+        schnorr::{EnhancedLanguage, EnhancedLanguagePublicValue, EnhancedLanguageWitness},
     },
     AdditivelyHomomorphicEncryptionKey,
 };
 
-/// Encryption of Discrete Log Schnorr Language
-///
-/// SECURITY NOTICE:
-/// Because correctness and zero-knowledge is guaranteed for any group and additively homomorphic
-/// encryption scheme in this language, we choose to provide a fully generic
-/// implementation.
-///
-/// However knowledge-soundness proofs are group and encryption scheme dependent, and thus we can
-/// only assure security for groups and encryption schemes for which we know how to prove it.
-///
-/// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
-/// `PrimeOrderGroupElement`.
-///
-/// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
-#[derive(Clone)]
-pub struct Language<
-    const MASK_LIMBS: usize,
-    const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
-    const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+// TODO: should I unite now the public parameters of the groups with commitment & encryption
+type UnboundedWitnessSpaceGroupElement<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, EncryptionKey> =
+    ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>;
+
+type RemainingPublicValueSpaceGroupElement<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    Scalar,
+    GroupElement,
+    EncryptionKey,
+> = direct_product::GroupElement<
+    ahe::CiphertextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+    GroupElement,
+>;
+
+type Witness<
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    EncryptionKey,
+    RangeProof,
+> = EnhancedLanguageWitness<
+    RANGE_CLAIMS_PER_SCALAR,
+    RANGE_CLAIM_LIMBS,
+    UnboundedWitnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+    RangeProof,
+>;
+
+type PublicValue<
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement,
     EncryptionKey,
     RangeProof,
-> {
-    _scalar_choice: PhantomData<Scalar>,
-    _group_element_choice: PhantomData<GroupElement>,
-    _encryption_key_choice: PhantomData<EncryptionKey>,
-    _range_proof_choice: PhantomData<RangeProof>,
-}
-
-// TODO: Witness, Statement type aliases of Language should simplify things.
-// TODO: do type aliases of type aliases: public parameters of randomness of ...
-// TODO: should I unite now the public parameters of the groups with commitment & encryption
-// schemes?
-/// The Public Parameters of the Encryption of Discrete Log Schnorr Language
-#[derive(Debug, PartialEq, Serialize, Clone)]
-pub struct PublicParameters<
-    CommitmentSchemePublicParameters,
-    CommitmentRandomnessPublicParameters,
-    EncryptionKeyPublicParameters,
-    PlaintextPublicParameters,
-    EncryptionRandomnessPublicParameters,
-    CiphertextPublicParameters,
-    ScalarPublicParameters,
-    GroupElementValue,
-> {
-    pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
-    pub commitment_randomness_group_public_parameters: CommitmentRandomnessPublicParameters,
-    pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
-    pub plaintext_group_public_parameters: PlaintextPublicParameters,
-    pub encryption_randomness_group_public_parameters: EncryptionRandomnessPublicParameters,
-    pub ciphertext_group_public_parameters: CiphertextPublicParameters,
-    pub scalar_group_public_parameters: ScalarPublicParameters,
-    pub generator: GroupElementValue,
-    // The base of discrete log */
-    // todo
-    // todo: range claim. */
-}
+> = EnhancedLanguagePublicValue<
+    RANGE_CLAIMS_PER_SCALAR,
+    RANGE_CLAIM_LIMBS,
+    RemainingPublicValueSpaceGroupElement<
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        GroupElement,
+        EncryptionKey,
+    >,
+    RangeProof,
+>;
 
 impl<
         const MASK_LIMBS: usize,
@@ -96,20 +77,20 @@ impl<
         RangeProof: proofs::RangeProof<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>,
     >
     schnorr::Language<
-        direct_product::ThreeWayGroupElement<
-            self_product::GroupElement<
-                RANGE_CLAIMS_PER_SCALAR,
-                power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>,
-            >,
-            commitments::RandomnessSpaceGroupElement<RangeProof::CommitmentScheme>,
-            ahe::RandomnessSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        Witness<
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            EncryptionKey,
+            RangeProof,
         >,
-        direct_product::GroupElement<
-            CommitmentSpaceGroupElement<RangeProof::CommitmentScheme>,
-            direct_product::GroupElement<
-                CiphertextSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
-                GroupElement,
-            >,
+        PublicValue<
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
         >,
     >
     for Language<
@@ -138,58 +119,50 @@ where
             commitments::RandomnessSpaceGroupElement<RangeProof::CommitmentScheme>,
         >,
         EncryptionKey::PublicParameters,
-        group::PublicParameters<
-            PlaintextSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        >,
-        group::PublicParameters<
-            ahe::RandomnessSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        >,
-        group::PublicParameters<
-            CiphertextSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        >,
+        ahe::PlaintextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        ahe::RandomnessSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        ahe::CiphertextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         Scalar::PublicParameters,
         GroupElement::Value,
     >;
     const NAME: &'static str = "Encryption of Discrete Log";
 
     fn group_homomorphism(
-        witness: &direct_product::ThreeWayGroupElement<
-            self_product::GroupElement<
-                RANGE_CLAIMS_PER_SCALAR,
-                power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>,
-            >,
-            commitments::RandomnessSpaceGroupElement<RangeProof::CommitmentScheme>,
-            ahe::RandomnessSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        witness: &Witness<
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            EncryptionKey,
+            RangeProof,
         >,
         language_public_parameters: &Self::PublicParameters,
-        _witness_space_public_parameters: &direct_product::ThreeWayPublicParameters<
-            self_product::PublicParameters<
+        _witness_space_public_parameters: &group::PublicParameters<
+            Witness<
                 RANGE_CLAIMS_PER_SCALAR,
-                group::PublicParameters<power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>>,
-            >,
-            group::PublicParameters<
-                commitments::RandomnessSpaceGroupElement<RangeProof::CommitmentScheme>,
-            >,
-            group::PublicParameters<
-                ahe::RandomnessSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
+                RANGE_CLAIM_LIMBS,
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                EncryptionKey,
+                RangeProof,
             >,
         >,
-        public_value_space_public_parameters: &direct_product::PublicParameters<
-            group::PublicParameters<CommitmentSpaceGroupElement<RangeProof::CommitmentScheme>>,
-            direct_product::PublicParameters<
-                group::PublicParameters<
-                    CiphertextSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
-                >,
-                GroupElement::PublicParameters,
+        public_value_space_public_parameters: &group::PublicParameters<
+            PublicValue<
+                RANGE_CLAIMS_PER_SCALAR,
+                RANGE_CLAIM_LIMBS,
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+                RangeProof,
             >,
         >,
     ) -> proofs::Result<
-        direct_product::GroupElement<
-            CommitmentSpaceGroupElement<RangeProof::CommitmentScheme>,
-            direct_product::GroupElement<
-                CiphertextSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
-                GroupElement,
-            >,
+        PublicValue<
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
         >,
     > {
         let (discrete_log_parts, commitment_randomness, encryption_randomness) = witness.into();
@@ -227,13 +200,13 @@ where
         )?;
 
         let discrete_log_plaintext =
-            PlaintextSpaceGroupElement::<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>::new(
+            ahe::PlaintextSpaceGroupElement::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>::new(
                 Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(discrete_log),
                 &language_public_parameters.plaintext_group_public_parameters,
             )?;
 
         Ok((
-            commitment_scheme.commit(&discrete_log_parts, commitment_randomness),
+            commitment_scheme.commit(discrete_log_parts, commitment_randomness),
             (
                 encryption_key
                     .encrypt_with_randomness(&discrete_log_plaintext, encryption_randomness),
@@ -258,10 +231,11 @@ impl<
     EnhancedLanguage<
         RANGE_CLAIMS_PER_SCALAR,
         RANGE_CLAIM_LIMBS,
-        ahe::RandomnessSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        direct_product::GroupElement<
-            CiphertextSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        UnboundedWitnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        RemainingPublicValueSpaceGroupElement<
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
+            EncryptionKey,
         >,
         RangeProof,
     >
@@ -287,6 +261,63 @@ where
 {
 }
 
+/// Encryption of Discrete Log Schnorr Language
+///
+/// SECURITY NOTICE:
+/// Because correctness and zero-knowledge is guaranteed for any group and additively homomorphic
+/// encryption scheme in this language, we choose to provide a fully generic
+/// implementation.
+///
+/// However knowledge-soundness proofs are group and encryption scheme dependent, and thus we can
+/// only assure security for groups and encryption schemes for which we know how to prove it.
+///
+/// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
+/// `PrimeOrderGroupElement`.
+///
+/// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
+#[derive(Clone)]
+pub struct Language<
+    const MASK_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
+    const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    EncryptionKey,
+    RangeProof,
+> {
+    _scalar_choice: PhantomData<Scalar>,
+    _group_element_choice: PhantomData<GroupElement>,
+    _encryption_key_choice: PhantomData<EncryptionKey>,
+    _range_proof_choice: PhantomData<RangeProof>,
+}
+
+// schemes?
+/// The Public Parameters of the Encryption of Discrete Log Schnorr Language
+#[derive(Debug, PartialEq, Serialize, Clone)]
+pub struct PublicParameters<
+    CommitmentSchemePublicParameters,
+    CommitmentRandomnessPublicParameters,
+    EncryptionKeyPublicParameters,
+    PlaintextPublicParameters,
+    EncryptionRandomnessPublicParameters,
+    CiphertextPublicParameters,
+    ScalarPublicParameters,
+    GroupElementValue,
+> {
+    pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
+    pub commitment_randomness_group_public_parameters: CommitmentRandomnessPublicParameters,
+    pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
+    pub plaintext_group_public_parameters: PlaintextPublicParameters,
+    pub encryption_randomness_group_public_parameters: EncryptionRandomnessPublicParameters,
+    pub ciphertext_group_public_parameters: CiphertextPublicParameters,
+    pub scalar_group_public_parameters: ScalarPublicParameters,
+    pub generator: GroupElementValue,
+    // The base of discrete log */
+    // todo
+    // todo: range claim. */
+}
+
 /// An Encryption of Discrete Log Schnorr Proof
 // TODO: enhanced proof.
 pub type Proof<
@@ -300,24 +331,20 @@ pub type Proof<
     RangeProof,
     ProtocolContext,
 > = schnorr::Proof<
-    direct_product::ThreeWayGroupElement<
-        self_product::GroupElement<
-            RANGE_CLAIMS_PER_SCALAR,
-            power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>,
-        >,
-        commitments::RandomnessSpaceGroupElement<
-            CommitmentScheme<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, RangeProof>,
-        >,
-        ahe::RandomnessSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    Witness<
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        EncryptionKey,
+        RangeProof,
     >,
-    direct_product::GroupElement<
-        CommitmentSpaceGroupElement<
-            CommitmentScheme<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, RangeProof>,
-        >,
-        direct_product::GroupElement<
-            CiphertextSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
-            GroupElement,
-        >,
+    PublicValue<
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        GroupElement,
+        EncryptionKey,
+        RangeProof,
     >,
     Language<
         MASK_LIMBS,

@@ -120,17 +120,17 @@ impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, Encryption
 
     fn new(
         encryption_scheme_public_parameters: &ahe::PublicParameters<
-            EncryptionKey,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
+            EncryptionKey,
         >,
         plaintext_group_public_parameters: &PublicParameters<
-            PlaintextSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
+            PlaintextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         >,
         randomness_group_public_parameters: &PublicParameters<
-            RandomnessSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
+            RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         >,
         ciphertext_group_public_parameters: &PublicParameters<
-            CiphertextSpaceGroupElement<EncryptionKey, PLAINTEXT_SPACE_SCALAR_LIMBS>,
+            CiphertextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         >,
         secret_key: Self::SecretKey,
     ) -> super::Result<Self> {

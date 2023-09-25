@@ -10,14 +10,38 @@ use crate::{
     proofs::{schnorr, schnorr::Samplable},
 };
 
-/// Knowledge of Discrete Log Schnorr Language.
-#[derive(Clone)]
-pub struct Language {}
+type WitnessGroupElement<Scalar> = Scalar;
+type PublicValueGroupElement<GroupElement> = GroupElement;
 
-/// The Public Parameters of the Knowledge of Discrete Log Schnorr Language.
-#[derive(Debug, PartialEq, Serialize, Clone)]
-pub struct PublicParameters<GroupElementValue> {
-    pub generator: GroupElementValue,
+impl<Scalar, GroupElement>
+    schnorr::Language<WitnessGroupElement<Scalar>, PublicValueGroupElement<GroupElement>>
+    for Language
+where
+    Scalar: group::GroupElement
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy,
+    GroupElement: group::GroupElement,
+{
+    type PublicParameters = PublicParameters<GroupElement::Value>;
+    const NAME: &'static str = "Knowledge of the Discrete Log";
+
+    fn group_homomorphism(
+        witness: &WitnessGroupElement<Scalar>,
+        language_public_parameters: &Self::PublicParameters,
+        _witness_space_public_parameters: &group::PublicParameters<WitnessGroupElement<Scalar>>,
+        public_value_space_public_parameters: &group::PublicParameters<
+            PublicValueGroupElement<GroupElement>,
+        >,
+    ) -> proofs::Result<PublicValueGroupElement<GroupElement>> {
+        let generator = GroupElement::new(
+            language_public_parameters.generator.clone(),
+            public_value_space_public_parameters,
+        )?;
+
+        Ok(*witness * generator)
+    }
 }
 
 /// Knowledge of Discrete Log Schnorr Language.
@@ -31,33 +55,20 @@ pub struct PublicParameters<GroupElementValue> {
 ///
 /// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
 /// `PrimeOrderGroupElement`.
-impl<Scalar, GroupElement> schnorr::Language<Scalar, GroupElement> for Language
-where
-    Scalar: group::GroupElement
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Copy,
-    GroupElement: group::GroupElement,
-{
-    type PublicParameters = PublicParameters<GroupElement::Value>;
-    const NAME: &'static str = "Knowledge of the Discrete Log";
+#[derive(Clone)]
+pub struct Language {}
 
-    fn group_homomorphism(
-        witness: &Scalar,
-        language_public_parameters: &Self::PublicParameters,
-        _witness_space_public_parameters: &Scalar::PublicParameters,
-        public_value_space_public_parameters: &GroupElement::PublicParameters,
-    ) -> proofs::Result<GroupElement> {
-        let generator = GroupElement::new(
-            language_public_parameters.generator.clone(),
-            public_value_space_public_parameters,
-        )?;
-
-        Ok(*witness * generator)
-    }
+/// The Public Parameters of the Knowledge of Discrete Log Schnorr Language.
+#[derive(Debug, PartialEq, Serialize, Clone)]
+pub struct PublicParameters<GroupElementValue> {
+    pub generator: GroupElementValue,
 }
 
 /// A Knowledge of Discrete Log Schnorr Proof.
 #[allow(dead_code)]
-pub type Proof<S, G, ProtocolContext> = schnorr::Proof<S, G, Language, ProtocolContext>;
+pub type Proof<Scalar, GroupElement, ProtocolContext> = schnorr::Proof<
+    WitnessGroupElement<Scalar>,
+    PublicValueGroupElement<GroupElement>,
+    Language,
+    ProtocolContext,
+>;

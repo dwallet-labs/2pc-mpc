@@ -13,6 +13,57 @@ use crate::{
     proofs::schnorr,
 };
 
+type WitnessGroupElement<Scalar> = self_product::GroupElement<2, Scalar>;
+type PublicValueGroupElement<GroupElement> = self_product::GroupElement<2, GroupElement>;
+
+impl<Scalar, GroupElement, CommitmentScheme>
+    schnorr::Language<WitnessGroupElement<Scalar>, PublicValueGroupElement<GroupElement>>
+    for Language<CommitmentScheme>
+where
+    Scalar: group::GroupElement
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy,
+    GroupElement: CyclicGroupElement,
+    CommitmentScheme: HomomorphicCommitmentScheme<
+        MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+        RandomnessSpaceGroupElement = Scalar,
+        CommitmentSpaceGroupElement = GroupElement,
+    >,
+{
+    type PublicParameters =
+        PublicParameters<GroupElement::Value, CommitmentScheme::PublicParameters>;
+    const NAME: &'static str = "Commitment of Discrete Log";
+
+    fn group_homomorphism(
+        witness: &WitnessGroupElement<Scalar>,
+        language_public_parameters: &Self::PublicParameters,
+        _witness_space_public_parameters: &group::PublicParameters<WitnessGroupElement<Scalar>>,
+        public_value_space_public_parameters: &group::PublicParameters<
+            PublicValueGroupElement<GroupElement>,
+        >,
+    ) -> proofs::Result<PublicValueGroupElement<GroupElement>> {
+        let [value, randomness]: &[Scalar; 2] = witness.into();
+
+        let base = GroupElement::new(
+            language_public_parameters.generator.clone(),
+            &public_value_space_public_parameters.public_parameters,
+        )?;
+
+        let commitment_scheme = CommitmentScheme::new(
+            &language_public_parameters.commitment_scheme_public_parameters,
+            &public_value_space_public_parameters.public_parameters,
+        )?;
+
+        Ok([
+            commitment_scheme.commit(&[*value].into(), randomness),
+            *value * base,
+        ]
+        .into())
+    }
+}
+
 /// Commitment of Discrete Log Schnorr Language
 ///
 /// SECURITY NOTICE:
@@ -36,65 +87,11 @@ pub struct PublicParameters<GroupElementValue, CommitmentSchemePublicParameters>
     pub generator: GroupElementValue, // The base of discrete log
 }
 
-impl<Scalar, GroupElement, CommitmentScheme>
-    schnorr::Language<
-        self_product::GroupElement<2, Scalar>,
-        self_product::GroupElement<2, GroupElement>,
-    > for Language<CommitmentScheme>
-where
-    Scalar: group::GroupElement
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Copy,
-    GroupElement: CyclicGroupElement,
-    CommitmentScheme: HomomorphicCommitmentScheme<
-        MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
-        RandomnessSpaceGroupElement = Scalar,
-        CommitmentSpaceGroupElement = GroupElement,
-    >,
-{
-    type PublicParameters =
-        PublicParameters<GroupElement::Value, CommitmentScheme::PublicParameters>;
-    const NAME: &'static str = "Commitment of Discrete Log";
-
-    fn group_homomorphism(
-        witness: &self_product::GroupElement<2, Scalar>,
-        language_public_parameters: &Self::PublicParameters,
-        _witness_space_public_parameters: &self_product::PublicParameters<
-            2,
-            Scalar::PublicParameters,
-        >,
-        public_value_space_public_parameters: &self_product::PublicParameters<
-            2,
-            GroupElement::PublicParameters,
-        >,
-    ) -> proofs::Result<self_product::GroupElement<2, GroupElement>> {
-        let [value, randomness]: &[Scalar; 2] = witness.into();
-
-        let base = GroupElement::new(
-            language_public_parameters.generator.clone(),
-            &public_value_space_public_parameters.public_parameters,
-        )?;
-
-        let commitment_scheme = CommitmentScheme::new(
-            &language_public_parameters.commitment_scheme_public_parameters,
-            &public_value_space_public_parameters.public_parameters,
-        )?;
-
-        Ok([
-            commitment_scheme.commit(&[*value].into(), randomness),
-            *value * base,
-        ]
-        .into())
-    }
-}
-
 /// A Commitment of Discrete Log Schnorr Proof
 #[allow(dead_code)]
 pub type Proof<Scalar, GroupElement, CommitmentScheme, ProtocolContext> = schnorr::Proof<
-    self_product::GroupElement<2, Scalar>,
-    self_product::GroupElement<2, GroupElement>,
+    WitnessGroupElement<Scalar>,
+    PublicValueGroupElement<GroupElement>,
     Language<CommitmentScheme>,
     ProtocolContext,
 >;
