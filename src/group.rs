@@ -46,9 +46,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 ///
 /// All group operations are guaranteed to be constant time
 pub trait GroupElement:
-    PartialEq
-    + Clone
-    + Neg<Output = Self>
+    Neg<Output = Self>
     + Add<Self, Output = Self>
     + for<'r> Add<&'r Self, Output = Self>
     + Sub<Self, Output = Self>
@@ -57,6 +55,10 @@ pub trait GroupElement:
     + for<'r> AddAssign<&'r Self>
     + SubAssign<Self>
     + for<'r> SubAssign<&'r Self>
+    + Into<Self::Value>
+    + Into<Self::PublicParameters>
+    + PartialEq
+    + Clone
 {
     /// The actual value of the group point used for encoding/decoding.
     ///
@@ -77,9 +79,6 @@ pub trait GroupElement:
     /// point from the group parameters.
     type Value: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq + ConstantTimeEq;
 
-    /// Returns the value of this group element
-    fn value(&self) -> Self::Value;
-
     /// The public parameters of the group, used for group operations.
     ///
     /// These include both dynamic information for runtime calculations
@@ -88,9 +87,6 @@ pub trait GroupElement:
     /// (that, together with the dynamic information, uniquely identifies a group and will be used
     /// for Fiat-Shamir Transcripts).
     type PublicParameters: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq;
-
-    /// Returns the public parameters of this group element
-    fn public_parameters(&self) -> Self::PublicParameters;
 
     /// Instantiate the group element from its value and the caller supplied parameters.
     ///

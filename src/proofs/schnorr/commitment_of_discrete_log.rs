@@ -10,7 +10,7 @@ use crate::{
     group,
     group::{self_product, CyclicGroupElement, Samplable},
     proofs,
-    proofs::schnorr,
+    proofs::{schnorr, schnorr::GroupsPublicParameters},
 };
 
 type WitnessGroupElement<Scalar> = self_product::GroupElement<2, Scalar>;
@@ -32,23 +32,26 @@ where
         CommitmentSpaceGroupElement = GroupElement,
     >,
 {
-    type PublicParameters =
-        PublicParameters<GroupElement::Value, CommitmentScheme::PublicParameters>;
+    type PublicParameters = PublicParameters<
+        group::PublicParameters<WitnessGroupElement<Scalar>>,
+        group::PublicParameters<PublicValueGroupElement<GroupElement>>,
+        GroupElement::Value,
+        CommitmentScheme::PublicParameters,
+    >;
     const NAME: &'static str = "Commitment of Discrete Log";
 
     fn group_homomorphism(
         witness: &WitnessGroupElement<Scalar>,
         language_public_parameters: &Self::PublicParameters,
-        _witness_space_public_parameters: &group::PublicParameters<WitnessGroupElement<Scalar>>,
-        public_value_space_public_parameters: &group::PublicParameters<
-            PublicValueGroupElement<GroupElement>,
-        >,
     ) -> proofs::Result<PublicValueGroupElement<GroupElement>> {
         let [value, randomness]: &[Scalar; 2] = witness.into();
 
         let base = GroupElement::new(
             language_public_parameters.generator.clone(),
-            &public_value_space_public_parameters.public_parameters,
+            &language_public_parameters
+                .as_ref()
+                .public_value_space_public_parameters
+                .public_parameters,
         )?;
 
         let commitment_scheme =
@@ -80,9 +83,37 @@ pub struct Language<CommitmentScheme> {
 
 /// The Public Parameters of the Commitment of Discrete Log Schnorr Language
 #[derive(Debug, PartialEq, Serialize, Clone)]
-pub struct PublicParameters<GroupElementValue, CommitmentSchemePublicParameters> {
+pub struct PublicParameters<
+    WitnessSpacePublicParameters,
+    PublicValueSpacePublicParameters,
+    GroupElementValue,
+    CommitmentSchemePublicParameters,
+> {
+    pub groups_public_parameters:
+        GroupsPublicParameters<WitnessSpacePublicParameters, PublicValueSpacePublicParameters>,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
     pub generator: GroupElementValue, // The base of discrete log
+}
+
+impl<
+        WitnessSpacePublicParameters,
+        PublicValueSpacePublicParameters,
+        GroupElementValue,
+        CommitmentSchemePublicParameters,
+    > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, PublicValueSpacePublicParameters>>
+    for PublicParameters<
+        WitnessSpacePublicParameters,
+        PublicValueSpacePublicParameters,
+        GroupElementValue,
+        CommitmentSchemePublicParameters,
+    >
+{
+    fn as_ref(
+        &self,
+    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, PublicValueSpacePublicParameters>
+    {
+        &self.groups_public_parameters
+    }
 }
 
 /// A Commitment of Discrete Log Schnorr Proof

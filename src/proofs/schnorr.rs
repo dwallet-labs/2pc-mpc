@@ -16,15 +16,10 @@ use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use super::{Error, Result, TranscriptProtocol};
-use crate::{
-    group::{
-        additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
-        GroupElement, Samplable,
-    },
-    proofs,
-    proofs::range,
-    ComputationalSecuritySizedNumber,
-};
+use crate::{group::{
+    additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
+    GroupElement, Samplable,
+}, proofs, proofs::range, ComputationalSecuritySizedNumber, group};
 
 // For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
 // Setting it to be 64-bit larger than the computational security parameter $\kappa$ allows us to
@@ -44,13 +39,12 @@ pub trait Language<
 {
     /// Public parameters for a language family $\pp \gets \Setup(1^\kappa)$.
     ///
-    /// Used for language-specific parameters (e.g., the public parameters of the commitment scheme
-    /// used for proving knowledge of decommitment - the bases $g$, $h$ in the case of Pedersen).
+    /// Includes the public parameters of the witness, and public value groups.
     ///
     /// Group public parameters are encoded separately in
     /// `WitnessSpaceGroupElement::PublicParameters` and
     /// `PublicValueSpaceGroupElement::PublicParameters`.
-    type PublicParameters: Serialize + PartialEq + Clone;
+    type PublicParameters: AsRef<GroupsPublicParameters<group::PublicParameters<WitnessSpaceGroupElement>, group::PublicParameters<PublicValueSpaceGroupElement>>> + Serialize + PartialEq + Clone;
 
     /// A unique string representing the name of this language; will be inserted to the Fiat-Shamir
     /// transcript.
@@ -61,8 +55,6 @@ pub trait Language<
     fn group_homomorphism(
         witness: &WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
-        witness_space_public_parameters: &WitnessSpaceGroupElement::PublicParameters,
-        public_value_space_public_parameters: &PublicValueSpaceGroupElement::PublicParameters,
     ) -> Result<PublicValueSpaceGroupElement>;
 }
 
@@ -332,4 +324,13 @@ impl<
             })
             .collect())
     }
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct GroupsPublicParameters<
+    WitnessSpacePublicParameters,
+    PublicValueSpacePublicParameters,
+> {
+    pub witness_space_public_parameters: WitnessSpacePublicParameters,
+    pub public_value_space_public_parameters: PublicValueSpacePublicParameters,
 }
