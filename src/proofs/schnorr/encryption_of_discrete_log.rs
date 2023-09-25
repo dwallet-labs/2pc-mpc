@@ -7,7 +7,7 @@ use crypto_bigint::{Encoding, Uint};
 use serde::Serialize;
 
 use crate::{
-    ahe, commitments,
+    ahe,
     commitments::HomomorphicCommitmentScheme,
     group,
     group::{
@@ -119,11 +119,6 @@ where
             RANGE_CLAIM_LIMBS,
             RangeProof,
         >,
-        range::CommitmentSchemeRandomnessSpacePublicParameters<
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            RangeProof,
-        >,
         ahe::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         ahe::PlaintextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         ahe::RandomnessSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
@@ -192,7 +187,6 @@ where
 
         let commitment_scheme = RangeProof::CommitmentScheme::new(
             &language_public_parameters.commitment_scheme_public_parameters,
-            commitment_public_parameters,
         )?;
 
         let discrete_log_parts_array: [power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>;
@@ -304,7 +298,6 @@ pub struct Language<
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
     CommitmentSchemePublicParameters,
-    CommitmentRandomnessPublicParameters,
     EncryptionKeyPublicParameters,
     PlaintextPublicParameters,
     EncryptionRandomnessPublicParameters,
@@ -313,7 +306,6 @@ pub struct PublicParameters<
     GroupElementValue,
 > {
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
-    pub commitment_randomness_group_public_parameters: CommitmentRandomnessPublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
     pub plaintext_group_public_parameters: PlaintextPublicParameters,
     pub encryption_randomness_group_public_parameters: EncryptionRandomnessPublicParameters,

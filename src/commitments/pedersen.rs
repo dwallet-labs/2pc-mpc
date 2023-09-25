@@ -6,7 +6,8 @@ use std::{marker::PhantomData, ops::Mul};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    commitments::HomomorphicCommitmentScheme,
+    commitments,
+    commitments::{GroupsPublicParameters, HomomorphicCommitmentScheme},
     group,
     group::{self_product, CyclicGroupElement, Samplable},
     helpers::const_generic_array_serialization,
@@ -15,21 +16,26 @@ use crate::{
 /// A Batched Pedersen Commitment
 /// The public parameters ['PublicParameters'] for this commitment should be carefully constructed.
 #[derive(PartialEq, Clone)]
-pub struct Pedersen<const BATCH_SIZE: usize, Scalar, GroupElement> {
+pub struct Pedersen<
+    const BATCH_SIZE: usize,
+    Scalar: group::GroupElement,
+    GroupElement: group::GroupElement,
+> {
     /// The generators used for the messages
     message_generators: [GroupElement; BATCH_SIZE],
     /// The generator used for the randomness
     randomness_generator: GroupElement,
 
-    _scalar_choice: PhantomData<Scalar>,
-}
+    /// The public parameters
+    public_parameters: PublicParameters<
+        BATCH_SIZE,
+        group::Value<GroupElement>,
+        MessageSpacePublicParameters<BATCH_SIZE, Scalar>,
+        RandomnessSpacePublicParameters<Scalar>,
+        CommitmentSpacePublicParameters<GroupElement>,
+    >,
 
-/// The Public Parameters of a Pedersen Commitment
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct PublicParameters<const BATCH_SIZE: usize, GroupElementValue> {
-    #[serde(with = "const_generic_array_serialization")]
-    pub message_generators: [GroupElementValue; BATCH_SIZE],
-    pub randomness_generator: GroupElementValue,
+    _scalar_choice: PhantomData<Scalar>,
 }
 
 impl<const BATCH_SIZE: usize, Scalar, GroupElement> HomomorphicCommitmentScheme
@@ -42,29 +48,26 @@ where
         + Copy,
     GroupElement: CyclicGroupElement,
 {
-    type MessageSpaceGroupElement = self_product::GroupElement<BATCH_SIZE, Scalar>;
-    type RandomnessSpaceGroupElement = Scalar;
-    type CommitmentSpaceGroupElement = GroupElement;
-    type PublicParameters = PublicParameters<BATCH_SIZE, GroupElement::Value>;
+    type MessageSpaceGroupElement = MessageSpaceGroupElement<BATCH_SIZE, Scalar>;
+    type RandomnessSpaceGroupElement = RandomnessSpaceGroupElement<Scalar>;
+    type CommitmentSpaceGroupElement = CommitmentSpaceGroupElement<GroupElement>;
+    type PublicParameters = PublicParameters<
+        BATCH_SIZE,
+        GroupElement::Value,
+        MessageSpacePublicParameters<BATCH_SIZE, Scalar>,
+        RandomnessSpacePublicParameters<Scalar>,
+        CommitmentSpacePublicParameters<GroupElement>,
+    >;
 
-    fn public_parameters(&self) -> Self::PublicParameters {
-        Self::PublicParameters {
-            message_generators: self
-                .message_generators
-                .clone()
-                .map(|element| element.value()),
-            randomness_generator: self.randomness_generator.value(),
-        }
-    }
-
-    fn new(
-        commitment_public_parameters: &Self::PublicParameters,
-        commitment_space_public_parameters: &GroupElement::PublicParameters,
-    ) -> group::Result<Self> {
-        let message_generators = commitment_public_parameters
-            .message_generators
-            .clone()
-            .map(|value| GroupElement::new(value, commitment_space_public_parameters));
+    fn new(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        let message_generators = public_parameters.message_generators.clone().map(|value| {
+            GroupElement::new(
+                value,
+                &public_parameters
+                    .as_ref()
+                    .commitment_space_public_parameters,
+            )
+        });
 
         // Return the first error you encounter, or instantiate `Self`
         if let Some(Err(err)) = message_generators.iter().find(|res| res.is_err()) {
@@ -74,13 +77,16 @@ where
         let message_generators = message_generators.map(|res| res.unwrap());
 
         let randomness_generator = GroupElement::new(
-            commitment_public_parameters.randomness_generator.clone(),
-            commitment_space_public_parameters,
+            public_parameters.randomness_generator.clone(),
+            &public_parameters
+                .as_ref()
+                .commitment_space_public_parameters,
         )?;
 
         Ok(Self {
             message_generators,
             randomness_generator,
+            public_parameters: public_parameters.clone(),
             _scalar_choice: PhantomData,
         })
     }
@@ -98,5 +104,83 @@ where
                 |acc, (generator, value)| acc + (*value * generator),
             )
             + (*randomness * &self.randomness_generator)
+    }
+}
+
+impl<const BATCH_SIZE: usize, Scalar, GroupElement> AsRef<commitments::PublicParameters<Self>>
+    for Pedersen<BATCH_SIZE, Scalar, GroupElement>
+where
+    Scalar: CyclicGroupElement
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Samplable
+        + Copy,
+    GroupElement: CyclicGroupElement,
+{
+    fn as_ref(&self) -> &commitments::PublicParameters<Self> {
+        &self.public_parameters
+    }
+}
+
+type MessageSpaceGroupElement<const BATCH_SIZE: usize, Scalar> =
+    self_product::GroupElement<BATCH_SIZE, Scalar>;
+type MessageSpacePublicParameters<const BATCH_SIZE: usize, Scalar> =
+    group::PublicParameters<MessageSpaceGroupElement<BATCH_SIZE, Scalar>>;
+type RandomnessSpaceGroupElement<Scalar> = Scalar;
+type RandomnessSpacePublicParameters<Scalar> =
+    group::PublicParameters<RandomnessSpaceGroupElement<Scalar>>;
+type CommitmentSpaceGroupElement<GroupElement> = GroupElement;
+type CommitmentSpacePublicParameters<GroupElement> =
+    group::PublicParameters<CommitmentSpaceGroupElement<GroupElement>>;
+
+/// The Public Parameters of a Pedersen Commitment
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct PublicParameters<
+    const BATCH_SIZE: usize,
+    GroupElementValue,
+    MessageSpacePublicParameters,
+    RandomnessSpacePublicParameters,
+    CommitmentSpacePublicParameters,
+> {
+    pub groups_public_parameters: GroupsPublicParameters<
+        MessageSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CommitmentSpacePublicParameters,
+    >,
+    #[serde(with = "const_generic_array_serialization")]
+    pub message_generators: [GroupElementValue; BATCH_SIZE],
+    pub randomness_generator: GroupElementValue,
+}
+
+impl<
+        const BATCH_SIZE: usize,
+        GroupElementValue,
+        MessageSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CommitmentSpacePublicParameters,
+    >
+    AsRef<
+        GroupsPublicParameters<
+            MessageSpacePublicParameters,
+            RandomnessSpacePublicParameters,
+            CommitmentSpacePublicParameters,
+        >,
+    >
+    for PublicParameters<
+        BATCH_SIZE,
+        GroupElementValue,
+        MessageSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CommitmentSpacePublicParameters,
+    >
+{
+    fn as_ref(
+        &self,
+    ) -> &GroupsPublicParameters<
+        MessageSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CommitmentSpacePublicParameters,
+    > {
+        &self.groups_public_parameters
     }
 }

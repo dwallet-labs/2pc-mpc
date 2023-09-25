@@ -51,10 +51,8 @@ where
             &public_value_space_public_parameters.public_parameters,
         )?;
 
-        let commitment_scheme = CommitmentScheme::new(
-            &language_public_parameters.commitment_scheme_public_parameters,
-            &public_value_space_public_parameters.public_parameters,
-        )?;
+        let commitment_scheme =
+            CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
         Ok([
             commitment_scheme.commit(&[*value].into(), randomness),

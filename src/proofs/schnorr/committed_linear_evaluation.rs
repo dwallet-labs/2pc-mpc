@@ -155,13 +155,7 @@ for Language<
     type PublicParameters = PublicParameters<
         DIMENSION,
         commitments::PublicParameters<CommitmentScheme>,
-        commitments::RandomnessSpacePublicParameters<CommitmentScheme>,
         range::CommitmentSchemePublicParameters<
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            RangeProof,
-        >,
-        range::CommitmentSchemeRandomnessSpacePublicParameters<
             RANGE_CLAIMS_PER_SCALAR,
             RANGE_CLAIM_LIMBS,
             RangeProof,
@@ -268,9 +262,7 @@ for Language<
 pub struct PublicParameters<
     const DIMENSION: usize,
     CommitmentSchemePublicParameters,
-    CommitmentRandomnessPublicParameters,
     ProofCommitmentSchemePublicParameters,
-    ProofCommitmentRandomnessPublicParameters,
     EncryptionKeyPublicParameters,
     PlaintextPublicParameters,
     EncryptionRandomnessPublicParameters,
@@ -279,10 +271,7 @@ pub struct PublicParameters<
     CiphertextSpaceValue: Serialize,
 > {
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
-    pub commitment_randomness_group_public_parameters: CommitmentRandomnessPublicParameters,
     pub range_proof_commitment_scheme_public_parameters: ProofCommitmentSchemePublicParameters,
-    pub range_proof_commitment_randomness_group_public_parameters:
-    ProofCommitmentRandomnessPublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
     pub plaintext_group_public_parameters: PlaintextPublicParameters,
     pub encryption_randomness_group_public_parameters: EncryptionRandomnessPublicParameters,

@@ -23,7 +23,7 @@ pub mod pedersen;
 /// \Com(\vec{m}_2; \rho_2) = \Com(\vec{m}_1 + \vec{m}_2; \rho_1 + \rho_2) $$
 ///
 /// As defined in Definitions 2.4, 2.5 in the paper.
-pub trait HomomorphicCommitmentScheme: PartialEq + Clone {
+pub trait HomomorphicCommitmentScheme: AsRef<Self::PublicParameters> + PartialEq + Clone {
     /// The Message space group element of the commitment scheme
     type MessageSpaceGroupElement: GroupElement;
     /// The Randomness space group element of the commitment scheme
@@ -33,36 +33,42 @@ pub trait HomomorphicCommitmentScheme: PartialEq + Clone {
 
     /// The public parameters of the commitment scheme $\Com_{\pp}$.
     ///
-    /// Used for commitment-specific parameters (e.g., the bases $g_i$, $h$ in the case of
-    /// Pedersen).
-    ///
-    /// Group public parameters are encoded separately in
-    /// `MessageSpaceGroupElement::PublicParameters`,
-    /// `RandomnessSpaceGroupElement::PublicParameters`
-    /// `CommitmentSpaceGroupElement::PublicParameters`.
+    /// Includes the public parameters of the message, randomness and commitment groups.
     ///
     /// Used in [`Self::commit()`] to define the commitment algorithm $\Com_{\pp}$.
     /// As such, it uniquely identifies the commitment-scheme (alongside the type `Self`) and will
     /// be used for Fiat-Shamir Transcripts).
-    type PublicParameters: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq;
-
-    /// Returns the public parameters of this commitment scheme.
-    fn public_parameters(&self) -> Self::PublicParameters;
+    type PublicParameters: AsRef<
+            GroupsPublicParameters<
+                MessageSpacePublicParameters<Self>,
+                RandomnessSpacePublicParameters<Self>,
+                CommitmentSpacePublicParameters<Self>,
+            >,
+        > + Serialize
+        + for<'r> Deserialize<'r>
+        + Clone
+        + PartialEq;
 
     /// Instantiate the commitment scheme from its public parameters and the commitment space group
     /// public parameters.
-    fn new(
-        commitment_public_parameters: &Self::PublicParameters,
-        commitment_space_public_parameters: &group::PublicParameters<
-            Self::CommitmentSpaceGroupElement,
-        >,
-    ) -> group::Result<Self>;
+    fn new(public_parameters: &Self::PublicParameters) -> group::Result<Self>;
 
     fn commit(
         &self,
         message: &Self::MessageSpaceGroupElement,
         randomness: &Self::RandomnessSpaceGroupElement,
     ) -> Self::CommitmentSpaceGroupElement;
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct GroupsPublicParameters<
+    MessageSpacePublicParameters,
+    RandomnessSpacePublicParameters,
+    CommitmentSpacePublicParameters,
+> {
+    pub message_space_public_parameters: MessageSpacePublicParameters,
+    pub randomness_space_public_parameters: RandomnessSpacePublicParameters,
+    pub commitment_space_public_parameters: CommitmentSpacePublicParameters,
 }
 
 pub type PublicParameters<C> = <C as HomomorphicCommitmentScheme>::PublicParameters;
