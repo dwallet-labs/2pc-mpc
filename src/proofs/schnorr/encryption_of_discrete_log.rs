@@ -16,13 +16,13 @@ use crate::{
     },
     proofs,
     proofs::{
-        schnorr,
+        range, schnorr,
         schnorr::{EnhancedLanguage, EnhancedLanguagePublicValue, EnhancedLanguageWitness},
     },
     AdditivelyHomomorphicEncryptionKey,
 };
 
-// TODO: should I unite now the public parameters of the groups with commitment & encryption
+// TODO: unite now the public parameters of the groups with commitment & encryption
 type UnboundedWitnessSpaceGroupElement<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, EncryptionKey> =
     ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>;
 
@@ -114,17 +114,24 @@ where
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
 {
     type PublicParameters = PublicParameters<
-        commitments::PublicParameters<RangeProof::CommitmentScheme>,
-        group::PublicParameters<
-            commitments::RandomnessSpaceGroupElement<RangeProof::CommitmentScheme>,
+        range::CommitmentSchemePublicParameters<
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            RangeProof,
         >,
-        EncryptionKey::PublicParameters,
+        range::CommitmentSchemeRandomnessSpacePublicParameters<
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            RangeProof,
+        >,
+        ahe::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         ahe::PlaintextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         ahe::RandomnessSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         ahe::CiphertextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         Scalar::PublicParameters,
         GroupElement::Value,
     >;
+
     const NAME: &'static str = "Encryption of Discrete Log";
 
     fn group_homomorphism(
