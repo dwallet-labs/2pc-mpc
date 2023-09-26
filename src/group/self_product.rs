@@ -72,10 +72,6 @@ impl<const N: usize, G: group::GroupElement> ConstantTimeEq for Value<N, G> {
 impl<const N: usize, G: group::GroupElement> group::GroupElement for GroupElement<N, G> {
     type Value = Value<N, G>;
 
-    fn value(&self) -> Self::Value {
-        Value(self.0.clone().map(|element| element.value()))
-    }
-
     type PublicParameters = PublicParameters<N, G::PublicParameters>;
 
     fn public_parameters(&self) -> Self::PublicParameters {
@@ -111,6 +107,22 @@ impl<const N: usize, G: group::GroupElement> group::GroupElement for GroupElemen
 
     fn double(&self) -> Self {
         Self(self.0.clone().map(|element| element.double()))
+    }
+}
+
+impl<const N: usize, G: group::GroupElement> From<GroupElement<N, G>>
+    for group::Value<GroupElement<N, G>>
+{
+    fn from(value: GroupElement<N, G>) -> Self {
+        Self(value.0.map(|element| element.into()))
+    }
+}
+
+impl<const N: usize, G: group::GroupElement> From<GroupElement<N, G>>
+    for group::PublicParameters<GroupElement<N, G>>
+{
+    fn from(value: GroupElement<N, G>) -> Self {
+        value.public_parameters()
     }
 }
 

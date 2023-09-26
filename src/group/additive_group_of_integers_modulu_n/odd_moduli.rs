@@ -58,15 +58,6 @@ where
 
     type PublicParameters = PublicParameters<LIMBS>;
 
-    fn public_parameters(&self) -> Self::PublicParameters {
-        // Montgomery form only works for odd modulus, and this is assured in `DynResidue`
-        // instantiation; therefore, the modulus of an instance can never be zero and it is safe to
-        // `unwrap()`.
-        PublicParameters {
-            modulus: NonZero::new(*self.0.params().modulus()).unwrap(),
-        }
-    }
-
     fn new(
         value: Self::Value,
         public_parameters: &Self::PublicParameters,
@@ -92,6 +83,20 @@ where
 
     fn double(&self) -> Self {
         Self(self.0 + self.0)
+    }
+}
+
+impl<const LIMBS: usize> From<GroupElement<LIMBS>> for group::PublicParameters<GroupElement<LIMBS>>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn from(value: GroupElement<LIMBS>) -> Self {
+        // Montgomery form only works for odd modulus, and this is assured in `DynResidue`
+        // instantiation; therefore, the modulus of an instance can never be zero and it is safe to
+        // `unwrap()`.
+        PublicParameters {
+            modulus: NonZero::new(*value.0.params().modulus()).unwrap(),
+        }
     }
 }
 

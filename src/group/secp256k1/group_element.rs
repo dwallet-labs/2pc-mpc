@@ -99,6 +99,20 @@ impl group::GroupElement for GroupElement {
     }
 }
 
+impl From<GroupElement> for group::Value<GroupElement> {
+    fn from(value: GroupElement) -> Self {
+        // As this group element is valid, it's safe to instantiate a `Value`
+        // from the valid affine representation.
+        Self(value.0.to_affine())
+    }
+}
+
+impl From<GroupElement> for group::PublicParameters<GroupElement> {
+    fn from(_value: GroupElement) -> Self {
+        Self::default()
+    }
+}
+
 impl Neg for GroupElement {
     type Output = Self;
 

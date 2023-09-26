@@ -12,10 +12,7 @@ use crypto_bigint::{
 use group::GroupElement as _;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    group,
-    group::{BoundedGroupElement, Samplable},
-};
+use crate::{group, group::Samplable};
 
 /// An element of the multiplicative group of integers modulo `n` $\mathbb{Z}_n^*$
 /// [Multiplicative group of integers modulo n](https://en.wikipedia.org/wiki/Multiplicative_group_of_integers_modulo_n)
@@ -66,18 +63,7 @@ where
     Uint<LIMBS>: Encoding,
 {
     type Value = Uint<LIMBS>;
-
-    fn value(&self) -> Self::Value {
-        self.0.retrieve()
-    }
-
     type PublicParameters = PublicParameters<LIMBS>;
-
-    fn public_parameters(&self) -> Self::PublicParameters {
-        PublicParameters {
-            modulus: *self.0.params().modulus(),
-        }
-    }
 
     fn new(value: Self::Value, public_parameters: &Self::PublicParameters) -> group::Result<Self> {
         // A valid modulus must be odd,
@@ -115,9 +101,15 @@ where
     }
 }
 
-impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> where
-    Uint<LIMBS>: Encoding
+impl<const LIMBS: usize> From<GroupElement<LIMBS>> for group::PublicParameters<GroupElement<LIMBS>>
+where
+    Uint<LIMBS>: Encoding,
 {
+    fn from(value: GroupElement<LIMBS>) -> Self {
+        PublicParameters {
+            modulus: *value.0.params().modulus(),
+        }
+    }
 }
 
 impl<const LIMBS: usize> Neg for GroupElement<LIMBS> {

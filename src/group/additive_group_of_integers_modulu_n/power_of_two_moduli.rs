@@ -32,11 +32,6 @@ where
     Uint<LIMBS>: Encoding,
 {
     type Value = Uint<LIMBS>;
-
-    fn value(&self) -> Self::Value {
-        self.0 .0
-    }
-
     type PublicParameters = ();
 
     fn public_parameters(&self) -> Self::PublicParameters {}
@@ -59,6 +54,13 @@ where
     fn double(&self) -> Self {
         Self(self.0 + self.0)
     }
+}
+
+impl<const LIMBS: usize> From<GroupElement<LIMBS>> for group::PublicParameters<GroupElement<LIMBS>>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn from(_value: GroupElement<LIMBS>) -> Self {}
 }
 
 impl<const LIMBS: usize> Neg for GroupElement<LIMBS> {

@@ -45,57 +45,46 @@ pub trait RangeProof<
     ) -> Result<()>;
 }
 
-#[allow(dead_code)]
 pub type CommitmentScheme<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize, Proof> = <Proof as RangeProof<NUM_RANGE_CLAIMS,RANGE_CLAIM_LIMBS>>::CommitmentScheme;
 
-#[allow(dead_code)]
 pub type CommitmentSchemePublicParameters<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize, Proof> = commitments::PublicParameters<<Proof as RangeProof<NUM_RANGE_CLAIMS,RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-#[allow(dead_code)]
 pub type CommitmentSchemeMessageSpaceGroupElement<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize, Proof> = commitments::MessageSpaceGroupElement<<Proof as RangeProof<NUM_RANGE_CLAIMS,RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-#[allow(dead_code)]
 pub type CommitmentSchemeMessageSpacePublicParameters<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize, Proof> = commitments::MessageSpacePublicParameters<<Proof as RangeProof<NUM_RANGE_CLAIMS,RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-#[allow(dead_code)]
 pub type CommitmentSchemeMessageSpaceValue<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize, Proof> = commitments::MessageSpaceValue<<Proof as RangeProof<NUM_RANGE_CLAIMS,RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-#[allow(dead_code)]
 pub type CommitmentSchemeRandomnessSpaceGroupElement<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize, Proof> = commitments::RandomnessSpaceGroupElement<<Proof as RangeProof<NUM_RANGE_CLAIMS,RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-#[allow(dead_code)]
 pub type CommitmentSchemeRandomnessSpacePublicParameters<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize, Proof> = commitments::RandomnessSpacePublicParameters<<Proof as RangeProof<NUM_RANGE_CLAIMS,RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-#[allow(dead_code)]
 pub type CommitmentSchemeRandomnessSpaceValue<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize, Proof> = commitments::RandomnessSpaceValue<<Proof as RangeProof<NUM_RANGE_CLAIMS,RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-#[allow(dead_code)]
 pub type CommitmentSchemeCommitmentSpaceGroupElement<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize, Proof> = commitments::CommitmentSpaceGroupElement<<Proof as RangeProof<NUM_RANGE_CLAIMS,RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-#[allow(dead_code)]
 pub type CommitmentSchemeCommitmentSpacePublicParameters<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize, Proof> = commitments::CommitmentSpacePublicParameters<<Proof as RangeProof<NUM_RANGE_CLAIMS,RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-#[allow(dead_code)]
 pub type CommitmentSchemeCommitmentSpaceValue<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize, Proof> = commitments::CommitmentSpaceValue<<Proof as RangeProof<NUM_RANGE_CLAIMS,RANGE_CLAIM_LIMBS>>::CommitmentScheme>;

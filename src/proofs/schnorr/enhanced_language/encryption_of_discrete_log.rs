@@ -6,6 +6,7 @@ use std::{marker::PhantomData, ops::Mul};
 use crypto_bigint::{Encoding, Uint};
 use serde::Serialize;
 
+use super::EnhancedLanguage;
 use crate::{
     ahe,
     commitments::HomomorphicCommitmentScheme,
@@ -15,57 +16,21 @@ use crate::{
         GroupElement as _, Samplable,
     },
     proofs,
-    proofs::{
-        range, schnorr,
-        schnorr::{EnhancedLanguage, EnhancedLanguagePublicValue, EnhancedLanguageWitness},
-    },
+    proofs::{range, schnorr},
     AdditivelyHomomorphicEncryptionKey,
 };
 
-// TODO: unite now the public parameters of the groups with commitment & encryption
-type UnboundedWitnessSpaceGroupElement<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, EncryptionKey> =
-    ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>;
-
-type RemainingPublicValueSpaceGroupElement<
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    GroupElement,
-    EncryptionKey,
-> = direct_product::GroupElement<
-    ahe::CiphertextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-    GroupElement,
->;
-
-type Witness<
-    const RANGE_CLAIMS_PER_SCALAR: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    EncryptionKey,
-    RangeProof,
-> = EnhancedLanguageWitness<
-    RANGE_CLAIMS_PER_SCALAR,
-    RANGE_CLAIM_LIMBS,
-    UnboundedWitnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-    RangeProof,
->;
-
-type PublicValue<
-    const RANGE_CLAIMS_PER_SCALAR: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    GroupElement,
-    EncryptionKey,
-    RangeProof,
-> = EnhancedLanguagePublicValue<
-    RANGE_CLAIMS_PER_SCALAR,
-    RANGE_CLAIM_LIMBS,
-    RemainingPublicValueSpaceGroupElement<
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        GroupElement,
-        EncryptionKey,
-    >,
-    RangeProof,
->;
-
+// todo: note the masked witness is > 256-bit, and should not go through modulation in the
+// constrained witness group, nor in the range proof commitment nor in the encryption, but could and
+// will go through modulation in the Scalar group - that's fine.
+//
+// option 1: RANGE_CLAIMS_PER_SCALAR => RANGE_CLAIMS_PER_MASKED_WITNESS
+// option 2: notice we don't need to do range proof for the masked witness, so don't care if its
+// bigger than RANGE_CLAIM_LIMBS. so can do the constrained witness as self_product of size
+// RANGE_CLAIM_LIMBS + Statistical + Computational. then also we don't need to change the sampling
+// of the original schnorr.
+//
+// TODO: can't
 impl<
         const MASK_LIMBS: usize,
         const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
@@ -75,24 +40,7 @@ impl<
         GroupElement: group::GroupElement,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         RangeProof: proofs::RangeProof<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>,
-    >
-    schnorr::Language<
-        Witness<
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            EncryptionKey,
-            RangeProof,
-        >,
-        PublicValue<
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-    >
+    > schnorr::Language
     for Language<
         MASK_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
@@ -113,61 +61,41 @@ where
     Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
 {
+    type WitnessSpaceGroupElement =
+        super::EnhancedLanguageWitness<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, Self>;
+    type PublicValueSpaceGroupElement =
+        super::EnhancedLanguagePublicValue<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, Self>;
+
     type PublicParameters = PublicParameters<
+        super::WitnessSpacePublicParameters<Self>,
+        super::PublicValueSpacePublicParameters<Self>,
         range::CommitmentSchemePublicParameters<
             RANGE_CLAIMS_PER_SCALAR,
             RANGE_CLAIM_LIMBS,
             RangeProof,
         >,
         ahe::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        Scalar::PublicParameters,
+        group::PublicParameters<Scalar>,
         GroupElement::Value,
     >;
 
     const NAME: &'static str = "Encryption of Discrete Log";
 
     fn group_homomorphism(
-        witness: &Witness<
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            EncryptionKey,
-            RangeProof,
-        >,
-        language_public_parameters: &Self::PublicParameters,
-        _witness_space_public_parameters: &group::PublicParameters<
-            Witness<
-                RANGE_CLAIMS_PER_SCALAR,
-                RANGE_CLAIM_LIMBS,
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-                EncryptionKey,
-                RangeProof,
-            >,
-        >,
-        public_value_space_public_parameters: &group::PublicParameters<
-            PublicValue<
-                RANGE_CLAIMS_PER_SCALAR,
-                RANGE_CLAIM_LIMBS,
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-                GroupElement,
-                EncryptionKey,
-                RangeProof,
-            >,
-        >,
-    ) -> proofs::Result<
-        PublicValue<
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-    > {
-        let (discrete_log_parts, commitment_randomness, encryption_randomness) = witness.into();
+        witness: &super::WitnessSpaceGroupElement<Self>,
+        language_public_parameters: &super::PublicParameters<Self>,
+    ) -> proofs::Result<super::PublicValueSpaceGroupElement<Self>> {
+        let (
+            discrete_log_in_range_claim_base_self_product,
+            commitment_randomness,
+            encryption_randomness,
+        ) = witness.into();
 
-        let (commitment_public_parameters, group_public_parameters) =
-            public_value_space_public_parameters.into();
+        let (_, group_public_parameters) = (&language_public_parameters
+            .as_ref()
+            .public_value_space_public_parameters)
+            .into();
+
         let (_, group_public_parameters) = group_public_parameters.into();
 
         let base = GroupElement::new(
@@ -182,9 +110,9 @@ where
             &language_public_parameters.commitment_scheme_public_parameters,
         )?;
 
-        let discrete_log_parts_array: [power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>;
-            RANGE_CLAIMS_PER_SCALAR] = (*discrete_log_parts).into();
-        let discrete_log: Scalar::Value = discrete_log_parts_array
+        let discrete_log_in_range_claim_base: [power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>;
+            RANGE_CLAIMS_PER_SCALAR] = (*discrete_log_in_range_claim_base_self_product).into();
+        let discrete_log: Scalar::Value = discrete_log_in_range_claim_base
             .map(|element| Uint::<RANGE_CLAIM_LIMBS>::from(element))
             .into();
 
@@ -203,7 +131,10 @@ where
             )?;
 
         Ok((
-            commitment_scheme.commit(discrete_log_parts, commitment_randomness),
+            commitment_scheme.commit(
+                discrete_log_in_range_claim_base_self_product,
+                commitment_randomness,
+            ),
             (
                 encryption_key
                     .encrypt_with_randomness(&discrete_log_plaintext, encryption_randomness),
@@ -212,6 +143,15 @@ where
                 .into(),
         )
             .into())
+    }
+
+    fn public_parameters_to_group_parameters(
+        language_public_parameters: &super::PublicParameters<Self>,
+    ) -> &super::GroupsPublicParameters<
+        super::WitnessSpacePublicParameters<Self>,
+        super::PublicValueSpacePublicParameters<Self>,
+    > {
+        language_public_parameters.as_ref()
     }
 }
 
@@ -224,18 +164,7 @@ impl<
         GroupElement: group::GroupElement,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         RangeProof: proofs::RangeProof<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>,
-    >
-    EnhancedLanguage<
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        UnboundedWitnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        RemainingPublicValueSpaceGroupElement<
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            GroupElement,
-            EncryptionKey,
-        >,
-        RangeProof,
-    >
+    > EnhancedLanguage<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>
     for Language<
         MASK_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
@@ -256,6 +185,15 @@ where
     Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
 {
+    type UnboundedWitnessSpaceGroupElement =
+        ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>;
+
+    type RemainingPublicValueSpaceGroupElement = direct_product::GroupElement<
+        ahe::CiphertextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        GroupElement,
+    >;
+
+    type RangeProof = RangeProof;
 }
 
 /// Encryption of Discrete Log Schnorr Language
@@ -289,61 +227,57 @@ pub struct Language<
     _range_proof_choice: PhantomData<RangeProof>,
 }
 
-// schemes?
 /// The Public Parameters of the Encryption of Discrete Log Schnorr Language
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
+    WitnessSpacePublicParameters,
+    PublicValueSpacePublicParameters,
     CommitmentSchemePublicParameters,
     EncryptionKeyPublicParameters,
     ScalarPublicParameters,
     GroupElementValue,
 > {
+    pub groups_public_parameters: super::GroupsPublicParameters<
+        WitnessSpacePublicParameters,
+        PublicValueSpacePublicParameters,
+    >,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
     pub scalar_group_public_parameters: ScalarPublicParameters,
+    // The base of the discrete log
     pub generator: GroupElementValue,
-    // The base of discrete log */
-    // todo
-    // todo: range claim. */
+    // todo: range claim. - of type RANGE_CLAIM_LIMBS * RANGE_CLAIMS_PER_SCALAR
 }
 
-/// An Encryption of Discrete Log Schnorr Proof
-// TODO: enhanced proof.
-pub type Proof<
-    const MASK_LIMBS: usize,
-    const RANGE_CLAIMS_PER_SCALAR: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    EncryptionKey,
-    RangeProof,
-    ProtocolContext,
-> = schnorr::Proof<
-    Witness<
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        EncryptionKey,
-        RangeProof,
-    >,
-    PublicValue<
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    >,
-    Language<
-        MASK_LIMBS,
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    >,
-    ProtocolContext,
->;
+impl<
+        WitnessSpacePublicParameters,
+        PublicValueSpacePublicParameters,
+        CommitmentSchemePublicParameters,
+        EncryptionKeyPublicParameters,
+        ScalarPublicParameters,
+        GroupElementValue,
+    >
+    AsRef<
+        super::GroupsPublicParameters<
+            WitnessSpacePublicParameters,
+            PublicValueSpacePublicParameters,
+        >,
+    >
+    for PublicParameters<
+        WitnessSpacePublicParameters,
+        PublicValueSpacePublicParameters,
+        CommitmentSchemePublicParameters,
+        EncryptionKeyPublicParameters,
+        ScalarPublicParameters,
+        GroupElementValue,
+    >
+{
+    fn as_ref(
+        &self,
+    ) -> &super::GroupsPublicParameters<
+        WitnessSpacePublicParameters,
+        PublicValueSpacePublicParameters,
+    > {
+        &self.groups_public_parameters
+    }
+}

@@ -86,6 +86,12 @@ impl group::GroupElement for Scalar {
     }
 }
 
+impl From<Scalar> for group::PublicParameters<Scalar> {
+    fn from(_value: Scalar) -> Self {
+        Self::default()
+    }
+}
+
 impl BoundedGroupElement<{ U256::LIMBS }> for Scalar {}
 
 impl<const LIMBS: usize> From<Uint<LIMBS>> for Scalar {

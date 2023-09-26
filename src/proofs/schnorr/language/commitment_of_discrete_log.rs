@@ -5,20 +5,19 @@ use std::{marker::PhantomData, ops::Mul};
 
 use serde::Serialize;
 
+use super::{
+    GroupsPublicParameters, PublicValueSpacePublicParameters, WitnessSpacePublicParameters,
+};
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group,
     group::{self_product, CyclicGroupElement, Samplable},
     proofs,
-    proofs::{schnorr, schnorr::GroupsPublicParameters},
+    proofs::schnorr,
 };
 
-type WitnessGroupElement<Scalar> = self_product::GroupElement<2, Scalar>;
-type PublicValueGroupElement<GroupElement> = self_product::GroupElement<2, GroupElement>;
-
-impl<Scalar, GroupElement, CommitmentScheme>
-    schnorr::Language<WitnessGroupElement<Scalar>, PublicValueGroupElement<GroupElement>>
-    for Language<CommitmentScheme>
+impl<Scalar, GroupElement, CommitmentScheme> schnorr::Language
+    for Language<Scalar, GroupElement, CommitmentScheme>
 where
     Scalar: group::GroupElement
         + Samplable
@@ -32,18 +31,22 @@ where
         CommitmentSpaceGroupElement = GroupElement,
     >,
 {
+    type WitnessSpaceGroupElement = self_product::GroupElement<2, Scalar>;
+    type PublicValueSpaceGroupElement = self_product::GroupElement<2, GroupElement>;
+
     type PublicParameters = PublicParameters<
-        group::PublicParameters<WitnessGroupElement<Scalar>>,
-        group::PublicParameters<PublicValueGroupElement<GroupElement>>,
+        WitnessSpacePublicParameters<Self>,
+        PublicValueSpacePublicParameters<Self>,
         GroupElement::Value,
         CommitmentScheme::PublicParameters,
     >;
+
     const NAME: &'static str = "Commitment of Discrete Log";
 
     fn group_homomorphism(
-        witness: &WitnessGroupElement<Scalar>,
-        language_public_parameters: &Self::PublicParameters,
-    ) -> proofs::Result<PublicValueGroupElement<GroupElement>> {
+        witness: &super::WitnessSpaceGroupElement<Self>,
+        language_public_parameters: &super::PublicParameters<Self>,
+    ) -> proofs::Result<super::PublicValueSpaceGroupElement<Self>> {
         let [value, randomness]: &[Scalar; 2] = witness.into();
 
         let base = GroupElement::new(
@@ -63,6 +66,15 @@ where
         ]
         .into())
     }
+
+    fn public_parameters_to_group_parameters(
+        language_public_parameters: &super::PublicParameters<Self>,
+    ) -> &super::GroupsPublicParameters<
+        super::WitnessSpacePublicParameters<Self>,
+        super::PublicValueSpacePublicParameters<Self>,
+    > {
+        language_public_parameters.as_ref()
+    }
 }
 
 /// Commitment of Discrete Log Schnorr Language
@@ -77,7 +89,9 @@ where
 /// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
 /// `PrimeOrderGroupElement`.
 #[derive(Clone)]
-pub struct Language<CommitmentScheme> {
+pub struct Language<Scalar, GroupElement, CommitmentScheme> {
+    _scalar_choice: PhantomData<Scalar>,
+    _group_element_choice: PhantomData<GroupElement>,
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
@@ -115,12 +129,3 @@ impl<
         &self.groups_public_parameters
     }
 }
-
-/// A Commitment of Discrete Log Schnorr Proof
-#[allow(dead_code)]
-pub type Proof<Scalar, GroupElement, CommitmentScheme, ProtocolContext> = schnorr::Proof<
-    WitnessGroupElement<Scalar>,
-    PublicValueGroupElement<GroupElement>,
-    Language<CommitmentScheme>,
-    ProtocolContext,
->;

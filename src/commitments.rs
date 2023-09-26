@@ -49,6 +49,11 @@ pub trait HomomorphicCommitmentScheme: Into<Self::PublicParameters> + PartialEq 
         + Clone
         + PartialEq;
 
+    /// Returns the public parameters of this commitment scheme.
+    fn public_parameters(&self) -> Self::PublicParameters {
+        self.clone().into()
+    }
+
     /// Instantiate the commitment scheme from its public parameters and the commitment space group
     /// public parameters.
     fn new(public_parameters: &Self::PublicParameters) -> group::Result<Self>;

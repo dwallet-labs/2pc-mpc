@@ -1,6 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
-mod range;
+pub mod range;
 pub mod schnorr;
 
 use crypto_bigint::{Encoding, Limb, Uint};

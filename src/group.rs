@@ -79,6 +79,11 @@ pub trait GroupElement:
     /// point from the group parameters.
     type Value: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq + ConstantTimeEq;
 
+    /// Returns the value of this group element
+    fn value(&self) -> Self::Value {
+        self.clone().into()
+    }
+
     /// The public parameters of the group, used for group operations.
     ///
     /// These include both dynamic information for runtime calculations
@@ -87,6 +92,11 @@ pub trait GroupElement:
     /// (that, together with the dynamic information, uniquely identifies a group and will be used
     /// for Fiat-Shamir Transcripts).
     type PublicParameters: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq;
+
+    /// Returns the public parameters of this group element
+    fn public_parameters(&self) -> Self::PublicParameters {
+        self.clone().into()
+    }
 
     /// Instantiate the group element from its value and the caller supplied parameters.
     ///

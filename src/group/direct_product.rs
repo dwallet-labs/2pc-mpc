@@ -101,16 +101,8 @@ impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupEle
 {
     type Value = Value<FirstGroupElement, SecondGroupElement>;
 
-    fn value(&self) -> Self::Value {
-        Value(self.0.value(), self.1.value())
-    }
-
     type PublicParameters =
         PublicParameters<FirstGroupElement::PublicParameters, SecondGroupElement::PublicParameters>;
-
-    fn public_parameters(&self) -> Self::PublicParameters {
-        PublicParameters(self.0.public_parameters(), self.1.public_parameters())
-    }
 
     fn new(
         value: Self::Value,
@@ -135,6 +127,23 @@ impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupEle
 
     fn double(&self) -> Self {
         Self(self.0.double(), self.1.double())
+    }
+}
+impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
+    From<GroupElement<FirstGroupElement, SecondGroupElement>>
+    for group::Value<GroupElement<FirstGroupElement, SecondGroupElement>>
+{
+    fn from(value: GroupElement<FirstGroupElement, SecondGroupElement>) -> Self {
+        Self(value.0.into(), value.1.into())
+    }
+}
+
+impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
+    From<GroupElement<FirstGroupElement, SecondGroupElement>>
+    for group::PublicParameters<GroupElement<FirstGroupElement, SecondGroupElement>>
+{
+    fn from(value: GroupElement<FirstGroupElement, SecondGroupElement>) -> Self {
+        Self(value.0.into(), value.1.into())
     }
 }
 

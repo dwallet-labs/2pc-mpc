@@ -56,6 +56,11 @@ PartialEq + Clone + Debug
         >,
     > + Serialize + for<'r> Deserialize<'r> + Clone + PartialEq;
 
+    /// Returns the public parameters of this encryption scheme.
+    fn public_parameters(&self) -> Self::PublicParameters {
+        self.clone().into()
+    }
+
     /// Instantiate the encryption key from the public parameters of the encryption scheme,
     /// plaintext, randomness and ciphertext groups.
     fn new(
@@ -114,6 +119,8 @@ PartialEq + Clone + Debug
             },
         ))
     }
+
+    // TODO: final
 
     /// $\Eval(pk,f, \ct_1,\ldots,\ct_t; \eta_{\sf eval})$: Efficient homomorphic evaluation of the
     /// linear combination defined by `coefficients` and `ciphertexts`.
@@ -290,8 +297,6 @@ impl<
         self
     }
 }
-
-
 pub type PlaintextSpaceGroupElement<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> = <
 E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
 >::PlaintextSpaceGroupElement;

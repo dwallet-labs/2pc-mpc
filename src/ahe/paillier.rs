@@ -9,15 +9,10 @@ use group::paillier::{
 use tiresias::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 
 use crate::{
-    ahe,
-    ahe::{
-        CiphertextSpaceGroupElement, GroupsPublicParameters, PlaintextSpaceGroupElement,
-        RandomnessSpaceGroupElement,
-    },
-    group,
+    ahe, group,
     group::{
         additive_group_of_integers_modulu_n::odd_moduli, paillier::PlaintextPublicParameters,
-        GroupElement, PublicParameters,
+        GroupElement,
     },
     AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
 };
@@ -40,7 +35,7 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
     type PlaintextSpaceGroupElement = PlaintextGroupElement;
     type RandomnessSpaceGroupElement = RandomnessGroupElement;
     type CiphertextSpaceGroupElement = CiphertextGroupElement;
-    type PublicParameters = GroupsPublicParameters<
+    type PublicParameters = ahe::GroupsPublicParameters<
         group::PublicParameters<PlaintextGroupElement>,
         group::PublicParameters<RandomnessGroupElement>,
         group::PublicParameters<CiphertextGroupElement>,
@@ -114,14 +109,14 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
 }
 
 impl From<EncryptionKey>
-    for GroupsPublicParameters<
+    for ahe::GroupsPublicParameters<
         PlaintextPublicParameters,
         RandomnessPublicParameters,
         CiphertextPublicParameters,
     >
 {
     fn from(value: EncryptionKey) -> Self {
-        GroupsPublicParameters {
+        ahe::GroupsPublicParameters {
             plaintext_space_public_parameters: PlaintextPublicParameters {
                 modulus: NonZero::new(value.0.n).unwrap(),
             },
