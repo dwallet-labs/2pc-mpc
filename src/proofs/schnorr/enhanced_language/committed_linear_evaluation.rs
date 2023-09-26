@@ -90,13 +90,13 @@ for Language<
 {
     type WitnessSpaceGroupElement =
     super::EnhancedLanguageWitness<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, Self>;
-    type PublicValueSpaceGroupElement =
-    super::EnhancedLanguagePublicValue<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, Self>;
+    type StatementSpaceGroupElement =
+    super::EnhancedLanguageStatement<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, Self>;
 
     type PublicParameters = PublicParameters<
         DIMENSION,
         super::WitnessSpacePublicParameters<Self>,
-        super::PublicValueSpacePublicParameters<Self>,
+        super::StatementSpacePublicParameters<Self>,
         commitments::PublicParameters<CommitmentScheme>,
         range::CommitmentSchemePublicParameters<
             RANGE_CLAIMS_PER_SCALAR,
@@ -113,7 +113,7 @@ for Language<
     fn group_homomorphism(
         _witness: &super::WitnessSpaceGroupElement<Self>,
         _language_public_parameters: &super::PublicParameters<Self>,
-    ) -> proofs::Result<super::PublicValueSpaceGroupElement<Self>> {
+    ) -> proofs::Result<super::StatementSpaceGroupElement<Self>> {
         // let (coefficients, commitment_randomness, mask, encryption_randomness) = witness.into();
         //
         // let (_, scalar_group_public_parameters, _, randomness_group_public_parameters) =
@@ -160,7 +160,7 @@ for Language<
         language_public_parameters: &super::PublicParameters<Self>,
     ) -> &super::GroupsPublicParameters<
         super::WitnessSpacePublicParameters<Self>,
-        super::PublicValueSpacePublicParameters<Self>,
+        super::StatementSpacePublicParameters<Self>,
     > {
         language_public_parameters.as_ref()
     }
@@ -210,7 +210,7 @@ for Language<
         ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>, // The encryption randomness
     >;
 
-    type RemainingPublicValueSpaceGroupElement = direct_product::GroupElement<
+    type RemainingStatementSpaceGroupElement = direct_product::GroupElement<
         ahe::CiphertextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>, // The resultant ciphertext of the homomorphic evaluation
         commitments::CommitmentSpaceGroupElement<CommitmentScheme>, // The commitment on the evaluation coefficients
     >;
@@ -227,7 +227,7 @@ for Language<
 pub struct PublicParameters<
     const DIMENSION: usize,
     WitnessSpacePublicParameters,
-    PublicValueSpacePublicParameters,
+    StatementSpacePublicParameters,
     CommitmentSchemePublicParameters,
     ProofCommitmentSchemePublicParameters,
     EncryptionKeyPublicParameters,
@@ -235,7 +235,7 @@ pub struct PublicParameters<
     CiphertextSpaceValue: Serialize,
 > {
     pub groups_public_parameters:
-    super::GroupsPublicParameters<WitnessSpacePublicParameters, PublicValueSpacePublicParameters>,
+    super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
     pub range_proof_commitment_scheme_public_parameters: ProofCommitmentSchemePublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
@@ -248,17 +248,17 @@ pub struct PublicParameters<
 impl<
     const DIMENSION: usize,
     WitnessSpacePublicParameters,
-    PublicValueSpacePublicParameters,
+    StatementSpacePublicParameters,
     CommitmentSchemePublicParameters,
     ProofCommitmentSchemePublicParameters,
     EncryptionKeyPublicParameters,
     ScalarPublicParameters,
     CiphertextSpaceValue: Serialize,
-> AsRef<super::GroupsPublicParameters<WitnessSpacePublicParameters, PublicValueSpacePublicParameters>>
+> AsRef<super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
 for PublicParameters<
     DIMENSION,
     WitnessSpacePublicParameters,
-    PublicValueSpacePublicParameters,
+    StatementSpacePublicParameters,
     CommitmentSchemePublicParameters,
     ProofCommitmentSchemePublicParameters,
     EncryptionKeyPublicParameters,
@@ -268,7 +268,7 @@ for PublicParameters<
 {
     fn as_ref(
         &self,
-    ) -> &super::GroupsPublicParameters<WitnessSpacePublicParameters, PublicValueSpacePublicParameters>
+    ) -> &super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>
     {
         &self.groups_public_parameters
     }

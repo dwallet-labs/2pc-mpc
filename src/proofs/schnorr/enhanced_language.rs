@@ -7,11 +7,13 @@ use crate::{group, proofs};
 use crate::group::{direct_product, GroupElement, Samplable, self_product};
 use crate::group::additive_group_of_integers_modulu_n::power_of_two_moduli;
 use crate::proofs::range;
-use super::language::{
-    PublicParameters, PublicValueSpaceGroupElement, PublicValueSpacePublicParameters,
-    WitnessSpaceGroupElement, WitnessSpacePublicParameters
-};
+
 use super::GroupsPublicParameters;
+use super::language::{
+    PublicParameters, StatementSpaceGroupElement, StatementSpacePublicParameters,
+    WitnessSpaceGroupElement, WitnessSpacePublicParameters,
+};
+
 pub mod committed_linear_evaluation;
 pub mod encryption_of_discrete_log;
 
@@ -32,8 +34,7 @@ pub type EnhancedLanguageWitness<
     UnconstrainedWitnessSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, L>,
 >;
 
-// TODO: change publicvalue to statement.
-pub type EnhancedLanguagePublicValue<
+pub type EnhancedLanguageStatement<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     L
@@ -43,7 +44,7 @@ pub type EnhancedLanguagePublicValue<
         RANGE_CLAIM_LIMBS,
         L,
     >,
-    RemainingPublicValueSpaceGroupElement<
+    RemainingStatementSpaceGroupElement<
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
         L,
@@ -64,7 +65,7 @@ pub trait EnhancedLanguage<
         RANGE_CLAIM_LIMBS,
         Self
     >,
-    PublicValueSpaceGroupElement=EnhancedLanguagePublicValue<
+    StatementSpaceGroupElement=EnhancedLanguageStatement<
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
         Self
@@ -74,9 +75,9 @@ pub trait EnhancedLanguage<
     /// The unconstrained part of the witness group element.
     type UnboundedWitnessSpaceGroupElement: GroupElement + Samplable;
 
-    /// An element in the associated public-value space, that will be the image of the homomorphism alongside the range proof commitment.
-    type RemainingPublicValueSpaceGroupElement: GroupElement;
-    
+    /// An element in the associated statement space, that will be the image of the homomorphism alongside the range proof commitment.
+    type RemainingStatementSpaceGroupElement: GroupElement;
+
     /// The range proof used to prove the constrained witnesses are within the range specified in the public parameters.
     type RangeProof: proofs::RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>;
 }
@@ -98,22 +99,22 @@ pub type UnboundedWitnessSpaceValue<
     L
 > = group::Value<UnconstrainedWitnessSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, L>>;
 
-pub type RemainingPublicValueSpaceGroupElement<
+pub type RemainingStatementSpaceGroupElement<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     L
-> = <L as EnhancedLanguage<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::RemainingPublicValueSpaceGroupElement;
+> = <L as EnhancedLanguage<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::RemainingStatementSpaceGroupElement;
 
-pub type RemainingPublicValueSpacePublicParameters<
+pub type RemainingStatementSpacePublicParameters<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     L
-> = group::PublicParameters<RemainingPublicValueSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, L>>;
-pub type RemainingPublicValueSpaceValue<
+> = group::PublicParameters<RemainingStatementSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, L>>;
+pub type RemainingStatementSpaceValue<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     L
-> = group::Value<RemainingPublicValueSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, L>>;
+> = group::Value<RemainingStatementSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, L>>;
 
 pub type RangeProof<
     const NUM_RANGE_CLAIMS: usize,

@@ -8,20 +8,20 @@ use serde::Serialize;
 use crate::{group, group::Samplable, proofs, proofs::schnorr};
 
 impl<Scalar, GroupElement> schnorr::Language for Language<Scalar, GroupElement>
-where
-    Scalar: group::GroupElement
+    where
+        Scalar: group::GroupElement
         + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Mul<GroupElement, Output=GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output=GroupElement>
         + Copy,
-    GroupElement: group::GroupElement,
+        GroupElement: group::GroupElement,
 {
     type WitnessSpaceGroupElement = Scalar;
-    type PublicValueSpaceGroupElement = GroupElement;
+    type StatementSpaceGroupElement = GroupElement;
 
     type PublicParameters = PublicParameters<
         super::WitnessSpacePublicParameters<Self>,
-        super::PublicValueSpacePublicParameters<Self>,
+        super::StatementSpacePublicParameters<Self>,
         group::Value<GroupElement>,
     >;
 
@@ -30,7 +30,7 @@ where
     fn group_homomorphism(
         witness: &super::WitnessSpaceGroupElement<Self>,
         language_public_parameters: &super::PublicParameters<Self>,
-    ) -> proofs::Result<super::PublicValueSpaceGroupElement<Self>> {
+    ) -> proofs::Result<super::StatementSpaceGroupElement<Self>> {
         let generator = GroupElement::new(
             language_public_parameters.generator.clone(),
             &language_public_parameters
@@ -45,7 +45,7 @@ where
         language_public_parameters: &super::PublicParameters<Self>,
     ) -> &super::GroupsPublicParameters<
         super::WitnessSpacePublicParameters<Self>,
-        super::PublicValueSpacePublicParameters<Self>,
+        super::StatementSpacePublicParameters<Self>,
     > {
         language_public_parameters.as_ref()
     }
@@ -72,34 +72,34 @@ pub struct Language<Scalar, GroupElement> {
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
     WitnessSpacePublicParameters,
-    PublicValueSpacePublicParameters,
+    StatementSpacePublicParameters,
     GroupElementValue,
 > {
     pub groups_public_parameters: super::GroupsPublicParameters<
         WitnessSpacePublicParameters,
-        PublicValueSpacePublicParameters,
+        StatementSpacePublicParameters,
     >,
     pub generator: GroupElementValue,
 }
 
-impl<WitnessSpacePublicParameters, PublicValueSpacePublicParameters, GroupElementValue>
-    AsRef<
-        super::GroupsPublicParameters<
-            WitnessSpacePublicParameters,
-            PublicValueSpacePublicParameters,
-        >,
-    >
-    for PublicParameters<
+impl<WitnessSpacePublicParameters, StatementSpacePublicParameters, GroupElementValue>
+AsRef<
+    super::GroupsPublicParameters<
         WitnessSpacePublicParameters,
-        PublicValueSpacePublicParameters,
-        GroupElementValue,
-    >
+        StatementSpacePublicParameters,
+    >,
+>
+for PublicParameters<
+    WitnessSpacePublicParameters,
+    StatementSpacePublicParameters,
+    GroupElementValue,
+>
 {
     fn as_ref(
         &self,
     ) -> &super::GroupsPublicParameters<
         WitnessSpacePublicParameters,
-        PublicValueSpacePublicParameters,
+        StatementSpacePublicParameters,
     > {
         &self.groups_public_parameters
     }

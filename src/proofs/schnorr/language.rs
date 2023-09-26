@@ -21,16 +21,16 @@ pub trait Language: Clone {
     /// An element of the witness space $(\HH_\pp, +)$
     type WitnessSpaceGroupElement: GroupElement + Samplable;
 
-    /// An element in the associated public-value space $(\GG_\pp, \cdot)$,
-    type PublicValueSpaceGroupElement: GroupElement;
+    /// An element in the associated statement space $(\GG_\pp, \cdot)$,
+    type StatementSpaceGroupElement: GroupElement;
 
     /// Public parameters for a language family $\pp \gets \Setup(1^\kappa)$.
     ///
-    /// Includes the public parameters of the witness, and public value groups.
+    /// Includes the public parameters of the witness, and statement groups.
     ///
     /// Group public parameters are encoded separately in
     /// `WitnessSpaceGroupElement::PublicParameters` and
-    /// `PublicValueSpaceGroupElement::PublicParameters`.
+    /// `StatementSpaceGroupElement::PublicParameters`.
     type PublicParameters: Serialize + PartialEq + Clone;
 
     /// A unique string representing the name of this language; will be inserted to the Fiat-Shamir
@@ -38,11 +38,11 @@ pub trait Language: Clone {
     const NAME: &'static str;
 
     /// A group homomorphism $\phi:\HH\to\GG$  from $(\HH_\pp, +)$, the witness space,
-    /// to $(\GG_\pp,\cdot)$, the public-value space space.
+    /// to $(\GG_\pp,\cdot)$, the statement space space.
     fn group_homomorphism(
         witness: &WitnessSpaceGroupElement<Self>,
         language_public_parameters: &PublicParameters<Self>,
-    ) -> Result<PublicValueSpaceGroupElement<Self>>;
+    ) -> Result<StatementSpaceGroupElement<Self>>;
 
     // TODO: This is just a trick to enforce that the language public parameters indeed holds the
     // group public parameters as members. Wanted to use `AsRef` but couldn't because of
@@ -51,7 +51,7 @@ pub trait Language: Clone {
         language_public_parameters: &PublicParameters<Self>,
     ) -> &GroupsPublicParameters<
         WitnessSpacePublicParameters<Self>,
-        PublicValueSpacePublicParameters<Self>,
+        StatementSpacePublicParameters<Self>,
     >;
 }
 
@@ -61,13 +61,13 @@ pub(super) type WitnessSpacePublicParameters<L> =
     group::PublicParameters<WitnessSpaceGroupElement<L>>;
 pub(super) type WitnessSpaceValue<L> = group::Value<WitnessSpaceGroupElement<L>>;
 
-pub(super) type PublicValueSpaceGroupElement<L> = <L as Language>::PublicValueSpaceGroupElement;
-pub(super) type PublicValueSpacePublicParameters<L> =
-    group::PublicParameters<PublicValueSpaceGroupElement<L>>;
-pub(super) type PublicValueSpaceValue<L> = group::Value<PublicValueSpaceGroupElement<L>>;
+pub(super) type StatementSpaceGroupElement<L> = <L as Language>::StatementSpaceGroupElement;
+pub(super) type StatementSpacePublicParameters<L> =
+    group::PublicParameters<StatementSpaceGroupElement<L>>;
+pub(super) type StatementSpaceValue<L> = group::Value<StatementSpaceGroupElement<L>>;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct GroupsPublicParameters<WitnessSpacePublicParameters, PublicValueSpacePublicParameters> {
+pub struct GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
     pub witness_space_public_parameters: WitnessSpacePublicParameters,
-    pub public_value_space_public_parameters: PublicValueSpacePublicParameters,
+    pub public_value_space_public_parameters: StatementSpacePublicParameters,
 }

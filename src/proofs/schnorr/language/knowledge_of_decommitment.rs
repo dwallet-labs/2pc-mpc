@@ -14,26 +14,26 @@ use crate::{
 };
 
 impl<Scalar, GroupElement, CommitmentScheme> schnorr::Language
-    for Language<Scalar, GroupElement, CommitmentScheme>
-where
-    Scalar: group::GroupElement
+for Language<Scalar, GroupElement, CommitmentScheme>
+    where
+        Scalar: group::GroupElement
         + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Mul<GroupElement, Output=GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output=GroupElement>
         + Copy,
-    GroupElement: group::GroupElement,
-    CommitmentScheme: HomomorphicCommitmentScheme<
-        MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
-        RandomnessSpaceGroupElement = Scalar,
-        CommitmentSpaceGroupElement = GroupElement,
-    >,
+        GroupElement: group::GroupElement,
+        CommitmentScheme: HomomorphicCommitmentScheme<
+            MessageSpaceGroupElement=self_product::GroupElement<1, Scalar>,
+            RandomnessSpaceGroupElement=Scalar,
+            CommitmentSpaceGroupElement=GroupElement,
+        >,
 {
     type WitnessSpaceGroupElement = self_product::GroupElement<2, Scalar>;
-    type PublicValueSpaceGroupElement = GroupElement;
+    type StatementSpaceGroupElement = GroupElement;
 
     type PublicParameters = PublicParameters<
         super::WitnessSpacePublicParameters<Self>,
-        super::PublicValueSpacePublicParameters<Self>,
+        super::StatementSpacePublicParameters<Self>,
         CommitmentScheme::PublicParameters,
     >;
 
@@ -42,7 +42,7 @@ where
     fn group_homomorphism(
         witness: &super::WitnessSpaceGroupElement<Self>,
         language_public_parameters: &super::PublicParameters<Self>,
-    ) -> proofs::Result<super::PublicValueSpaceGroupElement<Self>> {
+    ) -> proofs::Result<super::StatementSpaceGroupElement<Self>> {
         let [value, randomness]: &[Scalar; 2] = witness.into();
 
         let commitment_scheme =
@@ -55,7 +55,7 @@ where
         language_public_parameters: &super::PublicParameters<Self>,
     ) -> &super::GroupsPublicParameters<
         super::WitnessSpacePublicParameters<Self>,
-        super::PublicValueSpacePublicParameters<Self>,
+        super::StatementSpacePublicParameters<Self>,
     > {
         language_public_parameters.as_ref()
     }
@@ -84,38 +84,38 @@ pub struct Language<Scalar, GroupElement, CommitmentScheme> {
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
     WitnessSpacePublicParameters,
-    PublicValueSpacePublicParameters,
+    StatementSpacePublicParameters,
     CommitmentSchemePublicParameters,
 > {
     pub groups_public_parameters: super::GroupsPublicParameters<
         WitnessSpacePublicParameters,
-        PublicValueSpacePublicParameters,
+        StatementSpacePublicParameters,
     >,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
 }
 
 impl<
+    WitnessSpacePublicParameters,
+    StatementSpacePublicParameters,
+    CommitmentSchemePublicParameters,
+>
+AsRef<
+    super::GroupsPublicParameters<
         WitnessSpacePublicParameters,
-        PublicValueSpacePublicParameters,
-        CommitmentSchemePublicParameters,
-    >
-    AsRef<
-        super::GroupsPublicParameters<
-            WitnessSpacePublicParameters,
-            PublicValueSpacePublicParameters,
-        >,
-    >
-    for PublicParameters<
-        WitnessSpacePublicParameters,
-        PublicValueSpacePublicParameters,
-        CommitmentSchemePublicParameters,
-    >
+        StatementSpacePublicParameters,
+    >,
+>
+for PublicParameters<
+    WitnessSpacePublicParameters,
+    StatementSpacePublicParameters,
+    CommitmentSchemePublicParameters,
+>
 {
     fn as_ref(
         &self,
     ) -> &super::GroupsPublicParameters<
         WitnessSpacePublicParameters,
-        PublicValueSpacePublicParameters,
+        StatementSpacePublicParameters,
     > {
         &self.groups_public_parameters
     }

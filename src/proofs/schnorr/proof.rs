@@ -12,9 +12,9 @@ use crate::{
     proofs,
     proofs::{
         schnorr::language::{
-            Language, PublicParameters, PublicValueSpaceGroupElement,
-            PublicValueSpacePublicParameters, PublicValueSpaceValue, WitnessSpaceGroupElement,
-            WitnessSpacePublicParameters, WitnessSpaceValue,
+            Language, PublicParameters, StatementSpaceGroupElement, StatementSpacePublicParameters,
+            StatementSpaceValue, WitnessSpaceGroupElement, WitnessSpacePublicParameters,
+            WitnessSpaceValue,
         },
         Error, TranscriptProtocol,
     },
@@ -38,7 +38,7 @@ pub struct Proof<
     // code) and be inserted to the Fiat-Shamir transcript
     ProtocolContext: Clone,
 > {
-    statement_mask: PublicValueSpaceValue<Lang>,
+    statement_mask: StatementSpaceValue<Lang>,
     response: WitnessSpaceValue<Lang>,
 
     _protocol_context_choice: PhantomData<ProtocolContext>,
@@ -46,7 +46,7 @@ pub struct Proof<
 
 impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolContext> {
     fn new(
-        statement_mask: PublicValueSpaceGroupElement<Lang>,
+        statement_mask: StatementSpaceGroupElement<Lang>,
         response: WitnessSpaceGroupElement<Lang>,
     ) -> Self {
         Self {
@@ -62,10 +62,10 @@ impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolCon
         protocol_context: ProtocolContext,
         language_public_parameters: &PublicParameters<Lang>,
         witness_space_public_parameters: &WitnessSpacePublicParameters<Lang>,
-        public_value_space_public_parameters: &PublicValueSpacePublicParameters<Lang>,
+        public_value_space_public_parameters: &StatementSpacePublicParameters<Lang>,
         witnesses_and_statements: Vec<(
             WitnessSpaceGroupElement<Lang>,
-            PublicValueSpaceGroupElement<Lang>,
+            StatementSpaceGroupElement<Lang>,
         )>,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<Self> {
@@ -77,7 +77,7 @@ impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolCon
 
         let (witnesses, statements): (
             Vec<WitnessSpaceGroupElement<Lang>>,
-            Vec<PublicValueSpaceGroupElement<Lang>>,
+            Vec<StatementSpaceGroupElement<Lang>>,
         ) = witnesses_and_statements.iter().cloned().unzip();
 
         let mut transcript = Self::setup_protocol(
@@ -119,8 +119,8 @@ impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolCon
         protocol_context: ProtocolContext,
         language_public_parameters: &PublicParameters<Lang>,
         witness_space_public_parameters: &WitnessSpacePublicParameters<Lang>,
-        public_value_space_public_parameters: &PublicValueSpacePublicParameters<Lang>,
-        statements: Vec<PublicValueSpaceGroupElement<Lang>>,
+        public_value_space_public_parameters: &StatementSpacePublicParameters<Lang>,
+        statements: Vec<StatementSpaceGroupElement<Lang>>,
     ) -> proofs::Result<()> {
         let batch_size = statements.len();
 
@@ -140,15 +140,15 @@ impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolCon
             witness_space_public_parameters,
         )?;
 
-        let statement_mask = PublicValueSpaceGroupElement::<Lang>::new(
+        let statement_mask = StatementSpaceGroupElement::<Lang>::new(
             self.statement_mask.clone(),
             public_value_space_public_parameters,
         )?;
 
-        let response_statement: PublicValueSpaceGroupElement<Lang> =
+        let response_statement: StatementSpaceGroupElement<Lang> =
             Lang::group_homomorphism(&response, language_public_parameters)?;
 
-        let reconstructed_response_statement: PublicValueSpaceGroupElement<Lang> = statement_mask
+        let reconstructed_response_statement: StatementSpaceGroupElement<Lang> = statement_mask
             + statements
                 .into_iter()
                 .zip(challenges)
@@ -166,8 +166,8 @@ impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolCon
         protocol_context: &ProtocolContext,
         language_public_parameters: &PublicParameters<Lang>,
         witness_space_public_parameters: &WitnessSpacePublicParameters<Lang>,
-        public_value_space_public_parameters: &PublicValueSpacePublicParameters<Lang>,
-        statements: Vec<PublicValueSpaceGroupElement<Lang>>,
+        public_value_space_public_parameters: &StatementSpacePublicParameters<Lang>,
+        statements: Vec<StatementSpaceGroupElement<Lang>>,
     ) -> proofs::Result<Transcript> {
         let mut transcript = Transcript::new(Lang::NAME.as_bytes());
 
@@ -184,7 +184,7 @@ impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolCon
         )?;
 
         transcript.serialize_to_transcript_as_json(
-            b"public value space public parameters",
+            b"statement space public parameters",
             public_value_space_public_parameters,
         )?;
 
@@ -200,12 +200,12 @@ impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolCon
     }
 
     fn compute_challenges(
-        statement_mask_value: &PublicValueSpaceValue<Lang>,
+        statement_mask_value: &StatementSpaceValue<Lang>,
         batch_size: usize,
         transcript: &mut Transcript,
     ) -> proofs::Result<Vec<ChallengeSizedNumber>> {
         transcript
-            .serialize_to_transcript_as_json(b"randomizer public value", statement_mask_value)?;
+            .serialize_to_transcript_as_json(b"statement mask value", statement_mask_value)?;
 
         Ok((1..=batch_size)
             .map(|_| {

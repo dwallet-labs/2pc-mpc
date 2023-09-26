@@ -70,7 +70,7 @@ pub trait GroupElement:
     /// dynamic values to determine group operations in runtime (like the Paillier modulus
     /// $N^2$).
     ///
-    /// In those cases, it is both ineffecient communication-wise to serialize these public values
+    /// In those cases, it is both ineffecient communication-wise to serialize these statements
     /// as they are known by the deserializing side, and even worse it is a security risk as
     /// malicious actors could try and craft groups in which they can break security assumptions
     /// in order to e.g. bypass zk-proof verification and have the verifier use those groups.

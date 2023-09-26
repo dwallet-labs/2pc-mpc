@@ -5,9 +5,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 use serde::Serialize;
 
-use super::{
-    GroupsPublicParameters, PublicValueSpacePublicParameters, WitnessSpacePublicParameters,
-};
+use super::{GroupsPublicParameters, StatementSpacePublicParameters, WitnessSpacePublicParameters};
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group,
@@ -32,11 +30,11 @@ where
     >,
 {
     type WitnessSpaceGroupElement = self_product::GroupElement<2, Scalar>;
-    type PublicValueSpaceGroupElement = self_product::GroupElement<2, GroupElement>;
+    type StatementSpaceGroupElement = self_product::GroupElement<2, GroupElement>;
 
     type PublicParameters = PublicParameters<
         WitnessSpacePublicParameters<Self>,
-        PublicValueSpacePublicParameters<Self>,
+        StatementSpacePublicParameters<Self>,
         GroupElement::Value,
         CommitmentScheme::PublicParameters,
     >;
@@ -46,7 +44,7 @@ where
     fn group_homomorphism(
         witness: &super::WitnessSpaceGroupElement<Self>,
         language_public_parameters: &super::PublicParameters<Self>,
-    ) -> proofs::Result<super::PublicValueSpaceGroupElement<Self>> {
+    ) -> proofs::Result<super::StatementSpaceGroupElement<Self>> {
         let [value, randomness]: &[Scalar; 2] = witness.into();
 
         let base = GroupElement::new(
@@ -71,7 +69,7 @@ where
         language_public_parameters: &super::PublicParameters<Self>,
     ) -> &super::GroupsPublicParameters<
         super::WitnessSpacePublicParameters<Self>,
-        super::PublicValueSpacePublicParameters<Self>,
+        super::StatementSpacePublicParameters<Self>,
     > {
         language_public_parameters.as_ref()
     }
@@ -99,33 +97,32 @@ pub struct Language<Scalar, GroupElement, CommitmentScheme> {
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
     WitnessSpacePublicParameters,
-    PublicValueSpacePublicParameters,
+    StatementSpacePublicParameters,
     GroupElementValue,
     CommitmentSchemePublicParameters,
 > {
     pub groups_public_parameters:
-        GroupsPublicParameters<WitnessSpacePublicParameters, PublicValueSpacePublicParameters>,
+        GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
     pub generator: GroupElementValue, // The base of discrete log
 }
 
 impl<
         WitnessSpacePublicParameters,
-        PublicValueSpacePublicParameters,
+        StatementSpacePublicParameters,
         GroupElementValue,
         CommitmentSchemePublicParameters,
-    > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, PublicValueSpacePublicParameters>>
+    > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
     for PublicParameters<
         WitnessSpacePublicParameters,
-        PublicValueSpacePublicParameters,
+        StatementSpacePublicParameters,
         GroupElementValue,
         CommitmentSchemePublicParameters,
     >
 {
     fn as_ref(
         &self,
-    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, PublicValueSpacePublicParameters>
-    {
+    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
         &self.groups_public_parameters
     }
 }
