@@ -6,12 +6,11 @@ use std::ops::Mul;
 
 use crypto_bigint::{Encoding, Uint};
 use serde::Serialize;
-
+use crate::helpers::const_generic_array_serialization;
 use crate::{AdditivelyHomomorphicEncryptionKey, ahe, commitments, group, proofs};
 use crate::commitments::HomomorphicCommitmentScheme;
 use crate::group::{direct_product, Samplable};
 use crate::proofs::{range, schnorr};
-use crate::helpers::const_generic_array_serialization;
 
 /// Committed Linear Evaluation Schnorr Language
 ///
@@ -155,15 +154,6 @@ for Language<
         //     .into())
         todo!()
     }
-
-    fn public_parameters_to_group_parameters(
-        language_public_parameters: &super::PublicParameters<Self>,
-    ) -> &super::GroupsPublicParameters<
-        super::WitnessSpacePublicParameters<Self>,
-        super::StatementSpacePublicParameters<Self>,
-    > {
-        language_public_parameters.as_ref()
-    }
 }
 
 
@@ -254,8 +244,8 @@ impl<
     EncryptionKeyPublicParameters,
     ScalarPublicParameters,
     CiphertextSpaceValue: Serialize,
-> AsRef<super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
-for PublicParameters<
+>
+AsRef<WitnessSpacePublicParameters> for PublicParameters<
     DIMENSION,
     WitnessSpacePublicParameters,
     StatementSpacePublicParameters,
@@ -266,10 +256,9 @@ for PublicParameters<
     CiphertextSpaceValue,
 >
 {
-    fn as_ref(
-        &self,
-    ) -> &super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>
-    {
-        &self.groups_public_parameters
+    fn as_ref(&self) -> &WitnessSpacePublicParameters {
+        &self
+            .groups_public_parameters
+            .witness_space_public_parameters
     }
 }

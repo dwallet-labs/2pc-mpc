@@ -50,7 +50,7 @@ where
         let base = GroupElement::new(
             language_public_parameters.generator.clone(),
             &language_public_parameters
-                .as_ref()
+                .groups_public_parameters
                 .public_value_space_public_parameters
                 .public_parameters,
         )?;
@@ -63,15 +63,6 @@ where
             *value * base,
         ]
         .into())
-    }
-
-    fn public_parameters_to_group_parameters(
-        language_public_parameters: &super::PublicParameters<Self>,
-    ) -> &super::GroupsPublicParameters<
-        super::WitnessSpacePublicParameters<Self>,
-        super::StatementSpacePublicParameters<Self>,
-    > {
-        language_public_parameters.as_ref()
     }
 }
 
@@ -112,7 +103,7 @@ impl<
         StatementSpacePublicParameters,
         GroupElementValue,
         CommitmentSchemePublicParameters,
-    > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
+    > AsRef<WitnessSpacePublicParameters>
     for PublicParameters<
         WitnessSpacePublicParameters,
         StatementSpacePublicParameters,
@@ -120,9 +111,9 @@ impl<
         CommitmentSchemePublicParameters,
     >
 {
-    fn as_ref(
-        &self,
-    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
-        &self.groups_public_parameters
+    fn as_ref(&self) -> &WitnessSpacePublicParameters {
+        &self
+            .groups_public_parameters
+            .witness_space_public_parameters
     }
 }
