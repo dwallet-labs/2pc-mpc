@@ -20,6 +20,8 @@ use crate::{
     AdditivelyHomomorphicEncryptionKey,
 };
 
+// todo: remove from proof the other parameters. Need to fix AsRef for that.
+
 // todo: note the masked witness is > 256-bit, and should not go through modulation in the
 // constrained witness group, nor in the range proof commitment nor in the encryption, but could and
 // will go through modulation in the Scalar group - that's fine.
