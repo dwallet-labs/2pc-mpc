@@ -51,7 +51,7 @@ where
             language_public_parameters.generator.clone(),
             &language_public_parameters
                 .groups_public_parameters
-                .public_value_space_public_parameters
+                .statement_space_public_parameters
                 .public_parameters,
         )?;
 
@@ -103,7 +103,7 @@ impl<
         StatementSpacePublicParameters,
         GroupElementValue,
         CommitmentSchemePublicParameters,
-    > AsRef<WitnessSpacePublicParameters>
+    > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
     for PublicParameters<
         WitnessSpacePublicParameters,
         StatementSpacePublicParameters,
@@ -111,9 +111,9 @@ impl<
         CommitmentSchemePublicParameters,
     >
 {
-    fn as_ref(&self) -> &WitnessSpacePublicParameters {
-        &self
-            .groups_public_parameters
-            .witness_space_public_parameters
+    fn as_ref(
+        &self,
+    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
+        &self.groups_public_parameters
     }
 }

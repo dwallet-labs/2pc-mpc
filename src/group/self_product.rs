@@ -13,7 +13,7 @@ use subtle::{Choice, ConstantTimeEq};
 use crate::{
     group,
     group::{BoundedGroupElement, GroupElement as _, Samplable},
-    helpers::{const_generic_array_serialization, flat_map_results},
+    helpers::flat_map_results,
 };
 
 /// An element of the Self Product of the Group `G` by Itself.
@@ -52,7 +52,7 @@ pub struct PublicParameters<const N: usize, PP> {
 /// The value of the Self Product of the Group `G` by Itself.
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct Value<const N: usize, G: group::GroupElement>(
-    #[serde(with = "const_generic_array_serialization")] [G::Value; N],
+    #[serde(with = "crate::helpers::const_generic_array_serialization")] [G::Value; N],
 );
 
 impl<const N: usize, G: group::GroupElement> ConstantTimeEq for Value<N, G> {

@@ -5,6 +5,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 use serde::Serialize;
 
+use super::GroupsPublicParameters;
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group,
@@ -87,16 +88,16 @@ impl<
         WitnessSpacePublicParameters,
         StatementSpacePublicParameters,
         CommitmentSchemePublicParameters,
-    > AsRef<WitnessSpacePublicParameters>
+    > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
     for PublicParameters<
         WitnessSpacePublicParameters,
         StatementSpacePublicParameters,
         CommitmentSchemePublicParameters,
     >
 {
-    fn as_ref(&self) -> &WitnessSpacePublicParameters {
-        &self
-            .groups_public_parameters
-            .witness_space_public_parameters
+    fn as_ref(
+        &self,
+    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
+        &self.groups_public_parameters
     }
 }

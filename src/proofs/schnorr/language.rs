@@ -31,8 +31,12 @@ pub trait Language: Clone {
     /// Group public parameters are encoded separately in
     /// `WitnessSpaceGroupElement::PublicParameters` and
     /// `StatementSpaceGroupElement::PublicParameters`.
-    type PublicParameters: AsRef<group::PublicParameters<Self::WitnessSpaceGroupElement>>
-        + Serialize
+    type PublicParameters: AsRef<
+            GroupsPublicParameters<
+                group::PublicParameters<Self::WitnessSpaceGroupElement>,
+                group::PublicParameters<Self::StatementSpaceGroupElement>,
+            >,
+        > + Serialize
         + PartialEq
         + Clone;
 
@@ -62,5 +66,5 @@ pub(super) type StatementSpaceValue<L> = group::Value<StatementSpaceGroupElement
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
     pub witness_space_public_parameters: WitnessSpacePublicParameters,
-    pub public_value_space_public_parameters: StatementSpacePublicParameters,
+    pub statement_space_public_parameters: StatementSpacePublicParameters,
 }

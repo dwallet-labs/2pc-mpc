@@ -6,7 +6,7 @@ use std::{marker::PhantomData, ops::Mul};
 use crypto_bigint::{Encoding, Uint};
 use serde::Serialize;
 
-use super::EnhancedLanguage;
+use super::{EnhancedLanguage, GroupsPublicParameters};
 use crate::{
     ahe,
     commitments::HomomorphicCommitmentScheme,
@@ -95,7 +95,7 @@ where
 
         let (_, group_public_parameters) = (&language_public_parameters
             .groups_public_parameters
-            .public_value_space_public_parameters)
+            .statement_space_public_parameters)
             .into();
 
         let (_, group_public_parameters) = group_public_parameters.into();
@@ -247,7 +247,7 @@ impl<
         EncryptionKeyPublicParameters,
         ScalarPublicParameters,
         GroupElementValue,
-    > AsRef<WitnessSpacePublicParameters>
+    > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
     for PublicParameters<
         WitnessSpacePublicParameters,
         StatementSpacePublicParameters,
@@ -257,9 +257,9 @@ impl<
         GroupElementValue,
     >
 {
-    fn as_ref(&self) -> &WitnessSpacePublicParameters {
-        &self
-            .groups_public_parameters
-            .witness_space_public_parameters
+    fn as_ref(
+        &self,
+    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
+        &self.groups_public_parameters
     }
 }

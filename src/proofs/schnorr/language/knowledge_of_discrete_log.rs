@@ -5,6 +5,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 use serde::Serialize;
 
+use super::GroupsPublicParameters;
 use crate::{group, group::Samplable, proofs, proofs::schnorr};
 
 impl<Scalar, GroupElement> schnorr::Language for Language<Scalar, GroupElement>
@@ -35,7 +36,7 @@ where
             language_public_parameters.generator.clone(),
             &language_public_parameters
                 .groups_public_parameters
-                .public_value_space_public_parameters,
+                .statement_space_public_parameters,
         )?;
 
         Ok(*witness * generator)
@@ -72,16 +73,16 @@ pub struct PublicParameters<
 }
 
 impl<WitnessSpacePublicParameters, StatementSpacePublicParameters, GroupElementValue>
-    AsRef<WitnessSpacePublicParameters>
+    AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
     for PublicParameters<
         WitnessSpacePublicParameters,
         StatementSpacePublicParameters,
         GroupElementValue,
     >
 {
-    fn as_ref(&self) -> &WitnessSpacePublicParameters {
-        &self
-            .groups_public_parameters
-            .witness_space_public_parameters
+    fn as_ref(
+        &self,
+    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
+        &self.groups_public_parameters
     }
 }
