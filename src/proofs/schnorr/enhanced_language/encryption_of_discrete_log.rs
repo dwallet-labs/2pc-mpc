@@ -37,6 +37,7 @@ impl<
     const MASK_LIMBS: usize,
     const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
     const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+    const WITNESS_MASK_LIMBS: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     Scalar,
     GroupElement: group::GroupElement,
@@ -47,6 +48,7 @@ for Language<
     MASK_LIMBS,
     RANGE_CLAIMS_PER_SCALAR,
     RANGE_CLAIM_LIMBS,
+    WITNESS_MASK_LIMBS,
     PLAINTEXT_SPACE_SCALAR_LIMBS,
     Scalar,
     GroupElement,
@@ -55,18 +57,23 @@ for Language<
 >
     where
         Uint<RANGE_CLAIM_LIMBS>: Encoding,
+        Uint<WITNESS_MASK_LIMBS>: Encoding,
         Scalar: group::GroupElement
         + Samplable
         + Mul<GroupElement, Output=GroupElement>
         + for<'r> Mul<&'r GroupElement, Output=GroupElement>
         + Copy,
-        Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
+        Scalar::Value: From<[Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>, // TODO: remove this & follow paper
         Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
-{
+        range::CommitmentSchemeMessageSpaceGroupElement<
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            RangeProof,
+        >: for<'a> From<&'a super::ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>> {
     type WitnessSpaceGroupElement =
-    super::EnhancedLanguageWitness<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, Self>;
+    super::EnhancedLanguageWitness<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, Self>;
     type StatementSpaceGroupElement =
-    super::EnhancedLanguageStatement<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, Self>;
+    super::EnhancedLanguageStatement<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, Self>;
 
     type PublicParameters = PublicParameters<
         super::WitnessSpacePublicParameters<Self>,
@@ -112,10 +119,10 @@ for Language<
             &language_public_parameters.commitment_scheme_public_parameters,
         )?;
 
-        let discrete_log_in_range_claim_base: [power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>;
+        let discrete_log_in_range_claim_base: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>;
             RANGE_CLAIMS_PER_SCALAR] = (*discrete_log_in_range_claim_base_self_product).into();
         let discrete_log: Scalar::Value = discrete_log_in_range_claim_base
-            .map(|element| Uint::<RANGE_CLAIM_LIMBS>::from(element))
+            .map(|element| Uint::<WITNESS_MASK_LIMBS>::from(element))
             .into();
 
         let discrete_log = Scalar::new(
@@ -134,9 +141,9 @@ for Language<
 
         Ok((
             commitment_scheme.commit(
-                discrete_log_in_range_claim_base_self_product,
+                &discrete_log_in_range_claim_base_self_product.into(),
                 commitment_randomness,
-            ),
+            ), // TODO: need to check this is safe, or retry if it fails. Also, need to implement.
             (
                 encryption_key
                     .encrypt_with_randomness(&discrete_log_plaintext, encryption_randomness),
@@ -161,16 +168,18 @@ impl<
     const MASK_LIMBS: usize,
     const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
     const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+    const WITNESS_MASK_LIMBS: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     Scalar: group::GroupElement,
     GroupElement: group::GroupElement,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     RangeProof: proofs::RangeProof<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>,
-> EnhancedLanguage<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>
+> EnhancedLanguage<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS>
 for Language<
     MASK_LIMBS,
     RANGE_CLAIMS_PER_SCALAR,
     RANGE_CLAIM_LIMBS,
+    WITNESS_MASK_LIMBS,
     PLAINTEXT_SPACE_SCALAR_LIMBS,
     Scalar,
     GroupElement,
@@ -179,13 +188,19 @@ for Language<
 >
     where
         Uint<RANGE_CLAIM_LIMBS>: Encoding,
+        Uint<WITNESS_MASK_LIMBS>: Encoding,
         Scalar: group::GroupElement
         + Samplable
         + Mul<GroupElement, Output=GroupElement>
         + for<'r> Mul<&'r GroupElement, Output=GroupElement>
         + Copy,
-        Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
+        Scalar::Value: From<[Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
         Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
+        range::CommitmentSchemeMessageSpaceGroupElement<
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            RangeProof,
+        >: for<'a> From<&'a super::ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>
 {
     type UnboundedWitnessSpaceGroupElement =
     ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>;
@@ -217,6 +232,7 @@ pub struct Language<
     const MASK_LIMBS: usize,
     const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
     const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+    const WITNESS_MASK_LIMBS: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     Scalar,
     GroupElement,

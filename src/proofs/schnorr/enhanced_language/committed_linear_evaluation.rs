@@ -38,6 +38,7 @@ pub struct Language<
     const MASK_LIMBS: usize,
     const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
     const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+    const WITNESS_MASK_LIMBS: usize,
     const DIMENSION: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     Scalar,
@@ -57,6 +58,7 @@ impl<
     const MASK_LIMBS: usize,
     const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
     const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+    const WITNESS_MASK_LIMBS: usize,
     const DIMENSION: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     Scalar,
@@ -70,6 +72,7 @@ for Language<
     MASK_LIMBS,
     RANGE_CLAIMS_PER_SCALAR,
     RANGE_CLAIM_LIMBS,
+    WITNESS_MASK_LIMBS,
     DIMENSION,
     PLAINTEXT_SPACE_SCALAR_LIMBS,
     Scalar,
@@ -80,6 +83,7 @@ for Language<
 >
     where
         Uint<RANGE_CLAIM_LIMBS>: Encoding,
+        Uint<WITNESS_MASK_LIMBS>: Encoding,
         Scalar: group::GroupElement
         + Samplable
         + Mul<GroupElement, Output=GroupElement>
@@ -89,9 +93,9 @@ for Language<
         Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
 {
     type WitnessSpaceGroupElement =
-    super::EnhancedLanguageWitness<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, Self>;
+    super::EnhancedLanguageWitness<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, Self>;
     type StatementSpaceGroupElement =
-    super::EnhancedLanguageStatement<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, Self>;
+    super::EnhancedLanguageStatement<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, Self>;
 
     type PublicParameters = PublicParameters<
         DIMENSION,
@@ -171,6 +175,7 @@ impl<
     const MASK_LIMBS: usize,
     const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
     const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+    const WITNESS_MASK_LIMBS: usize,
     const DIMENSION: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     Scalar,
@@ -181,11 +186,13 @@ impl<
 >
 schnorr::EnhancedLanguage<RANGE_CLAIMS_PER_SCALAR,
     RANGE_CLAIM_LIMBS,
+    WITNESS_MASK_LIMBS,
 >
 for Language<
     MASK_LIMBS,
     RANGE_CLAIMS_PER_SCALAR,
     RANGE_CLAIM_LIMBS,
+    WITNESS_MASK_LIMBS,
     DIMENSION,
     PLAINTEXT_SPACE_SCALAR_LIMBS,
     Scalar,
@@ -196,6 +203,7 @@ for Language<
 >
     where
         Uint<RANGE_CLAIM_LIMBS>: Encoding,
+        Uint<WITNESS_MASK_LIMBS>: Encoding,
         Scalar: group::GroupElement
         + Samplable
         + Mul<GroupElement, Output=GroupElement>

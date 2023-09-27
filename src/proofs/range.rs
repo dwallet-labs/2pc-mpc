@@ -5,10 +5,8 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    commitments,
-    commitments::HomomorphicCommitmentScheme,
-    group::{additive_group_of_integers_modulu_n::power_of_two_moduli, self_product},
-    proofs::Result,
+    commitments, commitments::HomomorphicCommitmentScheme,
+    group::additive_group_of_integers_modulu_n::power_of_two_moduli, proofs::Result,
 };
 
 // TODO: can I move consts to the function bodies?
@@ -22,12 +20,7 @@ pub trait RangeProof<
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
 {
     /// The commitment scheme used for the range proof
-    type CommitmentScheme: HomomorphicCommitmentScheme<
-    MessageSpaceGroupElement = self_product::GroupElement<
-    NUM_RANGE_CLAIMS,
-    power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>,
-    >,
-    >;
+    type CommitmentScheme: HomomorphicCommitmentScheme;
 
     /// The public parameters of the range proof.
     ///
