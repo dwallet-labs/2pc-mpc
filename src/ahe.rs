@@ -30,14 +30,14 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// An Encryption Key of an Additively Homomorphic Encryption scheme.
-pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize>: Into<Self::PublicParameters> +
-PartialEq + Clone + Debug
+pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize>:
+    Into<Self::PublicParameters> + PartialEq + Clone + Debug
 {
-    type PlaintextSpaceGroupElement: GroupElement<Value=Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>
-    + KnownOrderGroupElement<
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        Scalar=Self::PlaintextSpaceGroupElement,
-    >;
+    type PlaintextSpaceGroupElement: GroupElement<Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>
+        + KnownOrderGroupElement<
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            Scalar = Self::PlaintextSpaceGroupElement,
+        >;
     type RandomnessSpaceGroupElement: GroupElement + Samplable;
     type CiphertextSpaceGroupElement: GroupElement;
 
@@ -49,12 +49,15 @@ PartialEq + Clone + Debug
     /// As such, it uniquely identifies the encryption-scheme (alongside the type `Self`) and will
     /// be used for Fiat-Shamir Transcripts).
     type PublicParameters: AsRef<
-        GroupsPublicParameters<
-            PlaintextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, Self>,
-            RandomnessSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, Self>,
-            CiphertextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, Self>,
-        >,
-    > + Serialize + for<'r> Deserialize<'r> + Clone + PartialEq;
+            GroupsPublicParameters<
+                PlaintextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, Self>,
+                RandomnessSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, Self>,
+                CiphertextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, Self>,
+            >,
+        > + Serialize
+        + for<'r> Deserialize<'r>
+        + Clone
+        + PartialEq;
 
     /// Returns the public parameters of this encryption scheme.
     fn public_parameters(&self) -> Self::PublicParameters {
@@ -63,9 +66,7 @@ PartialEq + Clone + Debug
 
     /// Instantiate the encryption key from the public parameters of the encryption scheme,
     /// plaintext, randomness and ciphertext groups.
-    fn new(
-        encryption_scheme_public_parameters: &Self::PublicParameters,
-    ) -> Result<Self>;
+    fn new(encryption_scheme_public_parameters: &Self::PublicParameters) -> Result<Self>;
 
     /// $\Enc(pk, \pt; \eta_{\sf enc}) \to \ct$: Encrypt `plaintext` to `self` using
     /// `randomness`.
@@ -285,14 +286,16 @@ pub struct GroupsPublicParameters<
 }
 
 impl<
-    PlaintextSpacePublicParameters,
-    RandomnessSpacePublicParameters,
-    CiphertextSpacePublicParameters,
-> AsRef<Self> for GroupsPublicParameters<
-    PlaintextSpacePublicParameters,
-    RandomnessSpacePublicParameters,
-    CiphertextSpacePublicParameters,
-> {
+        PlaintextSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CiphertextSpacePublicParameters,
+    > AsRef<Self>
+    for GroupsPublicParameters<
+        PlaintextSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CiphertextSpacePublicParameters,
+    >
+{
     fn as_ref(&self) -> &Self {
         self
     }
@@ -300,8 +303,9 @@ impl<
 pub type PlaintextSpaceGroupElement<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> = <
 E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
 >::PlaintextSpaceGroupElement;
-pub type PlaintextSpacePublicParameters<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> = group::PublicParameters<<
-E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
+pub type PlaintextSpacePublicParameters<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> =
+group::PublicParameters<<
+    E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
 >::PlaintextSpaceGroupElement>;
 pub type PlaintextSpaceValue<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> = group::Value<<
 E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
@@ -310,8 +314,9 @@ E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
 pub type RandomnessSpaceGroupElement<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> = <
 E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
 >::RandomnessSpaceGroupElement;
-pub type RandomnessSpacePublicParameters<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> = group::PublicParameters<<
-E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
+pub type RandomnessSpacePublicParameters<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> =
+group::PublicParameters<<
+    E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
 >::RandomnessSpaceGroupElement>;
 pub type RandomnessSpaceValue<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> = group::Value<<
 E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
@@ -319,15 +324,16 @@ E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
 pub type CiphertextSpaceGroupElement<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> = <
 E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
 >::CiphertextSpaceGroupElement;
-pub type CiphertextSpacePublicParameters<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> = group::PublicParameters<<
-E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
+pub type CiphertextSpacePublicParameters<
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    E> = group::PublicParameters<<
+    E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
 >::CiphertextSpaceGroupElement>;
 pub type CiphertextSpaceValue<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> = group::Value<<
 E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>
 >::CiphertextSpaceGroupElement>;
 pub type PublicParameters<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> =
-<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::PublicParameters;
-
+    <E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::PublicParameters;
 
 #[cfg(test)]
 #[allow(clippy::erasing_op)]
@@ -356,7 +362,7 @@ mod tests {
         >,
     ) where
         DecryptionKey:
-        AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+            AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         EncryptionKey::PlaintextSpaceGroupElement: Debug,
     {
         let encryption_key: EncryptionKey = decryption_key.clone().into();
@@ -366,7 +372,7 @@ mod tests {
                 plaintext.into(),
                 &plaintext_group_public_parameters,
             )
-                .unwrap();
+            .unwrap();
 
         let (_, ciphertext) = encryption_key
             .encrypt(&plaintext, &randomness_group_public_parameters, &mut OsRng)
@@ -397,7 +403,7 @@ mod tests {
         >,
     ) where
         DecryptionKey:
-        AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+            AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         EncryptionKey::PlaintextSpaceGroupElement: Debug,
         EncryptionKey::CiphertextSpaceGroupElement: Debug,
         EvaluationGroupElement: From<Value<EncryptionKey::PlaintextSpaceGroupElement>> + Debug,
@@ -409,38 +415,38 @@ mod tests {
             zero.into(),
             &plaintext_group_public_parameters,
         )
-            .unwrap();
+        .unwrap();
 
         let one: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(1u64)).into();
         let one = EncryptionKey::PlaintextSpaceGroupElement::new(
             one.into(),
             &plaintext_group_public_parameters,
         )
-            .unwrap();
+        .unwrap();
         let two: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(2u64)).into();
         let two = EncryptionKey::PlaintextSpaceGroupElement::new(
             two.into(),
             &plaintext_group_public_parameters,
         )
-            .unwrap();
+        .unwrap();
         let five: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(5u64)).into();
         let five = EncryptionKey::PlaintextSpaceGroupElement::new(
             five.into(),
             &plaintext_group_public_parameters,
         )
-            .unwrap();
+        .unwrap();
         let seven: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(7u64)).into();
         let seven = EncryptionKey::PlaintextSpaceGroupElement::new(
             seven.into(),
             &plaintext_group_public_parameters,
         )
-            .unwrap();
+        .unwrap();
         let seventy_three: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(73u64)).into();
         let seventy_three = EncryptionKey::PlaintextSpaceGroupElement::new(
             seventy_three.into(),
             &plaintext_group_public_parameters,
         )
-            .unwrap();
+        .unwrap();
 
         let (_, encrypted_two) = encryption_key
             .encrypt(&two, &randomness_group_public_parameters, &mut OsRng)
@@ -464,7 +470,7 @@ mod tests {
             expected_evaluation_result.into(),
             &plaintext_group_public_parameters,
         )
-            .unwrap();
+        .unwrap();
 
         assert_eq!(
             expected_evaluation_result,

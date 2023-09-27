@@ -1,17 +1,21 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::marker::PhantomData;
-use std::ops::Mul;
+use std::{marker::PhantomData, ops::Mul};
 
 use crypto_bigint::{Encoding, Uint};
 use serde::Serialize;
 
-use crate::{AdditivelyHomomorphicEncryptionKey, ahe, commitments, group, proofs};
-use crate::commitments::HomomorphicCommitmentScheme;
-use crate::group::{direct_product, Samplable};
-use crate::proofs::{range, schnorr};
-use crate::helpers::const_generic_array_serialization;
+use super::GroupsPublicParameters;
+use crate::{
+    ahe, commitments,
+    commitments::HomomorphicCommitmentScheme,
+    group,
+    group::{direct_product, Samplable},
+    proofs,
+    proofs::{range, schnorr},
+    AdditivelyHomomorphicEncryptionKey,
+};
 
 /// Committed Linear Evaluation Schnorr Language
 ///
@@ -55,47 +59,54 @@ pub struct Language<
 }
 
 impl<
-    const MASK_LIMBS: usize,
-    const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
-    const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
-    const WITNESS_MASK_LIMBS: usize,
-    const DIMENSION: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement: group::GroupElement,
-    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    CommitmentScheme: HomomorphicCommitmentScheme,
-    RangeProof: proofs::RangeProof<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>,
->
-schnorr::Language
-for Language<
-    MASK_LIMBS,
-    RANGE_CLAIMS_PER_SCALAR,
-    RANGE_CLAIM_LIMBS,
-    WITNESS_MASK_LIMBS,
-    DIMENSION,
-    PLAINTEXT_SPACE_SCALAR_LIMBS,
-    Scalar,
-    GroupElement,
-    EncryptionKey,
-    CommitmentScheme,
-    RangeProof,
->
-    where
-        Uint<RANGE_CLAIM_LIMBS>: Encoding,
-        Uint<WITNESS_MASK_LIMBS>: Encoding,
-        Scalar: group::GroupElement
+        const MASK_LIMBS: usize,
+        const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
+        const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+        const WITNESS_MASK_LIMBS: usize,
+        const DIMENSION: usize,
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        Scalar,
+        GroupElement: group::GroupElement,
+        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        CommitmentScheme: HomomorphicCommitmentScheme,
+        RangeProof: proofs::RangeProof<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>,
+    > schnorr::Language
+    for Language<
+        MASK_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        DIMENSION,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        CommitmentScheme,
+        RangeProof,
+    >
+where
+    Uint<RANGE_CLAIM_LIMBS>: Encoding,
+    Uint<WITNESS_MASK_LIMBS>: Encoding,
+    Scalar: group::GroupElement
         + Samplable
-        + Mul<GroupElement, Output=GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output=GroupElement>
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Copy,
-        Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
-        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
+    Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
 {
-    type WitnessSpaceGroupElement =
-    super::EnhancedLanguageWitness<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, Self>;
-    type StatementSpaceGroupElement =
-    super::EnhancedLanguageStatement<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, Self>;
+    type WitnessSpaceGroupElement = super::EnhancedLanguageWitness<
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Self,
+    >;
+    type StatementSpaceGroupElement = super::EnhancedLanguageStatement<
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Self,
+    >;
 
     type PublicParameters = PublicParameters<
         DIMENSION,
@@ -127,7 +138,7 @@ for Language<
         //     Scalar::order_from_public_parameters(&scalar_group_public_parameters);
         //
         // let (ciphertext_group_public_parameters, group_public_parameters) =
-        //     public_value_space_public_parameters.into();
+        //     statement_space_public_parameters.into();
         //
         // let encryption_key = EncryptionKey::new(
         //     &language_public_parameters.encryption_scheme_public_parameters,
@@ -159,73 +170,61 @@ for Language<
         //     .into())
         todo!()
     }
-
-    fn public_parameters_to_group_parameters(
-        language_public_parameters: &super::PublicParameters<Self>,
-    ) -> &super::GroupsPublicParameters<
-        super::WitnessSpacePublicParameters<Self>,
-        super::StatementSpacePublicParameters<Self>,
-    > {
-        language_public_parameters.as_ref()
-    }
 }
 
-
 impl<
-    const MASK_LIMBS: usize,
-    const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
-    const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
-    const WITNESS_MASK_LIMBS: usize,
-    const DIMENSION: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement: group::GroupElement,
-    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    CommitmentScheme: HomomorphicCommitmentScheme,
-    RangeProof: proofs::RangeProof<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>,
->
-schnorr::EnhancedLanguage<RANGE_CLAIMS_PER_SCALAR,
-    RANGE_CLAIM_LIMBS,
-    WITNESS_MASK_LIMBS,
->
-for Language<
-    MASK_LIMBS,
-    RANGE_CLAIMS_PER_SCALAR,
-    RANGE_CLAIM_LIMBS,
-    WITNESS_MASK_LIMBS,
-    DIMENSION,
-    PLAINTEXT_SPACE_SCALAR_LIMBS,
-    Scalar,
-    GroupElement,
-    EncryptionKey,
-    CommitmentScheme,
-    RangeProof,
->
-    where
-        Uint<RANGE_CLAIM_LIMBS>: Encoding,
-        Uint<WITNESS_MASK_LIMBS>: Encoding,
-        Scalar: group::GroupElement
+        const MASK_LIMBS: usize,
+        const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
+        const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+        const WITNESS_MASK_LIMBS: usize,
+        const DIMENSION: usize,
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        Scalar,
+        GroupElement: group::GroupElement,
+        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        CommitmentScheme: HomomorphicCommitmentScheme,
+        RangeProof: proofs::RangeProof<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>,
+    > schnorr::EnhancedLanguage<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS>
+    for Language<
+        MASK_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        DIMENSION,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        CommitmentScheme,
+        RangeProof,
+    >
+where
+    Uint<RANGE_CLAIM_LIMBS>: Encoding,
+    Uint<WITNESS_MASK_LIMBS>: Encoding,
+    Scalar: group::GroupElement
         + Samplable
-        + Mul<GroupElement, Output=GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output=GroupElement>
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Copy,
-        Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
-        Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
+    Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
 {
-    type UnboundedWitnessSpaceGroupElement =
-    direct_product::GroupElement<
-        Scalar, // The commitment randomness
-        ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>, // The encryption randomness
+    type UnboundedWitnessSpaceGroupElement = direct_product::GroupElement<
+        // The commitment randomness
+        Scalar,
+        // The encryption randomness
+        ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
     >;
 
     type RemainingStatementSpaceGroupElement = direct_product::GroupElement<
-        ahe::CiphertextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>, // The resultant ciphertext of the homomorphic evaluation
-        commitments::CommitmentSpaceGroupElement<CommitmentScheme>, // The commitment on the evaluation coefficients
+        // The resultant ciphertext of the homomorphic evaluation
+        ahe::CiphertextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        // The commitment on the evaluation coefficients
+        commitments::CommitmentSpaceGroupElement<CommitmentScheme>,
     >;
 
     type RangeProof = RangeProof;
 }
-
 
 /// The Public Parameters of the Committed Linear Evaluation Schnorr Language
 ///
@@ -243,41 +242,40 @@ pub struct PublicParameters<
     CiphertextSpaceValue: Serialize,
 > {
     pub groups_public_parameters:
-    super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
+        super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
     pub range_proof_commitment_scheme_public_parameters: ProofCommitmentSchemePublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
     pub scalar_group_public_parameters: ScalarPublicParameters,
 
-    #[serde(with = "const_generic_array_serialization")]
+    #[serde(with = "crate::helpers::const_generic_array_serialization")]
     pub ciphertexts: [CiphertextSpaceValue; DIMENSION],
 }
 
 impl<
-    const DIMENSION: usize,
-    WitnessSpacePublicParameters,
-    StatementSpacePublicParameters,
-    CommitmentSchemePublicParameters,
-    ProofCommitmentSchemePublicParameters,
-    EncryptionKeyPublicParameters,
-    ScalarPublicParameters,
-    CiphertextSpaceValue: Serialize,
-> AsRef<super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
-for PublicParameters<
-    DIMENSION,
-    WitnessSpacePublicParameters,
-    StatementSpacePublicParameters,
-    CommitmentSchemePublicParameters,
-    ProofCommitmentSchemePublicParameters,
-    EncryptionKeyPublicParameters,
-    ScalarPublicParameters,
-    CiphertextSpaceValue,
->
+        const DIMENSION: usize,
+        WitnessSpacePublicParameters,
+        StatementSpacePublicParameters,
+        CommitmentSchemePublicParameters,
+        ProofCommitmentSchemePublicParameters,
+        EncryptionKeyPublicParameters,
+        ScalarPublicParameters,
+        CiphertextSpaceValue: Serialize,
+    > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
+    for PublicParameters<
+        DIMENSION,
+        WitnessSpacePublicParameters,
+        StatementSpacePublicParameters,
+        CommitmentSchemePublicParameters,
+        ProofCommitmentSchemePublicParameters,
+        EncryptionKeyPublicParameters,
+        ScalarPublicParameters,
+        CiphertextSpaceValue,
+    >
 {
     fn as_ref(
         &self,
-    ) -> &super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>
-    {
+    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
         &self.groups_public_parameters
     }
 }

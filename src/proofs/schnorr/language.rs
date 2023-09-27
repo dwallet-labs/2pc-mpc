@@ -31,7 +31,14 @@ pub trait Language: Clone {
     /// Group public parameters are encoded separately in
     /// `WitnessSpaceGroupElement::PublicParameters` and
     /// `StatementSpaceGroupElement::PublicParameters`.
-    type PublicParameters: Serialize + PartialEq + Clone;
+    type PublicParameters: AsRef<
+            GroupsPublicParameters<
+                group::PublicParameters<Self::WitnessSpaceGroupElement>,
+                group::PublicParameters<Self::StatementSpaceGroupElement>,
+            >,
+        > + Serialize
+        + PartialEq
+        + Clone;
 
     /// A unique string representing the name of this language; will be inserted to the Fiat-Shamir
     /// transcript.
@@ -43,16 +50,6 @@ pub trait Language: Clone {
         witness: &WitnessSpaceGroupElement<Self>,
         language_public_parameters: &PublicParameters<Self>,
     ) -> Result<StatementSpaceGroupElement<Self>>;
-
-    // TODO: This is just a trick to enforce that the language public parameters indeed holds the
-    // group public parameters as members. Wanted to use `AsRef` but couldn't because of
-    // deriving issues. See: https://github.com/rust-lang/rust/commit/9cabe273d3adb06a19f63460deda96ae224b28bf
-    fn public_parameters_to_group_parameters(
-        language_public_parameters: &PublicParameters<Self>,
-    ) -> &GroupsPublicParameters<
-        WitnessSpacePublicParameters<Self>,
-        StatementSpacePublicParameters<Self>,
-    >;
 }
 
 pub(super) type PublicParameters<L> = <L as Language>::PublicParameters;
@@ -69,5 +66,5 @@ pub(super) type StatementSpaceValue<L> = group::Value<StatementSpaceGroupElement
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
     pub witness_space_public_parameters: WitnessSpacePublicParameters,
-    pub public_value_space_public_parameters: StatementSpacePublicParameters,
+    pub statement_space_public_parameters: StatementSpacePublicParameters,
 }

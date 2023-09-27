@@ -50,8 +50,8 @@ where
         let base = GroupElement::new(
             language_public_parameters.generator.clone(),
             &language_public_parameters
-                .as_ref()
-                .public_value_space_public_parameters
+                .groups_public_parameters
+                .statement_space_public_parameters
                 .public_parameters,
         )?;
 
@@ -63,15 +63,6 @@ where
             *value * base,
         ]
         .into())
-    }
-
-    fn public_parameters_to_group_parameters(
-        language_public_parameters: &super::PublicParameters<Self>,
-    ) -> &super::GroupsPublicParameters<
-        super::WitnessSpacePublicParameters<Self>,
-        super::StatementSpacePublicParameters<Self>,
-    > {
-        language_public_parameters.as_ref()
     }
 }
 
