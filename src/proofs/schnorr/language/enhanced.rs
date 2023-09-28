@@ -73,13 +73,13 @@ pub trait EnhancedLanguage<
     // The size of the witness mask. Must be equal to RANGE_CLAIM_LIMBS + ComputationalSecuritySizedNumber::LIMBS + StatisticalSecuritySizedNumber::LIMBS
     const WITNESS_MASK_LIMBS: usize,
 >: super::Language<
-    WitnessSpaceGroupElement = EnhancedLanguageWitness<
+    WitnessSpaceGroupElement=EnhancedLanguageWitness<
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
         WITNESS_MASK_LIMBS,
         Self
     >,
-    StatementSpaceGroupElement = EnhancedLanguageStatement<
+    StatementSpaceGroupElement=EnhancedLanguageStatement<
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
         WITNESS_MASK_LIMBS,
@@ -141,6 +141,17 @@ pub type RemainingStatementSpaceValue<
 
 pub type RangeProof<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, const WITNESS_MASK_LIMBS: usize, L> =
     <L as EnhancedLanguage<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS>>::RangeProof;
+
+pub type RangeProofPublicParameters<
+    const NUM_RANGE_CLAIMS: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    L,
+> = range::PublicParameters<
+    NUM_RANGE_CLAIMS,
+    RANGE_CLAIM_LIMBS,
+    RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, L>,
+>;
 
 pub type RangeProofCommitmentScheme<
     const NUM_RANGE_CLAIMS: usize,

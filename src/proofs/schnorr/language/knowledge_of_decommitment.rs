@@ -14,6 +14,25 @@ use crate::{
     proofs::schnorr,
 };
 
+/// Knowledge of Decommitment Schnorr Language.
+///
+/// SECURITY NOTICE:
+/// Because correctness and zero-knowledge is guaranteed for any group in this language, we choose
+/// to provide a fully generic implementation.
+///
+/// However knowledge-soundness proofs are group dependent, and thus we can only assure security for
+/// groups for which we know how to prove it.
+///
+/// In the paper, we have prove (or cited a proof) it for any prime known-order group or for
+/// Paillier groups based on safe-primes; so it is safe to use with a `PrimeOrderGroupElement` or
+/// `PaillierGroupElement`.
+#[derive(Clone, Serialize)]
+pub struct Language<Scalar, GroupElement, CommitmentScheme> {
+    _scalar_choice: PhantomData<Scalar>,
+    _group_element_choice: PhantomData<GroupElement>,
+    _commitment_choice: PhantomData<CommitmentScheme>,
+}
+
 impl<Scalar, GroupElement, CommitmentScheme> schnorr::Language for Language<Scalar, GroupElement, CommitmentScheme>
 where
     Scalar: group::GroupElement
@@ -49,25 +68,6 @@ where
 
         Ok(commitment_scheme.commit(&[*value].into(), randomness))
     }
-}
-
-/// Knowledge of Decommitment Schnorr Language.
-///
-/// SECURITY NOTICE:
-/// Because correctness and zero-knowledge is guaranteed for any group in this language, we choose
-/// to provide a fully generic implementation.
-///
-/// However knowledge-soundness proofs are group dependent, and thus we can only assure security for
-/// groups for which we know how to prove it.
-///
-/// In the paper, we have prove (or cited a proof) it for any prime known-order group or for
-/// Paillier groups based on safe-primes; so it is safe to use with a `PrimeOrderGroupElement` or
-/// `PaillierGroupElement`.
-#[derive(Clone)]
-pub struct Language<Scalar, GroupElement, CommitmentScheme> {
-    _scalar_choice: PhantomData<Scalar>,
-    _group_element_choice: PhantomData<GroupElement>,
-    _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
 /// The Public Parameters of the Knowledge of Decommitment Schnorr Language.

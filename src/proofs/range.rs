@@ -16,7 +16,7 @@ pub trait RangeProof<
     const NUM_RANGE_CLAIMS: usize,
     // An upper bound over the range claims (the lower bound is fixed to zero.)
     const RANGE_CLAIM_LIMBS: usize,
->: PartialEq + Clone where
+>: Serialize + for<'a> Deserialize<'a> + PartialEq + Clone where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
 {
     /// The commitment scheme used for the range proof
@@ -52,6 +52,9 @@ pub trait RangeProof<
         commitment: &commitments::CommitmentSpaceGroupElement<Self::CommitmentScheme>,
     ) -> Result<()>;
 }
+
+pub type PublicParameters<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, Proof> =
+    <Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::PublicParameters;
 
 pub type CommitmentScheme<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, Proof> =
     <Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme;

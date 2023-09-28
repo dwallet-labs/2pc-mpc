@@ -19,6 +19,38 @@ use crate::{
     AdditivelyHomomorphicEncryptionKey,
 };
 
+/// Encryption of Discrete Log Schnorr Language
+///
+/// SECURITY NOTICE:
+/// Because correctness and zero-knowledge is guaranteed for any group and additively homomorphic
+/// encryption scheme in this language, we choose to provide a fully generic
+/// implementation.
+///
+/// However knowledge-soundness proofs are group and encryption scheme dependent, and thus we can
+/// only assure security for groups and encryption schemes for which we know how to prove it.
+///
+/// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
+/// `PrimeOrderGroupElement`.
+///
+/// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
+#[derive(Clone, Serialize)]
+pub struct Language<
+    const MASK_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
+    const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+    const WITNESS_MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    EncryptionKey,
+    RangeProof,
+> {
+    _scalar_choice: PhantomData<Scalar>,
+    _group_element_choice: PhantomData<GroupElement>,
+    _encryption_key_choice: PhantomData<EncryptionKey>,
+    _range_proof_choice: PhantomData<RangeProof>,
+}
+
 // todo: remove from proof the other parameters. Need to fix AsRef for that.
 
 // todo: note the masked witness is > 256-bit, and should not go through modulation in the
@@ -127,7 +159,7 @@ where
                                                                                                                      * safe, or retry if it fails.
                                                                                                                      * Also, need
                                                                                                                      * to implement.
-                                                                                                                     * */
+                                                                                                                     */
             (
                 encryption_key.encrypt_with_randomness(&discrete_log_plaintext, encryption_randomness),
                 discrete_log * base,
@@ -179,38 +211,6 @@ where
         direct_product::GroupElement<ahe::CiphertextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>, GroupElement>;
 
     type RangeProof = RangeProof;
-}
-
-/// Encryption of Discrete Log Schnorr Language
-///
-/// SECURITY NOTICE:
-/// Because correctness and zero-knowledge is guaranteed for any group and additively homomorphic
-/// encryption scheme in this language, we choose to provide a fully generic
-/// implementation.
-///
-/// However knowledge-soundness proofs are group and encryption scheme dependent, and thus we can
-/// only assure security for groups and encryption schemes for which we know how to prove it.
-///
-/// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
-/// `PrimeOrderGroupElement`.
-///
-/// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
-#[derive(Clone)]
-pub struct Language<
-    const MASK_LIMBS: usize,
-    const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
-    const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
-    const WITNESS_MASK_LIMBS: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    EncryptionKey,
-    RangeProof,
-> {
-    _scalar_choice: PhantomData<Scalar>,
-    _group_element_choice: PhantomData<GroupElement>,
-    _encryption_key_choice: PhantomData<EncryptionKey>,
-    _range_proof_choice: PhantomData<RangeProof>,
 }
 
 /// The Public Parameters of the Encryption of Discrete Log Schnorr Language

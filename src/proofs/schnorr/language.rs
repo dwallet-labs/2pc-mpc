@@ -20,7 +20,7 @@ pub use enhanced::{committed_linear_evaluation, encryption_of_discrete_log, Enha
 /// A Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`.
 /// As defined in Appendix B. Schnorr Protocols in the paper.
-pub trait Language: Clone {
+pub trait Language: Clone + Serialize {
     /// An element of the witness space $(\HH_\pp, +)$
     type WitnessSpaceGroupElement: GroupElement + Samplable;
 

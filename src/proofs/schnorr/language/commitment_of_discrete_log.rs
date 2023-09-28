@@ -14,6 +14,24 @@ use crate::{
     proofs::schnorr,
 };
 
+/// Commitment of Discrete Log Schnorr Language
+///
+/// SECURITY NOTICE:
+/// Because correctness and zero-knowledge is guaranteed for any group in this language, we choose
+/// to provide a fully generic implementation.
+///
+/// However knowledge-soundness proofs are group dependent, and thus we can only assure security for
+/// groups for which we know how to prove it.
+///
+/// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
+/// `PrimeOrderGroupElement`.
+#[derive(Clone, Serialize)]
+pub struct Language<Scalar, GroupElement, CommitmentScheme> {
+    _scalar_choice: PhantomData<Scalar>,
+    _group_element_choice: PhantomData<GroupElement>,
+    _commitment_choice: PhantomData<CommitmentScheme>,
+}
+
 impl<Scalar, GroupElement, CommitmentScheme> schnorr::Language for Language<Scalar, GroupElement, CommitmentScheme>
 where
     Scalar: group::GroupElement
@@ -58,24 +76,6 @@ where
 
         Ok([commitment_scheme.commit(&[*value].into(), randomness), *value * base].into())
     }
-}
-
-/// Commitment of Discrete Log Schnorr Language
-///
-/// SECURITY NOTICE:
-/// Because correctness and zero-knowledge is guaranteed for any group in this language, we choose
-/// to provide a fully generic implementation.
-///
-/// However knowledge-soundness proofs are group dependent, and thus we can only assure security for
-/// groups for which we know how to prove it.
-///
-/// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
-/// `PrimeOrderGroupElement`.
-#[derive(Clone)]
-pub struct Language<Scalar, GroupElement, CommitmentScheme> {
-    _scalar_choice: PhantomData<Scalar>,
-    _group_element_choice: PhantomData<GroupElement>,
-    _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
 /// The Public Parameters of the Commitment of Discrete Log Schnorr Language
