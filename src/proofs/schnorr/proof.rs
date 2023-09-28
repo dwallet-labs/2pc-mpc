@@ -96,7 +96,7 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize> Proof<Lan
         let batch_size = witnesses_and_statements.len();
 
         let (witnesses, statements): (Vec<WitnessSpaceGroupElement<Language>>, Vec<StatementSpaceGroupElement<Language>>) =
-            witnesses_and_statements.iter().cloned().unzip();
+            witnesses_and_statements.into_iter().unzip();
 
         let mut transcript = Self::setup_protocol(&protocol_context, language_public_parameters, statements)?;
 
@@ -249,27 +249,23 @@ where
             rng,
         )?;
 
-        let (constrained_witnesses, commitments_and_randomness): (
+        let (witnesses, statements): (Vec<WitnessSpaceGroupElement<Language>>, Vec<StatementSpaceGroupElement<Language>>) =
+            witnesses_and_statements.into_iter().unzip();
+
+        let (constrained_witnesses, commitment_randomnesses): (
             Vec<[power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
-            Vec<(
+            Vec<
                 enhanced::RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
                     NUM_RANGE_CLAIMS,
                     RANGE_CLAIM_LIMBS,
                     WITNESS_MASK_LIMBS,
                     Language,
                 >,
-                enhanced::RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
-                    NUM_RANGE_CLAIMS,
-                    RANGE_CLAIM_LIMBS,
-                    WITNESS_MASK_LIMBS,
-                    Language,
-                >,
-            )>,
-        ) = witnesses_and_statements
+            >,
+        ) = witnesses
             .into_iter()
-            .map(|(witness, statement)| {
+            .map(|witness| {
                 let (constrained_witness, commitment_randomness, _) = witness.into();
-                let (commitment, _) = statement.into();
 
                 let constrained_witness: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>; NUM_RANGE_CLAIMS] =
                     constrained_witness.into();
@@ -283,12 +279,29 @@ where
                         power_of_two_moduli::GroupElement::<RANGE_CLAIM_LIMBS>::new(witness_part_range_claim_value, &()).unwrap()
                     });
 
-                (constrained_witness, (commitment_randomness, commitment))
+                (constrained_witness, commitment_randomness)
             })
             .unzip();
 
+        let commitments: Vec<
+            enhanced::RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
+                NUM_RANGE_CLAIMS,
+                RANGE_CLAIM_LIMBS,
+                WITNESS_MASK_LIMBS,
+                Language,
+            >,
+        > = statements
+            .into_iter()
+            .map(|statement| {
+                let (commitment, _) = statement.into();
+
+                commitment
+            })
+            .collect();
+
         // TODO: are we sure we want to take just one for the entire batch?
-        let (commitment_randomness, commitment) = commitments_and_randomness.first().ok_or(Error::InvalidParameters)?;
+        let commitment_randomness = commitment_randomnesses.first().ok_or(Error::InvalidParameters)?;
+        let commitment = commitments.first().ok_or(Error::InvalidParameters)?;
 
         let range_proof = enhanced::RangeProof::<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, Language>::prove(
             range_proof_public_parameters,
@@ -309,10 +322,39 @@ where
         &self,
         protocol_context: ProtocolContext,
         language_public_parameters: &PublicParameters<Language>,
+        range_proof_public_parameters: &enhanced::RangeProofPublicParameters<
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            Language,
+        >,
         statements: Vec<StatementSpaceGroupElement<Language>>,
     ) -> proofs::Result<()> {
         // TODO: here we should validate all the sizes are good etc. for example WITNESS_MASK_LIMBS and RANGE_CLAIM_LIMBS and
         // the message space thingy
-        todo!()
+
+        let commitments: Vec<
+            enhanced::RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
+                NUM_RANGE_CLAIMS,
+                RANGE_CLAIM_LIMBS,
+                WITNESS_MASK_LIMBS,
+                Language,
+            >,
+        > = statements
+            .clone()
+            .into_iter()
+            .map(|statement| {
+                let (commitment, _) = statement.into();
+
+                commitment
+            })
+            .collect();
+
+        // TODO: are we sure we want to take just one for the entire batch?
+        let commitment = commitments.first().ok_or(Error::InvalidParameters)?;
+
+        self.schnorr_proof
+            .verify(protocol_context, language_public_parameters, statements)
+            .and(self.range_proof.verify(range_proof_public_parameters, commitment))
     }
 }
