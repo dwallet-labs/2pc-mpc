@@ -14,8 +14,7 @@ use crate::{
     proofs::schnorr,
 };
 
-impl<Scalar, GroupElement, CommitmentScheme> schnorr::Language
-    for Language<Scalar, GroupElement, CommitmentScheme>
+impl<Scalar, GroupElement, CommitmentScheme> schnorr::Language for Language<Scalar, GroupElement, CommitmentScheme>
 where
     Scalar: group::GroupElement
         + Samplable
@@ -55,14 +54,9 @@ where
                 .public_parameters,
         )?;
 
-        let commitment_scheme =
-            CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
+        let commitment_scheme = CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
-        Ok([
-            commitment_scheme.commit(&[*value].into(), randomness),
-            *value * base,
-        ]
-        .into())
+        Ok([commitment_scheme.commit(&[*value].into(), randomness), *value * base].into())
     }
 }
 
@@ -92,18 +86,13 @@ pub struct PublicParameters<
     GroupElementValue,
     CommitmentSchemePublicParameters,
 > {
-    pub groups_public_parameters:
-        GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
+    pub groups_public_parameters: GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
     pub generator: GroupElementValue, // The base of discrete log
 }
 
-impl<
-        WitnessSpacePublicParameters,
-        StatementSpacePublicParameters,
-        GroupElementValue,
-        CommitmentSchemePublicParameters,
-    > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
+impl<WitnessSpacePublicParameters, StatementSpacePublicParameters, GroupElementValue, CommitmentSchemePublicParameters>
+    AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
     for PublicParameters<
         WitnessSpacePublicParameters,
         StatementSpacePublicParameters,
@@ -111,9 +100,7 @@ impl<
         CommitmentSchemePublicParameters,
     >
 {
-    fn as_ref(
-        &self,
-    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
+    fn as_ref(&self) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
         &self.groups_public_parameters
     }
 }

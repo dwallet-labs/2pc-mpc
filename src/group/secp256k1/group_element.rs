@@ -16,8 +16,7 @@ use crate::{
     group,
     group::{
         secp256k1::{scalar::Scalar, CURVE_EQUATION_A, CURVE_EQUATION_B, MODULUS, ORDER},
-        BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement, MulByGenerator,
-        PrimeGroupElement,
+        BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement, MulByGenerator, PrimeGroupElement,
     },
 };
 
@@ -204,18 +203,16 @@ impl KnownOrderGroupElement<{ U256::LIMBS }> for GroupElement {
         ORDER
     }
 
-    fn order_from_public_parameters(
-        _public_parameters: &Self::PublicParameters,
-    ) -> Uint<{ U256::LIMBS }> {
+    fn order_from_public_parameters(_public_parameters: &Self::PublicParameters) -> Uint<{ U256::LIMBS }> {
         ORDER
     }
 }
 
 impl MulByGenerator<Scalar> for GroupElement {
     fn mul_by_generator(&self, scalar: Scalar) -> Self {
-        GroupElement(
-            <ProjectivePoint as elliptic_curve::ops::MulByGenerator>::mul_by_generator(&scalar.0),
-        )
+        GroupElement(<ProjectivePoint as elliptic_curve::ops::MulByGenerator>::mul_by_generator(
+            &scalar.0,
+        ))
     }
 }
 

@@ -20,19 +20,13 @@ pub mod multiplicative_group_of_integers_modulu_n;
 /// An error in group element instantiation [`GroupElement::new()`]
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
 pub enum Error {
-    #[error(
-    "unsupported public parameters: the implementation doesn't support the public parameters, whether or not it identifies a valid group."
-    )]
+    #[error("unsupported public parameters: the implementation doesn't support the public parameters, whether or not it identifies a valid group.")]
     UnsupportedPublicParametersError,
 
-    #[error(
-        "invalid public parameters: no valid group can be identified by the public parameters."
-    )]
+    #[error("invalid public parameters: no valid group can be identified by the public parameters.")]
     InvalidPublicParametersError,
 
-    #[error(
-    "invalid group element: the value does not belong to the group identified by the public parameters."
-    )]
+    #[error("invalid group element: the value does not belong to the group identified by the public parameters.")]
     InvalidGroupElementError,
 }
 
@@ -147,9 +141,7 @@ pub trait CyclicGroupElement: GroupElement {
 }
 
 /// An element of a known-order abelian group, in additive notation.
-pub trait KnownOrderGroupElement<const SCALAR_LIMBS: usize>:
-    BoundedGroupElement<SCALAR_LIMBS>
-{
+pub trait KnownOrderGroupElement<const SCALAR_LIMBS: usize>: BoundedGroupElement<SCALAR_LIMBS> {
     type Scalar: KnownOrderGroupElement<SCALAR_LIMBS, Scalar = Self::Scalar>
         + Mul<Self, Output = Self>
         + for<'r> Mul<&'r Self, Output = Self>
@@ -161,9 +153,7 @@ pub trait KnownOrderGroupElement<const SCALAR_LIMBS: usize>:
         Self::order_from_public_parameters(&self.public_parameters())
     }
 
-    fn order_from_public_parameters(
-        public_parameters: &Self::PublicParameters,
-    ) -> Uint<SCALAR_LIMBS>;
+    fn order_from_public_parameters(public_parameters: &Self::PublicParameters) -> Uint<SCALAR_LIMBS>;
 }
 
 pub type Scalar<G, const SCALAR_LIMBS: usize> = <G as KnownOrderGroupElement<SCALAR_LIMBS>>::Scalar;
@@ -172,17 +162,11 @@ pub type Scalar<G, const SCALAR_LIMBS: usize> = <G as KnownOrderGroupElement<SCA
 /// Any prime-order group is also cyclic.
 /// In additive notation.
 pub trait PrimeGroupElement<const SCALAR_LIMBS: usize>:
-    KnownOrderGroupElement<SCALAR_LIMBS>
-    + CyclicGroupElement
-    + MulByGenerator<Self::Scalar>
-    + for<'r> MulByGenerator<&'r Self::Scalar>
+    KnownOrderGroupElement<SCALAR_LIMBS> + CyclicGroupElement + MulByGenerator<Self::Scalar> + for<'r> MulByGenerator<&'r Self::Scalar>
 {
 }
 
 pub trait Samplable: GroupElement {
     /// Uniformly sample a random value.
-    fn sample(
-        rng: &mut impl CryptoRngCore,
-        public_parameters: &Self::PublicParameters,
-    ) -> Result<Self>;
+    fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> Result<Self>;
 }

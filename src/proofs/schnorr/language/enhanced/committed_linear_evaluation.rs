@@ -4,9 +4,10 @@
 use std::{marker::PhantomData, ops::Mul};
 
 use crypto_bigint::{Encoding, Uint};
+use language::GroupsPublicParameters;
+use schnorr::language;
 use serde::Serialize;
 
-use super::GroupsPublicParameters;
 use crate::{
     ahe, commitments,
     commitments::HomomorphicCommitmentScheme,
@@ -95,29 +96,17 @@ where
     Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
 {
-    type WitnessSpaceGroupElement = super::EnhancedLanguageWitness<
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
-        Self,
-    >;
-    type StatementSpaceGroupElement = super::EnhancedLanguageStatement<
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
-        Self,
-    >;
+    type WitnessSpaceGroupElement =
+        super::EnhancedLanguageWitness<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, Self>;
+    type StatementSpaceGroupElement =
+        super::EnhancedLanguageStatement<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, Self>;
 
     type PublicParameters = PublicParameters<
         DIMENSION,
-        super::WitnessSpacePublicParameters<Self>,
-        super::StatementSpacePublicParameters<Self>,
+        language::WitnessSpacePublicParameters<Self>,
+        language::StatementSpacePublicParameters<Self>,
         commitments::PublicParameters<CommitmentScheme>,
-        range::CommitmentSchemePublicParameters<
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            RangeProof,
-        >,
+        range::CommitmentSchemePublicParameters<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, RangeProof>,
         ahe::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         group::PublicParameters<Scalar>,
         ahe::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
@@ -126,9 +115,9 @@ where
     const NAME: &'static str = "Committed Linear Evaluation";
 
     fn group_homomorphism(
-        _witness: &super::WitnessSpaceGroupElement<Self>,
-        _language_public_parameters: &super::PublicParameters<Self>,
-    ) -> proofs::Result<super::StatementSpaceGroupElement<Self>> {
+        _witness: &language::WitnessSpaceGroupElement<Self>,
+        _language_public_parameters: &language::PublicParameters<Self>,
+    ) -> proofs::Result<language::StatementSpaceGroupElement<Self>> {
         // let (coefficients, commitment_randomness, mask, encryption_randomness) = witness.into();
         //
         // let (_, scalar_group_public_parameters, _, randomness_group_public_parameters) =
@@ -241,8 +230,7 @@ pub struct PublicParameters<
     ScalarPublicParameters,
     CiphertextSpaceValue: Serialize,
 > {
-    pub groups_public_parameters:
-        super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
+    pub groups_public_parameters: GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
     pub range_proof_commitment_scheme_public_parameters: ProofCommitmentSchemePublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
@@ -273,9 +261,7 @@ impl<
         CiphertextSpaceValue,
     >
 {
-    fn as_ref(
-        &self,
-    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
+    fn as_ref(&self) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
         &self.groups_public_parameters
     }
 }

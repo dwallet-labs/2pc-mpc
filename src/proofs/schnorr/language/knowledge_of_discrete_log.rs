@@ -62,27 +62,16 @@ pub struct Language<Scalar, GroupElement> {
 
 /// The Public Parameters of the Knowledge of Discrete Log Schnorr Language.
 #[derive(Debug, PartialEq, Serialize, Clone)]
-pub struct PublicParameters<
-    WitnessSpacePublicParameters,
-    StatementSpacePublicParameters,
-    GroupElementValue,
-> {
-    pub groups_public_parameters:
-        super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
+pub struct PublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters, GroupElementValue> {
+    pub groups_public_parameters: GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
     pub generator: GroupElementValue,
 }
 
 impl<WitnessSpacePublicParameters, StatementSpacePublicParameters, GroupElementValue>
     AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
-    for PublicParameters<
-        WitnessSpacePublicParameters,
-        StatementSpacePublicParameters,
-        GroupElementValue,
-    >
+    for PublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters, GroupElementValue>
 {
-    fn as_ref(
-        &self,
-    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
+    fn as_ref(&self) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
         &self.groups_public_parameters
     }
 }

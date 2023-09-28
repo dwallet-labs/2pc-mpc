@@ -12,8 +12,7 @@ use crate::{
     proofs,
     proofs::{
         schnorr::language::{
-            Language, PublicParameters, StatementSpaceGroupElement, StatementSpaceValue,
-            WitnessSpaceGroupElement, WitnessSpaceValue,
+            Language, PublicParameters, StatementSpaceGroupElement, StatementSpaceValue, WitnessSpaceGroupElement, WitnessSpaceValue,
         },
         Error, TranscriptProtocol,
     },
@@ -24,8 +23,7 @@ use crate::{
 // Setting it to be 64-bit larger than the computational security parameter $\kappa$ allows us to
 // practically use any batch size (Rust does not allow a vector larger than $2^64$ elements,
 // as does 64-bit architectures in which the memory won't even be addressable.)
-pub(super) type ChallengeSizedNumber =
-    <ComputationalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput;
+pub(super) type ChallengeSizedNumber = <ComputationalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput;
 
 /// An Enhanced Batched Schnorr Zero-Knowledge Proof.
 /// Implements Appendix B. Schnorr Protocols in the paper.
@@ -44,10 +42,7 @@ pub struct Proof<
 }
 
 impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolContext> {
-    fn new(
-        statement_mask: StatementSpaceGroupElement<Lang>,
-        response: WitnessSpaceGroupElement<Lang>,
-    ) -> Self {
+    fn new(statement_mask: StatementSpaceGroupElement<Lang>, response: WitnessSpaceGroupElement<Lang>) -> Self {
         Self {
             statement_mask: statement_mask.value(),
             response: response.value(),
@@ -60,10 +55,7 @@ impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolCon
     pub fn prove(
         protocol_context: ProtocolContext,
         language_public_parameters: &PublicParameters<Lang>,
-        witnesses_and_statements: Vec<(
-            WitnessSpaceGroupElement<Lang>,
-            StatementSpaceGroupElement<Lang>,
-        )>,
+        witnesses_and_statements: Vec<(WitnessSpaceGroupElement<Lang>, StatementSpaceGroupElement<Lang>)>,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<Self> {
         if witnesses_and_statements.is_empty() {
@@ -72,25 +64,17 @@ impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolCon
 
         let batch_size = witnesses_and_statements.len();
 
-        let (witnesses, statements): (
-            Vec<WitnessSpaceGroupElement<Lang>>,
-            Vec<StatementSpaceGroupElement<Lang>>,
-        ) = witnesses_and_statements.iter().cloned().unzip();
+        let (witnesses, statements): (Vec<WitnessSpaceGroupElement<Lang>>, Vec<StatementSpaceGroupElement<Lang>>) =
+            witnesses_and_statements.iter().cloned().unzip();
 
-        let mut transcript =
-            Self::setup_protocol(&protocol_context, language_public_parameters, statements)?;
+        let mut transcript = Self::setup_protocol(&protocol_context, language_public_parameters, statements)?;
 
-        let randomizer = WitnessSpaceGroupElement::<Lang>::sample(
-            rng,
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
-        )?;
+        let randomizer =
+            WitnessSpaceGroupElement::<Lang>::sample(rng, &language_public_parameters.as_ref().witness_space_public_parameters)?;
 
         let statement_mask = Lang::group_homomorphism(&randomizer, language_public_parameters)?;
 
-        let challenges: Vec<ChallengeSizedNumber> =
-            Self::compute_challenges(&statement_mask.value(), batch_size, &mut transcript)?;
+        let challenges: Vec<ChallengeSizedNumber> = Self::compute_challenges(&statement_mask.value(), batch_size, &mut transcript)?;
 
         // Using the "small exponents" method for batching;
         // the exponents actually need to account for the batch size.
@@ -118,31 +102,21 @@ impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolCon
     ) -> proofs::Result<()> {
         let batch_size = statements.len();
 
-        let mut transcript = Self::setup_protocol(
-            &protocol_context,
-            language_public_parameters,
-            statements.clone(),
-        )?;
+        let mut transcript = Self::setup_protocol(&protocol_context, language_public_parameters, statements.clone())?;
 
-        let challenges: Vec<ChallengeSizedNumber> =
-            Self::compute_challenges(&self.statement_mask, batch_size, &mut transcript)?;
+        let challenges: Vec<ChallengeSizedNumber> = Self::compute_challenges(&self.statement_mask, batch_size, &mut transcript)?;
 
         let response = WitnessSpaceGroupElement::<Lang>::new(
             self.response.clone(),
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
+            &language_public_parameters.as_ref().witness_space_public_parameters,
         )?;
 
         let statement_mask = StatementSpaceGroupElement::<Lang>::new(
             self.statement_mask.clone(),
-            &language_public_parameters
-                .as_ref()
-                .statement_space_public_parameters,
+            &language_public_parameters.as_ref().statement_space_public_parameters,
         )?;
 
-        let response_statement: StatementSpaceGroupElement<Lang> =
-            Lang::group_homomorphism(&response, language_public_parameters)?;
+        let response_statement: StatementSpaceGroupElement<Lang> = Lang::group_homomorphism(&response, language_public_parameters)?;
 
         let reconstructed_response_statement: StatementSpaceGroupElement<Lang> = statement_mask
             + statements
@@ -167,23 +141,16 @@ impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolCon
 
         transcript.serialize_to_transcript_as_json(b"protocol context", protocol_context)?;
 
-        transcript.serialize_to_transcript_as_json(
-            b"language public parameters",
-            language_public_parameters,
-        )?;
+        transcript.serialize_to_transcript_as_json(b"language public parameters", language_public_parameters)?;
 
         transcript.serialize_to_transcript_as_json(
             b"witness space public parameters",
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
+            &language_public_parameters.as_ref().witness_space_public_parameters,
         )?;
 
         transcript.serialize_to_transcript_as_json(
             b"statement space public parameters",
-            &language_public_parameters
-                .as_ref()
-                .statement_space_public_parameters,
+            &language_public_parameters.as_ref().statement_space_public_parameters,
         )?;
 
         if statements.iter().any(|statement| {
@@ -202,8 +169,7 @@ impl<Lang: Language, ProtocolContext: Clone + Serialize> Proof<Lang, ProtocolCon
         batch_size: usize,
         transcript: &mut Transcript,
     ) -> proofs::Result<Vec<ChallengeSizedNumber>> {
-        transcript
-            .serialize_to_transcript_as_json(b"statement mask value", statement_mask_value)?;
+        transcript.serialize_to_transcript_as_json(b"statement mask value", statement_mask_value)?;
 
         Ok((1..=batch_size)
             .map(|_| {

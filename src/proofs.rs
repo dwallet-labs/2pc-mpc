@@ -35,11 +35,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// A transcript protocol for fiat-shamir transforms of interactive to non-interactive proofs.
 trait TranscriptProtocol {
-    fn serialize_to_transcript_as_json<T: Serialize>(
-        &mut self,
-        label: &'static [u8],
-        message: &T,
-    ) -> serde_json::Result<()>;
+    fn serialize_to_transcript_as_json<T: Serialize>(&mut self, label: &'static [u8], message: &T) -> serde_json::Result<()>;
 
     fn append_uint<const LIMBS: usize>(&mut self, label: &'static [u8], value: &Uint<LIMBS>)
     where
@@ -49,11 +45,7 @@ trait TranscriptProtocol {
 }
 
 impl TranscriptProtocol for Transcript {
-    fn serialize_to_transcript_as_json<T: Serialize>(
-        &mut self,
-        label: &'static [u8],
-        message: &T,
-    ) -> serde_json::Result<()> {
+    fn serialize_to_transcript_as_json<T: Serialize>(&mut self, label: &'static [u8], message: &T) -> serde_json::Result<()> {
         let serialized_message = serde_json::to_vec(message)?;
 
         self.append_message(label, serialized_message.as_slice());

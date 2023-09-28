@@ -5,8 +5,8 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    commitments, commitments::HomomorphicCommitmentScheme,
-    group::additive_group_of_integers_modulu_n::power_of_two_moduli, proofs::Result,
+    commitments, commitments::HomomorphicCommitmentScheme, group::additive_group_of_integers_modulu_n::power_of_two_moduli,
+    proofs::Result,
 };
 
 // TODO: can I move consts to the function bodies?
@@ -56,82 +56,32 @@ pub trait RangeProof<
 pub type CommitmentScheme<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, Proof> =
     <Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme;
 
-pub type CommitmentSchemePublicParameters<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    Proof,
-> = commitments::PublicParameters<
-    <Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme,
->;
+pub type CommitmentSchemePublicParameters<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, Proof> =
+    commitments::PublicParameters<<Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-pub type CommitmentSchemeMessageSpaceGroupElement<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    Proof,
-> = commitments::MessageSpaceGroupElement<
-    <Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme,
->;
+pub type CommitmentSchemeMessageSpaceGroupElement<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, Proof> =
+    commitments::MessageSpaceGroupElement<<Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-pub type CommitmentSchemeMessageSpacePublicParameters<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    Proof,
-> = commitments::MessageSpacePublicParameters<
-    <Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme,
->;
+pub type CommitmentSchemeMessageSpacePublicParameters<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, Proof> =
+    commitments::MessageSpacePublicParameters<<Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-pub type CommitmentSchemeMessageSpaceValue<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    Proof,
-> = commitments::MessageSpaceValue<
-    <Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme,
->;
+pub type CommitmentSchemeMessageSpaceValue<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, Proof> =
+    commitments::MessageSpaceValue<<Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-pub type CommitmentSchemeRandomnessSpaceGroupElement<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    Proof,
-> = commitments::RandomnessSpaceGroupElement<
-    <Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme,
->;
+pub type CommitmentSchemeRandomnessSpaceGroupElement<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, Proof> =
+    commitments::RandomnessSpaceGroupElement<<Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-pub type CommitmentSchemeRandomnessSpacePublicParameters<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    Proof,
-> = commitments::RandomnessSpacePublicParameters<
-    <Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme,
->;
+pub type CommitmentSchemeRandomnessSpacePublicParameters<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, Proof> =
+    commitments::RandomnessSpacePublicParameters<<Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-pub type CommitmentSchemeRandomnessSpaceValue<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    Proof,
-> = commitments::RandomnessSpaceValue<
-    <Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme,
->;
+pub type CommitmentSchemeRandomnessSpaceValue<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, Proof> =
+    commitments::RandomnessSpaceValue<<Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-pub type CommitmentSchemeCommitmentSpaceGroupElement<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    Proof,
-> = commitments::CommitmentSpaceGroupElement<
-    <Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme,
->;
+pub type CommitmentSchemeCommitmentSpaceGroupElement<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, Proof> =
+    commitments::CommitmentSpaceGroupElement<<Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-pub type CommitmentSchemeCommitmentSpacePublicParameters<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    Proof,
-> = commitments::CommitmentSpacePublicParameters<
-    <Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme,
->;
+pub type CommitmentSchemeCommitmentSpacePublicParameters<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, Proof> =
+    commitments::CommitmentSpacePublicParameters<<Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme>;
 
-pub type CommitmentSchemeCommitmentSpaceValue<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    Proof,
-> = commitments::CommitmentSpaceValue<
-    <Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme,
->;
+pub type CommitmentSchemeCommitmentSpaceValue<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, Proof> =
+    commitments::CommitmentSpaceValue<<Proof as RangeProof<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::CommitmentScheme>;

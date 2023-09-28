@@ -32,3 +32,5 @@ imports_granularity = "Crate"
 # external crates,
 # self, super and crate imports.
 group_imports = "StdExternalCrate"
+
+max_width = 135

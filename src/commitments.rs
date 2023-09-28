@@ -66,11 +66,7 @@ pub trait HomomorphicCommitmentScheme: Into<Self::PublicParameters> + PartialEq 
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct GroupsPublicParameters<
-    MessageSpacePublicParameters,
-    RandomnessSpacePublicParameters,
-    CommitmentSpacePublicParameters,
-> {
+pub struct GroupsPublicParameters<MessageSpacePublicParameters, RandomnessSpacePublicParameters, CommitmentSpacePublicParameters> {
     pub message_space_public_parameters: MessageSpacePublicParameters,
     pub randomness_space_public_parameters: RandomnessSpacePublicParameters,
     pub commitment_space_public_parameters: CommitmentSpacePublicParameters,
@@ -78,20 +74,12 @@ pub struct GroupsPublicParameters<
 
 pub type PublicParameters<C> = <C as HomomorphicCommitmentScheme>::PublicParameters;
 pub type MessageSpaceGroupElement<C> = <C as HomomorphicCommitmentScheme>::MessageSpaceGroupElement;
-pub type MessageSpacePublicParameters<C> =
-    group::PublicParameters<<C as HomomorphicCommitmentScheme>::MessageSpaceGroupElement>;
-pub type MessageSpaceValue<C> =
-    group::Value<<C as HomomorphicCommitmentScheme>::MessageSpaceGroupElement>;
+pub type MessageSpacePublicParameters<C> = group::PublicParameters<<C as HomomorphicCommitmentScheme>::MessageSpaceGroupElement>;
+pub type MessageSpaceValue<C> = group::Value<<C as HomomorphicCommitmentScheme>::MessageSpaceGroupElement>;
 
-pub type RandomnessSpaceGroupElement<C> =
-    <C as HomomorphicCommitmentScheme>::RandomnessSpaceGroupElement;
-pub type RandomnessSpacePublicParameters<C> =
-    group::PublicParameters<<C as HomomorphicCommitmentScheme>::RandomnessSpaceGroupElement>;
-pub type RandomnessSpaceValue<C> =
-    group::Value<<C as HomomorphicCommitmentScheme>::RandomnessSpaceGroupElement>;
-pub type CommitmentSpaceGroupElement<C> =
-    <C as HomomorphicCommitmentScheme>::CommitmentSpaceGroupElement;
-pub type CommitmentSpacePublicParameters<C> =
-    group::PublicParameters<<C as HomomorphicCommitmentScheme>::CommitmentSpaceGroupElement>;
-pub type CommitmentSpaceValue<C> =
-    group::Value<<C as HomomorphicCommitmentScheme>::CommitmentSpaceGroupElement>;
+pub type RandomnessSpaceGroupElement<C> = <C as HomomorphicCommitmentScheme>::RandomnessSpaceGroupElement;
+pub type RandomnessSpacePublicParameters<C> = group::PublicParameters<<C as HomomorphicCommitmentScheme>::RandomnessSpaceGroupElement>;
+pub type RandomnessSpaceValue<C> = group::Value<<C as HomomorphicCommitmentScheme>::RandomnessSpaceGroupElement>;
+pub type CommitmentSpaceGroupElement<C> = <C as HomomorphicCommitmentScheme>::CommitmentSpaceGroupElement;
+pub type CommitmentSpacePublicParameters<C> = group::PublicParameters<<C as HomomorphicCommitmentScheme>::CommitmentSpaceGroupElement>;
+pub type CommitmentSpaceValue<C> = group::Value<<C as HomomorphicCommitmentScheme>::CommitmentSpaceGroupElement>;

@@ -15,33 +15,18 @@ use crate::{
 /// An element of the Direct Product of the two Groups `FirstGroupElement` and `SecondGroupElement`.
 #[derive(PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(test, derive(Debug))]
-pub struct GroupElement<FirstGroupElement, SecondGroupElement>(
-    FirstGroupElement,
-    SecondGroupElement,
-);
+pub struct GroupElement<FirstGroupElement, SecondGroupElement>(FirstGroupElement, SecondGroupElement);
 
 pub type ThreeWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement> =
     GroupElement<GroupElement<FirstGroupElement, SecondGroupElement>, ThirdGroupElement>;
 
-pub type FourWayGroupElement<
-    FirstGroupElement,
-    SecondGroupElement,
-    ThirdGroupElement,
-    FourthGroupElement,
-> = GroupElement<
-    GroupElement<GroupElement<FirstGroupElement, SecondGroupElement>, ThirdGroupElement>,
-    FourthGroupElement,
->;
+pub type FourWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupElement> =
+    GroupElement<GroupElement<GroupElement<FirstGroupElement, SecondGroupElement>, ThirdGroupElement>, FourthGroupElement>;
 
-impl<
-        FirstGroupElement: group::GroupElement + Samplable,
-        SecondGroupElement: group::GroupElement + Samplable,
-    > Samplable for GroupElement<FirstGroupElement, SecondGroupElement>
+impl<FirstGroupElement: group::GroupElement + Samplable, SecondGroupElement: group::GroupElement + Samplable> Samplable
+    for GroupElement<FirstGroupElement, SecondGroupElement>
 {
-    fn sample(
-        rng: &mut impl CryptoRngCore,
-        public_parameters: &Self::PublicParameters,
-    ) -> group::Result<Self> {
+    fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> group::Result<Self> {
         Ok(Self(
             FirstGroupElement::sample(rng, &public_parameters.0)?,
             SecondGroupElement::sample(rng, &public_parameters.1)?,
@@ -57,14 +42,8 @@ pub struct PublicParameters<FirstGroupPublicParameters, SecondGroupPublicParamet
     pub SecondGroupPublicParameters,
 );
 
-pub type ThreeWayPublicParameters<
-    FirstGroupPublicParameters,
-    SecondGroupPublicParameters,
-    ThirdGroupPublicParameters,
-> = PublicParameters<
-    PublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters>,
-    ThirdGroupPublicParameters,
->;
+pub type ThreeWayPublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters> =
+    PublicParameters<PublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters>, ThirdGroupPublicParameters>;
 
 /// The value of the Direct Product of the two Groups `FirstGroupElement` and `SecondGroupElement`.
 pub type FourWayPublicParameters<
@@ -73,11 +52,7 @@ pub type FourWayPublicParameters<
     ThirdGroupPublicParameters,
     FourthGroupPublicParameters,
 > = PublicParameters<
-    ThreeWayPublicParameters<
-        FirstGroupPublicParameters,
-        SecondGroupPublicParameters,
-        ThirdGroupPublicParameters,
-    >,
+    ThreeWayPublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters>,
     FourthGroupPublicParameters,
 >;
 
@@ -96,18 +71,14 @@ impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupEle
     }
 }
 
-impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
-    group::GroupElement for GroupElement<FirstGroupElement, SecondGroupElement>
+impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement> group::GroupElement
+    for GroupElement<FirstGroupElement, SecondGroupElement>
 {
     type Value = Value<FirstGroupElement, SecondGroupElement>;
 
-    type PublicParameters =
-        PublicParameters<FirstGroupElement::PublicParameters, SecondGroupElement::PublicParameters>;
+    type PublicParameters = PublicParameters<FirstGroupElement::PublicParameters, SecondGroupElement::PublicParameters>;
 
-    fn new(
-        value: Self::Value,
-        public_parameters: &Self::PublicParameters,
-    ) -> crate::group::Result<Self> {
+    fn new(value: Self::Value, public_parameters: &Self::PublicParameters) -> crate::group::Result<Self> {
         Ok(Self(
             FirstGroupElement::new(value.0, &public_parameters.0)?,
             SecondGroupElement::new(value.1, &public_parameters.1)?,
@@ -115,10 +86,7 @@ impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupEle
     }
 
     fn neutral(&self) -> Self {
-        Self(
-            FirstGroupElement::neutral(&self.0),
-            SecondGroupElement::neutral(&self.1),
-        )
+        Self(FirstGroupElement::neutral(&self.0), SecondGroupElement::neutral(&self.1))
     }
 
     fn scalar_mul<const LIMBS: usize>(&self, scalar: &Uint<LIMBS>) -> Self {
@@ -130,8 +98,7 @@ impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupEle
     }
 }
 impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
-    From<GroupElement<FirstGroupElement, SecondGroupElement>>
-    for group::Value<GroupElement<FirstGroupElement, SecondGroupElement>>
+    From<GroupElement<FirstGroupElement, SecondGroupElement>> for group::Value<GroupElement<FirstGroupElement, SecondGroupElement>>
 {
     fn from(value: GroupElement<FirstGroupElement, SecondGroupElement>) -> Self {
         Self(value.0.into(), value.1.into())
@@ -167,8 +134,8 @@ impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupEle
     }
 }
 
-impl<'r, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
-    Add<&'r Self> for GroupElement<FirstGroupElement, SecondGroupElement>
+impl<'r, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement> Add<&'r Self>
+    for GroupElement<FirstGroupElement, SecondGroupElement>
 {
     type Output = Self;
 
@@ -187,8 +154,8 @@ impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupEle
     }
 }
 
-impl<'r, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
-    Sub<&'r Self> for GroupElement<FirstGroupElement, SecondGroupElement>
+impl<'r, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement> Sub<&'r Self>
+    for GroupElement<FirstGroupElement, SecondGroupElement>
 {
     type Output = Self;
 
@@ -197,8 +164,8 @@ impl<'r, FirstGroupElement: group::GroupElement, SecondGroupElement: group::Grou
     }
 }
 
-impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
-    AddAssign<Self> for GroupElement<FirstGroupElement, SecondGroupElement>
+impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement> AddAssign<Self>
+    for GroupElement<FirstGroupElement, SecondGroupElement>
 {
     fn add_assign(&mut self, rhs: Self) {
         self.0.add_assign(&rhs.0);
@@ -206,8 +173,8 @@ impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupEle
     }
 }
 
-impl<'r, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
-    AddAssign<&'r Self> for GroupElement<FirstGroupElement, SecondGroupElement>
+impl<'r, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement> AddAssign<&'r Self>
+    for GroupElement<FirstGroupElement, SecondGroupElement>
 {
     fn add_assign(&mut self, rhs: &'r Self) {
         self.0.add_assign(&rhs.0);
@@ -215,8 +182,8 @@ impl<'r, FirstGroupElement: group::GroupElement, SecondGroupElement: group::Grou
     }
 }
 
-impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
-    SubAssign<Self> for GroupElement<FirstGroupElement, SecondGroupElement>
+impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement> SubAssign<Self>
+    for GroupElement<FirstGroupElement, SecondGroupElement>
 {
     fn sub_assign(&mut self, rhs: Self) {
         self.0.sub_assign(&rhs.0);
@@ -224,8 +191,8 @@ impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupEle
     }
 }
 
-impl<'r, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
-    SubAssign<&'r Self> for GroupElement<FirstGroupElement, SecondGroupElement>
+impl<'r, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement> SubAssign<&'r Self>
+    for GroupElement<FirstGroupElement, SecondGroupElement>
 {
     fn sub_assign(&mut self, rhs: &'r Self) {
         self.0.sub_assign(&rhs.0);
@@ -233,11 +200,8 @@ impl<'r, FirstGroupElement: group::GroupElement, SecondGroupElement: group::Grou
     }
 }
 
-impl<
-        const LIMBS: usize,
-        FirstGroupElement: group::GroupElement,
-        SecondGroupElement: group::GroupElement,
-    > Mul<Uint<LIMBS>> for GroupElement<FirstGroupElement, SecondGroupElement>
+impl<const LIMBS: usize, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement> Mul<Uint<LIMBS>>
+    for GroupElement<FirstGroupElement, SecondGroupElement>
 {
     type Output = Self;
 
@@ -246,12 +210,8 @@ impl<
     }
 }
 
-impl<
-        'r,
-        const LIMBS: usize,
-        FirstGroupElement: group::GroupElement,
-        SecondGroupElement: group::GroupElement,
-    > Mul<&'r Uint<LIMBS>> for GroupElement<FirstGroupElement, SecondGroupElement>
+impl<'r, const LIMBS: usize, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement> Mul<&'r Uint<LIMBS>>
+    for GroupElement<FirstGroupElement, SecondGroupElement>
 {
     type Output = Self;
 
@@ -260,12 +220,8 @@ impl<
     }
 }
 
-impl<
-        'r,
-        const LIMBS: usize,
-        FirstGroupElement: group::GroupElement,
-        SecondGroupElement: group::GroupElement,
-    > Mul<Uint<LIMBS>> for &'r GroupElement<FirstGroupElement, SecondGroupElement>
+impl<'r, const LIMBS: usize, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement> Mul<Uint<LIMBS>>
+    for &'r GroupElement<FirstGroupElement, SecondGroupElement>
 {
     type Output = GroupElement<FirstGroupElement, SecondGroupElement>;
 
@@ -274,12 +230,8 @@ impl<
     }
 }
 
-impl<
-        'r,
-        const LIMBS: usize,
-        FirstGroupElement: group::GroupElement,
-        SecondGroupElement: group::GroupElement,
-    > Mul<&'r Uint<LIMBS>> for &'r GroupElement<FirstGroupElement, SecondGroupElement>
+impl<'r, const LIMBS: usize, FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement> Mul<&'r Uint<LIMBS>>
+    for &'r GroupElement<FirstGroupElement, SecondGroupElement>
 {
     type Output = GroupElement<FirstGroupElement, SecondGroupElement>;
 
@@ -288,8 +240,7 @@ impl<
     }
 }
 
-impl<FirstGroupElement, SecondGroupElement>
-    From<GroupElement<FirstGroupElement, SecondGroupElement>>
+impl<FirstGroupElement, SecondGroupElement> From<GroupElement<FirstGroupElement, SecondGroupElement>>
     for (FirstGroupElement, SecondGroupElement)
 {
     fn from(value: GroupElement<FirstGroupElement, SecondGroupElement>) -> Self {
@@ -297,8 +248,7 @@ impl<FirstGroupElement, SecondGroupElement>
     }
 }
 
-impl<'r, FirstGroupElement, SecondGroupElement>
-    From<&'r GroupElement<FirstGroupElement, SecondGroupElement>>
+impl<'r, FirstGroupElement, SecondGroupElement> From<&'r GroupElement<FirstGroupElement, SecondGroupElement>>
     for (&'r FirstGroupElement, &'r SecondGroupElement)
 {
     fn from(value: &'r GroupElement<FirstGroupElement, SecondGroupElement>) -> Self {
@@ -318,29 +268,21 @@ impl<FirstGroupPublicParameters, SecondGroupPublicParameters>
     From<PublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters>>
     for (FirstGroupPublicParameters, SecondGroupPublicParameters)
 {
-    fn from(
-        value: PublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters>,
-    ) -> Self {
+    fn from(value: PublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters>) -> Self {
         (value.0, value.1)
     }
 }
 
 impl<'r, FirstGroupPublicParameters, SecondGroupPublicParameters>
     From<&'r PublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters>>
-    for (
-        &'r FirstGroupPublicParameters,
-        &'r SecondGroupPublicParameters,
-    )
+    for (&'r FirstGroupPublicParameters, &'r SecondGroupPublicParameters)
 {
-    fn from(
-        value: &'r PublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters>,
-    ) -> Self {
+    fn from(value: &'r PublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters>) -> Self {
         (&value.0, &value.1)
     }
 }
 
-impl<FirstGroupPublicParameters, SecondGroupPublicParameters>
-    From<(FirstGroupPublicParameters, SecondGroupPublicParameters)>
+impl<FirstGroupPublicParameters, SecondGroupPublicParameters> From<(FirstGroupPublicParameters, SecondGroupPublicParameters)>
     for PublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters>
 {
     fn from(value: (FirstGroupPublicParameters, SecondGroupPublicParameters)) -> Self {
@@ -348,8 +290,7 @@ impl<FirstGroupPublicParameters, SecondGroupPublicParameters>
     }
 }
 
-impl<FirstGroupElement, SecondGroupElement, ThirdGroupElement>
-    From<(FirstGroupElement, SecondGroupElement, ThirdGroupElement)>
+impl<FirstGroupElement, SecondGroupElement, ThirdGroupElement> From<(FirstGroupElement, SecondGroupElement, ThirdGroupElement)>
     for ThreeWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement>
 {
     fn from(value: (FirstGroupElement, SecondGroupElement, ThirdGroupElement)) -> Self {
@@ -363,9 +304,7 @@ impl<FirstGroupElement, SecondGroupElement, ThirdGroupElement>
     From<ThreeWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement>>
     for (FirstGroupElement, SecondGroupElement, ThirdGroupElement)
 {
-    fn from(
-        value: ThreeWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement>,
-    ) -> Self {
+    fn from(value: ThreeWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement>) -> Self {
         let (first_by_second_element, third_element) = value.into();
         let (first_element, second_element) = first_by_second_element.into();
 
@@ -375,15 +314,9 @@ impl<FirstGroupElement, SecondGroupElement, ThirdGroupElement>
 
 impl<'r, FirstGroupElement, SecondGroupElement, ThirdGroupElement>
     From<&'r ThreeWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement>>
-    for (
-        &'r FirstGroupElement,
-        &'r SecondGroupElement,
-        &'r ThirdGroupElement,
-    )
+    for (&'r FirstGroupElement, &'r SecondGroupElement, &'r ThirdGroupElement)
 {
-    fn from(
-        value: &'r ThreeWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement>,
-    ) -> Self {
+    fn from(value: &'r ThreeWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement>) -> Self {
         let (first_by_second_element, third_element) = value.into();
         let (first_element, second_element) = first_by_second_element.into();
 
@@ -392,24 +325,10 @@ impl<'r, FirstGroupElement, SecondGroupElement, ThirdGroupElement>
 }
 
 impl<FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters>
-    From<(
-        FirstGroupPublicParameters,
-        SecondGroupPublicParameters,
-        ThirdGroupPublicParameters,
-    )>
-    for ThreeWayPublicParameters<
-        FirstGroupPublicParameters,
-        SecondGroupPublicParameters,
-        ThirdGroupPublicParameters,
-    >
+    From<(FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters)>
+    for ThreeWayPublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters>
 {
-    fn from(
-        value: (
-            FirstGroupPublicParameters,
-            SecondGroupPublicParameters,
-            ThirdGroupPublicParameters,
-        ),
-    ) -> Self {
+    fn from(value: (FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters)) -> Self {
         let (first_public_parameters, second_public_parameters, third_public_parameters) = value;
 
         PublicParameters(
@@ -420,46 +339,21 @@ impl<FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicPa
 }
 
 impl<FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters>
-    From<
-        ThreeWayPublicParameters<
-            FirstGroupPublicParameters,
-            SecondGroupPublicParameters,
-            ThirdGroupPublicParameters,
-        >,
-    >
-    for (
-        FirstGroupPublicParameters,
-        SecondGroupPublicParameters,
-        ThirdGroupPublicParameters,
-    )
+    From<ThreeWayPublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters>>
+    for (FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters)
 {
     fn from(
-        value: ThreeWayPublicParameters<
-            FirstGroupPublicParameters,
-            SecondGroupPublicParameters,
-            ThirdGroupPublicParameters,
-        >,
+        value: ThreeWayPublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters>,
     ) -> Self {
         let (first_by_second_public_parameters, third_public_parameters) = value.into();
-        let (first_public_parameters, second_public_parameters) =
-            first_by_second_public_parameters.into();
+        let (first_public_parameters, second_public_parameters) = first_by_second_public_parameters.into();
 
-        (
-            first_public_parameters,
-            second_public_parameters,
-            third_public_parameters,
-        )
+        (first_public_parameters, second_public_parameters, third_public_parameters)
     }
 }
 
 impl<'r, FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters>
-    From<
-        &'r ThreeWayPublicParameters<
-            FirstGroupPublicParameters,
-            SecondGroupPublicParameters,
-            ThirdGroupPublicParameters,
-        >,
-    >
+    From<&'r ThreeWayPublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters>>
     for (
         &'r FirstGroupPublicParameters,
         &'r SecondGroupPublicParameters,
@@ -467,46 +361,20 @@ impl<'r, FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPubl
     )
 {
     fn from(
-        value: &'r ThreeWayPublicParameters<
-            FirstGroupPublicParameters,
-            SecondGroupPublicParameters,
-            ThirdGroupPublicParameters,
-        >,
+        value: &'r ThreeWayPublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters>,
     ) -> Self {
         let (first_by_second_public_parameters, third_public_parameters) = value.into();
-        let (first_public_parameters, second_public_parameters) =
-            first_by_second_public_parameters.into();
+        let (first_public_parameters, second_public_parameters) = first_by_second_public_parameters.into();
 
-        (
-            first_public_parameters,
-            second_public_parameters,
-            third_public_parameters,
-        )
+        (first_public_parameters, second_public_parameters, third_public_parameters)
     }
 }
 
 impl<FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupElement>
-    From<(
-        FirstGroupElement,
-        SecondGroupElement,
-        ThirdGroupElement,
-        FourthGroupElement,
-    )>
-    for FourWayGroupElement<
-        FirstGroupElement,
-        SecondGroupElement,
-        ThirdGroupElement,
-        FourthGroupElement,
-    >
+    From<(FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupElement)>
+    for FourWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupElement>
 {
-    fn from(
-        value: (
-            FirstGroupElement,
-            SecondGroupElement,
-            ThirdGroupElement,
-            FourthGroupElement,
-        ),
-    ) -> Self {
+    fn from(value: (FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupElement)) -> Self {
         let (first_element, second_element, third_element, fourth_element) = value;
 
         GroupElement(
@@ -517,46 +385,19 @@ impl<FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupElemen
 }
 
 impl<FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupElement>
-    From<
-        FourWayGroupElement<
-            FirstGroupElement,
-            SecondGroupElement,
-            ThirdGroupElement,
-            FourthGroupElement,
-        >,
-    >
-    for (
-        FirstGroupElement,
-        SecondGroupElement,
-        ThirdGroupElement,
-        FourthGroupElement,
-    )
+    From<FourWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupElement>>
+    for (FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupElement)
 {
-    fn from(
-        value: FourWayGroupElement<
-            FirstGroupElement,
-            SecondGroupElement,
-            ThirdGroupElement,
-            FourthGroupElement,
-        >,
-    ) -> Self {
+    fn from(value: FourWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupElement>) -> Self {
         let (first_by_second_by_third_element, fourth_element) = value.into();
-        let (first_element, second_element, third_element) =
-            first_by_second_by_third_element.into();
+        let (first_element, second_element, third_element) = first_by_second_by_third_element.into();
 
         (first_element, second_element, third_element, fourth_element)
     }
 }
 
 impl<'r, FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupElement>
-    From<
-        &'r FourWayGroupElement<
-            FirstGroupElement,
-            SecondGroupElement,
-            ThirdGroupElement,
-            FourthGroupElement,
-        >,
-    >
+    From<&'r FourWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupElement>>
     for (
         &'r FirstGroupElement,
         &'r SecondGroupElement,
@@ -564,28 +405,15 @@ impl<'r, FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupEl
         &'r FourthGroupElement,
     )
 {
-    fn from(
-        value: &'r FourWayGroupElement<
-            FirstGroupElement,
-            SecondGroupElement,
-            ThirdGroupElement,
-            FourthGroupElement,
-        >,
-    ) -> Self {
+    fn from(value: &'r FourWayGroupElement<FirstGroupElement, SecondGroupElement, ThirdGroupElement, FourthGroupElement>) -> Self {
         let (first_by_second_by_third_element, fourth_element) = value.into();
-        let (first_element, second_element, third_element) =
-            first_by_second_by_third_element.into();
+        let (first_element, second_element, third_element) = first_by_second_by_third_element.into();
 
         (first_element, second_element, third_element, fourth_element)
     }
 }
 
-impl<
-        FirstGroupPublicParameters,
-        SecondGroupPublicParameters,
-        ThirdGroupPublicParameters,
-        FourthGroupPublicParameters,
-    >
+impl<FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters, FourthGroupPublicParameters>
     From<(
         FirstGroupPublicParameters,
         SecondGroupPublicParameters,
@@ -607,12 +435,7 @@ impl<
             FourthGroupPublicParameters,
         ),
     ) -> Self {
-        let (
-            first_public_parameters,
-            second_public_parameters,
-            third_public_parameters,
-            fourth_public_parameters,
-        ) = value;
+        let (first_public_parameters, second_public_parameters, third_public_parameters, fourth_public_parameters) = value;
 
         PublicParameters(
             PublicParameters(
@@ -624,12 +447,7 @@ impl<
     }
 }
 
-impl<
-        FirstGroupPublicParameters,
-        SecondGroupPublicParameters,
-        ThirdGroupPublicParameters,
-        FourthGroupPublicParameters,
-    >
+impl<FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters, FourthGroupPublicParameters>
     From<
         FourWayPublicParameters<
             FirstGroupPublicParameters,
@@ -666,13 +484,7 @@ impl<
     }
 }
 
-impl<
-        'r,
-        FirstGroupPublicParameters,
-        SecondGroupPublicParameters,
-        ThirdGroupPublicParameters,
-        FourthGroupPublicParameters,
-    >
+impl<'r, FirstGroupPublicParameters, SecondGroupPublicParameters, ThirdGroupPublicParameters, FourthGroupPublicParameters>
     From<
         &'r FourWayPublicParameters<
             FirstGroupPublicParameters,

@@ -14,8 +14,7 @@ use crate::{
     proofs::schnorr,
 };
 
-impl<Scalar, GroupElement, CommitmentScheme> schnorr::Language
-    for Language<Scalar, GroupElement, CommitmentScheme>
+impl<Scalar, GroupElement, CommitmentScheme> schnorr::Language for Language<Scalar, GroupElement, CommitmentScheme>
 where
     Scalar: group::GroupElement
         + Samplable
@@ -46,8 +45,7 @@ where
     ) -> proofs::Result<super::StatementSpaceGroupElement<Self>> {
         let [value, randomness]: &[Scalar; 2] = witness.into();
 
-        let commitment_scheme =
-            CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
+        let commitment_scheme = CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
         Ok(commitment_scheme.commit(&[*value].into(), randomness))
     }
@@ -74,30 +72,16 @@ pub struct Language<Scalar, GroupElement, CommitmentScheme> {
 
 /// The Public Parameters of the Knowledge of Decommitment Schnorr Language.
 #[derive(Debug, PartialEq, Serialize, Clone)]
-pub struct PublicParameters<
-    WitnessSpacePublicParameters,
-    StatementSpacePublicParameters,
-    CommitmentSchemePublicParameters,
-> {
-    pub groups_public_parameters:
-        super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
+pub struct PublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters, CommitmentSchemePublicParameters> {
+    pub groups_public_parameters: GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
 }
 
-impl<
-        WitnessSpacePublicParameters,
-        StatementSpacePublicParameters,
-        CommitmentSchemePublicParameters,
-    > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
-    for PublicParameters<
-        WitnessSpacePublicParameters,
-        StatementSpacePublicParameters,
-        CommitmentSchemePublicParameters,
-    >
+impl<WitnessSpacePublicParameters, StatementSpacePublicParameters, CommitmentSchemePublicParameters>
+    AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
+    for PublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters, CommitmentSchemePublicParameters>
 {
-    fn as_ref(
-        &self,
-    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
+    fn as_ref(&self) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
         &self.groups_public_parameters
     }
 }

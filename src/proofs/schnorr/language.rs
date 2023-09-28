@@ -11,8 +11,11 @@ use crate::{
 };
 
 pub mod commitment_of_discrete_log;
+pub mod enhanced;
 pub mod knowledge_of_decommitment;
 pub mod knowledge_of_discrete_log;
+
+pub use enhanced::{committed_linear_evaluation, encryption_of_discrete_log, EnhancedLanguage};
 
 /// A Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`.
@@ -54,13 +57,11 @@ pub trait Language: Clone {
 
 pub(super) type PublicParameters<L> = <L as Language>::PublicParameters;
 pub(super) type WitnessSpaceGroupElement<L> = <L as Language>::WitnessSpaceGroupElement;
-pub(super) type WitnessSpacePublicParameters<L> =
-    group::PublicParameters<WitnessSpaceGroupElement<L>>;
+pub(super) type WitnessSpacePublicParameters<L> = group::PublicParameters<WitnessSpaceGroupElement<L>>;
 pub(super) type WitnessSpaceValue<L> = group::Value<WitnessSpaceGroupElement<L>>;
 
 pub(super) type StatementSpaceGroupElement<L> = <L as Language>::StatementSpaceGroupElement;
-pub(super) type StatementSpacePublicParameters<L> =
-    group::PublicParameters<StatementSpaceGroupElement<L>>;
+pub(super) type StatementSpacePublicParameters<L> = group::PublicParameters<StatementSpaceGroupElement<L>>;
 pub(super) type StatementSpaceValue<L> = group::Value<StatementSpaceGroupElement<L>>;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

@@ -3,19 +3,9 @@
 
 use crypto_bigint::{Encoding, Uint};
 
-use super::{
-    language::{
-        PublicParameters, StatementSpaceGroupElement, StatementSpacePublicParameters,
-        WitnessSpaceGroupElement, WitnessSpacePublicParameters,
-    },
-    GroupsPublicParameters,
-};
 use crate::{
     group,
-    group::{
-        additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
-        GroupElement, Samplable,
-    },
+    group::{additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product, GroupElement, Samplable},
     proofs,
     proofs::range,
 };
@@ -23,54 +13,23 @@ use crate::{
 pub mod committed_linear_evaluation;
 pub mod encryption_of_discrete_log;
 
-pub type ConstrainedWitnessGroupElement<
-    const NUM_RANGE_CLAIMS: usize,
-    const WITNESS_MASK_LIMBS: usize,
-> = self_product::GroupElement<
-    NUM_RANGE_CLAIMS,
-    power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>,
->;
+pub type ConstrainedWitnessGroupElement<const NUM_RANGE_CLAIMS: usize, const WITNESS_MASK_LIMBS: usize> =
+    self_product::GroupElement<NUM_RANGE_CLAIMS, power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>>;
 pub type ConstrainedWitnessValue<const NUM_RANGE_CLAIMS: usize, const WITNESS_MASK_LIMBS: usize> =
-    group::Value<
-        self_product::GroupElement<
-            NUM_RANGE_CLAIMS,
-            power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>,
-        >,
-    >;
-pub type ConstrainedWitnessPublicParameters<
-    const NUM_RANGE_CLAIMS: usize,
-    const WITNESS_MASK_LIMBS: usize,
-> = group::PublicParameters<
-    self_product::GroupElement<
-        NUM_RANGE_CLAIMS,
-        power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>,
-    >,
->;
+    group::Value<self_product::GroupElement<NUM_RANGE_CLAIMS, power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>>>;
+pub type ConstrainedWitnessPublicParameters<const NUM_RANGE_CLAIMS: usize, const WITNESS_MASK_LIMBS: usize> =
+    group::PublicParameters<self_product::GroupElement<NUM_RANGE_CLAIMS, power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>>>;
 
 // - our witness is [WITNESS_MASK_LIMBS; NUM_RANGE_CLAIMS]
 // in the case of the real witness, we pass NUM_RANGE_CLAIMS and think of it as WITNESS_MASK_LIMBS.
 // But in the case of the witness mask, we actually pass it as WITNESS_MASK_LIMBS and it is of that
 // size.
-pub type EnhancedLanguageWitness<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    const WITNESS_MASK_LIMBS: usize,
-    L,
-> = direct_product::ThreeWayGroupElement<
-    ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, WITNESS_MASK_LIMBS>,
-    RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
-        NUM_RANGE_CLAIMS,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
-        L,
-    >,
-    UnconstrainedWitnessSpaceGroupElement<
-        NUM_RANGE_CLAIMS,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
-        L,
-    >,
->;
+pub type EnhancedLanguageWitness<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, const WITNESS_MASK_LIMBS: usize, L> =
+    direct_product::ThreeWayGroupElement<
+        ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, WITNESS_MASK_LIMBS>,
+        RangeProofCommitmentSchemeRandomnessSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, L>,
+        UnconstrainedWitnessSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, L>,
+    >;
 
 // Now in the statement of the homomorphism of the enhanced schnorr language, we have
 // the commitment of the range proof. Since the range proof know only RANGE_CLAIM_LIMBS,
@@ -97,20 +56,11 @@ pub type EnhancedLanguageWitness<
 // => 256 > q. so should use computational = 127? or I can simply repeat the proof if it fails.
 // But it will fail with ±50% chance no? can you speak I didn't hear
 // 50% = the probability of sampling a 256-bit with the MSB off
-pub type EnhancedLanguageStatement<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    const WITNESS_MASK_LIMBS: usize,
-    L,
-> = direct_product::GroupElement<
-    RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
-        NUM_RANGE_CLAIMS,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
-        L,
-    >,
-    RemainingStatementSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, L>,
->;
+pub type EnhancedLanguageStatement<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, const WITNESS_MASK_LIMBS: usize, L> =
+    direct_product::GroupElement<
+        RangeProofCommitmentSchemeCommitmentSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, L>,
+        RemainingStatementSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, L>,
+    >;
 
 /// An Enhacned Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.
@@ -151,70 +101,46 @@ pub trait EnhancedLanguage<
 
 pub type UnconstrainedWitnessSpaceGroupElement<
     const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize, const WITNESS_MASK_LIMBS: usize,
-    L
-> = <
-    L as EnhancedLanguage<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS>
->::UnboundedWitnessSpaceGroupElement;
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    L,
+> = <L as EnhancedLanguage<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS>>::UnboundedWitnessSpaceGroupElement;
 
 pub type UnboundedWitnessSpacePublicParameters<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     const WITNESS_MASK_LIMBS: usize,
     L,
-> = group::PublicParameters<
-    UnconstrainedWitnessSpaceGroupElement<
-        NUM_RANGE_CLAIMS,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
-        L,
-    >,
->;
+> = group::PublicParameters<UnconstrainedWitnessSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, L>>;
 pub type UnboundedWitnessSpaceValue<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     const WITNESS_MASK_LIMBS: usize,
     L,
-> = group::Value<
-    UnconstrainedWitnessSpaceGroupElement<
-        NUM_RANGE_CLAIMS,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
-        L,
-    >,
->;
+> = group::Value<UnconstrainedWitnessSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, L>>;
 
 pub type RemainingStatementSpaceGroupElement<
     const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize, const WITNESS_MASK_LIMBS: usize,
-    L
-> = <
-    L as EnhancedLanguage<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS>
->::RemainingStatementSpaceGroupElement;
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    L,
+> = <L as EnhancedLanguage<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS>>::RemainingStatementSpaceGroupElement;
 
 pub type RemainingStatementSpacePublicParameters<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     const WITNESS_MASK_LIMBS: usize,
     L,
-> = group::PublicParameters<
-    RemainingStatementSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, L>,
->;
+> = group::PublicParameters<RemainingStatementSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, L>>;
 pub type RemainingStatementSpaceValue<
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     const WITNESS_MASK_LIMBS: usize,
     L,
-> = group::Value<
-    RemainingStatementSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, L>,
->;
+> = group::Value<RemainingStatementSpaceGroupElement<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, L>>;
 
-pub type RangeProof<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    const WITNESS_MASK_LIMBS: usize,
-    L,
-> = <L as EnhancedLanguage<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS>>::RangeProof;
+pub type RangeProof<const NUM_RANGE_CLAIMS: usize, const RANGE_CLAIM_LIMBS: usize, const WITNESS_MASK_LIMBS: usize, L> =
+    <L as EnhancedLanguage<NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS>>::RangeProof;
 
 pub type RangeProofCommitmentScheme<
     const NUM_RANGE_CLAIMS: usize,

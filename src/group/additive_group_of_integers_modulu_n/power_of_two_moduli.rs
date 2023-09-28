@@ -4,9 +4,7 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Random, Uint, Wrapping, 
 
 use crate::{
     group,
-    group::{
-        BoundedGroupElement, CyclicGroupElement, GroupElement as _, MulByGenerator, Samplable,
-    },
+    group::{BoundedGroupElement, CyclicGroupElement, GroupElement as _, MulByGenerator, Samplable},
 };
 
 /// An element of the additive group of integers for a power-of-two modulo `n = modulus`
@@ -19,10 +17,7 @@ impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
-    fn sample(
-        rng: &mut impl CryptoRngCore,
-        _public_parameters: &Self::PublicParameters,
-    ) -> group::Result<Self> {
+    fn sample(rng: &mut impl CryptoRngCore, _public_parameters: &Self::PublicParameters) -> group::Result<Self> {
         Ok(Self(Wrapping::<Uint<LIMBS>>::random(rng)))
     }
 }
@@ -36,10 +31,7 @@ where
 
     fn public_parameters(&self) -> Self::PublicParameters {}
 
-    fn new(
-        value: Self::Value,
-        _public_parameters: &Self::PublicParameters,
-    ) -> crate::group::Result<Self> {
+    fn new(value: Self::Value, _public_parameters: &Self::PublicParameters) -> crate::group::Result<Self> {
         Ok(Self(Wrapping(value)))
     }
 
@@ -247,10 +239,7 @@ impl<'r, const LIMBS: usize> From<&'r Uint<LIMBS>> for GroupElement<LIMBS> {
     }
 }
 
-impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> where
-    Uint<LIMBS>: Encoding
-{
-}
+impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> where Uint<LIMBS>: Encoding {}
 
 impl<const LIMBS: usize> CyclicGroupElement for GroupElement<LIMBS>
 where
