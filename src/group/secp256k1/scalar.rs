@@ -12,8 +12,8 @@ use super::GroupElement;
 use crate::{
     group,
     group::{
-        secp256k1::ORDER, BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement, MulByGenerator, PrimeGroupElement,
-        Samplable,
+        secp256k1::ORDER, BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement,
+        KnownOrderScalar, MulByGenerator, PrimeGroupElement, Samplable,
     },
     traits::Reduce,
 };
@@ -31,7 +31,10 @@ impl ConstantTimeEq for Scalar {
 }
 
 impl Samplable for Scalar {
-    fn sample(rng: &mut impl CryptoRngCore, _public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        _public_parameters: &Self::PublicParameters,
+    ) -> group::Result<Self> {
         Ok(Self(k256::Scalar::random(rng)))
     }
 }
@@ -93,7 +96,9 @@ impl BoundedGroupElement<{ U256::LIMBS }> for Scalar {}
 
 impl<const LIMBS: usize> From<Uint<LIMBS>> for Scalar {
     fn from(value: Uint<LIMBS>) -> Self {
-        Self(k256::Scalar::from_uint_unchecked(value.reduce(&NonZero::new(ORDER).unwrap())))
+        Self(k256::Scalar::from_uint_unchecked(
+            value.reduce(&NonZero::new(ORDER).unwrap()),
+        ))
     }
 }
 
@@ -248,7 +253,9 @@ impl MulByGenerator<U256> for Scalar {
         // In the additive scalar group, our generator is 1 and multiplying a group element by it
         // results in that same element. However, a `U256` might be bigger than the field
         // order, so we must first reduce it by the modulus to get a valid element.
-        Self(k256::Scalar::from_uint_unchecked(scalar.reduce(&NonZero::new(ORDER).unwrap())))
+        Self(k256::Scalar::from_uint_unchecked(
+            scalar.reduce(&NonZero::new(ORDER).unwrap()),
+        ))
     }
 }
 
@@ -264,13 +271,17 @@ impl CyclicGroupElement for Scalar {
     }
 }
 
+impl KnownOrderScalar<{ U256::LIMBS }> for Scalar {}
+
 impl KnownOrderGroupElement<{ U256::LIMBS }> for Scalar {
     type Scalar = Self;
     fn order(&self) -> Uint<{ U256::LIMBS }> {
         ORDER
     }
 
-    fn order_from_public_parameters(_public_parameters: &Self::PublicParameters) -> Uint<{ U256::LIMBS }> {
+    fn order_from_public_parameters(
+        _public_parameters: &Self::PublicParameters,
+    ) -> Uint<{ U256::LIMBS }> {
         ORDER
     }
 }

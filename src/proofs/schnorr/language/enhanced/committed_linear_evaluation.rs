@@ -12,7 +12,7 @@ use crate::{
     ahe, commitments,
     commitments::HomomorphicCommitmentScheme,
     group,
-    group::{direct_product, Samplable},
+    group::{direct_product, KnownOrderGroupElement, Samplable},
     proofs,
     proofs::{range, schnorr},
     AdditivelyHomomorphicEncryptionKey,
@@ -40,6 +40,8 @@ use crate::{
 /// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
 #[derive(Clone, Serialize)]
 pub struct Language<
+    const SCALAR_LIMBS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const MASK_LIMBS: usize,
     const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
     const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
@@ -60,6 +62,8 @@ pub struct Language<
 }
 
 impl<
+        const SCALAR_LIMBS: usize,
+        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const MASK_LIMBS: usize,
         const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
         const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
@@ -69,10 +73,16 @@ impl<
         Scalar,
         GroupElement: group::GroupElement,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        CommitmentScheme: HomomorphicCommitmentScheme,
-        RangeProof: proofs::RangeProof<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>,
+        CommitmentScheme: HomomorphicCommitmentScheme<SCALAR_LIMBS>,
+        RangeProof: proofs::RangeProof<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+        >,
     > schnorr::Language
     for Language<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         MASK_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
         RANGE_CLAIM_LIMBS,
@@ -88,7 +98,7 @@ impl<
 where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
-    Scalar: group::GroupElement
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
         + Samplable
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
@@ -96,17 +106,32 @@ where
     Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
 {
-    type WitnessSpaceGroupElement =
-        super::EnhancedLanguageWitness<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, Self>;
-    type StatementSpaceGroupElement =
-        super::EnhancedLanguageStatement<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, Self>;
+    type WitnessSpaceGroupElement = super::EnhancedLanguageWitness<
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Self,
+    >;
+    type StatementSpaceGroupElement = super::EnhancedLanguageStatement<
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Self,
+    >;
 
     type PublicParameters = PublicParameters<
         DIMENSION,
         language::WitnessSpacePublicParameters<Self>,
         language::StatementSpacePublicParameters<Self>,
-        commitments::PublicParameters<CommitmentScheme>,
-        range::CommitmentSchemePublicParameters<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, RangeProof>,
+        commitments::PublicParameters<SCALAR_LIMBS, CommitmentScheme>,
+        range::CommitmentSchemePublicParameters<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            RangeProof,
+        >,
         ahe::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         group::PublicParameters<Scalar>,
         ahe::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
@@ -162,6 +187,8 @@ where
 }
 
 impl<
+        const SCALAR_LIMBS: usize,
+        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const MASK_LIMBS: usize,
         const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
         const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
@@ -171,10 +198,22 @@ impl<
         Scalar,
         GroupElement: group::GroupElement,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        CommitmentScheme: HomomorphicCommitmentScheme,
-        RangeProof: proofs::RangeProof<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS>,
-    > schnorr::EnhancedLanguage<RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS>
+        CommitmentScheme: HomomorphicCommitmentScheme<SCALAR_LIMBS>,
+        RangeProof: proofs::RangeProof<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+        >,
+    >
+    schnorr::EnhancedLanguage<
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+    >
     for Language<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         MASK_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
         RANGE_CLAIM_LIMBS,
@@ -190,7 +229,7 @@ impl<
 where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
-    Scalar: group::GroupElement
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
         + Samplable
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
@@ -209,7 +248,7 @@ where
         // The resultant ciphertext of the homomorphic evaluation
         ahe::CiphertextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         // The commitment on the evaluation coefficients
-        commitments::CommitmentSpaceGroupElement<CommitmentScheme>,
+        commitments::CommitmentSpaceGroupElement<SCALAR_LIMBS, CommitmentScheme>,
     >;
 
     type RangeProof = RangeProof;
@@ -230,7 +269,8 @@ pub struct PublicParameters<
     ScalarPublicParameters,
     CiphertextSpaceValue: Serialize,
 > {
-    pub groups_public_parameters: GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
+    pub groups_public_parameters:
+        GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
     pub range_proof_commitment_scheme_public_parameters: ProofCommitmentSchemePublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
@@ -261,7 +301,9 @@ impl<
         CiphertextSpaceValue,
     >
 {
-    fn as_ref(&self) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
+    fn as_ref(
+        &self,
+    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
         &self.groups_public_parameters
     }
 }

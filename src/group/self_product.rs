@@ -12,7 +12,10 @@ use subtle::{Choice, ConstantTimeEq};
 
 use crate::{
     group,
-    group::{BoundedGroupElement, GroupElement as _, Samplable},
+    group::{
+        scalar::Scalar, BoundedGroupElement, GroupElement as _, KnownOrderGroupElement,
+        KnownOrderScalar, Samplable,
+    },
     helpers::flat_map_results,
 };
 
@@ -25,7 +28,10 @@ impl<const N: usize, G: group::GroupElement> Samplable for GroupElement<N, G>
 where
     G: Samplable,
 {
-    fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+    ) -> group::Result<Self> {
         let public_parameters = &public_parameters.public_parameters;
 
         if N < 2 {
@@ -33,7 +39,9 @@ where
             return Err(group::Error::InvalidPublicParametersError);
         }
 
-        Ok(Self(flat_map_results(array::from_fn(|_| G::sample(rng, public_parameters)))?))
+        Ok(Self(flat_map_results(array::from_fn(|_| {
+            G::sample(rng, public_parameters)
+        }))?))
     }
 }
 
@@ -58,7 +66,9 @@ impl<const N: usize, G: group::GroupElement> ConstantTimeEq for Value<N, G> {
         self.0
             .iter()
             .zip(other.0.iter())
-            .fold(Choice::from(1u8), |choice, (x, y)| choice.bitand(x.ct_eq(y)))
+            .fold(Choice::from(1u8), |choice, (x, y)| {
+                choice.bitand(x.ct_eq(y))
+            })
     }
 }
 
@@ -85,7 +95,9 @@ impl<const N: usize, G: group::GroupElement> group::GroupElement for GroupElemen
             return Err(group::Error::InvalidPublicParametersError);
         }
 
-        Ok(Self(flat_map_results(value.0.map(|value| G::new(value, public_parameters)))?))
+        Ok(Self(flat_map_results(
+            value.0.map(|value| G::new(value, public_parameters)),
+        )?))
     }
 
     fn neutral(&self) -> Self {
@@ -101,13 +113,17 @@ impl<const N: usize, G: group::GroupElement> group::GroupElement for GroupElemen
     }
 }
 
-impl<const N: usize, G: group::GroupElement> From<GroupElement<N, G>> for group::Value<GroupElement<N, G>> {
+impl<const N: usize, G: group::GroupElement> From<GroupElement<N, G>>
+    for group::Value<GroupElement<N, G>>
+{
     fn from(value: GroupElement<N, G>) -> Self {
         Self(value.0.map(|element| element.into()))
     }
 }
 
-impl<const N: usize, G: group::GroupElement> From<GroupElement<N, G>> for group::PublicParameters<GroupElement<N, G>> {
+impl<const N: usize, G: group::GroupElement> From<GroupElement<N, G>>
+    for group::PublicParameters<GroupElement<N, G>>
+{
     fn from(value: GroupElement<N, G>) -> Self {
         value.public_parameters()
     }
@@ -193,38 +209,6 @@ impl<'r, const N: usize, G: group::GroupElement> SubAssign<&'r Self> for GroupEl
     }
 }
 
-impl<const LIMBS: usize, const N: usize, G: group::GroupElement> Mul<Uint<LIMBS>> for GroupElement<N, G> {
-    type Output = Self;
-
-    fn mul(self, rhs: Uint<LIMBS>) -> Self::Output {
-        self.scalar_mul(&rhs)
-    }
-}
-
-impl<'r, const LIMBS: usize, const N: usize, G: group::GroupElement> Mul<&'r Uint<LIMBS>> for GroupElement<N, G> {
-    type Output = Self;
-
-    fn mul(self, rhs: &'r Uint<LIMBS>) -> Self::Output {
-        self.scalar_mul(rhs)
-    }
-}
-
-impl<'r, const LIMBS: usize, const N: usize, G: group::GroupElement> Mul<Uint<LIMBS>> for &'r GroupElement<N, G> {
-    type Output = GroupElement<N, G>;
-
-    fn mul(self, rhs: Uint<LIMBS>) -> Self::Output {
-        self.scalar_mul(&rhs)
-    }
-}
-
-impl<'r, const LIMBS: usize, const N: usize, G: group::GroupElement> Mul<&'r Uint<LIMBS>> for &'r GroupElement<N, G> {
-    type Output = GroupElement<N, G>;
-
-    fn mul(self, rhs: &'r Uint<LIMBS>) -> Self::Output {
-        self.scalar_mul(rhs)
-    }
-}
-
 impl<const N: usize, G: group::GroupElement> From<GroupElement<N, G>> for [G; N] {
     fn from(value: GroupElement<N, G>) -> Self {
         value.0
@@ -243,7 +227,54 @@ impl<const N: usize, G: group::GroupElement> From<[G; N]> for GroupElement<N, G>
     }
 }
 
-impl<const N: usize, const SCALAR_LIMBS: usize, G: BoundedGroupElement<SCALAR_LIMBS>> BoundedGroupElement<SCALAR_LIMBS>
-    for GroupElement<N, G>
+impl<const N: usize, const SCALAR_LIMBS: usize, G: BoundedGroupElement<SCALAR_LIMBS>>
+    BoundedGroupElement<SCALAR_LIMBS> for GroupElement<N, G>
 {
+}
+
+impl<
+        'r,
+        const N: usize,
+        const SCALAR_LIMBS: usize,
+        S: KnownOrderScalar<SCALAR_LIMBS> + Mul<G, Output = G>,
+        G: KnownOrderGroupElement<SCALAR_LIMBS, Scalar = S>,
+    > Mul<GroupElement<N, G>> for Scalar<SCALAR_LIMBS, group::Scalar<SCALAR_LIMBS, G>>
+{
+    type Output = GroupElement<N, G>;
+
+    fn mul(self, rhs: GroupElement<N, G>) -> Self::Output {
+        GroupElement::<N, G>(rhs.0.map(|element| self.0 * element))
+    }
+}
+
+impl<
+        'r,
+        const N: usize,
+        const SCALAR_LIMBS: usize,
+        // TODO: why doesn't Rust understand that it implements Mul?
+        S: KnownOrderScalar<SCALAR_LIMBS> + Mul<G, Output = G>,
+        G: KnownOrderGroupElement<SCALAR_LIMBS, Scalar = S>,
+    > Mul<&'r GroupElement<N, G>> for Scalar<SCALAR_LIMBS, group::Scalar<SCALAR_LIMBS, G>>
+{
+    type Output = GroupElement<N, G>;
+
+    fn mul(self, rhs: &'r GroupElement<N, G>) -> Self::Output {
+        self * rhs.clone()
+    }
+}
+
+impl<
+        const N: usize,
+        const SCALAR_LIMBS: usize,
+        S: KnownOrderScalar<SCALAR_LIMBS> + Mul<G, Output = G>,
+        G: KnownOrderGroupElement<SCALAR_LIMBS, Scalar = S>,
+    > KnownOrderGroupElement<SCALAR_LIMBS> for GroupElement<N, G>
+{
+    type Scalar = Scalar<SCALAR_LIMBS, S>;
+
+    fn order_from_public_parameters(
+        public_parameters: &Self::PublicParameters,
+    ) -> Uint<SCALAR_LIMBS> {
+        G::order_from_public_parameters(&public_parameters.public_parameters)
+    }
 }

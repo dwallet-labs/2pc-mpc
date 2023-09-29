@@ -12,7 +12,7 @@ comment_width = 120
 condense_wildcard_suffixes = true
 
 # Error if Rustfmt is unable to get all lines within max_width, except for comments and string literals
-error_on_line_overflow = true
+error_on_line_overflow = false
 
 # Format code snippet included in doc comments.
 format_code_in_doc_comments = true
@@ -33,4 +33,4 @@ imports_granularity = "Crate"
 # self, super and crate imports.
 group_imports = "StdExternalCrate"
 
-max_width = 135
+max_width = 100

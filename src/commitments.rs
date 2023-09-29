@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
-    group::{GroupElement, Samplable},
+    group::{GroupElement, KnownOrderGroupElement, Samplable},
 };
 
 pub mod pedersen;
@@ -23,9 +23,11 @@ pub mod pedersen;
 /// \Com(\vec{m}_2; \rho_2) = \Com(\vec{m}_1 + \vec{m}_2; \rho_1 + \rho_2) $$
 ///
 /// As defined in Definitions 2.4, 2.5 in the paper.
-pub trait HomomorphicCommitmentScheme: Into<Self::PublicParameters> + PartialEq + Clone {
+pub trait HomomorphicCommitmentScheme<const MESSAGE_SPACE_SCALAR_LIMBS: usize>:
+    PartialEq + Clone
+{
     /// The Message space group element of the commitment scheme
-    type MessageSpaceGroupElement: GroupElement;
+    type MessageSpaceGroupElement: KnownOrderGroupElement<MESSAGE_SPACE_SCALAR_LIMBS>;
     /// The Randomness space group element of the commitment scheme
     type RandomnessSpaceGroupElement: GroupElement + Samplable;
     /// The Commitment space group element of the commitment scheme
@@ -40,19 +42,14 @@ pub trait HomomorphicCommitmentScheme: Into<Self::PublicParameters> + PartialEq 
     /// be used for Fiat-Shamir Transcripts).
     type PublicParameters: AsRef<
             GroupsPublicParameters<
-                MessageSpacePublicParameters<Self>,
-                RandomnessSpacePublicParameters<Self>,
-                CommitmentSpacePublicParameters<Self>,
+                MessageSpacePublicParameters<MESSAGE_SPACE_SCALAR_LIMBS, Self>,
+                RandomnessSpacePublicParameters<MESSAGE_SPACE_SCALAR_LIMBS, Self>,
+                CommitmentSpacePublicParameters<MESSAGE_SPACE_SCALAR_LIMBS, Self>,
             >,
         > + Serialize
         + for<'r> Deserialize<'r>
         + Clone
         + PartialEq;
-
-    /// Returns the public parameters of this commitment scheme.
-    fn public_parameters(&self) -> Self::PublicParameters {
-        self.clone().into()
-    }
 
     /// Instantiate the commitment scheme from its public parameters and the commitment space group
     /// public parameters.
@@ -66,20 +63,43 @@ pub trait HomomorphicCommitmentScheme: Into<Self::PublicParameters> + PartialEq 
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct GroupsPublicParameters<MessageSpacePublicParameters, RandomnessSpacePublicParameters, CommitmentSpacePublicParameters> {
+pub struct GroupsPublicParameters<
+    MessageSpacePublicParameters,
+    RandomnessSpacePublicParameters,
+    CommitmentSpacePublicParameters,
+> {
     pub message_space_public_parameters: MessageSpacePublicParameters,
     pub randomness_space_public_parameters: RandomnessSpacePublicParameters,
     pub commitment_space_public_parameters: CommitmentSpacePublicParameters,
 }
 
-pub type PublicParameters<C> = <C as HomomorphicCommitmentScheme>::PublicParameters;
-pub type MessageSpaceGroupElement<C> = <C as HomomorphicCommitmentScheme>::MessageSpaceGroupElement;
-pub type MessageSpacePublicParameters<C> = group::PublicParameters<<C as HomomorphicCommitmentScheme>::MessageSpaceGroupElement>;
-pub type MessageSpaceValue<C> = group::Value<<C as HomomorphicCommitmentScheme>::MessageSpaceGroupElement>;
+pub type PublicParameters<const MESSAGE_SPACE_SCALAR_LIMBS: usize, C> =
+    <C as HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>>::PublicParameters;
+pub type MessageSpaceGroupElement<const MESSAGE_SPACE_SCALAR_LIMBS: usize, C> =
+    <C as HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>>::MessageSpaceGroupElement;
+pub type MessageSpacePublicParameters<const MESSAGE_SPACE_SCALAR_LIMBS: usize, C> =
+    group::PublicParameters<
+        <C as HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>>::MessageSpaceGroupElement,
+    >;
+pub type MessageSpaceValue<const MESSAGE_SPACE_SCALAR_LIMBS: usize, C> = group::Value<
+    <C as HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>>::MessageSpaceGroupElement,
+>;
 
-pub type RandomnessSpaceGroupElement<C> = <C as HomomorphicCommitmentScheme>::RandomnessSpaceGroupElement;
-pub type RandomnessSpacePublicParameters<C> = group::PublicParameters<<C as HomomorphicCommitmentScheme>::RandomnessSpaceGroupElement>;
-pub type RandomnessSpaceValue<C> = group::Value<<C as HomomorphicCommitmentScheme>::RandomnessSpaceGroupElement>;
-pub type CommitmentSpaceGroupElement<C> = <C as HomomorphicCommitmentScheme>::CommitmentSpaceGroupElement;
-pub type CommitmentSpacePublicParameters<C> = group::PublicParameters<<C as HomomorphicCommitmentScheme>::CommitmentSpaceGroupElement>;
-pub type CommitmentSpaceValue<C> = group::Value<<C as HomomorphicCommitmentScheme>::CommitmentSpaceGroupElement>;
+pub type RandomnessSpaceGroupElement<const MESSAGE_SPACE_SCALAR_LIMBS: usize, C> =
+    <C as HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>>::RandomnessSpaceGroupElement;
+pub type RandomnessSpacePublicParameters<const MESSAGE_SPACE_SCALAR_LIMBS: usize, C> =
+    group::PublicParameters<
+        <C as HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>>::RandomnessSpaceGroupElement,
+    >;
+pub type RandomnessSpaceValue<const MESSAGE_SPACE_SCALAR_LIMBS: usize, C> = group::Value<
+    <C as HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>>::RandomnessSpaceGroupElement,
+>;
+pub type CommitmentSpaceGroupElement<const MESSAGE_SPACE_SCALAR_LIMBS: usize, C> =
+    <C as HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>>::CommitmentSpaceGroupElement;
+pub type CommitmentSpacePublicParameters<const MESSAGE_SPACE_SCALAR_LIMBS: usize, C> =
+    group::PublicParameters<
+        <C as HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>>::CommitmentSpaceGroupElement,
+    >;
+pub type CommitmentSpaceValue<const MESSAGE_SPACE_SCALAR_LIMBS: usize, C> = group::Value<
+    <C as HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>>::CommitmentSpaceGroupElement,
+>;

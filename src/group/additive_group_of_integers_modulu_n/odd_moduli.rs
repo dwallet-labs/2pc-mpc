@@ -12,7 +12,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
-    group::{BoundedGroupElement, CyclicGroupElement, GroupElement as _, KnownOrderGroupElement, MulByGenerator, Samplable},
+    group::{
+        BoundedGroupElement, CyclicGroupElement, GroupElement as _, KnownOrderGroupElement,
+        KnownOrderScalar, MulByGenerator, Samplable,
+    },
     traits::Reduce,
 };
 
@@ -26,7 +29,10 @@ impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
-    fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+    ) -> group::Result<Self> {
         GroupElement::<LIMBS>::new(Uint::<LIMBS>::random(rng), public_parameters)
     }
 }
@@ -52,7 +58,10 @@ where
 
     type PublicParameters = PublicParameters<LIMBS>;
 
-    fn new(value: Self::Value, public_parameters: &Self::PublicParameters) -> crate::group::Result<Self> {
+    fn new(
+        value: Self::Value,
+        public_parameters: &Self::PublicParameters,
+    ) -> crate::group::Result<Self> {
         Ok(Self(DynResidue::<LIMBS>::new(
             &value,
             DynResidueParams::<LIMBS>::new(&public_parameters.modulus),
@@ -64,7 +73,10 @@ where
     }
 
     fn scalar_mul<const RHS_LIMBS: usize>(&self, scalar: &Uint<RHS_LIMBS>) -> Self {
-        let scalar = DynResidue::new(&scalar.reduce(&self.public_parameters().modulus), *self.0.params());
+        let scalar = DynResidue::new(
+            &scalar.reduce(&self.public_parameters().modulus),
+            *self.0.params(),
+        );
 
         Self(self.0 * scalar)
     }
@@ -172,7 +184,10 @@ where
     }
 }
 
-impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> where Uint<LIMBS>: Encoding {}
+impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> where
+    Uint<LIMBS>: Encoding
+{
+}
 
 impl<const LIMBS: usize> CyclicGroupElement for GroupElement<LIMBS>
 where
@@ -270,6 +285,8 @@ impl<'r, const LIMBS: usize> From<&'r GroupElement<LIMBS>> for Uint<LIMBS> {
         value.0.retrieve()
     }
 }
+
+impl<const LIMBS: usize> KnownOrderScalar<LIMBS> for GroupElement<LIMBS> where Uint<LIMBS>: Encoding {}
 
 impl<const LIMBS: usize> KnownOrderGroupElement<LIMBS> for GroupElement<LIMBS>
 where

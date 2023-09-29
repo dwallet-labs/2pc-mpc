@@ -8,8 +8,7 @@ use serde::Serialize;
 use super::{GroupsPublicParameters, StatementSpacePublicParameters, WitnessSpacePublicParameters};
 use crate::{
     commitments::HomomorphicCommitmentScheme,
-    group,
-    group::{self_product, CyclicGroupElement, Samplable},
+    group::{self_product, CyclicGroupElement, KnownOrderGroupElement, Samplable},
     proofs,
     proofs::schnorr,
 };
@@ -26,21 +25,23 @@ use crate::{
 /// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
 /// `PrimeOrderGroupElement`.
 #[derive(Clone, Serialize)]
-pub struct Language<Scalar, GroupElement, CommitmentScheme> {
+pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> {
     _scalar_choice: PhantomData<Scalar>,
     _group_element_choice: PhantomData<GroupElement>,
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
-impl<Scalar, GroupElement, CommitmentScheme> schnorr::Language for Language<Scalar, GroupElement, CommitmentScheme>
+impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> schnorr::Language
+    for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
 where
-    Scalar: group::GroupElement
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
         + Samplable
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Copy,
     GroupElement: CyclicGroupElement,
     CommitmentScheme: HomomorphicCommitmentScheme<
+        SCALAR_LIMBS,
         MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
         RandomnessSpaceGroupElement = Scalar,
         CommitmentSpaceGroupElement = GroupElement,
@@ -72,9 +73,14 @@ where
                 .public_parameters,
         )?;
 
-        let commitment_scheme = CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
+        let commitment_scheme =
+            CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
-        Ok([commitment_scheme.commit(&[*value].into(), randomness), *value * base].into())
+        Ok([
+            commitment_scheme.commit(&[*value].into(), randomness),
+            *value * base,
+        ]
+        .into())
     }
 }
 
@@ -86,13 +92,18 @@ pub struct PublicParameters<
     GroupElementValue,
     CommitmentSchemePublicParameters,
 > {
-    pub groups_public_parameters: GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
+    pub groups_public_parameters:
+        GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
     pub generator: GroupElementValue, // The base of discrete log
 }
 
-impl<WitnessSpacePublicParameters, StatementSpacePublicParameters, GroupElementValue, CommitmentSchemePublicParameters>
-    AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
+impl<
+        WitnessSpacePublicParameters,
+        StatementSpacePublicParameters,
+        GroupElementValue,
+        CommitmentSchemePublicParameters,
+    > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
     for PublicParameters<
         WitnessSpacePublicParameters,
         StatementSpacePublicParameters,
@@ -100,7 +111,9 @@ impl<WitnessSpacePublicParameters, StatementSpacePublicParameters, GroupElementV
         CommitmentSchemePublicParameters,
     >
 {
-    fn as_ref(&self) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
+    fn as_ref(
+        &self,
+    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
         &self.groups_public_parameters
     }
 }

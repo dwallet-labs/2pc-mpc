@@ -9,7 +9,7 @@ use super::GroupsPublicParameters;
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group,
-    group::{self_product, Samplable},
+    group::{self_product, KnownOrderGroupElement, Samplable},
     proofs,
     proofs::schnorr,
 };
@@ -27,21 +27,23 @@ use crate::{
 /// Paillier groups based on safe-primes; so it is safe to use with a `PrimeOrderGroupElement` or
 /// `PaillierGroupElement`.
 #[derive(Clone, Serialize)]
-pub struct Language<Scalar, GroupElement, CommitmentScheme> {
+pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> {
     _scalar_choice: PhantomData<Scalar>,
     _group_element_choice: PhantomData<GroupElement>,
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
-impl<Scalar, GroupElement, CommitmentScheme> schnorr::Language for Language<Scalar, GroupElement, CommitmentScheme>
+impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> schnorr::Language
+    for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
 where
-    Scalar: group::GroupElement
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
         + Samplable
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Copy,
     GroupElement: group::GroupElement,
     CommitmentScheme: HomomorphicCommitmentScheme<
+        SCALAR_LIMBS,
         MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
         RandomnessSpaceGroupElement = Scalar,
         CommitmentSpaceGroupElement = GroupElement,
@@ -64,7 +66,8 @@ where
     ) -> proofs::Result<super::StatementSpaceGroupElement<Self>> {
         let [value, randomness]: &[Scalar; 2] = witness.into();
 
-        let commitment_scheme = CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
+        let commitment_scheme =
+            CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
         Ok(commitment_scheme.commit(&[*value].into(), randomness))
     }
@@ -72,16 +75,30 @@ where
 
 /// The Public Parameters of the Knowledge of Decommitment Schnorr Language.
 #[derive(Debug, PartialEq, Serialize, Clone)]
-pub struct PublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters, CommitmentSchemePublicParameters> {
-    pub groups_public_parameters: GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
+pub struct PublicParameters<
+    WitnessSpacePublicParameters,
+    StatementSpacePublicParameters,
+    CommitmentSchemePublicParameters,
+> {
+    pub groups_public_parameters:
+        GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
 }
 
-impl<WitnessSpacePublicParameters, StatementSpacePublicParameters, CommitmentSchemePublicParameters>
-    AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
-    for PublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters, CommitmentSchemePublicParameters>
+impl<
+        WitnessSpacePublicParameters,
+        StatementSpacePublicParameters,
+        CommitmentSchemePublicParameters,
+    > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
+    for PublicParameters<
+        WitnessSpacePublicParameters,
+        StatementSpacePublicParameters,
+        CommitmentSchemePublicParameters,
+    >
 {
-    fn as_ref(&self) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
+    fn as_ref(
+        &self,
+    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
         &self.groups_public_parameters
     }
 }
