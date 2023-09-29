@@ -5,7 +5,7 @@ pub mod language;
 pub mod proof;
 
 pub use language::{
-    commitment_of_discrete_log, committed_linear_evaluation, encryption_of_discrete_log, knowledge_of_decommitment,
-    knowledge_of_discrete_log, EnhancedLanguage, Language,
+    commitment_of_discrete_log, committed_linear_evaluation, encryption_of_discrete_log,
+    knowledge_of_decommitment, knowledge_of_discrete_log, EnhancedLanguage, Language,
 };
-pub use proof::Proof;
+pub use proof::{enhanced, Proof};
