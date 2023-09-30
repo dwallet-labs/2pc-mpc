@@ -12,7 +12,7 @@ use crate::{
     ahe, commitments,
     commitments::HomomorphicCommitmentScheme,
     group,
-    group::{direct_product, KnownOrderGroupElement, Samplable},
+    group::{direct_product, BoundedGroupElement, Samplable},
     proofs,
     proofs::{range, schnorr},
     AdditivelyHomomorphicEncryptionKey,
@@ -98,7 +98,7 @@ impl<
 where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
+    Scalar: BoundedGroupElement<SCALAR_LIMBS>
         + Samplable
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
@@ -229,7 +229,7 @@ impl<
 where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
+    Scalar: BoundedGroupElement<SCALAR_LIMBS>
         + Samplable
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>

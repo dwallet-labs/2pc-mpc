@@ -1,8 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-pub mod bulletproofs;
-
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +9,7 @@ use crate::{
     group::additive_group_of_integers_modulu_n::power_of_two_moduli, proofs::Result,
 };
 
-// TODO: can I move consts to the function bodies?
+pub mod bulletproofs;
 
 pub trait RangeProof<
     // The commitment scheme's message space scalar size in limbs
@@ -20,7 +18,7 @@ pub trait RangeProof<
     const NUM_RANGE_CLAIMS: usize,
     // An upper bound over the range claims (the lower bound is fixed to zero.)
     const RANGE_CLAIM_LIMBS: usize,
->: Serialize + for<'a> Deserialize<'a> + PartialEq + Clone where
+>: Serialize + for<'a> Deserialize<'a> + Clone where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
 {
     /// The commitment scheme used for the range proof
@@ -43,8 +41,8 @@ pub trait RangeProof<
     fn prove(
         public_parameters: &Self::PublicParameters,
         witnesses: Vec<[power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
-        commitment_randomness: &commitments::RandomnessSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>,
-        commitment: &commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>,
+        commitment_randomness: Vec<commitments::RandomnessSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
+        commitment: Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
         rng: &mut impl CryptoRngCore,
     ) -> Result<Self>;
 
@@ -53,7 +51,7 @@ pub trait RangeProof<
     fn verify(
         &self,
         public_parameters: &Self::PublicParameters,
-        commitment: &commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>,
+        commitment: Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
     ) -> Result<()>;
 }
 

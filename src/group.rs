@@ -16,7 +16,7 @@ pub mod paillier;
 
 pub mod additive_group_of_integers_modulu_n;
 pub mod multiplicative_group_of_integers_modulu_n;
-mod ristretto;
+pub mod ristretto;
 pub mod scalar;
 
 /// An error in group element instantiation [`GroupElement::new()`]
@@ -127,7 +127,18 @@ pub type PublicParameters<G> = <G as GroupElement>::PublicParameters;
 
 /// An element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in additive
 /// notation.
-pub trait BoundedGroupElement<const SCALAR_LIMBS: usize>: GroupElement {}
+pub trait BoundedGroupElement<const SCALAR_LIMBS: usize>: GroupElement {
+    // TODO: remove `scalar` from the name?
+    /// Returns a (tight) lower-bound on the scalar group
+    fn scalar_lower_bound(&self) -> Uint<SCALAR_LIMBS> {
+        Self::scalar_lower_bound_from_public_parameters(&self.public_parameters())
+    }
+
+    /// Returns a (tight) lower-bound on the scalar group
+    fn scalar_lower_bound_from_public_parameters(
+        public_parameters: &Self::PublicParameters,
+    ) -> Uint<SCALAR_LIMBS>;
+}
 
 /// Constant-time multiplication by the generator.
 ///
@@ -162,10 +173,12 @@ pub trait KnownOrderGroupElement<const SCALAR_LIMBS: usize>:
         + Mul<Self, Output = Self>
         + for<'r> Mul<&'r Self, Output = Self>;
 
+    /// Returns the order of the group
     fn order(&self) -> Uint<SCALAR_LIMBS> {
         Self::order_from_public_parameters(&self.public_parameters())
     }
 
+    /// Returns the order of the group
     fn order_from_public_parameters(
         public_parameters: &Self::PublicParameters,
     ) -> Uint<SCALAR_LIMBS>;

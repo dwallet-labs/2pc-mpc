@@ -8,7 +8,7 @@ use serde::Serialize;
 use super::{GroupsPublicParameters, StatementSpacePublicParameters, WitnessSpacePublicParameters};
 use crate::{
     commitments::HomomorphicCommitmentScheme,
-    group::{self_product, CyclicGroupElement, KnownOrderGroupElement, Samplable},
+    group::{self_product, BoundedGroupElement, CyclicGroupElement, Samplable},
     proofs,
     proofs::schnorr,
 };
@@ -34,7 +34,7 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentS
 impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> schnorr::Language
     for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
 where
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
+    Scalar: BoundedGroupElement<SCALAR_LIMBS>
         + Samplable
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>

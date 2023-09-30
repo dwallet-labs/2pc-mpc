@@ -7,8 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     group::{
-        additive_group_of_integers_modulu_n::power_of_two_moduli, GroupElement,
-        KnownOrderGroupElement,
+        additive_group_of_integers_modulu_n::power_of_two_moduli, BoundedGroupElement, GroupElement,
     },
     proofs,
     proofs::{
@@ -104,7 +103,6 @@ where
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<Self> {
         // TODO: choice of parameters, batching conversation in airport.
-        // TODO: lower bound not order
         if WITNESS_MASK_LIMBS
             != RANGE_CLAIM_LIMBS
                 + super::ChallengeSizedNumber::LIMBS
@@ -118,7 +116,7 @@ where
                 RANGE_CLAIM_LIMBS,
                 WITNESS_MASK_LIMBS,
                 Language,
-            >::order_from_public_parameters(
+            >::scalar_lower_bound_from_public_parameters(
                 &range_proof_public_parameters
                     .as_ref()
                     .as_ref()
@@ -195,12 +193,6 @@ where
             })
             .collect();
 
-        // TODO: are we sure we want to take just one for the entire batch?
-        let commitment_randomness = commitment_randomnesses
-            .first()
-            .ok_or(Error::InvalidParameters)?;
-        let commitment = commitments.first().ok_or(Error::InvalidParameters)?;
-
         let range_proof = language::enhanced::RangeProof::<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
@@ -210,8 +202,8 @@ where
         >::prove(
             range_proof_public_parameters,
             constrained_witnesses,
-            commitment_randomness,
-            commitment,
+            commitment_randomnesses,
+            commitments,
             rng,
         )?;
 
@@ -251,7 +243,7 @@ where
                 RANGE_CLAIM_LIMBS,
                 WITNESS_MASK_LIMBS,
                 Language,
-            >::order_from_public_parameters(
+            >::scalar_lower_bound_from_public_parameters(
                 &range_proof_public_parameters
                     .as_ref()
                     .as_ref()
@@ -280,14 +272,11 @@ where
             })
             .collect();
 
-        // TODO: are we sure we want to take just one for the entire batch?
-        let commitment = commitments.first().ok_or(Error::InvalidParameters)?;
-
         self.schnorr_proof
             .verify(protocol_context, language_public_parameters, statements)
             .and(
                 self.range_proof
-                    .verify(range_proof_public_parameters, commitment),
+                    .verify(range_proof_public_parameters, commitments),
             )
     }
 }
