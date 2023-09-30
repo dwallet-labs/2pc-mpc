@@ -9,7 +9,10 @@ use crate::{
     group::{BoundedGroupElement, GroupElement, Samplable},
 };
 
+pub mod multicommitment;
 pub mod pedersen;
+
+pub use multicommitment::MultiCommitment;
 
 /// A Homomorphic Commitment Scheme
 ///

@@ -52,6 +52,15 @@ pub struct PublicParameters<const N: usize, PP> {
     pub size: usize,
 }
 
+impl<const N: usize, PP> PublicParameters<N, PP> {
+    pub fn new(public_parameters: PP) -> Self {
+        Self {
+            public_parameters,
+            size: N,
+        }
+    }
+}
+
 /// The value of the Self Product of the Group `G` by Itself.
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct Value<const N: usize, G: group::GroupElement>(
@@ -81,10 +90,7 @@ impl<const N: usize, G: group::GroupElement> group::GroupElement for GroupElemen
         // in [`Self::new()`] we used the same public parameters for all elements, so we just pick
         // the first calling `unwrap()` is safe here because we assure to get at least two
         // values, i.e. this struct cannot be instantiated for `N == 0`.
-        Self::PublicParameters {
-            public_parameters: self.0.first().unwrap().public_parameters(),
-            size: N,
-        }
+        Self::PublicParameters::new(self.0.first().unwrap().public_parameters())
     }
 
     fn new(value: Self::Value, public_parameters: &Self::PublicParameters) -> group::Result<Self> {
