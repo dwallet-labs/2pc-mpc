@@ -4,10 +4,8 @@
 use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 
 use crypto_bigint::{Uint, U256};
-use k256::{
-    elliptic_curve,
-    elliptic_curve::{group::prime::PrimeCurveAffine, Group},
-    AffinePoint, ProjectivePoint,
+use curve25519_dalek::{
+    constants::RISTRETTO_BASEPOINT_POINT, ristretto, ristretto::RistrettoPoint, traits::Identity,
 };
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
@@ -15,25 +13,24 @@ use subtle::{Choice, ConstantTimeEq};
 use crate::{
     group,
     group::{
-        secp256k1::{scalar::Scalar, CURVE_EQUATION_A, CURVE_EQUATION_B, MODULUS, ORDER},
+        ristretto::{scalar::Scalar, CURVE_EQUATION_A, CURVE_EQUATION_B, MODULUS, ORDER},
         BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement, MulByGenerator,
         PrimeGroupElement,
     },
 };
 
-/// An element of the secp256k1 prime group.
-#[derive(PartialEq, Eq, Clone, Copy)]
-#[cfg_attr(test, derive(Debug))]
-pub struct GroupElement(pub(super) ProjectivePoint);
+/// An element of the ristretto prime group.
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct GroupElement(pub(super) ristretto::RistrettoPoint);
 
-/// The public parameters of the secp256k1 group.
+/// The public parameters of the ristretto group.
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct PublicParameters {
     name: String,
     curve_type: String,
     pub order: U256,
     pub modulus: U256,
-    pub generator: Value,
+    pub generator: GroupElement,
     pub curve_equation_a: U256,
     pub curve_equation_b: U256,
 }
@@ -41,38 +38,28 @@ pub struct PublicParameters {
 impl Default for PublicParameters {
     fn default() -> Self {
         Self {
-            name: "Secp256k1".to_string(),
-            curve_type: "Weierstrass".to_string(),
+            name: "Ristretto".to_string(),
+            curve_type: "Montgomery".to_string(),
             order: ORDER,
             modulus: MODULUS,
-            generator: Value(AffinePoint::GENERATOR),
+            generator: GroupElement(RISTRETTO_BASEPOINT_POINT),
             curve_equation_a: CURVE_EQUATION_A,
             curve_equation_b: CURVE_EQUATION_B,
         }
     }
 }
 
-/// The value of the secp256k1 group used for serialization.
-///
-/// This is a `newtype` around `AffinePoint` used to control instantiation;
-/// the only way to instantiate this type from outside this module is through deserialization,
-/// which in turn will invoke `AffinePoint`'s deserialization which assures the point is on curve.
-#[derive(PartialEq, Eq, Clone, Debug, Copy, Serialize, Deserialize)]
-pub struct Value(AffinePoint);
-
-impl ConstantTimeEq for Value {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        self.0.ct_eq(&other.0)
+impl ConstantTimeEq for GroupElement {
+    fn ct_eq(&self, _other: &Self) -> Choice {
+        todo!()
     }
 }
 
 impl group::GroupElement for GroupElement {
-    type Value = Value;
+    type Value = Self;
 
     fn value(&self) -> Self::Value {
-        // As this group element is valid, it's safe to instantiate a `Value`
-        // from the valid affine representation.
-        Value(self.0.to_affine())
+        *self
     }
 
     type PublicParameters = PublicParameters;
@@ -82,14 +69,14 @@ impl group::GroupElement for GroupElement {
     }
 
     fn new(value: Self::Value, _public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        // `k256::AffinePoint` assures deserialized values are on curve,
-        // and `Value` can only be instantiated through deserialization, so
+        // `RistrettoPoint` assures deserialized values are on curve,
+        // and `Self` can only be instantiated through deserialization, so
         // this is always safe.
-        Ok(Self(value.0.to_curve()))
+        Ok(value)
     }
 
     fn neutral(&self) -> Self {
-        Self(ProjectivePoint::IDENTITY)
+        Self(RistrettoPoint::identity())
     }
 
     fn scalar_mul<const LIMBS: usize>(&self, scalar: &Uint<LIMBS>) -> Self {
@@ -97,15 +84,7 @@ impl group::GroupElement for GroupElement {
     }
 
     fn double(&self) -> Self {
-        Self(<ProjectivePoint as Group>::double(&self.0))
-    }
-}
-
-impl From<GroupElement> for group::Value<GroupElement> {
-    fn from(value: GroupElement) -> Self {
-        // As this group element is valid, it's safe to instantiate a `Value`
-        // from the valid affine representation.
-        Self(value.0.to_affine())
+        Self(self.0 + self.0)
     }
 }
 
@@ -193,7 +172,7 @@ impl<'r> MulByGenerator<&'r U256> for GroupElement {
 
 impl CyclicGroupElement for GroupElement {
     fn generator(&self) -> Self {
-        Self(ProjectivePoint::GENERATOR)
+        Self(RISTRETTO_BASEPOINT_POINT)
     }
 }
 
@@ -215,15 +194,13 @@ impl KnownOrderGroupElement<{ U256::LIMBS }> for GroupElement {
 
 impl MulByGenerator<Scalar> for GroupElement {
     fn mul_by_generator(&self, scalar: Scalar) -> Self {
-        GroupElement(
-            <ProjectivePoint as elliptic_curve::ops::MulByGenerator>::mul_by_generator(&scalar.0),
-        )
+        scalar * self
     }
 }
 
 impl<'r> MulByGenerator<&'r Scalar> for GroupElement {
     fn mul_by_generator(&self, scalar: &'r Scalar) -> Self {
-        self.mul_by_generator(*scalar)
+        scalar * self
     }
 }
 

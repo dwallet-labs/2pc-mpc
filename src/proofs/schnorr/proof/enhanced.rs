@@ -104,6 +104,7 @@ where
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<Self> {
         // TODO: choice of parameters, batching conversation in airport.
+        // TODO: lower bound not order
         if WITNESS_MASK_LIMBS
             != RANGE_CLAIM_LIMBS
                 + super::ChallengeSizedNumber::LIMBS

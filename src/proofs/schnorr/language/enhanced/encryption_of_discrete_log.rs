@@ -198,17 +198,17 @@ where
                     .plaintext_space_public_parameters,
             )?;
 
+        // TODO: need
+        // to check this
+        // is
+        // safe, or retry if it fails.
+        // Also, need
+        // to implement.
         Ok((
             commitment_scheme.commit(
                 &discrete_log_in_range_claim_base_self_product.into(),
                 commitment_randomness,
-            ), /* TODO: need
-                * to check this
-                * is
-                * safe, or retry if it fails.
-                * Also, need
-                * to implement.
-                */
+            ),
             (
                 encryption_key
                     .encrypt_with_randomness(&discrete_log_plaintext, encryption_randomness),

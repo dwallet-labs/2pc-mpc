@@ -16,6 +16,7 @@ pub mod paillier;
 
 pub mod additive_group_of_integers_modulu_n;
 pub mod multiplicative_group_of_integers_modulu_n;
+mod ristretto;
 pub mod scalar;
 
 /// An error in group element instantiation [`GroupElement::new()`]

@@ -8,11 +8,14 @@ license = "Apache-2.0"
 crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint.git", features = ["rand_core", "serde"], default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 subtle = "2.5"
+subtle-ng = "2.5"
 thiserror = "1.0.47"
 k256 = { version = "0.13.1", features = ["arithmetic", "critical-section", "precomputed-tables", "serde"], default-features = false }
 merlin = { version = "3.0.0", default-features = false }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 tiresias = { git = "https://github.com/odsy-network/tiresias.git" }
+bulletproofs = "4.0.0"
+curve25519-dalek = { package = "curve25519-dalek-ng", version = "4", default-features = false, features = ["u64_backend", "serde"] }
 
 [dev-dependencies]
 rstest = "0.18.2"
