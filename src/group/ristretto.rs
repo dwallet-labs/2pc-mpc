@@ -8,6 +8,8 @@ pub mod scalar;
 pub use group_element::GroupElement;
 pub use scalar::Scalar;
 
+pub const SCALAR_LIMBS: usize = U256::LIMBS;
+
 // TODO: validate this
 
 /// The order `q` of the ristretto group

@@ -10,6 +10,7 @@ use curve25519_dalek::{
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
+use super::SCALAR_LIMBS;
 use crate::{
     group,
     group::{
@@ -21,7 +22,7 @@ use crate::{
 
 /// An element of the ristretto prime group.
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct GroupElement(pub(super) ristretto::RistrettoPoint);
+pub struct GroupElement(pub(crate) ristretto::RistrettoPoint);
 
 /// The public parameters of the ristretto group.
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
@@ -176,28 +177,28 @@ impl CyclicGroupElement for GroupElement {
     }
 }
 
-impl BoundedGroupElement<{ U256::LIMBS }> for GroupElement {
-    fn scalar_lower_bound(&self) -> Uint<{ U256::LIMBS }> {
+impl BoundedGroupElement<SCALAR_LIMBS> for GroupElement {
+    fn scalar_lower_bound(&self) -> Uint<SCALAR_LIMBS> {
         self.order()
     }
 
     fn scalar_lower_bound_from_public_parameters(
         public_parameters: &Self::PublicParameters,
-    ) -> Uint<{ U256::LIMBS }> {
+    ) -> Uint<SCALAR_LIMBS> {
         Self::order_from_public_parameters(public_parameters)
     }
 }
 
-impl KnownOrderGroupElement<{ U256::LIMBS }> for GroupElement {
+impl KnownOrderGroupElement<SCALAR_LIMBS> for GroupElement {
     type Scalar = Scalar;
 
-    fn order(&self) -> Uint<{ U256::LIMBS }> {
+    fn order(&self) -> Uint<SCALAR_LIMBS> {
         ORDER
     }
 
     fn order_from_public_parameters(
         _public_parameters: &Self::PublicParameters,
-    ) -> Uint<{ U256::LIMBS }> {
+    ) -> Uint<SCALAR_LIMBS> {
         ORDER
     }
 }
@@ -214,4 +215,4 @@ impl<'r> MulByGenerator<&'r Scalar> for GroupElement {
     }
 }
 
-impl PrimeGroupElement<{ U256::LIMBS }> for GroupElement {}
+impl PrimeGroupElement<SCALAR_LIMBS> for GroupElement {}

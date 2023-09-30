@@ -67,7 +67,7 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
     /// Prove a batched Schnorr zero-knowledge claim.
     /// Returns the zero-knowledge proof.
     pub fn prove(
-        protocol_context: ProtocolContext,
+        protocol_context: &ProtocolContext,
         language_public_parameters: &PublicParameters<Language>,
         witnesses_and_statements: Vec<(
             WitnessSpaceGroupElement<Language>,
@@ -87,7 +87,7 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         ) = witnesses_and_statements.into_iter().unzip();
 
         let mut transcript =
-            Self::setup_protocol(&protocol_context, language_public_parameters, statements)?;
+            Self::setup_protocol(protocol_context, language_public_parameters, statements)?;
 
         let randomizer = WitnessSpaceGroupElement::<Language>::sample(
             rng,
@@ -121,14 +121,14 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
     /// Verify a batched Schnorr zero-knowledge proof.
     pub fn verify(
         &self,
-        protocol_context: ProtocolContext,
+        protocol_context: &ProtocolContext,
         language_public_parameters: &PublicParameters<Language>,
         statements: Vec<StatementSpaceGroupElement<Language>>,
     ) -> proofs::Result<()> {
         let batch_size = statements.len();
 
         let mut transcript = Self::setup_protocol(
-            &protocol_context,
+            protocol_context,
             language_public_parameters,
             statements.clone(),
         )?;

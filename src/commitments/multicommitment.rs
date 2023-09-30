@@ -14,7 +14,6 @@ use crate::{
     },
     group,
     group::self_product,
-    helpers::flat_map_results,
 };
 
 /// The commitment scheme whose commitment algorithm maps `N` message space

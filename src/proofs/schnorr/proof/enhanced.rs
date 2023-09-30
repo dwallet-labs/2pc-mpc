@@ -16,7 +16,7 @@ use crate::{
             language,
             language::{StatementSpaceGroupElement, WitnessSpaceGroupElement},
         },
-        Error,
+        Error, Transcript, TranscriptProtocol,
     },
     StatisticalSecuritySizedNumber,
 };
@@ -87,7 +87,7 @@ where
     /// Prove an enhanced batched Schnorr zero-knowledge claim.
     /// Returns the zero-knowledge proof.
     pub fn prove(
-        protocol_context: ProtocolContext,
+        protocol_context: &ProtocolContext,
         language_public_parameters: &PublicParameters<Language>,
         range_proof_public_parameters: &language::enhanced::RangeProofPublicParameters<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -102,45 +102,16 @@ where
         )>,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<Self> {
-        // TODO: choice of parameters, batching conversation in airport.
-        if WITNESS_MASK_LIMBS
-            != RANGE_CLAIM_LIMBS
-                + super::ChallengeSizedNumber::LIMBS
-                + StatisticalSecuritySizedNumber::LIMBS
-            || WITNESS_MASK_LIMBS > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS
-            || Uint::<RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::from(
-                &Uint::<WITNESS_MASK_LIMBS>::MAX,
-            ) >= language::enhanced::RangeProofCommitmentSchemeMessageSpaceGroupElement::<
-                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                NUM_RANGE_CLAIMS,
-                RANGE_CLAIM_LIMBS,
-                WITNESS_MASK_LIMBS,
-                Language,
-            >::scalar_lower_bound_from_public_parameters(
-                &range_proof_public_parameters
-                    .as_ref()
-                    .as_ref()
-                    .message_space_public_parameters,
-            )
-        {
-            // TODO: dedicated error?
-            return Err(Error::InvalidParameters);
-        }
-
-        let schnorr_proof = super::Proof::<Language, ProtocolContext>::prove(
-            protocol_context,
-            language_public_parameters,
-            witnesses_and_statements.clone(),
-            rng,
-        )?;
+        let mut transcript =
+            Self::setup_range_proof(protocol_context, range_proof_public_parameters)?;
 
         let (witnesses, statements): (
             Vec<WitnessSpaceGroupElement<Language>>,
             Vec<StatementSpaceGroupElement<Language>>,
-        ) = witnesses_and_statements.into_iter().unzip();
+        ) = witnesses_and_statements.clone().into_iter().unzip();
 
         let (constrained_witnesses, commitment_randomnesses): (
-            Vec<[power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
+            Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
             Vec<
                 language::enhanced::RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
                     RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -158,19 +129,12 @@ where
                 let constrained_witness: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>;
                     NUM_RANGE_CLAIMS] = constrained_witness.into();
 
-                let constrained_witness: [power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>;
-                    NUM_RANGE_CLAIMS] = constrained_witness.map(|witness_part| {
-                    let witness_part_value: Uint<WITNESS_MASK_LIMBS> = witness_part.into();
-                    // TODO: should I return an error upon overflow or just let the proof fail?
-                    let witness_part_range_claim_value: Uint<RANGE_CLAIM_LIMBS> =
-                        (&witness_part_value).into();
-                    // power_of_two_moduli performs no checks, TODO: this is coupling
-                    power_of_two_moduli::GroupElement::<RANGE_CLAIM_LIMBS>::new(
-                        witness_part_range_claim_value,
-                        &(),
-                    )
-                    .unwrap()
-                });
+                let constrained_witness: [Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS] =
+                    constrained_witness.map(|witness_part| {
+                        let witness_part_value: Uint<WITNESS_MASK_LIMBS> = witness_part.into();
+
+                        (&witness_part_value).into()
+                    });
 
                 (constrained_witness, commitment_randomness)
             })
@@ -204,6 +168,14 @@ where
             constrained_witnesses,
             commitment_randomnesses,
             commitments,
+            &mut transcript,
+            rng,
+        )?;
+
+        let schnorr_proof = super::Proof::<Language, ProtocolContext>::prove(
+            protocol_context,
+            language_public_parameters,
+            witnesses_and_statements,
             rng,
         )?;
 
@@ -216,7 +188,7 @@ where
     /// Verify an enhanced batched Schnorr zero-knowledge proof.
     pub fn verify(
         &self,
-        protocol_context: ProtocolContext,
+        protocol_context: &ProtocolContext,
         language_public_parameters: &PublicParameters<Language>,
         range_proof_public_parameters: &language::enhanced::RangeProofPublicParameters<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -226,10 +198,53 @@ where
             Language,
         >,
         statements: Vec<StatementSpaceGroupElement<Language>>,
+        rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<()> {
         // TODO: here we should validate all the sizes are good etc. for example WITNESS_MASK_LIMBS
         // and RANGE_CLAIM_LIMBS and the message space thingy
 
+        let mut transcript =
+            Self::setup_range_proof(protocol_context, range_proof_public_parameters)?;
+
+        let commitments: Vec<
+            language::enhanced::RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
+                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                NUM_RANGE_CLAIMS,
+                RANGE_CLAIM_LIMBS,
+                WITNESS_MASK_LIMBS,
+                Language,
+            >,
+        > = statements
+            .clone()
+            .into_iter()
+            .map(|statement| {
+                let (commitment, _) = statement.into();
+
+                commitment
+            })
+            .collect();
+
+        self.schnorr_proof
+            .verify(protocol_context, language_public_parameters, statements)
+            .and(self.range_proof.verify(
+                range_proof_public_parameters,
+                commitments,
+                &mut transcript,
+                rng,
+            ))
+    }
+
+    fn setup_range_proof(
+        protocol_context: &ProtocolContext,
+        range_proof_public_parameters: &language::enhanced::RangeProofPublicParameters<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            Language,
+        >,
+    ) -> proofs::Result<Transcript> {
+        // TODO: choice of parameters, batching conversation in airport.
         if WITNESS_MASK_LIMBS
             != RANGE_CLAIM_LIMBS
                 + super::ChallengeSizedNumber::LIMBS
@@ -254,29 +269,22 @@ where
             return Err(Error::InvalidParameters);
         }
 
-        let commitments: Vec<
-            language::enhanced::RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
+        let mut transcript = Transcript::new(Language::NAME.as_bytes());
+
+        transcript.append_message(
+            b"range proof used for the enhanced Schnorr proof",
+            language::enhanced::RangeProof::<
                 RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 NUM_RANGE_CLAIMS,
                 RANGE_CLAIM_LIMBS,
                 WITNESS_MASK_LIMBS,
                 Language,
-            >,
-        > = statements
-            .clone()
-            .into_iter()
-            .map(|statement| {
-                let (commitment, _) = statement.into();
+            >::NAME
+                .as_bytes(),
+        );
 
-                commitment
-            })
-            .collect();
+        transcript.serialize_to_transcript_as_json(b"protocol context", protocol_context)?;
 
-        self.schnorr_proof
-            .verify(protocol_context, language_public_parameters, statements)
-            .and(
-                self.range_proof
-                    .verify(range_proof_public_parameters, commitments),
-            )
+        Ok(transcript)
     }
 }

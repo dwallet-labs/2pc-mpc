@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
+use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -21,6 +22,10 @@ pub trait RangeProof<
 >: Serialize + for<'a> Deserialize<'a> + Clone where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
 {
+    /// A unique string representing the name of this range proof; will be inserted to the Fiat-Shamir
+    /// transcript.
+    const NAME: &'static str;
+
     /// The commitment scheme used for the range proof
     type CommitmentScheme: HomomorphicCommitmentScheme<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>;
 
@@ -40,9 +45,10 @@ pub trait RangeProof<
     /// range upper bound in range_claims.
     fn prove(
         public_parameters: &Self::PublicParameters,
-        witnesses: Vec<[power_of_two_moduli::GroupElement<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
-        commitment_randomness: Vec<commitments::RandomnessSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
-        commitment: Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
+        witnesses:  Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
+        commitments_randomness: Vec<commitments::RandomnessSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
+        commitments: Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
+        transcript: &mut Transcript,
         rng: &mut impl CryptoRngCore,
     ) -> Result<Self>;
 
@@ -51,7 +57,9 @@ pub trait RangeProof<
     fn verify(
         &self,
         public_parameters: &Self::PublicParameters,
-        commitment: Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
+        commitments: Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
+        transcript: &mut Transcript,
+        rng: &mut impl CryptoRngCore,
     ) -> Result<()>;
 }
 

@@ -7,7 +7,7 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, NonZero, Uint, U256};
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConstantTimeEq};
 
-use super::GroupElement;
+use super::{GroupElement, SCALAR_LIMBS};
 // TODO: use original dalek repos.
 // TODO: ct_eq
 use crate::{
@@ -23,7 +23,7 @@ use crate::{
 /// defined.
 #[derive(PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug))]
-pub struct Scalar(pub(super) curve25519_dalek::scalar::Scalar);
+pub struct Scalar(pub(crate) curve25519_dalek::scalar::Scalar);
 
 impl ConstantTimeEq for Scalar {
     fn ct_eq(&self, _other: &Self) -> Choice {
@@ -94,14 +94,14 @@ impl From<Scalar> for group::PublicParameters<Scalar> {
     }
 }
 
-impl BoundedGroupElement<{ U256::LIMBS }> for Scalar {
-    fn scalar_lower_bound(&self) -> Uint<{ U256::LIMBS }> {
+impl BoundedGroupElement<SCALAR_LIMBS> for Scalar {
+    fn scalar_lower_bound(&self) -> Uint<SCALAR_LIMBS> {
         self.order()
     }
 
     fn scalar_lower_bound_from_public_parameters(
         public_parameters: &Self::PublicParameters,
-    ) -> Uint<{ U256::LIMBS }> {
+    ) -> Uint<SCALAR_LIMBS> {
         Self::order_from_public_parameters(public_parameters)
     }
 }
@@ -287,17 +287,17 @@ impl CyclicGroupElement for Scalar {
     }
 }
 
-impl KnownOrderScalar<{ U256::LIMBS }> for Scalar {}
+impl KnownOrderScalar<SCALAR_LIMBS> for Scalar {}
 
-impl KnownOrderGroupElement<{ U256::LIMBS }> for Scalar {
+impl KnownOrderGroupElement<SCALAR_LIMBS> for Scalar {
     type Scalar = Self;
-    fn order(&self) -> Uint<{ U256::LIMBS }> {
+    fn order(&self) -> Uint<SCALAR_LIMBS> {
         super::ORDER
     }
 
     fn order_from_public_parameters(
         _public_parameters: &Self::PublicParameters,
-    ) -> Uint<{ U256::LIMBS }> {
+    ) -> Uint<SCALAR_LIMBS> {
         super::ORDER
     }
 }
@@ -316,4 +316,4 @@ impl<'r> MulByGenerator<&'r Scalar> for Scalar {
     }
 }
 
-impl PrimeGroupElement<{ U256::LIMBS }> for Scalar {}
+impl PrimeGroupElement<SCALAR_LIMBS> for Scalar {}

@@ -14,7 +14,6 @@ use crate::{
 #[derive(PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(test, derive(Debug))]
 pub struct GroupElement<const LIMBS: usize>(Wrapping<Uint<LIMBS>>);
-
 impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
@@ -26,31 +25,25 @@ where
         Ok(Self(Wrapping::<Uint<LIMBS>>::random(rng)))
     }
 }
-
 impl<const LIMBS: usize> group::GroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
     type Value = Uint<LIMBS>;
     type PublicParameters = ();
-
     fn public_parameters(&self) -> Self::PublicParameters {}
-
     fn new(
         value: Self::Value,
         _public_parameters: &Self::PublicParameters,
     ) -> crate::group::Result<Self> {
         Ok(Self(Wrapping(value)))
     }
-
     fn neutral(&self) -> Self {
         Self(Wrapping::<Uint<LIMBS>>::ZERO)
     }
-
     fn scalar_mul<const RHS_LIMBS: usize>(&self, scalar: &Uint<RHS_LIMBS>) -> Self {
         Self(Wrapping(self.0 .0.wrapping_mul(scalar)))
     }
-
     fn double(&self) -> Self {
         Self(self.0 + self.0)
     }
