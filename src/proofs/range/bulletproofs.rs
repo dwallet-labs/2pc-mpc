@@ -86,7 +86,6 @@ impl<const NUM_RANGE_CLAIMS: usize>
 
         Ok(proof)
     }
-
     fn verify(
         &self,
         public_parameters: &Self::PublicParameters,

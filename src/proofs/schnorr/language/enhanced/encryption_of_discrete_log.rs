@@ -41,8 +41,8 @@ pub struct Language<
     const SCALAR_LIMBS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const MASK_LIMBS: usize,
-    const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
-    const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
     const WITNESS_MASK_LIMBS: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     Scalar,
@@ -80,11 +80,7 @@ impl<
         Scalar,
         GroupElement: group::GroupElement,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        RangeProof: proofs::RangeProof<
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-        >,
+        RangeProof,
     > schnorr::Language
     for Language<
         SCALAR_LIMBS,
@@ -116,6 +112,11 @@ where
         RangeProof,
     >: for<'a> From<
         &'a super::ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>,
+    >,
+    RangeProof: proofs::RangeProof<
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
     >,
 {
     type WitnessSpaceGroupElement = super::EnhancedLanguageWitness<
@@ -183,7 +184,7 @@ where
             WITNESS_MASK_LIMBS,
         >; RANGE_CLAIMS_PER_SCALAR] = (*discrete_log_in_range_claim_base_self_product).into();
 
-        let discrete_log: Uint<SCALAR_LIMBS> = super::constrained_witness_to_scalar::<
+        let discrete_log: Uint<SCALAR_LIMBS> = super::switch_constrained_witness_base::<
             RANGE_CLAIMS_PER_SCALAR,
             RANGE_CLAIM_LIMBS,
             WITNESS_MASK_LIMBS,
@@ -233,18 +234,14 @@ impl<
         const SCALAR_LIMBS: usize,
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const MASK_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
-        const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+        const RANGE_CLAIMS_PER_SCALAR: usize,
+        const RANGE_CLAIM_LIMBS: usize,
         const WITNESS_MASK_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         Scalar: group::GroupElement,
         GroupElement: group::GroupElement,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        RangeProof: proofs::RangeProof<
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-        >,
+        RangeProof,
     >
     EnhancedLanguage<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -282,6 +279,11 @@ where
         RangeProof,
     >: for<'a> From<
         &'a super::ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>,
+    >,
+    RangeProof: proofs::RangeProof<
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
     >,
 {
     type UnboundedWitnessSpaceGroupElement =

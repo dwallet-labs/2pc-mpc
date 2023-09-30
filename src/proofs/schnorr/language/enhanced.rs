@@ -135,21 +135,22 @@ pub trait EnhancedLanguage<
     type RangeProof: proofs::RangeProof<RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>;
 }
 
-fn constrained_witness_to_scalar<
-    const RANGE_CLAIMS_PER_SCALAR: usize,
+// TODO: this is the same computation for the mask right? and it also overlaps
+fn switch_constrained_witness_base<
+    const RANGE_CLAIMS_PER_WITNESS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     const WITNESS_MASK_LIMBS: usize,
-    const SCALAR_LIMBS: usize,
+    const LIMBS: usize,
 >(
-    constrained_witness: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_SCALAR],
-) -> proofs::Result<Uint<SCALAR_LIMBS>> {
+    constrained_witness: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_WITNESS],
+) -> proofs::Result<Uint<LIMBS>> {
     // TODO: perform all the checks here, checking add
 
     // TODO: move these constants to public parameters or something
-    let delta: Uint<SCALAR_LIMBS> =
-        Uint::<SCALAR_LIMBS>::from(&Uint::<RANGE_CLAIM_LIMBS>::MAX).wrapping_add(&1u64.into());
+    let delta: Uint<LIMBS> =
+        Uint::<LIMBS>::from(&Uint::<RANGE_CLAIM_LIMBS>::MAX).wrapping_add(&1u64.into());
 
-    let constrained_witness: Vec<Wrapping<Uint<SCALAR_LIMBS>>> = constrained_witness
+    let constrained_witness: Vec<Wrapping<Uint<LIMBS>>> = constrained_witness
         .into_iter()
         .map(|witness| Wrapping((&witness).into()))
         .collect();
