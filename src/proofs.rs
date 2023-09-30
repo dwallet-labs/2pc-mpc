@@ -10,7 +10,7 @@ use serde::Serialize;
 
 use crate::{ahe, group};
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Clone)]
 pub enum Error {
     #[error("invalid parameters")]
     InvalidParameters,

@@ -1,7 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{marker::PhantomData, ops::Mul};
+use std::{array, marker::PhantomData, ops::Mul};
 
 use crypto_bigint::{Encoding, Uint};
 use language::GroupsPublicParameters;
@@ -109,11 +109,11 @@ where
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Copy,
-    Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
+    Scalar::Value: From<Uint<SCALAR_LIMBS>>,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
     CommitmentScheme: HomomorphicCommitmentScheme<
         SCALAR_LIMBS,
-        MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>, // TODO
+        MessageSpaceGroupElement = self_product::GroupElement<DIMENSION, Scalar>,
         RandomnessSpaceGroupElement = Scalar,
         CommitmentSpaceGroupElement = GroupElement,
     >,
@@ -122,6 +122,12 @@ where
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
     >,
+    range::CommitmentSchemeMessageSpaceGroupElement<
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        RangeProof,
+    >: From<[Uint<WITNESS_MASK_LIMBS>; NUM_RANGE_CLAIMS]>,
 {
     type WitnessSpaceGroupElement = super::EnhancedLanguageWitness<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -167,14 +173,18 @@ where
             return Err(proofs::Error::InvalidParameters);
         }
 
-        let (coefficients, commitment_randomness, encryption_randomness) = witness.into();
+        let (
+            coefficients_and_mask_in_witness_mask_base,
+            commitment_randomness,
+            encryption_randomness,
+        ) = witness.into();
 
-        let scalar_group_order = Scalar::order_from_public_parameters(
-            &language_public_parameters
-                .commitment_scheme_public_parameters
-                .as_ref()
-                .randomness_space_public_parameters,
-        );
+        let scalar_group_public_paramaters = &language_public_parameters
+            .commitment_scheme_public_parameters
+            .as_ref()
+            .randomness_space_public_parameters;
+        let scalar_group_order =
+            Scalar::order_from_public_parameters(scalar_group_public_paramaters);
 
         let encryption_key =
             EncryptionKey::new(&language_public_parameters.encryption_scheme_public_parameters)?;
@@ -194,33 +204,69 @@ where
                 )
             }))?;
 
-        let coefficients_iter: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>;
-            NUM_RANGE_CLAIMS] = coefficients.clone().into();
-        let mut coefficients_iter = coefficients_iter.into_iter();
+        let coefficients_and_mask_in_witness_mask_base: [power_of_two_moduli::GroupElement<
+            WITNESS_MASK_LIMBS,
+        >; NUM_RANGE_CLAIMS] = coefficients_and_mask_in_witness_mask_base.clone().into();
 
-        let mask_in_range_claim_base = coefficients_iter.take(RANGE_CLAIMS_PER_MASK);
+        let coefficients_and_mask_in_witness_mask_base: [Uint<WITNESS_MASK_LIMBS>;
+            NUM_RANGE_CLAIMS] = coefficients_and_mask_in_witness_mask_base
+            .map(|witness| Uint::<WITNESS_MASK_LIMBS>::from(witness));
+        let mut coefficients_and_mask_in_witness_mask_base_iter =
+            coefficients_and_mask_in_witness_mask_base.into_iter();
+
+        let coefficients_in_witness_mask_base: [[Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_SCALAR];
+            DIMENSION] = flat_map_results(array::from_fn(|_| {
+            flat_map_results(array::from_fn(|_| {
+                coefficients_and_mask_in_witness_mask_base_iter
+                    .next()
+                    .ok_or(proofs::Error::InvalidParameters)
+            }))
+        }))?;
+
+        let coefficients = flat_map_results(coefficients_in_witness_mask_base.map(
+            |coefficient_in_witness_base| {
+                super::switch_constrained_witness_base::<
+                    RANGE_CLAIMS_PER_SCALAR,
+                    RANGE_CLAIM_LIMBS,
+                    WITNESS_MASK_LIMBS,
+                    SCALAR_LIMBS,
+                >(coefficient_in_witness_base)
+            },
+        ))?;
+
+        let coefficients: [Scalar; DIMENSION] =
+            flat_map_results(coefficients.map(|scalar_value| {
+                Scalar::new(scalar_value.into(), scalar_group_public_paramaters)
+            }))?;
+
+        let mask_in_witness_mask_base: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_MASK] =
+            flat_map_results(array::from_fn(|_| {
+                coefficients_and_mask_in_witness_mask_base_iter
+                    .next()
+                    .ok_or(proofs::Error::InvalidParameters)
+            }))?;
+
         let mask: Uint<MASK_LIMBS> = super::switch_constrained_witness_base::<
             RANGE_CLAIMS_PER_MASK,
             RANGE_CLAIM_LIMBS,
             WITNESS_MASK_LIMBS,
             MASK_LIMBS,
-        >(
-            mask_in_range_claim_base.map(|element| Uint::<WITNESS_MASK_LIMBS>::from(element)),
-        )?;
-
-        // let coefficients =
+        >(mask_in_witness_mask_base)?;
 
         Ok((
-            range_proof_commitment_scheme.commit(&coefficients.into(), commitment_randomness),
+            range_proof_commitment_scheme.commit(
+                &coefficients_and_mask_in_witness_mask_base.into(),
+                commitment_randomness,
+            ),
             (
                 encryption_key.evaluate_circuit_private_linear_combination_with_randomness(
-                    coefficients.into(),
+                    coefficients_and_mask_in_witness_mask_base.into(),
                     &ciphertexts,
                     &scalar_group_order,
                     &mask.into(),
                     encryption_randomness,
                 )?,
-                commitment_scheme.commit(coefficients, commitment_randomness),
+                commitment_scheme.commit(&coefficients.into(), commitment_randomness),
             ),
         )
             .into())
@@ -275,11 +321,11 @@ where
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Copy,
-    Scalar::Value: From<[Uint<RANGE_CLAIM_LIMBS>; RANGE_CLAIMS_PER_SCALAR]>,
+    Scalar::Value: From<Uint<SCALAR_LIMBS>>,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
     CommitmentScheme: HomomorphicCommitmentScheme<
         SCALAR_LIMBS,
-        MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>, // TODO
+        MessageSpaceGroupElement = self_product::GroupElement<DIMENSION, Scalar>,
         RandomnessSpaceGroupElement = Scalar,
         CommitmentSpaceGroupElement = GroupElement,
     >,
@@ -288,6 +334,12 @@ where
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
     >,
+    range::CommitmentSchemeMessageSpaceGroupElement<
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        RangeProof,
+    >: From<[Uint<WITNESS_MASK_LIMBS>; NUM_RANGE_CLAIMS]>,
 {
     type UnboundedWitnessSpaceGroupElement = direct_product::GroupElement<
         // The commitment randomness
