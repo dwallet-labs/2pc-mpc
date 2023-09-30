@@ -13,6 +13,7 @@ use crate::{
     commitments::HomomorphicCommitmentScheme,
     group,
     group::{direct_product, BoundedGroupElement, Samplable},
+    helpers::flat_map_results,
     proofs,
     proofs::{range, schnorr},
     AdditivelyHomomorphicEncryptionKey,
@@ -140,19 +141,25 @@ where
     const NAME: &'static str = "Committed Linear Evaluation";
 
     fn group_homomorphism(
-        _witness: &language::WitnessSpaceGroupElement<Self>,
-        _language_public_parameters: &language::PublicParameters<Self>,
+        witness: &language::WitnessSpaceGroupElement<Self>,
+        language_public_parameters: &language::PublicParameters<Self>,
     ) -> proofs::Result<language::StatementSpaceGroupElement<Self>> {
         // let (coefficients, commitment_randomness, mask, encryption_randomness) = witness.into();
         //
         // let (_, scalar_group_public_parameters, _, randomness_group_public_parameters) =
-        //     witness_space_public_parameters.into();
+        //     &language_public_parameters
+        //         .groups_public_parameters
+        //         .witness_space_public_parameters
+        //         .into();
         //
         // let scalar_group_order =
         //     Scalar::order_from_public_parameters(&scalar_group_public_parameters);
         //
         // let (ciphertext_group_public_parameters, group_public_parameters) =
-        //     statement_space_public_parameters.into();
+        //     &language_public_parameters
+        //         .groups_public_parameters
+        //         .statement_space_public_parameters
+        //         .into();
         //
         // let encryption_key = EncryptionKey::new(
         //     &language_public_parameters.encryption_scheme_public_parameters,
@@ -182,6 +189,7 @@ where
         //     commitment_scheme.commit(coefficients, commitment_randomness),
         // )
         //     .into())
+
         todo!()
     }
 }

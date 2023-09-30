@@ -1,7 +1,10 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto_bigint::{Encoding, Uint};
+use std::array;
+
+use crypto_bigint::{Encoding, Uint, Wrapping};
+use tiresias::secret_sharing::shamir::Polynomial;
 
 use crate::{
     group,
@@ -130,6 +133,31 @@ pub trait EnhancedLanguage<
 
     /// The range proof used to prove the constrained witnesses are within the range specified in the public parameters.
     type RangeProof: proofs::RangeProof<RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>;
+}
+
+fn constrained_witness_to_scalar<
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+>(
+    constrained_witness: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_SCALAR],
+) -> proofs::Result<Uint<SCALAR_LIMBS>> {
+    // TODO: perform all the checks here, checking add
+
+    // TODO: move these constants to public parameters or something
+    let delta: Uint<SCALAR_LIMBS> =
+        Uint::<SCALAR_LIMBS>::from(&Uint::<RANGE_CLAIM_LIMBS>::MAX).wrapping_add(&1u64.into());
+
+    let constrained_witness: Vec<Wrapping<Uint<SCALAR_LIMBS>>> = constrained_witness
+        .into_iter()
+        .map(|witness| Wrapping((&witness).into()))
+        .collect();
+
+    let polynomial =
+        Polynomial::try_from(constrained_witness).map_err(|_| proofs::Error::InvalidParameters)?;
+
+    Ok(polynomial.evaluate(&Wrapping(delta)).0)
 }
 
 pub type UnconstrainedWitnessSpaceGroupElement<

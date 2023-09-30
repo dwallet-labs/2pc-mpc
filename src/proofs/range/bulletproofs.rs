@@ -47,10 +47,9 @@ impl<const NUM_RANGE_CLAIMS: usize>
         let compressed_commitments: Vec<curve25519_dalek::ristretto::CompressedRistretto> =
             commitments
                 .into_iter()
-                .map(|multicommitment| {
+                .flat_map(|multicommitment| {
                     <[ristretto::GroupElement; NUM_RANGE_CLAIMS]>::from(multicommitment)
                 })
-                .flatten()
                 .map(|commitment| commitment.0.compress())
                 .collect();
 
@@ -62,10 +61,9 @@ impl<const NUM_RANGE_CLAIMS: usize>
 
         let commitments_randomness: Vec<curve25519_dalek::scalar::Scalar> = commitments_randomness
             .into_iter()
-            .map(|multicommitment_randomness| {
+            .flat_map(|multicommitment_randomness| {
                 <[ristretto::Scalar; NUM_RANGE_CLAIMS]>::from(multicommitment_randomness)
             })
-            .flatten()
             .map(|randomness| randomness.0)
             .collect();
 
@@ -105,10 +103,9 @@ impl<const NUM_RANGE_CLAIMS: usize>
         let compressed_commitments: Vec<curve25519_dalek::ristretto::CompressedRistretto> =
             commitments
                 .into_iter()
-                .map(|multicommitment| {
+                .flat_map(|multicommitment| {
                     <[ristretto::GroupElement; NUM_RANGE_CLAIMS]>::from(multicommitment)
                 })
-                .flatten()
                 .map(|commitment| commitment.0.compress())
                 .collect();
 
