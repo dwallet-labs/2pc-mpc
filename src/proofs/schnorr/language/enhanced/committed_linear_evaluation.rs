@@ -180,12 +180,12 @@ where
 
         let (commitment_randomness, encryption_randomness) = remaining_witness.into();
 
-        let scalar_group_public_paramaters = &language_public_parameters
+        let scalar_group_public_parameters = &language_public_parameters
             .commitment_scheme_public_parameters
             .as_ref()
             .randomness_space_public_parameters;
         let scalar_group_order =
-            Scalar::order_from_public_parameters(scalar_group_public_paramaters);
+            Scalar::order_from_public_parameters(scalar_group_public_parameters);
 
         let encryption_key =
             EncryptionKey::new(&language_public_parameters.encryption_scheme_public_parameters)?;
@@ -226,7 +226,7 @@ where
 
         let coefficients_as_numbers = flat_map_results(coefficients_in_witness_mask_base.map(
             |coefficient_in_witness_base| {
-                super::switch_constrained_witness_base::<
+                super::witness_mask_base_to_integer::<
                     RANGE_CLAIMS_PER_SCALAR,
                     RANGE_CLAIM_LIMBS,
                     WITNESS_MASK_LIMBS,
@@ -237,7 +237,7 @@ where
 
         let coefficients_as_scalar: [Scalar; DIMENSION] =
             flat_map_results(coefficients_as_numbers.map(|coefficient| {
-                Scalar::new(coefficient.into(), scalar_group_public_paramaters)
+                Scalar::new(coefficient.into(), scalar_group_public_parameters)
             }))?;
 
         let coefficients_as_plaintext_elements =
@@ -258,7 +258,7 @@ where
                     .ok_or(proofs::Error::InvalidParameters)
             }))?;
 
-        let mask: Uint<MASK_LIMBS> = super::switch_constrained_witness_base::<
+        let mask: Uint<MASK_LIMBS> = super::witness_mask_base_to_integer::<
             RANGE_CLAIMS_PER_MASK,
             RANGE_CLAIM_LIMBS,
             WITNESS_MASK_LIMBS,

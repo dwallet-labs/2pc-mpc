@@ -103,8 +103,7 @@ where
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Copy,
-    Scalar::Value: From<Uint<SCALAR_LIMBS>>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
+    Scalar::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
     range::CommitmentSchemeMessageSpaceGroupElement<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
@@ -156,7 +155,7 @@ where
         language_public_parameters: &language::PublicParameters<Self>,
     ) -> proofs::Result<language::StatementSpaceGroupElement<Self>> {
         let (
-            discrete_log_in_range_claim_base_self_product,
+            discrete_log_in_witness_mask_base_element,
             commitment_randomness,
             encryption_randomness,
         ) = witness.into();
@@ -180,49 +179,48 @@ where
             &language_public_parameters.commitment_scheme_public_parameters,
         )?;
 
-        let discrete_log_in_range_claim_base: [power_of_two_moduli::GroupElement<
+        let discrete_log_in_witness_mask_base: [power_of_two_moduli::GroupElement<
             WITNESS_MASK_LIMBS,
-        >; RANGE_CLAIMS_PER_SCALAR] = (*discrete_log_in_range_claim_base_self_product).into();
+        >; RANGE_CLAIMS_PER_SCALAR] = (*discrete_log_in_witness_mask_base_element).into();
 
-        let discrete_log: Uint<SCALAR_LIMBS> = super::switch_constrained_witness_base::<
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            SCALAR_LIMBS,
-        >(
-            discrete_log_in_range_claim_base
-                .map(|element| Uint::<WITNESS_MASK_LIMBS>::from(element)),
-        )?;
+        let discrete_log_in_witness_mask_base: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_SCALAR] =
+            discrete_log_in_witness_mask_base
+                .map(|element| Uint::<WITNESS_MASK_LIMBS>::from(element));
 
-        let discrete_log = Scalar::new(
+        let discrete_log: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> =
+            super::witness_mask_base_to_integer::<
+                RANGE_CLAIMS_PER_SCALAR,
+                RANGE_CLAIM_LIMBS,
+                WITNESS_MASK_LIMBS,
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+            >(discrete_log_in_witness_mask_base)?;
+
+        let discrete_log_scalar = Scalar::new(
             discrete_log.into(),
             &language_public_parameters.scalar_group_public_parameters,
         )?;
 
         let discrete_log_plaintext =
             ahe::PlaintextSpaceGroupElement::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>::new(
-                Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(discrete_log),
+                discrete_log,
                 &language_public_parameters
                     .encryption_scheme_public_parameters
                     .as_ref()
                     .plaintext_space_public_parameters,
             )?;
 
-        // TODO: need
-        // to check this
-        // is
-        // safe, or retry if it fails.
-        // Also, need
-        // to implement.
+        // TODO: Need to check that WITNESS_MASK_LIMBS is actually in a size fitting the range proof
+        // commitment scheme without going through modulation, and to implement `From` to
+        // transition.
         Ok((
             commitment_scheme.commit(
-                &discrete_log_in_range_claim_base_self_product.into(),
+                &discrete_log_in_witness_mask_base_element.into(),
                 commitment_randomness,
             ),
             (
                 encryption_key
                     .encrypt_with_randomness(&discrete_log_plaintext, encryption_randomness),
-                discrete_log * base,
+                discrete_log_scalar * base,
             )
                 .into(),
         )
@@ -270,8 +268,7 @@ where
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Copy,
-    Scalar::Value: From<Uint<SCALAR_LIMBS>>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
+    Scalar::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
     range::CommitmentSchemeMessageSpaceGroupElement<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,

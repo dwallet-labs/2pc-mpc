@@ -135,8 +135,7 @@ pub trait EnhancedLanguage<
     type RangeProof: proofs::RangeProof<RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>;
 }
 
-// TODO: this is the same computation for the mask right? and it also overlaps
-fn switch_constrained_witness_base<
+fn witness_mask_base_to_integer<
     const RANGE_CLAIMS_PER_WITNESS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     const WITNESS_MASK_LIMBS: usize,
@@ -144,9 +143,9 @@ fn switch_constrained_witness_base<
 >(
     constrained_witness: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_WITNESS],
 ) -> proofs::Result<Uint<LIMBS>> {
-    // TODO: perform all the checks here, checking add
+    // TODO: perform all the checks here, checking add - also check that no modulation occurs in
+    // LIMBS for the entire computation
 
-    // TODO: move these constants to public parameters or something
     let delta: Uint<LIMBS> =
         Uint::<LIMBS>::from(&Uint::<RANGE_CLAIM_LIMBS>::MAX).wrapping_add(&1u64.into());
 
