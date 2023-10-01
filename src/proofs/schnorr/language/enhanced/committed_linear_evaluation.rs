@@ -14,7 +14,7 @@ use crate::{
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
-        BoundedGroupElement, GroupElement as _, KnownOrderScalar, Samplable,
+        GroupElement as _, KnownOrderScalar, Samplable,
     },
     helpers::flat_map_results,
     proofs,

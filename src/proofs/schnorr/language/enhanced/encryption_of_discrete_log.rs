@@ -15,7 +15,7 @@ use crate::{
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product,
-        BoundedGroupElement, GroupElement as _, Samplable,
+        BoundedGroupElement, Samplable,
     },
     proofs,
     proofs::{range, schnorr},

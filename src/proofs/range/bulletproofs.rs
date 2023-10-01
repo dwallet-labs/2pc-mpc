@@ -1,15 +1,14 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 use bulletproofs::{self, BulletproofGens, PedersenGens};
-use crypto_bigint::{rand_core::CryptoRngCore, Uint, U256, U64};
+use crypto_bigint::{rand_core::CryptoRngCore, Uint, U64};
 use ristretto::SCALAR_LIMBS;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     commitments,
     commitments::{multicommitment::MultiCommitment, pedersen, GroupsPublicParameters, Pedersen},
-    group,
-    group::{additive_group_of_integers_modulu_n::power_of_two_moduli, ristretto, self_product},
+    group::{ristretto, self_product},
     proofs::{Error, Transcript},
 };
 
@@ -29,7 +28,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
     type PublicParameters = PublicParameters<NUM_RANGE_CLAIMS>;
 
     fn prove(
-        public_parameters: &Self::PublicParameters,
+        _public_parameters: &Self::PublicParameters,
         witnesses: Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
         commitments_randomness: Vec<
             commitments::RandomnessSpaceGroupElement<SCALAR_LIMBS, Self::CommitmentScheme>,
@@ -42,6 +41,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
     ) -> crate::proofs::Result<Self> {
         let commitment_generators = PedersenGens::default();
 
+        // TODO: maybe use smaller than 64 here
         let bulletproofs_generators = BulletproofGens::new(64, 1);
 
         let compressed_commitments: Vec<curve25519_dalek::ristretto::CompressedRistretto> =
@@ -70,12 +70,14 @@ impl<const NUM_RANGE_CLAIMS: usize>
         // TODO: above operation keeps order right?
 
         // TODO: the commitments here are being double computed? ...
+        // TODO: change (everywhere!) that `prove()` functions generate the statements, and not get
+        // them.
         let (proof, proof_commitments) = bulletproofs::RangeProof::prove_multiple_with_rng(
             &bulletproofs_generators,
             &commitment_generators,
             transcript,
-            witnesses.as_slice().into(),
-            commitments_randomness.as_slice().into(),
+            witnesses.as_slice(),
+            commitments_randomness.as_slice(),
             64,
             rng,
         )?;
@@ -88,7 +90,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
     }
     fn verify(
         &self,
-        public_parameters: &Self::PublicParameters,
+        _public_parameters: &Self::PublicParameters,
         commitments: Vec<
             commitments::CommitmentSpaceGroupElement<SCALAR_LIMBS, Self::CommitmentScheme>,
         >,

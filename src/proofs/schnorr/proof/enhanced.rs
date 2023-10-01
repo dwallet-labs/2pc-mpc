@@ -6,9 +6,7 @@ use language::PublicParameters;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    group::{
-        additive_group_of_integers_modulu_n::power_of_two_moduli, BoundedGroupElement, GroupElement,
-    },
+    group::{additive_group_of_integers_modulu_n::power_of_two_moduli, BoundedGroupElement},
     proofs,
     proofs::{
         range::RangeProof,

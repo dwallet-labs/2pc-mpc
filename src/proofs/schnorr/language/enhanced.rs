@@ -1,16 +1,16 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{array, ops::Mul, process::Output};
+use std::ops::Mul;
 
-use crypto_bigint::{Encoding, Uint, Wrapping};
+use crypto_bigint::{Encoding, Uint};
 use tiresias::secret_sharing::shamir::Polynomial;
 
 use crate::{
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
-        BoundedGroupElement, GroupElement, Samplable, Scalar,
+        BoundedGroupElement, GroupElement, Samplable,
     },
     proofs,
     proofs::range,

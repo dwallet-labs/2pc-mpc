@@ -5,10 +5,7 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    commitments, commitments::HomomorphicCommitmentScheme,
-    group::additive_group_of_integers_modulu_n::power_of_two_moduli, proofs::Result,
-};
+use crate::{commitments, commitments::HomomorphicCommitmentScheme, proofs::Result};
 
 pub mod bulletproofs;
 
@@ -45,7 +42,7 @@ pub trait RangeProof<
     /// range upper bound in range_claims.
     fn prove(
         public_parameters: &Self::PublicParameters,
-        witnesses:  Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
+        witnesses: Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
         commitments_randomness: Vec<commitments::RandomnessSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
         commitments: Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
         transcript: &mut Transcript,
