@@ -110,7 +110,6 @@ where
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Copy,
     Scalar::Value: From<Uint<SCALAR_LIMBS>>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
     CommitmentScheme: HomomorphicCommitmentScheme<
         SCALAR_LIMBS,
         MessageSpaceGroupElement = self_product::GroupElement<DIMENSION, Scalar>,
@@ -175,9 +174,11 @@ where
 
         let (
             coefficients_and_mask_in_witness_mask_base,
-            commitment_randomness,
-            encryption_randomness,
+            range_proof_commitment_randomness,
+            remaining_witness,
         ) = witness.into();
+
+        let (commitment_randomness, encryption_randomness) = remaining_witness.into();
 
         let scalar_group_public_paramaters = &language_public_parameters
             .commitment_scheme_public_parameters
@@ -223,7 +224,7 @@ where
             }))
         }))?;
 
-        let coefficients = flat_map_results(coefficients_in_witness_mask_base.map(
+        let coefficients_as_numbers = flat_map_results(coefficients_in_witness_mask_base.map(
             |coefficient_in_witness_base| {
                 super::switch_constrained_witness_base::<
                     RANGE_CLAIMS_PER_SCALAR,
@@ -234,9 +235,20 @@ where
             },
         ))?;
 
-        let coefficients: [Scalar; DIMENSION] =
-            flat_map_results(coefficients.map(|scalar_value| {
-                Scalar::new(scalar_value.into(), scalar_group_public_paramaters)
+        let coefficients_as_scalar: [Scalar; DIMENSION] =
+            flat_map_results(coefficients_as_numbers.map(|coefficient| {
+                Scalar::new(coefficient.into(), scalar_group_public_paramaters)
+            }))?;
+
+        let coefficients_as_plaintext_elements =
+            flat_map_results(coefficients_as_numbers.map(|coefficient| {
+                ahe::PlaintextSpaceGroupElement::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>::new(
+                    Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(&coefficient),
+                    &language_public_parameters
+                        .encryption_scheme_public_parameters
+                        .as_ref()
+                        .plaintext_space_public_parameters,
+                )
             }))?;
 
         let mask_in_witness_mask_base: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_MASK] =
@@ -256,18 +268,19 @@ where
         Ok((
             range_proof_commitment_scheme.commit(
                 &coefficients_and_mask_in_witness_mask_base.into(),
-                commitment_randomness,
+                range_proof_commitment_randomness,
             ),
             (
                 encryption_key.evaluate_circuit_private_linear_combination_with_randomness(
-                    coefficients_and_mask_in_witness_mask_base.into(),
+                    &coefficients_as_plaintext_elements,
                     &ciphertexts,
                     &scalar_group_order,
                     &mask.into(),
                     encryption_randomness,
                 )?,
-                commitment_scheme.commit(&coefficients.into(), commitment_randomness),
-            ),
+                commitment_scheme.commit(&coefficients_as_scalar.into(), commitment_randomness),
+            )
+                .into(),
         )
             .into())
     }
@@ -322,7 +335,6 @@ where
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Copy,
     Scalar::Value: From<Uint<SCALAR_LIMBS>>,
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: From<Scalar>,
     CommitmentScheme: HomomorphicCommitmentScheme<
         SCALAR_LIMBS,
         MessageSpaceGroupElement = self_product::GroupElement<DIMENSION, Scalar>,
