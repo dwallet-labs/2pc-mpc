@@ -1,7 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::array;
+use std::{array, ops::Mul, process::Output};
 
 use crypto_bigint::{Encoding, Uint, Wrapping};
 use tiresias::secret_sharing::shamir::Polynomial;
@@ -10,7 +10,7 @@ use crate::{
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
-        GroupElement, Samplable,
+        BoundedGroupElement, GroupElement, Samplable, Scalar,
     },
     proofs,
     proofs::range,
@@ -135,29 +135,43 @@ pub trait EnhancedLanguage<
     type RangeProof: proofs::RangeProof<RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>;
 }
 
-fn witness_mask_base_to_integer<
+fn witness_mask_base_to_scalar<
     const RANGE_CLAIMS_PER_WITNESS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     const WITNESS_MASK_LIMBS: usize,
-    const LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    Scalar: BoundedGroupElement<SCALAR_LIMBS> + Copy + Mul<Scalar, Output = Scalar>,
 >(
-    constrained_witness: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_WITNESS],
-) -> proofs::Result<Uint<LIMBS>> {
+    witness_in_witness_mask_base: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_WITNESS],
+    scalar_group_public_parameters: &group::PublicParameters<Scalar>,
+) -> proofs::Result<Scalar>
+where
+    Scalar::Value: From<Uint<SCALAR_LIMBS>>,
+{
     // TODO: perform all the checks here, checking add - also check that no modulation occurs in
     // LIMBS for the entire computation
 
-    let delta: Uint<LIMBS> =
-        Uint::<LIMBS>::from(&Uint::<RANGE_CLAIM_LIMBS>::MAX).wrapping_add(&1u64.into());
+    // TODO: RANGE_CLAIM_LIMBS < SCALAR_LIMBS
+    let delta: Uint<SCALAR_LIMBS> =
+        Uint::<SCALAR_LIMBS>::from(&Uint::<RANGE_CLAIM_LIMBS>::MAX).wrapping_add(&1u64.into());
 
-    let constrained_witness: Vec<Wrapping<Uint<LIMBS>>> = constrained_witness
+    let delta = Scalar::new(delta.into(), scalar_group_public_parameters)?;
+
+    // TODO: WITNESS_MASK_LIMBS < SCALAR_LIMBS
+    let witness_in_witness_mask_base: group::Result<Vec<Scalar>> = witness_in_witness_mask_base
         .into_iter()
-        .map(|witness| Wrapping((&witness).into()))
+        .map(|witness| {
+            Scalar::new(
+                Uint::<SCALAR_LIMBS>::from(&witness).into(),
+                scalar_group_public_parameters,
+            )
+        })
         .collect();
 
-    let polynomial =
-        Polynomial::try_from(constrained_witness).map_err(|_| proofs::Error::InvalidParameters)?;
+    let polynomial = Polynomial::try_from(witness_in_witness_mask_base?)
+        .map_err(|_| proofs::Error::InvalidParameters)?;
 
-    Ok(polynomial.evaluate(&Wrapping(delta)).0)
+    Ok(polynomial.evaluate(&delta))
 }
 
 pub type UnconstrainedWitnessSpaceGroupElement<

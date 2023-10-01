@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
-    group::{GroupElement, KnownOrderGroupElement, Samplable},
+    group::{GroupElement, KnownOrderGroupElement, KnownOrderScalar, Samplable},
 };
 
 /// An error in encryption key instantiation [`AdditivelyHomomorphicEncryptionKey::new()`]
@@ -32,10 +32,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
     Into<Self::PublicParameters> + PartialEq + Clone + Debug
 {
     type PlaintextSpaceGroupElement: GroupElement<Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>
-        + KnownOrderGroupElement<
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar = Self::PlaintextSpaceGroupElement,
-        >;
+        + KnownOrderScalar<PLAINTEXT_SPACE_SCALAR_LIMBS>;
     type RandomnessSpaceGroupElement: GroupElement + Samplable;
     type CiphertextSpaceGroupElement: GroupElement;
 
@@ -169,15 +166,18 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
     fn evaluate_circuit_private_linear_combination_with_randomness<
         const DIMENSION: usize,
         const MODULUS_LIMBS: usize,
-        const MASK_LIMBS: usize,
     >(
         &self,
         coefficients: &[Self::PlaintextSpaceGroupElement; DIMENSION],
         ciphertexts: &[Self::CiphertextSpaceGroupElement; DIMENSION],
         modulus: &Uint<MODULUS_LIMBS>,
-        mask: &Uint<MASK_LIMBS>,
+        mask: &Self::PlaintextSpaceGroupElement,
         randomness: &Self::RandomnessSpaceGroupElement,
     ) -> Result<Self::CiphertextSpaceGroupElement> {
+        // TODO: if no MASK_LIMBS, we are unable to perform the appropriate checks,
+        // It's still safe as there are range proofs, but this function couldn't gurantee safety.
+        // Or check somehow that we aren't going through moudlation in a different way
+        // IN any case we should just defer this decision to later
         if DIMENSION == 0 {
             return Err(Error::ZeroDimension);
         }
@@ -197,9 +197,9 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
                 coefficients[0].neutral()
             } else {
                 Self::PlaintextSpaceGroupElement::new(
-                    (Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(mask).wrapping_mul(modulus)).into(),
+                    Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(modulus),
                     &coefficients[0].public_parameters(),
-                )?
+                )? * mask
             };
 
         let encryption_with_fresh_randomness = self.encrypt_with_randomness(&plaintext, randomness);
@@ -240,7 +240,10 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
                 coefficients,
                 ciphertexts,
                 modulus,
-                &mask,
+                &Self::PlaintextSpaceGroupElement::new(
+                    Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(&mask),
+                    &coefficients[0].public_parameters(),
+                )?,
                 &randomness,
             )?;
 
@@ -298,25 +301,26 @@ impl<
         self
     }
 }
+
 pub type PlaintextSpaceGroupElement<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> =
-    <E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::PlaintextSpaceGroupElement;
+<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::PlaintextSpaceGroupElement;
 pub type PlaintextSpacePublicParameters<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> =
-    group::PublicParameters<<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::PlaintextSpaceGroupElement>;
+group::PublicParameters<<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::PlaintextSpaceGroupElement>;
 pub type PlaintextSpaceValue<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> =
-    group::Value<<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::PlaintextSpaceGroupElement>;
+group::Value<<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::PlaintextSpaceGroupElement>;
 
 pub type RandomnessSpaceGroupElement<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> =
-    <E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::RandomnessSpaceGroupElement;
+<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::RandomnessSpaceGroupElement;
 pub type RandomnessSpacePublicParameters<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> =
-    group::PublicParameters<<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::RandomnessSpaceGroupElement>;
+group::PublicParameters<<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::RandomnessSpaceGroupElement>;
 pub type RandomnessSpaceValue<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> =
-    group::Value<<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::RandomnessSpaceGroupElement>;
+group::Value<<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::RandomnessSpaceGroupElement>;
 pub type CiphertextSpaceGroupElement<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> =
-    <E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::CiphertextSpaceGroupElement;
+<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::CiphertextSpaceGroupElement;
 pub type CiphertextSpacePublicParameters<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> =
-    group::PublicParameters<<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::CiphertextSpaceGroupElement>;
+group::PublicParameters<<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::CiphertextSpaceGroupElement>;
 pub type CiphertextSpaceValue<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> =
-    group::Value<<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::CiphertextSpaceGroupElement>;
+group::Value<<E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::CiphertextSpaceGroupElement>;
 pub type PublicParameters<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, E> =
     <E as AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>>::PublicParameters;
 

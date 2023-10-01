@@ -102,8 +102,10 @@ where
         + Samplable
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Mul<Scalar, Output = Scalar>
+        + for<'r> Mul<&'r Scalar, Output = Scalar>
         + Copy,
-    Scalar::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
+    Scalar::Value: From<Uint<SCALAR_LIMBS>>,
     range::CommitmentSchemeMessageSpaceGroupElement<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
@@ -187,27 +189,33 @@ where
             discrete_log_in_witness_mask_base
                 .map(|element| Uint::<WITNESS_MASK_LIMBS>::from(element));
 
-        let discrete_log: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> =
-            super::witness_mask_base_to_integer::<
-                RANGE_CLAIMS_PER_SCALAR,
-                RANGE_CLAIM_LIMBS,
-                WITNESS_MASK_LIMBS,
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-            >(discrete_log_in_witness_mask_base)?;
-
-        let discrete_log_scalar = Scalar::new(
-            discrete_log.into(),
+        let discrete_log_scalar: Scalar = super::witness_mask_base_to_scalar::<
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            SCALAR_LIMBS,
+            Scalar,
+        >(
+            discrete_log_in_witness_mask_base,
             &language_public_parameters.scalar_group_public_parameters,
         )?;
 
-        let discrete_log_plaintext =
-            ahe::PlaintextSpaceGroupElement::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>::new(
-                discrete_log,
-                &language_public_parameters
-                    .encryption_scheme_public_parameters
-                    .as_ref()
-                    .plaintext_space_public_parameters,
-            )?;
+        let discrete_log_plaintext: ahe::PlaintextSpaceGroupElement<
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            EncryptionKey,
+        > = super::witness_mask_base_to_scalar::<
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            ahe::PlaintextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        >(
+            discrete_log_in_witness_mask_base,
+            &language_public_parameters
+                .encryption_scheme_public_parameters
+                .as_ref()
+                .plaintext_space_public_parameters,
+        )?;
 
         // TODO: Need to check that WITNESS_MASK_LIMBS is actually in a size fitting the range proof
         // commitment scheme without going through modulation, and to implement `From` to
@@ -267,8 +275,10 @@ where
         + Samplable
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Mul<Scalar, Output = Scalar>
+        + for<'r> Mul<&'r Scalar, Output = Scalar>
         + Copy,
-    Scalar::Value: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
+    Scalar::Value: From<Uint<SCALAR_LIMBS>>,
     range::CommitmentSchemeMessageSpaceGroupElement<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,

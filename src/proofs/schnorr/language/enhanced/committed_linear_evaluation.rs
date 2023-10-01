@@ -167,7 +167,7 @@ where
     ) -> proofs::Result<language::StatementSpaceGroupElement<Self>> {
         if NUM_RANGE_CLAIMS != RANGE_CLAIMS_PER_SCALAR * DIMENSION + RANGE_CLAIMS_PER_MASK
             || RANGE_CLAIMS_PER_SCALAR * RANGE_CLAIM_LIMBS < SCALAR_LIMBS
-            || RANGE_CLAIMS_PER_SCALAR * RANGE_CLAIM_LIMBS < MASK_LIMBS
+            || RANGE_CLAIMS_PER_MASK * RANGE_CLAIM_LIMBS < MASK_LIMBS
         {
             return Err(proofs::Error::InvalidParameters);
         }
@@ -184,6 +184,7 @@ where
             .commitment_scheme_public_parameters
             .as_ref()
             .randomness_space_public_parameters;
+
         let scalar_group_order =
             Scalar::order_from_public_parameters(scalar_group_public_parameters);
 
@@ -207,11 +208,12 @@ where
 
         let coefficients_and_mask_in_witness_mask_base: [power_of_two_moduli::GroupElement<
             WITNESS_MASK_LIMBS,
-        >; NUM_RANGE_CLAIMS] = coefficients_and_mask_in_witness_mask_base.clone().into();
+        >; NUM_RANGE_CLAIMS] = (*coefficients_and_mask_in_witness_mask_base).into();
 
         let coefficients_and_mask_in_witness_mask_base: [Uint<WITNESS_MASK_LIMBS>;
-            NUM_RANGE_CLAIMS] = coefficients_and_mask_in_witness_mask_base
-            .map(|witness| Uint::<WITNESS_MASK_LIMBS>::from(witness));
+            NUM_RANGE_CLAIMS] =
+            coefficients_and_mask_in_witness_mask_base.map(Uint::<WITNESS_MASK_LIMBS>::from);
+
         let mut coefficients_and_mask_in_witness_mask_base_iter =
             coefficients_and_mask_in_witness_mask_base.into_iter();
 
@@ -224,32 +226,35 @@ where
             }))
         }))?;
 
-        let coefficients_as_numbers = flat_map_results(coefficients_in_witness_mask_base.map(
+        let coefficients_as_scalar = flat_map_results(coefficients_in_witness_mask_base.map(
             |coefficient_in_witness_base| {
-                super::witness_mask_base_to_integer::<
+                super::witness_mask_base_to_scalar::<
                     RANGE_CLAIMS_PER_SCALAR,
                     RANGE_CLAIM_LIMBS,
                     WITNESS_MASK_LIMBS,
                     SCALAR_LIMBS,
-                >(coefficient_in_witness_base)
+                    Scalar,
+                >(coefficient_in_witness_base, &scalar_group_public_parameters)
             },
         ))?;
 
-        let coefficients_as_scalar: [Scalar; DIMENSION] =
-            flat_map_results(coefficients_as_numbers.map(|coefficient| {
-                Scalar::new(coefficient.into(), scalar_group_public_parameters)
-            }))?;
-
-        let coefficients_as_plaintext_elements =
-            flat_map_results(coefficients_as_numbers.map(|coefficient| {
-                ahe::PlaintextSpaceGroupElement::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>::new(
-                    Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(&coefficient),
+        let coefficients_as_plaintext_elements = flat_map_results(
+            coefficients_in_witness_mask_base.map(|coefficient_in_witness_base| {
+                super::witness_mask_base_to_scalar::<
+                    RANGE_CLAIMS_PER_SCALAR,
+                    RANGE_CLAIM_LIMBS,
+                    WITNESS_MASK_LIMBS,
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    ahe::PlaintextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+                >(
+                    coefficient_in_witness_base,
                     &language_public_parameters
                         .encryption_scheme_public_parameters
                         .as_ref()
                         .plaintext_space_public_parameters,
                 )
-            }))?;
+            }),
+        )?;
 
         let mask_in_witness_mask_base: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_MASK] =
             flat_map_results(array::from_fn(|_| {
@@ -258,12 +263,19 @@ where
                     .ok_or(proofs::Error::InvalidParameters)
             }))?;
 
-        let mask: Uint<MASK_LIMBS> = super::witness_mask_base_to_integer::<
+        let mask = super::witness_mask_base_to_scalar::<
             RANGE_CLAIMS_PER_MASK,
             RANGE_CLAIM_LIMBS,
             WITNESS_MASK_LIMBS,
-            MASK_LIMBS,
-        >(mask_in_witness_mask_base)?;
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            ahe::PlaintextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        >(
+            mask_in_witness_mask_base,
+            &language_public_parameters
+                .encryption_scheme_public_parameters
+                .as_ref()
+                .plaintext_space_public_parameters,
+        )?;
 
         Ok((
             range_proof_commitment_scheme.commit(
@@ -275,7 +287,7 @@ where
                     &coefficients_as_plaintext_elements,
                     &ciphertexts,
                     &scalar_group_order,
-                    &mask.into(),
+                    &mask,
                     encryption_randomness,
                 )?,
                 commitment_scheme.commit(&coefficients_as_scalar.into(), commitment_randomness),
