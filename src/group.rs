@@ -75,7 +75,7 @@ pub trait GroupElement:
     ///
     /// In order to mitigate these risks and save on communication, we separate the value of the
     /// point from the group parameters.
-    type Value: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq + ConstantTimeEq;
+    type Value: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq + ConstantTimeEq + Copy;
 
     /// Returns the value of this group element
     fn value(&self) -> Self::Value {

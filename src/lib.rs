@@ -27,5 +27,5 @@ criterion_group!(
     proofs::schnorr::knowledge_of_discrete_log::benchmark,
     proofs::schnorr::knowledge_of_decommitment::benchmark,
     proofs::schnorr::commitment_of_discrete_log::benchmark,
-    // proofs::schnorr::discrete_log_ratio_of_commited_values::benchmark
+    proofs::schnorr::discrete_log_ratio_of_commited_values::benchmark
 );

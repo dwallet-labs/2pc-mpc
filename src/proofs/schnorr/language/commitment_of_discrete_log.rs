@@ -151,6 +151,10 @@ mod tests {
         )
         .unwrap();
 
+        let message_generator =
+            secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap()
+                * generator;
+
         let randomness_generator =
             secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap()
                 * generator;
@@ -164,7 +168,7 @@ mod tests {
         >(
             secp256k1_scalar_public_parameters.clone(),
             secp256k1_group_public_parameters.clone(),
-            [secp256k1_group_public_parameters.generator],
+            [message_generator.value()],
             randomness_generator.value(),
         );
 

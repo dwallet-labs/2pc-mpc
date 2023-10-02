@@ -62,12 +62,14 @@ impl<const N: usize, PP> PublicParameters<N, PP> {
 }
 
 /// The value of the Self Product of the Group `G` by Itself.
-#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
-pub struct Value<const N: usize, G: group::GroupElement>(
-    #[serde(with = "crate::helpers::const_generic_array_serialization")] [G::Value; N],
+#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize, Copy)]
+pub struct Value<const N: usize, GroupElementValue: Serialize + for<'a> Deserialize<'a>>(
+    #[serde(with = "crate::helpers::const_generic_array_serialization")] [GroupElementValue; N],
 );
 
-impl<const N: usize, G: group::GroupElement> ConstantTimeEq for Value<N, G> {
+impl<const N: usize, GroupElementValue: Serialize + for<'a> Deserialize<'a> + ConstantTimeEq>
+    ConstantTimeEq for Value<N, GroupElementValue>
+{
     fn ct_eq(&self, other: &Self) -> Choice {
         // The arrays are of the same size so its safe to `zip` them.
         // Following that, we get an array of the pairs, and we assure they are all equal to each
@@ -82,7 +84,7 @@ impl<const N: usize, G: group::GroupElement> ConstantTimeEq for Value<N, G> {
 }
 
 impl<const N: usize, G: group::GroupElement> group::GroupElement for GroupElement<N, G> {
-    type Value = Value<N, G>;
+    type Value = Value<N, group::Value<G>>;
 
     type PublicParameters = PublicParameters<N, G::PublicParameters>;
 
