@@ -126,11 +126,19 @@ mod tests {
         .unwrap()
     }
 
+    // TODO: why is this considered as dead code, if its being called from a test in other modules?
+    #[allow(dead_code)]
     pub(crate) fn valid_proof_verifies<Lang: Language>(
         language_public_parameters: Lang::PublicParameters,
-        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
         batch_size: usize,
     ) {
+        let witnesses = generate_witnesses::<Lang>(
+            &language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters,
+            batch_size,
+        );
+
         let (proof, statements) =
             generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone());
 
@@ -142,13 +150,20 @@ mod tests {
         );
     }
 
+    #[allow(dead_code)]
     pub(crate) fn invalid_proof_fails_verification<Lang: Language>(
         invalid_witness_space_value: Option<WitnessSpaceValue<Lang>>,
         invalid_statement_space_value: Option<StatementSpaceValue<Lang>>,
         language_public_parameters: Lang::PublicParameters,
-        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
         batch_size: usize,
     ) {
+        let witnesses = generate_witnesses::<Lang>(
+            &language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters,
+            batch_size,
+        );
+
         let (valid_proof, statements) =
             generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone());
 
@@ -273,7 +288,6 @@ mod tests {
         prover_language_public_parameters: Lang::PublicParameters,
         verifier_language_public_parameters: Lang::PublicParameters,
         witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
-        batch_size: usize,
     ) {
         let (proof, statements) =
             generate_valid_proof::<Lang>(&prover_language_public_parameters, witnesses.clone());
@@ -304,30 +318,28 @@ mod benches {
 
     pub(crate) fn benchmark<Lang: Language>(
         language_public_parameters: Lang::PublicParameters,
-        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
         c: &mut Criterion,
     ) {
         let mut g = c.benchmark_group(Lang::NAME);
 
         g.sample_size(100);
 
-        assert_eq!(witnesses.len(), 1000);
-
         for batch_size in [1, 10, 100, 1000] {
-            let witnesses_batch: Vec<WitnessSpaceGroupElement<Lang>> =
-                witnesses.clone().into_iter().take(batch_size).collect();
+            let witnesses = generate_witnesses::<Lang>(
+                &language_public_parameters
+                    .as_ref()
+                    .witness_space_public_parameters,
+                batch_size,
+            );
 
             g.bench_function(format!("prove() over {batch_size} statements"), |bench| {
                 bench.iter(|| {
-                    generate_valid_proof::<Lang>(
-                        &language_public_parameters,
-                        witnesses_batch.clone(),
-                    )
+                    generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone())
                 });
             });
 
             let (proof, statements) =
-                generate_valid_proof::<Lang>(&language_public_parameters, witnesses_batch.clone());
+                generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone());
 
             g.bench_function(format!("verfiy() over {batch_size} statements"), |bench| {
                 bench.iter(|| {
