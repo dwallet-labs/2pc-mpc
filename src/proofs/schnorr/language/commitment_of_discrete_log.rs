@@ -1,8 +1,9 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
-
 use std::{marker::PhantomData, ops::Mul};
 
+#[cfg(feature = "benchmarking")]
+pub(crate) use benches::benchmark;
 use serde::Serialize;
 
 use super::{GroupsPublicParameters, StatementSpacePublicParameters, WitnessSpacePublicParameters};
@@ -115,5 +116,150 @@ impl<
         &self,
     ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
         &self.groups_public_parameters
+    }
+}
+
+#[cfg(any(test, feature = "benchmarking"))]
+mod tests {
+    use rand_core::OsRng;
+    use rstest::rstest;
+
+    use super::*;
+    use crate::{
+        commitments::{pedersen, Pedersen},
+        group,
+        group::{secp256k1, GroupElement, Samplable},
+        proofs::schnorr::language,
+    };
+
+    pub(crate) fn language_public_parameters() -> language::PublicParameters<
+        Language<
+            { secp256k1::SCALAR_LIMBS },
+            secp256k1::Scalar,
+            secp256k1::GroupElement,
+            Pedersen<1, { secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
+        >,
+    > {
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
+
+        let generator = secp256k1::GroupElement::new(
+            secp256k1_group_public_parameters.generator,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
+
+        let randomness_generator =
+            secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap()
+                * generator;
+
+        // TODO: this is not safe; we need a proper way to derive generators
+        let pedersen_public_parameters = pedersen::public_parameters::<
+            1,
+            { secp256k1::SCALAR_LIMBS },
+            secp256k1::Scalar,
+            secp256k1::GroupElement,
+        >(
+            secp256k1_scalar_public_parameters.clone(),
+            secp256k1_group_public_parameters.clone(),
+            [secp256k1_group_public_parameters.generator],
+            randomness_generator.value(),
+        );
+
+        PublicParameters {
+            groups_public_parameters: GroupsPublicParameters {
+                witness_space_public_parameters: group::PublicParameters::<
+                    self_product::GroupElement<2, secp256k1::Scalar>,
+                >::new(
+                    secp256k1_scalar_public_parameters.clone()
+                ),
+                statement_space_public_parameters: group::PublicParameters::<
+                    self_product::GroupElement<2, secp256k1::GroupElement>,
+                >::new(
+                    secp256k1_group_public_parameters.clone()
+                ),
+            },
+            commitment_scheme_public_parameters: pedersen_public_parameters,
+            generator: secp256k1_group_public_parameters.generator,
+        }
+    }
+
+    #[rstest]
+    #[case(1)]
+    #[case(2)]
+    #[case(3)]
+    fn valid_proof_verifies(#[case] batch_size: usize) {
+        let language_public_parameters = language_public_parameters();
+
+        language::tests::valid_proof_verifies::<
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                Pedersen<
+                    1,
+                    { secp256k1::SCALAR_LIMBS },
+                    secp256k1::Scalar,
+                    secp256k1::GroupElement,
+                >,
+            >,
+        >(language_public_parameters, batch_size)
+    }
+
+    #[rstest]
+    #[case(1)]
+    #[case(2)]
+    #[case(3)]
+    fn invalid_proof_fails_verification(#[case] batch_size: usize) {
+        let language_public_parameters = language_public_parameters();
+
+        // No invalid values as secp256k1 statically defines group,
+        // `k256::AffinePoint` assures deserialized values are on curve,
+        // and `Value` can only be instantiated through deserialization
+        language::tests::invalid_proof_fails_verification::<
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                Pedersen<
+                    1,
+                    { secp256k1::SCALAR_LIMBS },
+                    secp256k1::Scalar,
+                    secp256k1::GroupElement,
+                >,
+            >,
+        >(None, None, language_public_parameters, batch_size)
+    }
+}
+
+#[cfg(feature = "benchmarking")]
+mod benches {
+    use criterion::Criterion;
+
+    use super::*;
+    use crate::{
+        commitments::Pedersen,
+        group::secp256k1,
+        proofs::schnorr::{
+            language, language::commitment_of_discrete_log::tests::language_public_parameters,
+        },
+    };
+
+    pub(crate) fn benchmark(c: &mut Criterion) {
+        language::benchmark::<
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                Pedersen<
+                    1,
+                    { secp256k1::SCALAR_LIMBS },
+                    secp256k1::Scalar,
+                    secp256k1::GroupElement,
+                >,
+            >,
+        >(language_public_parameters(), c);
     }
 }

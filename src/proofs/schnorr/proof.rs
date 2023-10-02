@@ -44,8 +44,8 @@ pub struct Proof<
     // code) and be inserted to the Fiat-Shamir transcript
     ProtocolContext: Clone,
 > {
-    statement_mask: StatementSpaceValue<Language>,
-    response: WitnessSpaceValue<Language>,
+    pub(super) statement_mask: StatementSpaceValue<Language>,
+    pub(super) response: WitnessSpaceValue<Language>,
 
     _protocol_context_choice: PhantomData<ProtocolContext>,
 }

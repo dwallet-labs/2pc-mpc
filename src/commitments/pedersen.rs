@@ -129,6 +129,37 @@ pub struct PublicParameters<
     pub randomness_generator: GroupElementValue,
 }
 
+pub fn public_parameters<
+    const BATCH_SIZE: usize,
+    const SCALAR_LIMBS: usize,
+    Scalar: group::GroupElement,
+    GroupElement: group::GroupElement,
+>(
+    scalar_public_parameters: group::PublicParameters<Scalar>,
+    group_public_parameters: group::PublicParameters<GroupElement>,
+    message_generators: [group::Value<GroupElement>; BATCH_SIZE],
+    randomness_generator: group::Value<GroupElement>,
+) -> PublicParameters<
+    BATCH_SIZE,
+    group::Value<GroupElement>,
+    MessageSpacePublicParameters<BATCH_SIZE, Scalar>,
+    RandomnessSpacePublicParameters<Scalar>,
+    CommitmentSpacePublicParameters<GroupElement>,
+> {
+    PublicParameters {
+        groups_public_parameters: GroupsPublicParameters {
+            message_space_public_parameters:
+                MessageSpacePublicParameters::<BATCH_SIZE, Scalar>::new(
+                    scalar_public_parameters.clone(),
+                ),
+            randomness_space_public_parameters: scalar_public_parameters,
+            commitment_space_public_parameters: group_public_parameters,
+        },
+        message_generators,
+        randomness_generator,
+    }
+}
+
 impl<
         const BATCH_SIZE: usize,
         GroupElementValue,

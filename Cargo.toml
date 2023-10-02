@@ -17,9 +17,23 @@ tiresias = { git = "https://github.com/odsy-network/tiresias.git" }
 bulletproofs = "4.0.0"
 curve25519-dalek = { package = "curve25519-dalek-ng", version = "4", default-features = false, features = ["u64_backend", "serde"] }
 
+# For benchmarking
+criterion = { version = "0.5", features = ["html_reports"], optional = true }
+rand_core = { version = "0.6.4", features = ["std"], optional = true }
+rstest = { version = "0.18.2", optional = true }
+
 [dev-dependencies]
 rstest = "0.18.2"
 rand_core = { version = "0.6.4", features = ["std"] }
+
+[features]
+# This feature is for internal-use only (for benchmarking) and exists due to limitations of benchmarking non-public functions in Rust.
+# There will be no SemVer support for this feature.
+benchmarking = ["dep:criterion", "dep:rand_core", "dep:rstest"]
+
+[[bench]]
+name = "benches"
+harness = false
 
 [patch.crates-io]
 crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint.git" }
