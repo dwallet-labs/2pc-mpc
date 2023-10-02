@@ -15,7 +15,7 @@ use crate::{
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product,
-        BoundedGroupElement, Samplable,
+        BoundedGroupElement, GroupElement as _, Samplable,
     },
     proofs,
     proofs::{range, schnorr},
@@ -40,7 +40,6 @@ use crate::{
 pub struct Language<
     const SCALAR_LIMBS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-    const MASK_LIMBS: usize,
     const RANGE_CLAIMS_PER_SCALAR: usize,
     const RANGE_CLAIM_LIMBS: usize,
     const WITNESS_MASK_LIMBS: usize,
@@ -56,25 +55,11 @@ pub struct Language<
     _range_proof_choice: PhantomData<RangeProof>,
 }
 
-// todo: remove from proof the other parameters. Need to fix AsRef for that.
-
-// todo: note the masked witness is > 256-bit, and should not go through modulation in the
-// constrained witness group, nor in the range proof commitment nor in the encryption, but could and
-// will go through modulation in the Scalar group - that's fine.
-//
-// option 1: RANGE_CLAIMS_PER_SCALAR => RANGE_CLAIMS_PER_MASKED_WITNESS
-// option 2: notice we don't need to do range proof for the masked witness, so don't care if its
-// bigger than RANGE_CLAIM_LIMBS. so can do the constrained witness as self_product of size
-// RANGE_CLAIM_LIMBS + Statistical + Computational. then also we don't need to change the sampling
-// of the original schnorr.
-//
-// TODO: can't
 impl<
         const SCALAR_LIMBS: usize,
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const MASK_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize, // TOdO: potentially change to d
-        const RANGE_CLAIM_LIMBS: usize,       // TODO: delta
+        const RANGE_CLAIMS_PER_SCALAR: usize,
+        const RANGE_CLAIM_LIMBS: usize,
         const WITNESS_MASK_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         Scalar,
@@ -85,7 +70,6 @@ impl<
     for Language<
         SCALAR_LIMBS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        MASK_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
         RANGE_CLAIM_LIMBS,
         WITNESS_MASK_LIMBS,
@@ -106,14 +90,12 @@ where
         + for<'r> Mul<&'r Scalar, Output = Scalar>
         + Copy,
     Scalar::Value: From<Uint<SCALAR_LIMBS>>,
-    range::CommitmentSchemeMessageSpaceGroupElement<
+    range::CommitmentSchemeMessageSpaceValue<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
         RANGE_CLAIM_LIMBS,
         RangeProof,
-    >: for<'a> From<
-        &'a super::ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>,
-    >,
+    >: From<super::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
     RangeProof: proofs::RangeProof<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
@@ -217,14 +199,24 @@ where
                 .plaintext_space_public_parameters,
         )?;
 
+        let discrete_log_commitment_message = range::CommitmentSchemeMessageSpaceGroupElement::<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            RangeProof,
+        >::new(
+            discrete_log_in_witness_mask_base_element.value().into(),
+            &language_public_parameters
+                .commitment_scheme_public_parameters
+                .as_ref()
+                .message_space_public_parameters,
+        )?;
+
         // TODO: Need to check that WITNESS_MASK_LIMBS is actually in a size fitting the range proof
         // commitment scheme without going through modulation, and to implement `From` to
         // transition.
         Ok((
-            commitment_scheme.commit(
-                &discrete_log_in_witness_mask_base_element.into(),
-                commitment_randomness,
-            ),
+            commitment_scheme.commit(&discrete_log_commitment_message, commitment_randomness),
             (
                 encryption_key
                     .encrypt_with_randomness(&discrete_log_plaintext, encryption_randomness),
@@ -239,7 +231,6 @@ where
 impl<
         const SCALAR_LIMBS: usize,
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const MASK_LIMBS: usize,
         const RANGE_CLAIMS_PER_SCALAR: usize,
         const RANGE_CLAIM_LIMBS: usize,
         const WITNESS_MASK_LIMBS: usize,
@@ -258,7 +249,6 @@ impl<
     for Language<
         SCALAR_LIMBS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        MASK_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
         RANGE_CLAIM_LIMBS,
         WITNESS_MASK_LIMBS,
@@ -279,14 +269,12 @@ where
         + for<'r> Mul<&'r Scalar, Output = Scalar>
         + Copy,
     Scalar::Value: From<Uint<SCALAR_LIMBS>>,
-    range::CommitmentSchemeMessageSpaceGroupElement<
+    range::CommitmentSchemeMessageSpaceValue<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
         RANGE_CLAIM_LIMBS,
         RangeProof,
-    >: for<'a> From<
-        &'a super::ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>,
-    >,
+    >: From<super::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
     RangeProof: proofs::RangeProof<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
@@ -321,7 +309,50 @@ pub struct PublicParameters<
     pub scalar_group_public_parameters: ScalarPublicParameters,
     // The base of the discrete log
     pub generator: GroupElementValue,
-    // todo: range claim. - of type RANGE_CLAIM_LIMBS * RANGE_CLAIMS_PER_SCALAR
+}
+
+impl<
+        WitnessSpacePublicParameters,
+        StatementSpacePublicParameters,
+        CommitmentSchemePublicParameters,
+        EncryptionKeyPublicParameters,
+        ScalarPublicParameters,
+        GroupElementValue,
+    >
+    PublicParameters<
+        WitnessSpacePublicParameters,
+        StatementSpacePublicParameters,
+        CommitmentSchemePublicParameters,
+        EncryptionKeyPublicParameters,
+        ScalarPublicParameters,
+        GroupElementValue,
+    >
+{
+    pub fn new(
+        commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
+        encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
+        scalar_group_public_parameters: ScalarPublicParameters,
+        generator: GroupElementValue,
+    ) -> Self {
+        // let witness_space_public_parameters = (
+        //     encryption_scheme_public_parameters.as_ref().randomness_space_public_parameters,
+        //     ).into();
+        //
+        // let groups_public_parameters = GroupsPublicParameters {
+        //     witness_space_public_parameters,
+        //     statement_space_public_parameters,
+        // };
+        //
+        // Self {
+        //     groups_public_parameters,
+        //     commitment_scheme_public_parameters,
+        //     encryption_scheme_public_parameters,
+        //     scalar_group_public_parameters,
+        //     generator,
+        // }
+
+        todo!()
+    }
 }
 
 impl<
@@ -345,5 +376,156 @@ impl<
         &self,
     ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
         &self.groups_public_parameters
+    }
+}
+
+#[cfg(any(test, feature = "benchmarking"))]
+mod tests {
+    use rstest::rstest;
+
+    use super::*;
+    use crate::{
+        ahe::paillier,
+        group::{ristretto, secp256k1},
+        proofs::{range, schnorr::language},
+        ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
+    };
+
+    pub(crate) fn language_public_parameters() -> language::PublicParameters<
+        Language<
+            { secp256k1::SCALAR_LIMBS },
+            { ristretto::SCALAR_LIMBS },
+            4,
+            { range::bulletproofs::RANGE_CLAIM_LIMBS },
+            // TOOD: challenge instead of computational?
+            {
+                range::bulletproofs::RANGE_CLAIM_LIMBS
+                    + ComputationalSecuritySizedNumber::LIMBS
+                    + StatisticalSecuritySizedNumber::LIMBS
+            },
+            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+            secp256k1::Scalar,
+            secp256k1::GroupElement,
+            paillier::EncryptionKey,
+            bulletproofs::RangeProof,
+        >,
+    > {
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
+
+        let bulletproofs_public_parameters = range::bulletproofs::PublicParameters::<4>::default();
+
+        // PublicParameters {
+        //     groups_public_parameters: GroupsPublicParameters {
+        //         witness_space_public_parameters: secp256k1_scalar_public_parameters,
+        //         statement_space_public_parameters: secp256k1_group_public_parameters.clone(),
+        //     },
+        //     generator: secp256k1_group_public_parameters.generator,
+        // }
+
+        todo!()
+    }
+
+    #[rstest]
+    #[case(1)]
+    #[case(2)]
+    #[case(3)]
+    fn valid_proof_verifies(#[case] batch_size: usize) {
+        let language_public_parameters = language_public_parameters();
+
+        language::tests::valid_proof_verifies::<
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                { ristretto::SCALAR_LIMBS },
+                4,
+                { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                // TOOD: challenge instead of computational?
+                {
+                    range::bulletproofs::RANGE_CLAIM_LIMBS
+                        + ComputationalSecuritySizedNumber::LIMBS
+                        + StatisticalSecuritySizedNumber::LIMBS
+                },
+                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                paillier::EncryptionKey,
+                bulletproofs::RangeProof,
+            >,
+        >(language_public_parameters, batch_size)
+    }
+
+    #[rstest]
+    #[case(1)]
+    #[case(2)]
+    #[case(3)]
+    fn invalid_proof_fails_verification(#[case] batch_size: usize) {
+        let language_public_parameters = language_public_parameters();
+
+        // No invalid values as secp256k1 statically defines group,
+        // `k256::AffinePoint` assures deserialized values are on curve,
+        // and `Value` can only be instantiated through deserialization
+        language::tests::invalid_proof_fails_verification::<
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                { ristretto::SCALAR_LIMBS },
+                4,
+                { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                // TOOD: challenge instead of computational?
+                {
+                    range::bulletproofs::RANGE_CLAIM_LIMBS
+                        + ComputationalSecuritySizedNumber::LIMBS
+                        + StatisticalSecuritySizedNumber::LIMBS
+                },
+                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                paillier::EncryptionKey,
+                bulletproofs::RangeProof,
+            >,
+        >(None, None, language_public_parameters, batch_size)
+    }
+}
+
+#[cfg(feature = "benchmarking")]
+mod benches {
+    use criterion::Criterion;
+
+    use super::*;
+    use crate::{
+        ahe::paillier,
+        group::{ristretto, secp256k1},
+        proofs::{
+            range,
+            schnorr::{
+                language, language::encryption_of_discrete_log::tests::language_public_parameters,
+            },
+        },
+        ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
+    };
+
+    pub(crate) fn benchmark(c: &mut Criterion) {
+        let language_public_parameters = language_public_parameters();
+
+        language::benchmark::<
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                { ristretto::SCALAR_LIMBS },
+                4,
+                { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                // TOOD: challenge instead of computational?
+                {
+                    range::bulletproofs::RANGE_CLAIM_LIMBS
+                        + ComputationalSecuritySizedNumber::LIMBS
+                        + StatisticalSecuritySizedNumber::LIMBS
+                },
+                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                paillier::EncryptionKey,
+                bulletproofs::RangeProof,
+            >,
+        >(language_public_parameters, c);
     }
 }

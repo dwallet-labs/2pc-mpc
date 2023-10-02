@@ -3,20 +3,27 @@
 use std::{array, iter};
 
 use bulletproofs::{self, BulletproofGens, PedersenGens};
-use crypto_bigint::{rand_core::CryptoRngCore, Uint, U64};
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U64};
 use ristretto::SCALAR_LIMBS;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     commitments,
     commitments::{multicommitment::MultiCommitment, pedersen, GroupsPublicParameters, Pedersen},
-    group::{ristretto, self_product},
+    group::{
+        additive_group_of_integers_modulu_n::power_of_two_moduli, ristretto, self_product,
+        self_product::Value,
+    },
     helpers::flat_map_results,
     proofs,
-    proofs::Transcript,
+    proofs::{
+        range,
+        schnorr::language::{enhanced, enhanced::ConstrainedWitnessValue},
+        Transcript,
+    },
 };
 
-const RANGE_CLAIM_LIMBS: usize = U64::LIMBS;
+pub const RANGE_CLAIM_LIMBS: usize = U64::LIMBS;
 
 impl<const NUM_RANGE_CLAIMS: usize>
     super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>
@@ -226,5 +233,29 @@ impl<const NUM_RANGE_CLAIMS: usize>
         >,
     > {
         &self.commitment_scheme_public_parameters
+    }
+}
+
+impl<const NUM_RANGE_CLAIMS: usize, const WITNESS_MASK_LIMBS: usize>
+    From<self_product::Value<NUM_RANGE_CLAIMS, Uint<WITNESS_MASK_LIMBS>>>
+    for range::CommitmentSchemeMessageSpaceValue<
+        SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        bulletproofs::RangeProof,
+    >
+where
+    Uint<WITNESS_MASK_LIMBS>: Encoding,
+{
+    fn from(value: Value<NUM_RANGE_CLAIMS, Uint<WITNESS_MASK_LIMBS>>) -> Self {
+        let value: [Uint<WITNESS_MASK_LIMBS>; NUM_RANGE_CLAIMS] = value.into();
+
+        // TODO: need to specify when this is safe? for WITNESS_MASK_LIMBS < SCALAR_LIMBS
+        // perhaps return result
+
+        value
+            .map(|v| ristretto::Scalar::from(Uint::<SCALAR_LIMBS>::from(&v)))
+            .map(|scalar| [scalar].into())
+            .into()
     }
 }

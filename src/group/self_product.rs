@@ -129,6 +129,22 @@ impl<const N: usize, G: group::GroupElement> From<GroupElement<N, G>>
     }
 }
 
+impl<const N: usize, GroupElementValue: Serialize + for<'a> Deserialize<'a>>
+    From<Value<N, GroupElementValue>> for [GroupElementValue; N]
+{
+    fn from(value: Value<N, GroupElementValue>) -> Self {
+        value.0
+    }
+}
+
+impl<const N: usize, GroupElementValue: Serialize + for<'a> Deserialize<'a>>
+    From<[GroupElementValue; N]> for Value<N, GroupElementValue>
+{
+    fn from(value: [GroupElementValue; N]) -> Self {
+        Value(value)
+    }
+}
+
 impl<const N: usize, G: group::GroupElement> From<GroupElement<N, G>>
     for group::PublicParameters<GroupElement<N, G>>
 {
