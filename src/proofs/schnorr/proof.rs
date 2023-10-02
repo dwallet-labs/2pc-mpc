@@ -69,25 +69,26 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
     pub fn prove(
         protocol_context: &ProtocolContext,
         language_public_parameters: &PublicParameters<Language>,
-        witnesses_and_statements: Vec<(
-            WitnessSpaceGroupElement<Language>,
-            StatementSpaceGroupElement<Language>,
-        )>,
+        witnesses: Vec<WitnessSpaceGroupElement<Language>>,
         rng: &mut impl CryptoRngCore,
-    ) -> proofs::Result<Self> {
-        if witnesses_and_statements.is_empty() {
+    ) -> proofs::Result<(Self, Vec<StatementSpaceGroupElement<Language>>)> {
+        if witnesses.is_empty() {
             return Err(Error::InvalidParameters);
         }
 
-        let batch_size = witnesses_and_statements.len();
+        let batch_size = witnesses.len();
 
-        let (witnesses, statements): (
-            Vec<WitnessSpaceGroupElement<Language>>,
-            Vec<StatementSpaceGroupElement<Language>>,
-        ) = witnesses_and_statements.into_iter().unzip();
+        let statements: proofs::Result<Vec<StatementSpaceGroupElement<Language>>> = witnesses
+            .iter()
+            .map(|witness| Language::group_homomorphism(witness, language_public_parameters))
+            .collect();
+        let statements = statements?;
 
-        let mut transcript =
-            Self::setup_protocol(protocol_context, language_public_parameters, statements)?;
+        let mut transcript = Self::setup_protocol(
+            protocol_context,
+            language_public_parameters,
+            statements.clone(),
+        )?;
 
         let randomizer = WitnessSpaceGroupElement::<Language>::sample(
             rng,
@@ -115,7 +116,7 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
                 .reduce(|a, b| a + b)
                 .unwrap();
 
-        Ok(Self::new(statement_mask, response))
+        Ok((Self::new(statement_mask, response), statements))
     }
 
     /// Verify a batched Schnorr zero-knowledge proof.

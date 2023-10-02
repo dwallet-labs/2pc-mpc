@@ -93,22 +93,40 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
-    use crate::{group::secp256k1, proofs::schnorr::language};
+    use crate::{
+        group::secp256k1,
+        proofs::schnorr::{language, language::WitnessSpaceGroupElement},
+    };
 
-    pub(crate) fn language_public_parameters(
-    ) -> language::PublicParameters<Language<secp256k1::Scalar, secp256k1::GroupElement>> {
+    pub(crate) fn setup(
+        batch_size: usize,
+    ) -> (
+        language::PublicParameters<Language<secp256k1::Scalar, secp256k1::GroupElement>>,
+        Vec<WitnessSpaceGroupElement<Language<secp256k1::Scalar, secp256k1::GroupElement>>>,
+    ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
             secp256k1::group_element::PublicParameters::default();
 
-        PublicParameters {
+        let language_public_parameters = PublicParameters {
             groups_public_parameters: GroupsPublicParameters {
                 witness_space_public_parameters: secp256k1_scalar_public_parameters,
                 statement_space_public_parameters: secp256k1_group_public_parameters.clone(),
             },
             generator: secp256k1_group_public_parameters.generator,
-        }
+        };
+
+        let witnesses = language::tests::generate_witnesses::<
+            Language<secp256k1::Scalar, secp256k1::GroupElement>,
+        >(
+            &language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters,
+            batch_size,
+        );
+
+        (language_public_parameters, witnesses)
     }
 
     #[rstest]
@@ -116,10 +134,11 @@ mod tests {
     #[case(2)]
     #[case(3)]
     fn valid_proof_verifies(#[case] batch_size: usize) {
-        let language_public_parameters = language_public_parameters();
+        let (language_public_parameters, witnesses) = setup(batch_size);
 
         language::tests::valid_proof_verifies::<Language<secp256k1::Scalar, secp256k1::GroupElement>>(
             language_public_parameters,
+            witnesses,
             batch_size,
         )
     }
@@ -129,14 +148,20 @@ mod tests {
     #[case(2)]
     #[case(3)]
     fn invalid_proof_fails_verification(#[case] batch_size: usize) {
-        let language_public_parameters = language_public_parameters();
+        let (language_public_parameters, witnesses) = setup(batch_size);
 
         // No invalid values as secp256k1 statically defines group,
         // `k256::AffinePoint` assures deserialized values are on curve,
         // and `Value` can only be instantiated through deserialization
         language::tests::invalid_proof_fails_verification::<
             Language<secp256k1::Scalar, secp256k1::GroupElement>,
-        >(None, None, language_public_parameters, batch_size)
+        >(
+            None,
+            None,
+            language_public_parameters,
+            witnesses,
+            batch_size,
+        )
     }
 }
 
@@ -147,14 +172,15 @@ mod benches {
     use super::*;
     use crate::{
         group::secp256k1,
-        proofs::schnorr::{
-            language, language::knowledge_of_discrete_log::tests::language_public_parameters,
-        },
+        proofs::schnorr::{language, language::knowledge_of_discrete_log::tests::setup},
     };
 
     pub(crate) fn benchmark(c: &mut Criterion) {
+        let (language_public_parameters, witnesses) = setup(1000);
+
         language::benchmark::<Language<secp256k1::Scalar, secp256k1::GroupElement>>(
-            language_public_parameters(),
+            language_public_parameters,
+            witnesses,
             c,
         );
     }

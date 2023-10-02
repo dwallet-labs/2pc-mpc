@@ -85,63 +85,42 @@ mod tests {
         proofs::{schnorr::Proof, Error},
     };
 
-    pub(crate) fn generate_witnesses_and_statements<Lang: Language>(
-        language_public_parameters: &Lang::PublicParameters,
+    pub(crate) fn generate_witnesses<Lang: Language>(
+        witness_space_public_parameters: &WitnessSpacePublicParameters<Lang>,
         batch_size: usize,
-    ) -> Vec<(
-        WitnessSpaceGroupElement<Lang>,
-        StatementSpaceGroupElement<Lang>,
-    )> {
-        let witnesses: Vec<WitnessSpaceGroupElement<Lang>> = iter::repeat_with(|| {
-            WitnessSpaceGroupElement::<Lang>::sample(
-                &mut OsRng,
-                &language_public_parameters
-                    .as_ref()
-                    .witness_space_public_parameters,
-            )
-            .unwrap()
+    ) -> Vec<WitnessSpaceGroupElement<Lang>> {
+        iter::repeat_with(|| {
+            WitnessSpaceGroupElement::<Lang>::sample(&mut OsRng, &witness_space_public_parameters)
+                .unwrap()
         })
         .take(batch_size)
-        .collect();
-
-        let statements: Vec<StatementSpaceGroupElement<Lang>> = witnesses
-            .iter()
-            .map(|witness| Lang::group_homomorphism(witness, language_public_parameters).unwrap())
-            .collect();
-
-        witnesses.clone().into_iter().zip(statements).collect()
+        .collect()
     }
 
-    pub(crate) fn generate_witness_and_statement<Lang: Language>(
+    pub(crate) fn generate_witness<Lang: Language>(
         language_public_parameters: &Lang::PublicParameters,
-    ) -> (
-        WitnessSpaceGroupElement<Lang>,
-        StatementSpaceGroupElement<Lang>,
-    ) {
-        let (witnesses, statements): (
-            Vec<WitnessSpaceGroupElement<Lang>>,
-            Vec<StatementSpaceGroupElement<Lang>>,
-        ) = generate_witnesses_and_statements::<Lang>(language_public_parameters, 1)
-            .into_iter()
-            .unzip();
+    ) -> WitnessSpaceGroupElement<Lang> {
+        let witnesses = generate_witnesses::<Lang>(
+            &language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters,
+            1,
+        );
 
-        (
-            witnesses.first().unwrap().clone(),
-            statements.first().unwrap().clone(),
-        )
+        witnesses.first().unwrap().clone()
     }
 
     pub(crate) fn generate_valid_proof<Lang: Language>(
         language_public_parameters: &Lang::PublicParameters,
-        witnesses_and_statements: Vec<(
-            WitnessSpaceGroupElement<Lang>,
-            StatementSpaceGroupElement<Lang>,
-        )>,
-    ) -> Proof<Lang, PhantomData<()>> {
+        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
+    ) -> (
+        Proof<Lang, PhantomData<()>>,
+        Vec<StatementSpaceGroupElement<Lang>>,
+    ) {
         Proof::prove(
             &PhantomData,
             language_public_parameters,
-            witnesses_and_statements,
+            witnesses,
             &mut OsRng,
         )
         .unwrap()
@@ -149,20 +128,11 @@ mod tests {
 
     pub(crate) fn valid_proof_verifies<Lang: Language>(
         language_public_parameters: Lang::PublicParameters,
+        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
         batch_size: usize,
     ) {
-        let witnesses_and_statements =
-            generate_witnesses_and_statements::<Lang>(&language_public_parameters, batch_size);
-
-        let proof = generate_valid_proof::<Lang>(
-            &language_public_parameters,
-            witnesses_and_statements.clone(),
-        );
-
-        let (_, statements): (
-            Vec<WitnessSpaceGroupElement<Lang>>,
-            Vec<StatementSpaceGroupElement<Lang>>,
-        ) = witnesses_and_statements.into_iter().unzip();
+        let (proof, statements) =
+            generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone());
 
         assert!(
             proof
@@ -176,23 +146,16 @@ mod tests {
         invalid_witness_space_value: Option<WitnessSpaceValue<Lang>>,
         invalid_statement_space_value: Option<StatementSpaceValue<Lang>>,
         language_public_parameters: Lang::PublicParameters,
+        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
         batch_size: usize,
     ) {
-        let witnesses_and_statements =
-            generate_witnesses_and_statements::<Lang>(&language_public_parameters, batch_size);
+        let (valid_proof, statements) =
+            generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone());
 
-        let valid_proof = generate_valid_proof::<Lang>(
-            &language_public_parameters,
-            witnesses_and_statements.clone(),
-        );
+        let wrong_witness = generate_witness::<Lang>(&language_public_parameters);
 
-        let (_, statements): (
-            Vec<WitnessSpaceGroupElement<Lang>>,
-            Vec<StatementSpaceGroupElement<Lang>>,
-        ) = witnesses_and_statements.into_iter().unzip();
-
-        let (wrong_witness, wrong_statement) =
-            generate_witness_and_statement::<Lang>(&language_public_parameters);
+        let wrong_statement =
+            Lang::group_homomorphism(&wrong_witness, &language_public_parameters).unwrap();
 
         assert!(
             matches!(
@@ -303,37 +266,17 @@ mod tests {
                     "proof with an invalid response value should generate an invalid parameter error when checking the element is not in the group"
             );
         }
-
-        // TODO: make cases for elliptic curve with not on group values and make sure they fail and
-        // for the right reason!
-
-        // TODO: generate a valid proof with wrong public parameters and assure it isn't valid -
-        // that can only be done for Paillier, and we should just add a case for it
     }
 
     #[allow(dead_code)]
     pub(crate) fn proof_over_invalid_public_parameters_fails_verification<Lang: Language>(
-        prover_language_public_parameters: Option<Lang::PublicParameters>,
+        prover_language_public_parameters: Lang::PublicParameters,
         verifier_language_public_parameters: Lang::PublicParameters,
+        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
         batch_size: usize,
     ) {
-        let prover_language_public_parameters = prover_language_public_parameters
-            .unwrap_or(verifier_language_public_parameters.clone());
-
-        let witnesses_and_statements = generate_witnesses_and_statements::<Lang>(
-            &verifier_language_public_parameters,
-            batch_size,
-        );
-
-        let proof = generate_valid_proof::<Lang>(
-            &prover_language_public_parameters,
-            witnesses_and_statements.clone(),
-        );
-
-        let (_, statements): (
-            Vec<WitnessSpaceGroupElement<Lang>>,
-            Vec<StatementSpaceGroupElement<Lang>>,
-        ) = witnesses_and_statements.into_iter().unzip();
+        let (proof, statements) =
+            generate_valid_proof::<Lang>(&prover_language_public_parameters, witnesses.clone());
 
         assert!(
             matches!(
@@ -357,40 +300,34 @@ mod benches {
     use criterion::Criterion;
 
     use super::*;
-    use crate::proofs::schnorr::language::tests::{
-        generate_valid_proof, generate_witnesses_and_statements,
-    };
+    use crate::proofs::schnorr::language::tests::{generate_valid_proof, generate_witnesses};
 
     pub(crate) fn benchmark<Lang: Language>(
         language_public_parameters: Lang::PublicParameters,
+        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
         c: &mut Criterion,
     ) {
         let mut g = c.benchmark_group(Lang::NAME);
 
         g.sample_size(100);
 
-        for batch_size in [1, 10, 100, 1000] {
-            let witnesses_and_statements =
-                generate_witnesses_and_statements::<Lang>(&language_public_parameters, batch_size);
+        assert_eq!(witnesses.len(), 1000);
 
-            let (_, statements): (
-                Vec<WitnessSpaceGroupElement<Lang>>,
-                Vec<StatementSpaceGroupElement<Lang>>,
-            ) = witnesses_and_statements.clone().into_iter().unzip();
+        for batch_size in [1, 10, 100, 1000] {
+            let witnesses_batch: Vec<WitnessSpaceGroupElement<Lang>> =
+                witnesses.clone().into_iter().take(batch_size).collect();
 
             g.bench_function(format!("prove() over {batch_size} statements"), |bench| {
                 bench.iter(|| {
                     generate_valid_proof::<Lang>(
                         &language_public_parameters,
-                        witnesses_and_statements.clone(),
+                        witnesses_batch.clone(),
                     )
                 });
             });
 
-            let proof = generate_valid_proof::<Lang>(
-                &language_public_parameters,
-                witnesses_and_statements.clone(),
-            );
+            let (proof, statements) =
+                generate_valid_proof::<Lang>(&language_public_parameters, witnesses_batch.clone());
 
             g.bench_function(format!("verfiy() over {batch_size} statements"), |bench| {
                 bench.iter(|| {

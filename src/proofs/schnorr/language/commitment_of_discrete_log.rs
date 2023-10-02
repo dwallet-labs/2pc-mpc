@@ -129,17 +129,41 @@ mod tests {
         commitments::{pedersen, Pedersen},
         group,
         group::{secp256k1, GroupElement, Samplable},
-        proofs::schnorr::language,
+        proofs::schnorr::{language, language::WitnessSpaceGroupElement},
     };
 
-    pub(crate) fn language_public_parameters() -> language::PublicParameters<
-        Language<
-            { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
-            secp256k1::GroupElement,
-            Pedersen<1, { secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
+    pub(crate) fn setup(
+        batch_size: usize,
+    ) -> (
+        language::PublicParameters<
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                Pedersen<
+                    1,
+                    { secp256k1::SCALAR_LIMBS },
+                    secp256k1::Scalar,
+                    secp256k1::GroupElement,
+                >,
+            >,
         >,
-    > {
+        Vec<
+            WitnessSpaceGroupElement<
+                Language<
+                    { secp256k1::SCALAR_LIMBS },
+                    secp256k1::Scalar,
+                    secp256k1::GroupElement,
+                    Pedersen<
+                        1,
+                        { secp256k1::SCALAR_LIMBS },
+                        secp256k1::Scalar,
+                        secp256k1::GroupElement,
+                    >,
+                >,
+            >,
+        >,
+    ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
@@ -172,7 +196,7 @@ mod tests {
             randomness_generator.value(),
         );
 
-        PublicParameters {
+        let language_public_parameters = PublicParameters {
             groups_public_parameters: GroupsPublicParameters {
                 witness_space_public_parameters: group::PublicParameters::<
                     self_product::GroupElement<2, secp256k1::Scalar>,
@@ -187,7 +211,28 @@ mod tests {
             },
             commitment_scheme_public_parameters: pedersen_public_parameters,
             generator: secp256k1_group_public_parameters.generator,
-        }
+        };
+
+        let witnesses = language::tests::generate_witnesses::<
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                Pedersen<
+                    1,
+                    { secp256k1::SCALAR_LIMBS },
+                    secp256k1::Scalar,
+                    secp256k1::GroupElement,
+                >,
+            >,
+        >(
+            &language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters,
+            batch_size,
+        );
+
+        (language_public_parameters, witnesses)
     }
 
     #[rstest]
@@ -195,7 +240,7 @@ mod tests {
     #[case(2)]
     #[case(3)]
     fn valid_proof_verifies(#[case] batch_size: usize) {
-        let language_public_parameters = language_public_parameters();
+        let (language_public_parameters, witnesses) = setup(batch_size);
 
         language::tests::valid_proof_verifies::<
             Language<
@@ -209,7 +254,7 @@ mod tests {
                     secp256k1::GroupElement,
                 >,
             >,
-        >(language_public_parameters, batch_size)
+        >(language_public_parameters, witnesses, batch_size)
     }
 
     #[rstest]
@@ -217,7 +262,7 @@ mod tests {
     #[case(2)]
     #[case(3)]
     fn invalid_proof_fails_verification(#[case] batch_size: usize) {
-        let language_public_parameters = language_public_parameters();
+        let (language_public_parameters, witnesses) = setup(batch_size);
 
         // No invalid values as secp256k1 statically defines group,
         // `k256::AffinePoint` assures deserialized values are on curve,
@@ -234,7 +279,13 @@ mod tests {
                     secp256k1::GroupElement,
                 >,
             >,
-        >(None, None, language_public_parameters, batch_size)
+        >(
+            None,
+            None,
+            language_public_parameters,
+            witnesses,
+            batch_size,
+        )
     }
 }
 
@@ -246,12 +297,12 @@ mod benches {
     use crate::{
         commitments::Pedersen,
         group::secp256k1,
-        proofs::schnorr::{
-            language, language::commitment_of_discrete_log::tests::language_public_parameters,
-        },
+        proofs::schnorr::{language, language::commitment_of_discrete_log::tests::setup},
     };
 
     pub(crate) fn benchmark(c: &mut Criterion) {
+        let (language_public_parameters, witnesses) = setup(1000);
+
         language::benchmark::<
             Language<
                 { secp256k1::SCALAR_LIMBS },
@@ -264,6 +315,6 @@ mod benches {
                     secp256k1::GroupElement,
                 >,
             >,
-        >(language_public_parameters(), c);
+        >(language_public_parameters, witnesses, c);
     }
 }

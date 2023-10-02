@@ -155,6 +155,8 @@ impl<
 
 #[cfg(any(test, feature = "benchmarking"))]
 mod tests {
+    use std::iter;
+
     use rand_core::OsRng;
     use rstest::rstest;
 
@@ -163,12 +165,21 @@ mod tests {
         commitments::{pedersen, Pedersen},
         group,
         group::{secp256k1, GroupElement, Samplable},
-        proofs::schnorr::language,
+        proofs::schnorr::{language, language::WitnessSpaceGroupElement},
     };
 
-    pub(crate) fn language_public_parameters() -> language::PublicParameters<
-        Language<{ secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
-    > {
+    pub(crate) fn setup(
+        batch_size: usize,
+    ) -> (
+        language::PublicParameters<
+            Language<{ secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
+        >,
+        Vec<
+            WitnessSpaceGroupElement<
+                Language<{ secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
+            >,
+        >,
+    ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
@@ -179,6 +190,13 @@ mod tests {
             &secp256k1_group_public_parameters,
         )
         .unwrap();
+
+        let discrete_log =
+            secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap();
+
+        let base_by_discrete_log =
+            secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap()
+                * generator;
 
         let message_generator =
             secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap()
@@ -201,7 +219,7 @@ mod tests {
             randomness_generator.value(),
         );
 
-        PublicParameters {
+        let language_public_parameters = PublicParameters {
             groups_public_parameters: GroupsPublicParameters {
                 witness_space_public_parameters: group::PublicParameters::<
                     self_product::GroupElement<4, secp256k1::Scalar>,
@@ -218,8 +236,36 @@ mod tests {
             generator: secp256k1_group_public_parameters.generator,
             // TODO: why is this working?
             // base_by_discrete_log: secp256k1_group_public_parameters.generator,
-            base_by_discrete_log: message_generator.value(),
-        }
+            // base_by_discrete_log: message_generator.value(),
+            base_by_discrete_log: base_by_discrete_log.value(),
+        };
+
+        // TODO: why does this pass here with random discrete log values?
+        // let witnesses = language::tests::generate_witnesses::<
+        //     Language<{ secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
+        // >(
+        //     &language_public_parameters
+        //         .as_ref()
+        //         .witness_space_public_parameters,
+        //     batch_size,
+        // );
+
+        let witnesses = iter::repeat_with(|| {
+            let message =
+                secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap();
+
+            let first_randomness =
+                secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap();
+
+            let second_randomness =
+                secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap();
+
+            [message, discrete_log, first_randomness, second_randomness].into()
+        })
+        .take(batch_size)
+        .collect();
+
+        (language_public_parameters, witnesses)
     }
 
     #[rstest]
@@ -227,11 +273,11 @@ mod tests {
     #[case(2)]
     #[case(3)]
     fn valid_proof_verifies(#[case] batch_size: usize) {
-        let language_public_parameters = language_public_parameters();
+        let (language_public_parameters, witnesses) = setup(batch_size);
 
         language::tests::valid_proof_verifies::<
             Language<{ secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
-        >(language_public_parameters, batch_size)
+        >(language_public_parameters, witnesses, batch_size)
     }
 
     #[rstest]
@@ -239,14 +285,20 @@ mod tests {
     #[case(2)]
     #[case(3)]
     fn invalid_proof_fails_verification(#[case] batch_size: usize) {
-        let language_public_parameters = language_public_parameters();
+        let (language_public_parameters, witnesses) = setup(batch_size);
 
         // No invalid values as secp256k1 statically defines group,
         // `k256::AffinePoint` assures deserialized values are on curve,
         // and `Value` can only be instantiated through deserialization
         language::tests::invalid_proof_fails_verification::<
             Language<{ secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
-        >(None, None, language_public_parameters, batch_size)
+        >(
+            None,
+            None,
+            language_public_parameters,
+            witnesses,
+            batch_size,
+        )
     }
 }
 
@@ -259,14 +311,15 @@ mod benches {
         commitments::Pedersen,
         group::secp256k1,
         proofs::schnorr::{
-            language,
-            language::discrete_log_ratio_of_commited_values::tests::language_public_parameters,
+            language, language::discrete_log_ratio_of_commited_values::tests::setup,
         },
     };
 
     pub(crate) fn benchmark(c: &mut Criterion) {
+        let (language_public_parameters, witnesses) = setup(1000);
+
         language::benchmark::<
             Language<{ secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
-        >(language_public_parameters(), c);
+        >(language_public_parameters, witnesses, c);
     }
 }

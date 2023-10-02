@@ -94,19 +94,18 @@ where
             WITNESS_MASK_LIMBS,
             Language,
         >,
-        witnesses_and_statements: Vec<(
-            WitnessSpaceGroupElement<Language>,
-            StatementSpaceGroupElement<Language>,
-        )>,
+        witnesses: Vec<WitnessSpaceGroupElement<Language>>,
         rng: &mut impl CryptoRngCore,
-    ) -> proofs::Result<Self> {
+    ) -> proofs::Result<(Self, Vec<StatementSpaceGroupElement<Language>>)> {
+        let (schnorr_proof, statements) = super::Proof::<Language, ProtocolContext>::prove(
+            protocol_context,
+            language_public_parameters,
+            witnesses.clone(),
+            rng,
+        )?;
+
         let mut transcript =
             Self::setup_range_proof(protocol_context, range_proof_public_parameters)?;
-
-        let (witnesses, statements): (
-            Vec<WitnessSpaceGroupElement<Language>>,
-            Vec<StatementSpaceGroupElement<Language>>,
-        ) = witnesses_and_statements.clone().into_iter().unzip();
 
         let (constrained_witnesses, commitment_randomnesses): (
             Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
@@ -138,6 +137,9 @@ where
             })
             .unzip();
 
+        // TODO: still I'm sending the commitments here to the range proof code.. so again its being
+        // computed twice.
+
         let commitments: Vec<
             language::enhanced::RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
                 RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -147,6 +149,7 @@ where
                 Language,
             >,
         > = statements
+            .clone()
             .into_iter()
             .map(|statement| {
                 let (commitment, _) = statement.into();
@@ -170,17 +173,13 @@ where
             rng,
         )?;
 
-        let schnorr_proof = super::Proof::<Language, ProtocolContext>::prove(
-            protocol_context,
-            language_public_parameters,
-            witnesses_and_statements,
-            rng,
-        )?;
-
-        Ok(Proof {
-            schnorr_proof,
-            range_proof,
-        })
+        Ok((
+            Proof {
+                schnorr_proof,
+                range_proof,
+            },
+            statements,
+        ))
     }
 
     /// Verify an enhanced batched Schnorr zero-knowledge proof.
