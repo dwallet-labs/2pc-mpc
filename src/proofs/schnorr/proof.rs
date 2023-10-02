@@ -72,17 +72,34 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         witnesses: Vec<WitnessSpaceGroupElement<Language>>,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(Self, Vec<StatementSpaceGroupElement<Language>>)> {
-        if witnesses.is_empty() {
-            return Err(Error::InvalidParameters);
-        }
-
-        let batch_size = witnesses.len();
-
         let statements: proofs::Result<Vec<StatementSpaceGroupElement<Language>>> = witnesses
             .iter()
             .map(|witness| Language::group_homomorphism(witness, language_public_parameters))
             .collect();
         let statements = statements?;
+
+        Self::prove_with_statements(
+            protocol_context,
+            language_public_parameters,
+            witnesses,
+            statements.clone(),
+            rng,
+        )
+        .map(|proof| (proof, statements))
+    }
+
+    fn prove_with_statements(
+        protocol_context: &ProtocolContext,
+        language_public_parameters: &PublicParameters<Language>,
+        witnesses: Vec<WitnessSpaceGroupElement<Language>>,
+        statements: Vec<StatementSpaceGroupElement<Language>>,
+        rng: &mut impl CryptoRngCore,
+    ) -> proofs::Result<Self> {
+        if witnesses.is_empty() {
+            return Err(Error::InvalidParameters);
+        }
+
+        let batch_size = witnesses.len();
 
         let mut transcript = Self::setup_protocol(
             protocol_context,
@@ -116,7 +133,7 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
                 .reduce(|a, b| a + b)
                 .unwrap();
 
-        Ok((Self::new(statement_mask, response), statements))
+        Ok(Self::new(statement_mask, response))
     }
 
     /// Verify a batched Schnorr zero-knowledge proof.

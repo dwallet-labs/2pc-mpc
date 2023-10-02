@@ -44,10 +44,9 @@ pub trait RangeProof<
         public_parameters: &Self::PublicParameters,
         witnesses: Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
         commitments_randomness: Vec<commitments::RandomnessSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
-        commitments: Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
         transcript: &mut Transcript,
         rng: &mut impl CryptoRngCore,
-    ) -> Result<Self>;
+    ) -> Result<(Self, Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>)>;
 
     /// Verifies that all witnesses committed in `commitment` are bounded by their corresponding
     /// range upper bound in range_claims.

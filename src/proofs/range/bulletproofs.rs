@@ -1,5 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
+use std::{array, iter};
+
 use bulletproofs::{self, BulletproofGens, PedersenGens};
 use crypto_bigint::{rand_core::CryptoRngCore, Uint, U64};
 use ristretto::SCALAR_LIMBS;
@@ -9,7 +11,9 @@ use crate::{
     commitments,
     commitments::{multicommitment::MultiCommitment, pedersen, GroupsPublicParameters, Pedersen},
     group::{ristretto, self_product},
-    proofs::{Error, Transcript},
+    helpers::flat_map_results,
+    proofs,
+    proofs::Transcript,
 };
 
 const RANGE_CLAIM_LIMBS: usize = U64::LIMBS;
@@ -25,6 +29,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
         SCALAR_LIMBS,
         Pedersen<1, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>,
     >;
+
     type PublicParameters = PublicParameters<NUM_RANGE_CLAIMS>;
 
     fn prove(
@@ -33,25 +38,18 @@ impl<const NUM_RANGE_CLAIMS: usize>
         commitments_randomness: Vec<
             commitments::RandomnessSpaceGroupElement<SCALAR_LIMBS, Self::CommitmentScheme>,
         >,
-        commitments: Vec<
-            commitments::CommitmentSpaceGroupElement<SCALAR_LIMBS, Self::CommitmentScheme>,
-        >,
         transcript: &mut Transcript,
         rng: &mut impl CryptoRngCore,
-    ) -> crate::proofs::Result<Self> {
+    ) -> proofs::Result<(
+        Self,
+        Vec<commitments::CommitmentSpaceGroupElement<SCALAR_LIMBS, Self::CommitmentScheme>>,
+    )> {
         let commitment_generators = PedersenGens::default();
 
         // TODO: maybe use smaller than 64 here
         let bulletproofs_generators = BulletproofGens::new(64, 1);
 
-        let compressed_commitments: Vec<curve25519_dalek::ristretto::CompressedRistretto> =
-            commitments
-                .into_iter()
-                .flat_map(|multicommitment| {
-                    <[ristretto::GroupElement; NUM_RANGE_CLAIMS]>::from(multicommitment)
-                })
-                .map(|commitment| commitment.0.compress())
-                .collect();
+        let number_of_witnesses = witnesses.len();
 
         let witnesses: Vec<u64> = witnesses
             .into_iter()
@@ -69,10 +67,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
 
         // TODO: above operation keeps order right?
 
-        // TODO: the commitments here are being double computed? ...
-        // TODO: change (everywhere!) that `prove()` functions generate the statements, and not get
-        // them.
-        let (proof, proof_commitments) = bulletproofs::RangeProof::prove_multiple_with_rng(
+        let (proof, commitments) = bulletproofs::RangeProof::prove_multiple_with_rng(
             &bulletproofs_generators,
             &commitment_generators,
             transcript,
@@ -82,12 +77,42 @@ impl<const NUM_RANGE_CLAIMS: usize>
             rng,
         )?;
 
-        if proof_commitments != compressed_commitments {
-            return Err(Error::InvalidParameters);
-        }
+        let commitments: proofs::Result<Vec<curve25519_dalek::ristretto::RistrettoPoint>> =
+            commitments
+                .into_iter()
+                .map(|compressed_commitment| {
+                    compressed_commitment
+                        .decompress()
+                        .ok_or(proofs::Error::InvalidParameters)
+                })
+                .collect();
 
-        Ok(proof)
+        // TODO: note that we create a `GroupElement` here without checking it is in the group.
+        // We need to make sure bulletproofs make that check for it to be safe.
+        let mut commitments_iter = commitments?
+            .into_iter()
+            .map(|point| ristretto::GroupElement(point));
+
+        let commitments: proofs::Result<
+            Vec<commitments::CommitmentSpaceGroupElement<SCALAR_LIMBS, Self::CommitmentScheme>>,
+        > = iter::repeat_with(|| {
+            flat_map_results(
+                array::from_fn(|_| {
+                    commitments_iter
+                        .next()
+                        .ok_or(proofs::Error::InvalidParameters)
+                })
+            ).map(
+                commitments::CommitmentSpaceGroupElement::<SCALAR_LIMBS,
+                    Self::CommitmentScheme>::from,
+            )
+        })
+        .take(number_of_witnesses)
+        .collect();
+
+        Ok((proof, commitments?))
     }
+
     fn verify(
         &self,
         _public_parameters: &Self::PublicParameters,

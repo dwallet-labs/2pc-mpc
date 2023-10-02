@@ -97,13 +97,6 @@ where
         witnesses: Vec<WitnessSpaceGroupElement<Language>>,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(Self, Vec<StatementSpaceGroupElement<Language>>)> {
-        let (schnorr_proof, statements) = super::Proof::<Language, ProtocolContext>::prove(
-            protocol_context,
-            language_public_parameters,
-            witnesses.clone(),
-            rng,
-        )?;
-
         let mut transcript =
             Self::setup_range_proof(protocol_context, range_proof_public_parameters)?;
 
@@ -119,6 +112,7 @@ where
                 >,
             >,
         ) = witnesses
+            .clone()
             .into_iter()
             .map(|witness| {
                 let (constrained_witness, commitment_randomness, _) = witness.into();
@@ -137,28 +131,10 @@ where
             })
             .unzip();
 
-        // TODO: still I'm sending the commitments here to the range proof code.. so again its being
-        // computed twice.
+        // TODO: commitments are being computed twice. In order to avoid this, I would need to
+        // somehow partially compute the group homomorphism, which is problematic..
 
-        let commitments: Vec<
-            language::enhanced::RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
-                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                NUM_RANGE_CLAIMS,
-                RANGE_CLAIM_LIMBS,
-                WITNESS_MASK_LIMBS,
-                Language,
-            >,
-        > = statements
-            .clone()
-            .into_iter()
-            .map(|statement| {
-                let (commitment, _) = statement.into();
-
-                commitment
-            })
-            .collect();
-
-        let range_proof = language::enhanced::RangeProof::<
+        let (range_proof, _) = language::enhanced::RangeProof::<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -168,8 +144,14 @@ where
             range_proof_public_parameters,
             constrained_witnesses,
             commitment_randomnesses,
-            commitments,
             &mut transcript,
+            rng,
+        )?;
+
+        let (schnorr_proof, statements) = super::Proof::<Language, ProtocolContext>::prove(
+            protocol_context,
+            language_public_parameters,
+            witnesses,
             rng,
         )?;
 
