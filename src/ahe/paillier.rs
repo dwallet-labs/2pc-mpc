@@ -3,13 +3,18 @@
 
 use crypto_bigint::{NonZero, Uint};
 use group::paillier::{
-    CiphertextGroupElement, CiphertextPublicParameters, PlaintextGroupElement, RandomnessGroupElement, RandomnessPublicParameters,
+    CiphertextGroupElement, CiphertextPublicParameters, PlaintextGroupElement,
+    RandomnessGroupElement, RandomnessPublicParameters,
 };
+use serde::{Deserialize, Serialize};
 use tiresias::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 
 use crate::{
     ahe, group,
-    group::{additive_group_of_integers_modulu_n::odd_moduli, paillier::PlaintextPublicParameters, GroupElement},
+    group::{
+        additive_group_of_integers_modulu_n::odd_moduli, paillier::PlaintextPublicParameters,
+        GroupElement,
+    },
     AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
 };
 
@@ -31,11 +36,7 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
     type PlaintextSpaceGroupElement = PlaintextGroupElement;
     type RandomnessSpaceGroupElement = RandomnessGroupElement;
     type CiphertextSpaceGroupElement = CiphertextGroupElement;
-    type PublicParameters = ahe::GroupsPublicParameters<
-        group::PublicParameters<PlaintextGroupElement>,
-        group::PublicParameters<RandomnessGroupElement>,
-        group::PublicParameters<CiphertextGroupElement>,
-    >;
+    type PublicParameters = PublicParameters;
 
     fn new(encryption_scheme_public_parameters: &Self::PublicParameters) -> super::Result<Self> {
         // TODO: this actually now should always succeed and the check should be in evaluate()
@@ -92,7 +93,10 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
 
         CiphertextGroupElement::new(
             self.0.encrypt_with_randomness(
-                &(&<&PlaintextGroupElement as Into<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>>::into(plaintext)).into(),
+                &(&<&PlaintextGroupElement as Into<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>>::into(
+                    plaintext,
+                ))
+                    .into(),
                 &randomness.into(),
             ),
             &CiphertextPublicParameters { modulus: self.0.n2 },
@@ -101,30 +105,75 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
     }
 }
 
-impl From<EncryptionKey>
-    for ahe::GroupsPublicParameters<PlaintextPublicParameters, RandomnessPublicParameters, CiphertextPublicParameters>
-{
-    fn from(value: EncryptionKey) -> Self {
-        ahe::GroupsPublicParameters {
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct PublicParameters(
+    ahe::GroupsPublicParameters<
+        PlaintextPublicParameters,
+        RandomnessPublicParameters,
+        CiphertextPublicParameters,
+    >,
+);
+
+impl PublicParameters {
+    pub fn new(paillier_associate_bi_prime: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>) -> Self {
+        Self(ahe::GroupsPublicParameters {
             plaintext_space_public_parameters: PlaintextPublicParameters {
-                modulus: NonZero::new(value.0.n).unwrap(),
+                modulus: NonZero::new(paillier_associate_bi_prime).unwrap(),
             },
-            randomness_space_public_parameters: RandomnessPublicParameters { modulus: value.0.n },
-            ciphertext_space_public_parameters: CiphertextPublicParameters { modulus: value.0.n2 },
-        }
+            randomness_space_public_parameters: RandomnessPublicParameters {
+                modulus: paillier_associate_bi_prime,
+            },
+            ciphertext_space_public_parameters: CiphertextPublicParameters {
+                modulus: paillier_associate_bi_prime.square(),
+            },
+        })
     }
 }
 
-impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey> for DecryptionKey {
+impl
+    AsRef<
+        ahe::GroupsPublicParameters<
+            PlaintextPublicParameters,
+            RandomnessPublicParameters,
+            CiphertextPublicParameters,
+        >,
+    > for PublicParameters
+{
+    fn as_ref(
+        &self,
+    ) -> &ahe::GroupsPublicParameters<
+        PlaintextPublicParameters,
+        RandomnessPublicParameters,
+        CiphertextPublicParameters,
+    > {
+        &self.0
+    }
+}
+
+impl From<EncryptionKey> for PublicParameters {
+    fn from(value: EncryptionKey) -> Self {
+        Self::new(value.0.n)
+    }
+}
+
+impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>
+    for DecryptionKey
+{
     type SecretKey = PaillierModulusSizedNumber;
 
     fn new(
-        encryption_scheme_public_parameters: &ahe::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        encryption_scheme_public_parameters: &ahe::PublicParameters<
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            EncryptionKey,
+        >,
         secret_key: Self::SecretKey,
     ) -> super::Result<Self> {
         let encryption_key = EncryptionKey::new(encryption_scheme_public_parameters)?;
 
-        Ok(Self(tiresias::DecryptionKey::new(encryption_key.0, secret_key)))
+        Ok(Self(tiresias::DecryptionKey::new(
+            encryption_key.0,
+            secret_key,
+        )))
     }
 
     // todo: new()
@@ -151,8 +200,8 @@ impl Into<EncryptionKey> for DecryptionKey {
     }
 }
 
-#[cfg(test)]
-mod tests {
+#[cfg(any(test, feature = "benchmarking"))]
+pub(crate) mod tests {
     use crypto_bigint::{U256, U384};
 
     use super::*;
@@ -164,23 +213,29 @@ mod tests {
     // TODO: modulation checks and so forth
     const MASK_LIMBS: usize = U384::LIMBS;
 
-    const N: LargeBiPrimeSizedNumber = LargeBiPrimeSizedNumber::from_be_hex("97431848911c007fa3a15b718ae97da192e68a4928c0259f2d19ab58ed01f1aa930e6aeb81f0d4429ac2f037def9508b91b45875c11668cea5dc3d4941abd8fbb2d6c8750e88a69727f982e633051f60252ad96ba2e9c9204f4c766c1c97bc096bb526e4b7621ec18766738010375829657c77a23faf50e3a31cb471f72c7abecdec61bdf45b2c73c666aa3729add2d01d7d96172353380c10011e1db3c47199b72da6ae769690c883e9799563d6605e0670a911a57ab5efc69a8c5611f158f1ae6e0b1b6434bafc21238921dc0b98a294195e4e88c173c8dab6334b207636774daad6f35138b9802c1784f334a82cbff480bb78976b22bb0fb41e78fdcb8095");
+    pub(crate) const N: LargeBiPrimeSizedNumber = LargeBiPrimeSizedNumber::from_be_hex("97431848911c007fa3a15b718ae97da192e68a4928c0259f2d19ab58ed01f1aa930e6aeb81f0d4429ac2f037def9508b91b45875c11668cea5dc3d4941abd8fbb2d6c8750e88a69727f982e633051f60252ad96ba2e9c9204f4c766c1c97bc096bb526e4b7621ec18766738010375829657c77a23faf50e3a31cb471f72c7abecdec61bdf45b2c73c666aa3729add2d01d7d96172353380c10011e1db3c47199b72da6ae769690c883e9799563d6605e0670a911a57ab5efc69a8c5611f158f1ae6e0b1b6434bafc21238921dc0b98a294195e4e88c173c8dab6334b207636774daad6f35138b9802c1784f334a82cbff480bb78976b22bb0fb41e78fdcb8095");
+
     const SECRET_KEY: PaillierModulusSizedNumber = PaillierModulusSizedNumber::from_be_hex("19d698592b9ccb2890fb84be46cd2b18c360153b740aeccb606cf4168ee2de399f05273182bf468978508a5f4869cb867b340e144838dfaf4ca9bfd38cd55dc2837688aed2dbd76d95091640c47b2037d3d0ca854ffb4c84970b86f905cef24e876ddc8ab9e04f2a5f171b9c7146776c469f0d90908aa436b710cf4489afc73cd3ee38bb81e80a22d5d9228b843f435c48c5eb40088623a14a12b44e2721b56625da5d56d257bb27662c6975630d51e8f5b930d05fc5ba461a0e158cbda0f3266408c9bf60ff617e39ae49e707cbb40958adc512f3b4b69a5c3dc8b6d34cf45bc9597840057438598623fb65254869a165a6030ec6bec12fd59e192b3c1eefd33ef5d9336e0666aa8f36c6bd2749f86ea82290488ee31bf7498c2c77a8900bae00efcff418b62d41eb93502a245236b89c241ad6272724858122a2ebe1ae7ec4684b29048ba25b3a516c281a93043d58844cf3fa0c6f1f73db5db7ecba179652349dea8df5454e0205e910e0206736051ac4b7c707c3013e190423532e907af2e85e5bb6f6f0b9b58257ca1ec8b0318dd197f30352a96472a5307333f0e6b83f4f775fb302c1e10f21e1fcbfff17e3a4aa8bb6f553d9c6ebc2c884ae9b140dd66f21afc8610418e9f0ba2d14ecfa51ff08744a3470ebe4bb21bd6d65b58ac154630b8331ea620673ffbabb179a971a6577c407a076654a629c7733836c250000");
 
-    const RANDOMNESS_PUBLIC_PARAMETERS: multiplicative_group_of_integers_modulu_n::PublicParameters<
-        { LargeBiPrimeSizedNumber::LIMBS },
-    > = multiplicative_group_of_integers_modulu_n::PublicParameters { modulus: N };
+    const RANDOMNESS_PUBLIC_PARAMETERS:
+        multiplicative_group_of_integers_modulu_n::PublicParameters<
+            { LargeBiPrimeSizedNumber::LIMBS },
+        > = multiplicative_group_of_integers_modulu_n::PublicParameters { modulus: N };
 
     const SECP256K1_ORDER_LIMBS: usize = U256::LIMBS;
 
     #[test]
     fn encrypt_decrypts() {
-        let plaintext_public_parameters: odd_moduli::PublicParameters<{ LargeBiPrimeSizedNumber::LIMBS }> =
-            odd_moduli::PublicParameters {
-                modulus: NonZero::new(N).unwrap(),
-            };
+        let plaintext_public_parameters: odd_moduli::PublicParameters<
+            { LargeBiPrimeSizedNumber::LIMBS },
+        > = odd_moduli::PublicParameters {
+            modulus: NonZero::new(N).unwrap(),
+        };
 
-        let decryption_key = DecryptionKey::from(tiresias::DecryptionKey::new(tiresias::EncryptionKey::new(N), SECRET_KEY));
+        let decryption_key = DecryptionKey::from(tiresias::DecryptionKey::new(
+            tiresias::EncryptionKey::new(N),
+            SECRET_KEY,
+        ));
 
         ahe::tests::encrypt_decrypts::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey, DecryptionKey>(
             decryption_key,
@@ -191,12 +246,16 @@ mod tests {
 
     #[test]
     fn evaluates() {
-        let plaintext_public_parameters: odd_moduli::PublicParameters<{ LargeBiPrimeSizedNumber::LIMBS }> =
-            odd_moduli::PublicParameters {
-                modulus: NonZero::new(N).unwrap(),
-            };
+        let plaintext_public_parameters: odd_moduli::PublicParameters<
+            { LargeBiPrimeSizedNumber::LIMBS },
+        > = odd_moduli::PublicParameters {
+            modulus: NonZero::new(N).unwrap(),
+        };
 
-        let decryption_key = DecryptionKey::from(tiresias::DecryptionKey::new(tiresias::EncryptionKey::new(N), SECRET_KEY));
+        let decryption_key = DecryptionKey::from(tiresias::DecryptionKey::new(
+            tiresias::EncryptionKey::new(N),
+            SECRET_KEY,
+        ));
 
         ahe::tests::evaluates::<
             MASK_LIMBS,

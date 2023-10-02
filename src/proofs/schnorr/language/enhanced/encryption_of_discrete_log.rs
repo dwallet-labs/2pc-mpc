@@ -318,50 +318,6 @@ impl<
         EncryptionKeyPublicParameters,
         ScalarPublicParameters,
         GroupElementValue,
-    >
-    PublicParameters<
-        WitnessSpacePublicParameters,
-        StatementSpacePublicParameters,
-        CommitmentSchemePublicParameters,
-        EncryptionKeyPublicParameters,
-        ScalarPublicParameters,
-        GroupElementValue,
-    >
-{
-    pub fn new(
-        commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
-        encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
-        scalar_group_public_parameters: ScalarPublicParameters,
-        generator: GroupElementValue,
-    ) -> Self {
-        // let witness_space_public_parameters = (
-        //     encryption_scheme_public_parameters.as_ref().randomness_space_public_parameters,
-        //     ).into();
-        //
-        // let groups_public_parameters = GroupsPublicParameters {
-        //     witness_space_public_parameters,
-        //     statement_space_public_parameters,
-        // };
-        //
-        // Self {
-        //     groups_public_parameters,
-        //     commitment_scheme_public_parameters,
-        //     encryption_scheme_public_parameters,
-        //     scalar_group_public_parameters,
-        //     generator,
-        // }
-
-        todo!()
-    }
-}
-
-impl<
-        WitnessSpacePublicParameters,
-        StatementSpacePublicParameters,
-        CommitmentSchemePublicParameters,
-        EncryptionKeyPublicParameters,
-        ScalarPublicParameters,
-        GroupElementValue,
     > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
     for PublicParameters<
         WitnessSpacePublicParameters,
@@ -381,15 +337,22 @@ impl<
 
 #[cfg(any(test, feature = "benchmarking"))]
 mod tests {
+    use crypto_bigint::NonZero;
+    use paillier::tests::N;
     use rstest::rstest;
 
     use super::*;
     use crate::{
         ahe::paillier,
-        group::{ristretto, secp256k1},
+        group::{ristretto, secp256k1, self_product},
         proofs::{range, schnorr::language},
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
+
+    // TOOD: challenge instead of computational?
+    pub(crate) const WITNESS_MASK_LIMBS: usize = range::bulletproofs::RANGE_CLAIM_LIMBS
+        + ComputationalSecuritySizedNumber::LIMBS
+        + StatisticalSecuritySizedNumber::LIMBS;
 
     pub(crate) fn language_public_parameters() -> language::PublicParameters<
         Language<
@@ -397,12 +360,7 @@ mod tests {
             { ristretto::SCALAR_LIMBS },
             4,
             { range::bulletproofs::RANGE_CLAIM_LIMBS },
-            // TOOD: challenge instead of computational?
-            {
-                range::bulletproofs::RANGE_CLAIM_LIMBS
-                    + ComputationalSecuritySizedNumber::LIMBS
-                    + StatisticalSecuritySizedNumber::LIMBS
-            },
+            { WITNESS_MASK_LIMBS },
             { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
             secp256k1::Scalar,
             secp256k1::GroupElement,
@@ -417,15 +375,54 @@ mod tests {
 
         let bulletproofs_public_parameters = range::bulletproofs::PublicParameters::<4>::default();
 
-        // PublicParameters {
-        //     groups_public_parameters: GroupsPublicParameters {
-        //         witness_space_public_parameters: secp256k1_scalar_public_parameters,
-        //         statement_space_public_parameters: secp256k1_group_public_parameters.clone(),
-        //     },
-        //     generator: secp256k1_group_public_parameters.generator,
-        // }
+        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N);
 
-        todo!()
+        // TODO: think how we can generalize this with `new()` for `PublicParameters` (of encryption
+        // of discrete log).
+
+        let witness_space_public_parameters = (
+            self_product::PublicParameters::<4, ()>::new(()),
+            bulletproofs_public_parameters
+                .as_ref()
+                .as_ref()
+                .randomness_space_public_parameters
+                .clone(),
+            paillier_public_parameters
+                .as_ref()
+                .randomness_space_public_parameters
+                .clone(),
+        )
+            .into();
+
+        let statement_space_public_parameters = (
+            bulletproofs_public_parameters
+                .as_ref()
+                .as_ref()
+                .commitment_space_public_parameters
+                .clone(),
+            (
+                paillier_public_parameters
+                    .as_ref()
+                    .ciphertext_space_public_parameters
+                    .clone(),
+                secp256k1_group_public_parameters.clone(),
+            )
+                .into(),
+        )
+            .into();
+
+        let groups_public_parameters = GroupsPublicParameters {
+            witness_space_public_parameters,
+            statement_space_public_parameters,
+        };
+
+        PublicParameters {
+            groups_public_parameters,
+            commitment_scheme_public_parameters: bulletproofs_public_parameters.as_ref().clone(),
+            encryption_scheme_public_parameters: paillier_public_parameters,
+            scalar_group_public_parameters: secp256k1_scalar_public_parameters,
+            generator: secp256k1_group_public_parameters.generator,
+        }
     }
 
     #[rstest]
@@ -441,12 +438,7 @@ mod tests {
                 { ristretto::SCALAR_LIMBS },
                 4,
                 { range::bulletproofs::RANGE_CLAIM_LIMBS },
-                // TOOD: challenge instead of computational?
-                {
-                    range::bulletproofs::RANGE_CLAIM_LIMBS
-                        + ComputationalSecuritySizedNumber::LIMBS
-                        + StatisticalSecuritySizedNumber::LIMBS
-                },
+                { WITNESS_MASK_LIMBS },
                 { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
                 secp256k1::Scalar,
                 secp256k1::GroupElement,
@@ -472,12 +464,7 @@ mod tests {
                 { ristretto::SCALAR_LIMBS },
                 4,
                 { range::bulletproofs::RANGE_CLAIM_LIMBS },
-                // TOOD: challenge instead of computational?
-                {
-                    range::bulletproofs::RANGE_CLAIM_LIMBS
-                        + ComputationalSecuritySizedNumber::LIMBS
-                        + StatisticalSecuritySizedNumber::LIMBS
-                },
+                { WITNESS_MASK_LIMBS },
                 { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
                 secp256k1::Scalar,
                 secp256k1::GroupElement,
@@ -499,7 +486,10 @@ mod benches {
         proofs::{
             range,
             schnorr::{
-                language, language::encryption_of_discrete_log::tests::language_public_parameters,
+                language,
+                language::encryption_of_discrete_log::tests::{
+                    language_public_parameters, WITNESS_MASK_LIMBS,
+                },
             },
         },
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
@@ -514,12 +504,7 @@ mod benches {
                 { ristretto::SCALAR_LIMBS },
                 4,
                 { range::bulletproofs::RANGE_CLAIM_LIMBS },
-                // TOOD: challenge instead of computational?
-                {
-                    range::bulletproofs::RANGE_CLAIM_LIMBS
-                        + ComputationalSecuritySizedNumber::LIMBS
-                        + StatisticalSecuritySizedNumber::LIMBS
-                },
+                { WITNESS_MASK_LIMBS },
                 { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
                 secp256k1::Scalar,
                 secp256k1::GroupElement,

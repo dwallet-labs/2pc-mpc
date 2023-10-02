@@ -98,8 +98,7 @@ impl<const N: usize, G: group::GroupElement> group::GroupElement for GroupElemen
     fn new(value: Self::Value, public_parameters: &Self::PublicParameters) -> group::Result<Self> {
         let public_parameters = &public_parameters.public_parameters;
 
-        if N < 2 {
-            // there is no use of using this struct for a "product group" of less than two groups.
+        if N == 0 {
             return Err(group::Error::InvalidPublicParametersError);
         }
 
