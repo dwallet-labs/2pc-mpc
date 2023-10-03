@@ -340,6 +340,7 @@ pub(crate) mod tests {
     use std::array;
 
     use crypto_bigint::{NonZero, Random};
+    use language::enhanced::tests::{RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS};
     use paillier::tests::N;
     use rand_core::OsRng;
     use rstest::rstest;
@@ -349,35 +350,49 @@ pub(crate) mod tests {
         ahe::paillier,
         group::{ristretto, secp256k1, self_product},
         proofs::{range, schnorr::language},
-        ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
 
-    // TODO: challenge instead of computational?
-    // TODO: move this to super?
-    pub(crate) const WITNESS_MASK_LIMBS: usize = range::bulletproofs::RANGE_CLAIM_LIMBS
-        + ComputationalSecuritySizedNumber::LIMBS
-        + StatisticalSecuritySizedNumber::LIMBS;
-
-    pub(crate) fn language_public_parameters() -> language::PublicParameters<
-        Language<
-            { secp256k1::SCALAR_LIMBS },
-            { ristretto::SCALAR_LIMBS },
-            4,
-            { range::bulletproofs::RANGE_CLAIM_LIMBS },
-            { WITNESS_MASK_LIMBS },
-            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-            secp256k1::Scalar,
-            secp256k1::GroupElement,
-            paillier::EncryptionKey,
-            bulletproofs::RangeProof,
+    pub(crate) fn language_public_parameters() -> (
+        language::PublicParameters<
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                { ristretto::SCALAR_LIMBS },
+                RANGE_CLAIMS_PER_SCALAR,
+                { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                { WITNESS_MASK_LIMBS },
+                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                paillier::EncryptionKey,
+                bulletproofs::RangeProof,
+            >,
         >,
-    > {
+        language::enhanced::RangeProofPublicParameters<
+            { ristretto::SCALAR_LIMBS },
+            RANGE_CLAIMS_PER_SCALAR,
+            { range::bulletproofs::RANGE_CLAIM_LIMBS },
+            WITNESS_MASK_LIMBS,
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                { ristretto::SCALAR_LIMBS },
+                RANGE_CLAIMS_PER_SCALAR,
+                { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                { WITNESS_MASK_LIMBS },
+                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                paillier::EncryptionKey,
+                bulletproofs::RangeProof,
+            >,
+        >,
+    ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
             secp256k1::group_element::PublicParameters::default();
 
-        let bulletproofs_public_parameters = range::bulletproofs::PublicParameters::<4>::default();
+        let bulletproofs_public_parameters =
+            range::bulletproofs::PublicParameters::<{ RANGE_CLAIMS_PER_SCALAR }>::default();
 
         let paillier_public_parameters = ahe::paillier::PublicParameters::new(N);
 
@@ -385,7 +400,7 @@ pub(crate) mod tests {
         // of discrete log).
 
         let witness_space_public_parameters = (
-            self_product::PublicParameters::<4, ()>::new(()),
+            self_product::PublicParameters::<{ RANGE_CLAIMS_PER_SCALAR }, ()>::new(()),
             bulletproofs_public_parameters
                 .as_ref()
                 .as_ref()
@@ -420,13 +435,15 @@ pub(crate) mod tests {
             statement_space_public_parameters,
         };
 
-        PublicParameters {
+        let language_public_parameters = PublicParameters {
             groups_public_parameters,
             commitment_scheme_public_parameters: bulletproofs_public_parameters.as_ref().clone(),
             encryption_scheme_public_parameters: paillier_public_parameters,
             scalar_group_public_parameters: secp256k1_scalar_public_parameters,
             generator: secp256k1_group_public_parameters.generator,
-        }
+        };
+
+        (language_public_parameters, bulletproofs_public_parameters)
     }
 
     #[rstest]
@@ -434,9 +451,14 @@ pub(crate) mod tests {
     #[case(2)]
     #[case(3)]
     fn valid_proof_verifies(#[case] batch_size: usize) {
-        let language_public_parameters = language_public_parameters();
+        let (language_public_parameters, range_proof_public_parameters) =
+            language_public_parameters();
 
-        let witnesses = language::tests::generate_witnesses::<
+        language::enhanced::tests::valid_proof_verifies::<
+            { ristretto::SCALAR_LIMBS },
+            RANGE_CLAIMS_PER_SCALAR,
+            { range::bulletproofs::RANGE_CLAIM_LIMBS },
+            WITNESS_MASK_LIMBS,
             Language<
                 { secp256k1::SCALAR_LIMBS },
                 { ristretto::SCALAR_LIMBS },
@@ -450,48 +472,10 @@ pub(crate) mod tests {
                 bulletproofs::RangeProof,
             >,
         >(
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
+            &language_public_parameters,
+            &range_proof_public_parameters,
             batch_size,
-        );
-
-        let witnesses = witnesses
-            .into_iter()
-            .map(|witness| {
-                let (_, commitment_randomness, unconstrained_witness) = witness.into();
-
-                (
-                    array::from_fn(|_| {
-                        Uint::<{ WITNESS_MASK_LIMBS }>::from(&Uint::<
-                            { range::bulletproofs::RANGE_CLAIM_LIMBS },
-                        >::random(
-                            &mut OsRng
-                        ))
-                        .into()
-                    })
-                    .into(),
-                    commitment_randomness,
-                    unconstrained_witness,
-                )
-                    .into()
-            })
-            .collect();
-
-        language::tests::valid_proof_verifies_with_witnesses::<
-            Language<
-                { secp256k1::SCALAR_LIMBS },
-                { ristretto::SCALAR_LIMBS },
-                4,
-                { range::bulletproofs::RANGE_CLAIM_LIMBS },
-                { WITNESS_MASK_LIMBS },
-                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-                secp256k1::Scalar,
-                secp256k1::GroupElement,
-                paillier::EncryptionKey,
-                bulletproofs::RangeProof,
-            >,
-        >(language_public_parameters, witnesses)
+        )
     }
 
     #[rstest]
@@ -499,7 +483,7 @@ pub(crate) mod tests {
     #[case(2)]
     #[case(3)]
     fn invalid_proof_fails_verification(#[case] batch_size: usize) {
-        let language_public_parameters = language_public_parameters();
+        let (language_public_parameters, _) = language_public_parameters();
 
         // No invalid values as secp256k1 statically defines group,
         // `k256::AffinePoint` assures deserialized values are on curve,
@@ -508,7 +492,7 @@ pub(crate) mod tests {
             Language<
                 { secp256k1::SCALAR_LIMBS },
                 { ristretto::SCALAR_LIMBS },
-                4,
+                RANGE_CLAIMS_PER_SCALAR,
                 { range::bulletproofs::RANGE_CLAIM_LIMBS },
                 { WITNESS_MASK_LIMBS },
                 { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
@@ -524,6 +508,7 @@ pub(crate) mod tests {
 #[cfg(feature = "benchmarking")]
 mod benches {
     use criterion::Criterion;
+    use language::enhanced::tests::{RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS};
 
     use super::*;
     use crate::{
@@ -532,23 +517,20 @@ mod benches {
         proofs::{
             range,
             schnorr::{
-                language,
-                language::encryption_of_discrete_log::tests::{
-                    language_public_parameters, WITNESS_MASK_LIMBS,
-                },
+                language, language::encryption_of_discrete_log::tests::language_public_parameters,
             },
         },
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
 
     pub(crate) fn benchmark(c: &mut Criterion) {
-        let language_public_parameters = language_public_parameters();
+        let (language_public_parameters, _) = language_public_parameters();
 
         language::benchmark::<
             Language<
                 { secp256k1::SCALAR_LIMBS },
                 { ristretto::SCALAR_LIMBS },
-                4,
+                RANGE_CLAIMS_PER_SCALAR,
                 { range::bulletproofs::RANGE_CLAIM_LIMBS },
                 { WITNESS_MASK_LIMBS },
                 { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },

@@ -18,6 +18,7 @@ use crate::{
 
 pub mod committed_linear_evaluation;
 pub mod encryption_of_discrete_log;
+
 pub type ConstrainedWitnessGroupElement<
     const NUM_RANGE_CLAIMS: usize,
     const WITNESS_MASK_LIMBS: usize,
@@ -501,3 +502,185 @@ pub type RangeProofCommitmentSchemeCommitmentSpaceValue<
         L,
     >,
 >;
+
+#[cfg(any(test, feature = "benchmarking"))]
+pub(crate) mod tests {
+    use std::{array, iter, marker::PhantomData};
+
+    use crypto_bigint::Random;
+    use rand_core::OsRng;
+
+    use super::*;
+    use crate::{
+        proofs::schnorr::{
+            enhanced, language,
+            language::{
+                StatementSpaceGroupElement, WitnessSpaceGroupElement, WitnessSpacePublicParameters,
+            },
+        },
+        ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
+    };
+
+    // TODO: challenge instead of computational?
+    pub(crate) const WITNESS_MASK_LIMBS: usize = range::bulletproofs::RANGE_CLAIM_LIMBS
+        + ComputationalSecuritySizedNumber::LIMBS
+        + StatisticalSecuritySizedNumber::LIMBS;
+
+    pub(crate) const RANGE_CLAIMS_PER_SCALAR: usize = 4;
+
+    pub(crate) fn generate_witnesses<
+        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        const RANGE_CLAIM_LIMBS: usize,
+        const WITNESS_MASK_LIMBS: usize,
+        Lang: EnhancedLanguage<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+        >,
+    >(
+        witness_space_public_parameters: &WitnessSpacePublicParameters<Lang>,
+        batch_size: usize,
+    ) -> Vec<WitnessSpaceGroupElement<Lang>>
+    where
+        Uint<RANGE_CLAIM_LIMBS>: Encoding,
+        Uint<WITNESS_MASK_LIMBS>: Encoding,
+    {
+        iter::repeat_with(|| {
+            let (_, commitment_randomness, unconstrained_witness) =
+                WitnessSpaceGroupElement::<Lang>::sample(
+                    &mut OsRng,
+                    &witness_space_public_parameters,
+                )
+                .unwrap()
+                .into();
+
+            (
+                array::from_fn(|_| {
+                    Uint::<{ WITNESS_MASK_LIMBS }>::from(&Uint::<RANGE_CLAIM_LIMBS>::random(
+                        &mut OsRng,
+                    ))
+                    .into()
+                })
+                .into(),
+                commitment_randomness,
+                unconstrained_witness,
+            )
+                .into()
+        })
+        .take(batch_size)
+        .collect()
+    }
+
+    pub(crate) fn generate_valid_proof<
+        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        const RANGE_CLAIM_LIMBS: usize,
+        const WITNESS_MASK_LIMBS: usize,
+        Lang: EnhancedLanguage<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+        >,
+    >(
+        language_public_parameters: &Lang::PublicParameters,
+        range_proof_public_parameters: &language::enhanced::RangeProofPublicParameters<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            Lang,
+        >,
+        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
+    ) -> (
+        enhanced::Proof<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            Lang,
+            PhantomData<()>,
+        >,
+        Vec<StatementSpaceGroupElement<Lang>>,
+    )
+    where
+        Uint<RANGE_CLAIM_LIMBS>: Encoding,
+        Uint<WITNESS_MASK_LIMBS>: Encoding,
+    {
+        enhanced::Proof::prove(
+            &PhantomData,
+            language_public_parameters,
+            range_proof_public_parameters,
+            witnesses,
+            &mut OsRng,
+        )
+        .unwrap()
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn valid_proof_verifies<
+        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        const RANGE_CLAIM_LIMBS: usize,
+        const WITNESS_MASK_LIMBS: usize,
+        Lang: EnhancedLanguage<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+        >,
+    >(
+        language_public_parameters: &Lang::PublicParameters,
+        range_proof_public_parameters: &RangeProofPublicParameters<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            Lang,
+        >,
+        batch_size: usize,
+    ) where
+        Uint<RANGE_CLAIM_LIMBS>: Encoding,
+        Uint<WITNESS_MASK_LIMBS>: Encoding,
+    {
+        let witnesses = generate_witnesses::<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            Lang,
+        >(
+            &language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters,
+            batch_size,
+        );
+
+        let (proof, statements) = generate_valid_proof::<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            Lang,
+        >(
+            language_public_parameters,
+            range_proof_public_parameters,
+            witnesses.clone(),
+        );
+
+        assert!(
+            proof
+                .verify(
+                    &PhantomData,
+                    language_public_parameters,
+                    range_proof_public_parameters,
+                    statements,
+                    &mut OsRng,
+                )
+                .is_ok(),
+            "valid enhanced proofs should verify"
+        );
+    }
+}
