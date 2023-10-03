@@ -91,7 +91,26 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         .map(|proof| (proof, statements))
     }
 
-    fn prove_with_statements(
+    pub(super) fn compute_statement_mask(
+        language_public_parameters: &PublicParameters<Language>,
+        rng: &mut impl CryptoRngCore,
+    ) -> proofs::Result<(
+        WitnessSpaceGroupElement<Language>,
+        StatementSpaceGroupElement<Language>,
+    )> {
+        let randomizer = WitnessSpaceGroupElement::<Language>::sample(
+            rng,
+            &language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters,
+        )?;
+
+        let statement_mask = Language::group_homomorphism(&randomizer, language_public_parameters)?;
+
+        Ok((randomizer, statement_mask))
+    }
+
+    pub(super) fn prove_with_statements(
         protocol_context: &ProtocolContext,
         language_public_parameters: &PublicParameters<Language>,
         witnesses: Vec<WitnessSpaceGroupElement<Language>>,
@@ -104,23 +123,18 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
 
         let batch_size = witnesses.len();
 
-        let mut transcript = Self::setup_protocol(
+        let (randomizer, statement_mask) =
+            Self::compute_statement_mask(language_public_parameters, rng)?;
+
+        let mut transcript = Self::setup_transcript(
             protocol_context,
             language_public_parameters,
             statements.clone(),
+            &statement_mask.value(),
         )?;
-
-        let randomizer = WitnessSpaceGroupElement::<Language>::sample(
-            rng,
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
-        )?;
-
-        let statement_mask = Language::group_homomorphism(&randomizer, language_public_parameters)?;
 
         let challenges: Vec<ChallengeSizedNumber> =
-            Self::compute_challenges(&statement_mask.value(), batch_size, &mut transcript)?;
+            Self::compute_challenges(batch_size, &mut transcript)?;
 
         // Using the "small exponents" method for batching;
         // the exponents actually need to account for the batch size.
@@ -148,14 +162,15 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
     ) -> proofs::Result<()> {
         let batch_size = statements.len();
 
-        let mut transcript = Self::setup_protocol(
+        let mut transcript = Self::setup_transcript(
             protocol_context,
             language_public_parameters,
             statements.clone(),
+            &self.statement_mask,
         )?;
 
         let challenges: Vec<ChallengeSizedNumber> =
-            Self::compute_challenges(&self.statement_mask, batch_size, &mut transcript)?;
+            Self::compute_challenges(batch_size, &mut transcript)?;
 
         let response = WitnessSpaceGroupElement::<Language>::new(
             self.response.clone(),
@@ -188,10 +203,11 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         Err(Error::ProofVerification)
     }
 
-    fn setup_protocol(
+    pub(super) fn setup_transcript(
         protocol_context: &ProtocolContext,
         language_public_parameters: &PublicParameters<Language>,
         statements: Vec<StatementSpaceGroupElement<Language>>,
+        statement_mask_value: &StatementSpaceValue<Language>,
     ) -> proofs::Result<Transcript> {
         let mut transcript = Transcript::new(Language::NAME.as_bytes());
 
@@ -224,17 +240,16 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
             return Err(Error::InvalidParameters);
         }
 
+        transcript
+            .serialize_to_transcript_as_json(b"statement mask value", statement_mask_value)?;
+
         Ok(transcript)
     }
 
     fn compute_challenges(
-        statement_mask_value: &StatementSpaceValue<Language>,
         batch_size: usize,
         transcript: &mut Transcript,
     ) -> proofs::Result<Vec<ChallengeSizedNumber>> {
-        transcript
-            .serialize_to_transcript_as_json(b"statement mask value", statement_mask_value)?;
-
         Ok((1..=batch_size)
             .map(|_| {
                 let challenge = transcript.challenge(b"challenge");

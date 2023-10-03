@@ -56,16 +56,17 @@ pub trait Language: Clone + Serialize {
     ) -> Result<StatementSpaceGroupElement<Self>>;
 }
 
-pub(super) type PublicParameters<L> = <L as Language>::PublicParameters;
-pub(super) type WitnessSpaceGroupElement<L> = <L as Language>::WitnessSpaceGroupElement;
-pub(super) type WitnessSpacePublicParameters<L> =
+pub(in crate::proofs) type PublicParameters<L> = <L as Language>::PublicParameters;
+pub(in crate::proofs) type WitnessSpaceGroupElement<L> = <L as Language>::WitnessSpaceGroupElement;
+pub(in crate::proofs) type WitnessSpacePublicParameters<L> =
     group::PublicParameters<WitnessSpaceGroupElement<L>>;
-pub(super) type WitnessSpaceValue<L> = group::Value<WitnessSpaceGroupElement<L>>;
+pub(in crate::proofs) type WitnessSpaceValue<L> = group::Value<WitnessSpaceGroupElement<L>>;
 
-pub(super) type StatementSpaceGroupElement<L> = <L as Language>::StatementSpaceGroupElement;
-pub(super) type StatementSpacePublicParameters<L> =
+pub(in crate::proofs) type StatementSpaceGroupElement<L> =
+    <L as Language>::StatementSpaceGroupElement;
+pub(in crate::proofs) type StatementSpacePublicParameters<L> =
     group::PublicParameters<StatementSpaceGroupElement<L>>;
-pub(super) type StatementSpaceValue<L> = group::Value<StatementSpaceGroupElement<L>>;
+pub(in crate::proofs) type StatementSpaceValue<L> = group::Value<StatementSpaceGroupElement<L>>;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
@@ -312,10 +313,13 @@ mod tests {
 
 #[cfg(feature = "benchmarking")]
 mod benches {
+    use std::marker::PhantomData;
+
     use criterion::Criterion;
+    use rand_core::OsRng;
 
     use super::*;
-    use crate::proofs::schnorr::language::tests::{generate_valid_proof, generate_witnesses};
+    use crate::proofs::schnorr::{language::tests::generate_witnesses, Proof};
 
     pub(crate) fn benchmark<Lang: Language>(
         language_public_parameters: Lang::PublicParameters,
@@ -323,9 +327,9 @@ mod benches {
     ) {
         let mut g = c.benchmark_group(Lang::NAME);
 
-        g.sample_size(100);
+        g.sample_size(10);
 
-        for batch_size in [1, 10, 100, 1000] {
+        for batch_size in [1, 10, 100] {
             let witnesses = generate_witnesses::<Lang>(
                 &language_public_parameters
                     .as_ref()
@@ -333,17 +337,36 @@ mod benches {
                 batch_size,
             );
 
+            let statements: proofs::Result<Vec<StatementSpaceGroupElement<Lang>>> = witnesses
+                .iter()
+                .map(|witness| Lang::group_homomorphism(witness, &language_public_parameters))
+                .collect();
+            let statements = statements.unwrap();
+
             g.bench_function(
                 format!("schnorr::Proof::prove() over {batch_size} statements"),
                 |bench| {
                     bench.iter(|| {
-                        generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone())
+                        Proof::<Lang, PhantomData<()>>::prove_with_statements(
+                            &PhantomData,
+                            &language_public_parameters,
+                            witnesses.clone(),
+                            statements.clone(),
+                            &mut OsRng,
+                        )
+                        .unwrap()
                     });
                 },
             );
 
-            let (proof, statements) =
-                generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone());
+            let proof = Proof::<Lang, PhantomData<()>>::prove_with_statements(
+                &PhantomData,
+                &language_public_parameters,
+                witnesses.clone(),
+                statements.clone(),
+                &mut OsRng,
+            )
+            .unwrap();
 
             g.bench_function(
                 format!("schnorr::Proof::verify() over {batch_size} statements"),

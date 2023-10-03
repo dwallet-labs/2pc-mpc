@@ -475,7 +475,7 @@ mod tests {
         secp256k1::SCALAR_LIMBS + StatisticalSecuritySizedNumber::LIMBS + U64::LIMBS;
 
     // TODO: what's the real dimension in the paper?
-    pub(crate) const DIMENSION: usize = 1;
+    pub(crate) const DIMENSION: usize = 2;
 
     pub(crate) const RANGE_CLAIMS_PER_MASK: usize = 6;
 
@@ -549,7 +549,7 @@ mod tests {
         let paillier_encryption_key =
             paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();
 
-        let ciphertexts = [34u64]
+        let ciphertexts = array::from_fn(|_| u64::from(U64::random(&mut OsRng)))
             .map(Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from_u64)
             .map(|plaintext| {
                 paillier::PlaintextGroupElement::new(

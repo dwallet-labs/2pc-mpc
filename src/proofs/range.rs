@@ -267,9 +267,9 @@ mod benches {
     {
         let mut g = c.benchmark_group(Lang::NAME);
 
-        g.sample_size(100);
+        g.sample_size(10);
 
-        for batch_size in [1, 10, 100, 1000] {
+        for batch_size in [1, 10, 100] {
             let witnesses = generate_witnesses::<
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 NUM_RANGE_CLAIMS,
