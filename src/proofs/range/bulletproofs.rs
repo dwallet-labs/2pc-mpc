@@ -4,6 +4,7 @@ use std::{array, iter};
 
 use bulletproofs::{self, BulletproofGens, PedersenGens};
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U64};
+use curve25519_dalek::traits::Identity;
 use ristretto::SCALAR_LIMBS;
 use serde::{Deserialize, Serialize};
 
@@ -51,11 +52,6 @@ impl<const NUM_RANGE_CLAIMS: usize>
         Self,
         Vec<commitments::CommitmentSpaceGroupElement<SCALAR_LIMBS, Self::CommitmentScheme>>,
     )> {
-        let commitment_generators = PedersenGens::default();
-
-        // TODO: maybe use smaller than 64 here
-        let bulletproofs_generators = BulletproofGens::new(64, 1);
-
         let number_of_witnesses = witnesses.len();
 
         let witnesses: Vec<u64> = witnesses
@@ -73,6 +69,25 @@ impl<const NUM_RANGE_CLAIMS: usize>
             .collect();
 
         // TODO: above operation keeps order right?
+
+        let padded_witnesses_length = witnesses.len().next_power_of_two();
+        let mut iter = witnesses.into_iter();
+        let witnesses: Vec<u64> = iter::repeat_with(|| iter.next().unwrap_or_else(|| 0u64))
+            .take(padded_witnesses_length)
+            .collect();
+
+        let mut iter = commitments_randomness.into_iter();
+        let commitments_randomness: Vec<curve25519_dalek::scalar::Scalar> =
+            iter::repeat_with(|| {
+                iter.next()
+                    .unwrap_or_else(|| curve25519_dalek::scalar::Scalar::zero())
+            })
+            .take(padded_witnesses_length)
+            .collect();
+
+        // TODO: maybe use 32
+        let bulletproofs_generators = BulletproofGens::new(64, witnesses.len());
+        let commitment_generators = PedersenGens::default();
 
         let (proof, commitments) = bulletproofs::RangeProof::prove_multiple_with_rng(
             &bulletproofs_generators,
@@ -133,21 +148,31 @@ impl<const NUM_RANGE_CLAIMS: usize>
 
         let bulletproofs_generators = BulletproofGens::new(64, 1);
 
+        let commitments: Vec<curve25519_dalek::ristretto::RistrettoPoint> = commitments
+            .into_iter()
+            .flat_map(|multicommitment| {
+                <[ristretto::GroupElement; NUM_RANGE_CLAIMS]>::from(multicommitment)
+            })
+            .map(|commitment| commitment.0)
+            .collect();
+
+        let padded_commitments_length = commitments.len().next_power_of_two();
+        let mut iter = commitments.into_iter();
         let compressed_commitments: Vec<curve25519_dalek::ristretto::CompressedRistretto> =
-            commitments
-                .into_iter()
-                .flat_map(|multicommitment| {
-                    <[ristretto::GroupElement; NUM_RANGE_CLAIMS]>::from(multicommitment)
-                })
-                .map(|commitment| commitment.0.compress())
-                .collect();
+            iter::repeat_with(|| {
+                iter.next()
+                    .unwrap_or_else(|| curve25519_dalek::ristretto::RistrettoPoint::identity())
+            })
+            .take(padded_commitments_length)
+            .map(|commtiment| commtiment.compress())
+            .collect();
 
         // TODO: convert their verification error to our range proof error?
         Ok(self.verify_multiple_with_rng(
             &bulletproofs_generators,
             &commitment_generators,
             transcript,
-            compressed_commitments.as_slice().into(),
+            compressed_commitments.as_slice(),
             64,
             rng,
         )?)

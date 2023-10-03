@@ -29,9 +29,12 @@ use crate::{
 // Setting it to be 64-bit larger than the computational security parameter $\kappa$ allows us to
 // practically use any batch size (Rust does not allow a vector larger than $2^64$ elements,
 // as does 64-bit architectures in which the memory won't even be addressable.)
+
 // TODO: we said we don't need the +64 anymore right?
-pub(super) type ChallengeSizedNumber =
-    <ComputationalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput;
+// pub(super) type ChallengeSizedNumber =
+//     <ComputationalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput;
+
+pub(super) type ChallengeSizedNumber = ComputationalSecuritySizedNumber;
 
 /// A Batched Schnorr Zero-Knowledge Proof.
 /// Implements Appendix B. Schnorr Protocols in the paper.
