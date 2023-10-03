@@ -74,6 +74,8 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
         randomness: &Self::RandomnessSpaceGroupElement,
     ) -> Self::CiphertextSpaceGroupElement;
 
+    // TODO: get public parameters of the language not randomness
+
     /// $\Enc(pk, \pt)$: a probabilistic algorithm that first uniformly samples `randomness`
     /// $\eta_{\sf enc} \in \calR_{pk}$ from `rng` and then calls [`Self::
     /// encrypt_with_randomness()`] to encrypt `plaintext` to `self` using the sampled randomness.
@@ -436,6 +438,8 @@ mod tests {
             &plaintext_group_public_parameters,
         )
         .unwrap();
+
+        // TODO: refactor like committed linear evaluation.
 
         let (_, encrypted_two) = encryption_key
             .encrypt(&two, &randomness_group_public_parameters, &mut OsRng)

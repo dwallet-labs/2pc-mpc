@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crypto_bigint::{NonZero, Uint};
-use group::paillier::{
+pub use group::paillier::{
     CiphertextGroupElement, CiphertextPublicParameters, PlaintextGroupElement,
     RandomnessGroupElement, RandomnessPublicParameters,
 };

@@ -126,7 +126,6 @@ mod tests {
         .unwrap()
     }
 
-    // TODO: why is this considered as dead code, if its being called from a test in other modules?
     #[allow(dead_code)]
     pub(crate) fn valid_proof_verifies<Lang: Language>(
         language_public_parameters: Lang::PublicParameters,
@@ -139,6 +138,15 @@ mod tests {
             batch_size,
         );
 
+        valid_proof_verifies_with_witnesses::<Lang>(language_public_parameters, witnesses);
+    }
+
+    // TODO: why is this considered as dead code, if its being called from a test in other modules?
+    #[allow(dead_code)]
+    pub(crate) fn valid_proof_verifies_with_witnesses<Lang: Language>(
+        language_public_parameters: Lang::PublicParameters,
+        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
+    ) {
         let (proof, statements) =
             generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone());
 

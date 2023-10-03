@@ -336,9 +336,12 @@ impl<
 }
 
 #[cfg(any(test, feature = "benchmarking"))]
-mod tests {
-    use crypto_bigint::NonZero;
+pub(crate) mod tests {
+    use std::array;
+
+    use crypto_bigint::{NonZero, Random};
     use paillier::tests::N;
+    use rand_core::OsRng;
     use rstest::rstest;
 
     use super::*;
@@ -349,7 +352,8 @@ mod tests {
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
 
-    // TOOD: challenge instead of computational?
+    // TODO: challenge instead of computational?
+    // TODO: move this to super?
     pub(crate) const WITNESS_MASK_LIMBS: usize = range::bulletproofs::RANGE_CLAIM_LIMBS
         + ComputationalSecuritySizedNumber::LIMBS
         + StatisticalSecuritySizedNumber::LIMBS;
@@ -432,7 +436,7 @@ mod tests {
     fn valid_proof_verifies(#[case] batch_size: usize) {
         let language_public_parameters = language_public_parameters();
 
-        language::tests::valid_proof_verifies::<
+        let witnesses = language::tests::generate_witnesses::<
             Language<
                 { secp256k1::SCALAR_LIMBS },
                 { ristretto::SCALAR_LIMBS },
@@ -445,7 +449,49 @@ mod tests {
                 paillier::EncryptionKey,
                 bulletproofs::RangeProof,
             >,
-        >(language_public_parameters, batch_size)
+        >(
+            &language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters,
+            batch_size,
+        );
+
+        let witnesses = witnesses
+            .into_iter()
+            .map(|witness| {
+                let (_, commitment_randomness, unconstrained_witness) = witness.into();
+
+                (
+                    array::from_fn(|_| {
+                        Uint::<{ WITNESS_MASK_LIMBS }>::from(&Uint::<
+                            { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                        >::random(
+                            &mut OsRng
+                        ))
+                        .into()
+                    })
+                    .into(),
+                    commitment_randomness,
+                    unconstrained_witness,
+                )
+                    .into()
+            })
+            .collect();
+
+        language::tests::valid_proof_verifies_with_witnesses::<
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                { ristretto::SCALAR_LIMBS },
+                4,
+                { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                { WITNESS_MASK_LIMBS },
+                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                paillier::EncryptionKey,
+                bulletproofs::RangeProof,
+            >,
+        >(language_public_parameters, witnesses)
     }
 
     #[rstest]
