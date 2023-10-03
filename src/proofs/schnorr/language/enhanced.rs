@@ -728,6 +728,7 @@ pub(crate) mod tests {
             witnesses.first().unwrap().clone().into();
         let mut constrained_witnesses: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>;
             NUM_RANGE_CLAIMS] = constrained_witnesses.into();
+
         // just out of range by 1
         constrained_witnesses[0] =
             Uint::<{ WITNESS_MASK_LIMBS }>::from(&Uint::<RANGE_CLAIM_LIMBS>::MAX)

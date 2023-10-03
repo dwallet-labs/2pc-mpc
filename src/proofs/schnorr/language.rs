@@ -333,24 +333,30 @@ mod benches {
                 batch_size,
             );
 
-            g.bench_function(format!("prove() over {batch_size} statements"), |bench| {
-                bench.iter(|| {
-                    generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone())
-                });
-            });
+            g.bench_function(
+                format!("schnorr::Proof::prove() over {batch_size} statements"),
+                |bench| {
+                    bench.iter(|| {
+                        generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone())
+                    });
+                },
+            );
 
             let (proof, statements) =
                 generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone());
 
-            g.bench_function(format!("verfiy() over {batch_size} statements"), |bench| {
-                bench.iter(|| {
-                    proof.verify(
-                        &std::marker::PhantomData,
-                        &language_public_parameters,
-                        statements.clone(),
-                    )
-                });
-            });
+            g.bench_function(
+                format!("schnorr::Proof::verify() over {batch_size} statements"),
+                |bench| {
+                    bench.iter(|| {
+                        proof.verify(
+                            &std::marker::PhantomData,
+                            &language_public_parameters,
+                            statements.clone(),
+                        )
+                    });
+                },
+            );
         }
 
         g.finish();
