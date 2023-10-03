@@ -29,6 +29,9 @@ pub enum Error {
 
     #[error("bulletproofs error")]
     Bulletproofs(#[from] bulletproofs::ProofError),
+
+    #[error("schnorr proof aggregation protocol error")]
+    AggregationProtocol(#[from] schnorr::aggregation::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

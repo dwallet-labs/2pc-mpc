@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 
 use crypto_bigint::{rand_core::CryptoRngCore, Concat, Random, U256};
 use merlin::Transcript;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::decommitment_round;
 use crate::{
@@ -15,7 +15,7 @@ use crate::{
         schnorr,
         schnorr::{
             language,
-            language::{StatementSpaceGroupElement, WitnessSpaceGroupElement},
+            language::{StatementSpaceGroupElement, StatementSpaceValue, WitnessSpaceGroupElement},
             Proof,
         },
         TranscriptProtocol,
@@ -30,30 +30,30 @@ pub struct Party<Language: schnorr::Language, ProtocolContext: Clone + Serialize
     pub(super) statements: Vec<StatementSpaceGroupElement<Language>>,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Serialize, Deserialize)]
 pub struct Commitment(CommitmentSizedNumber);
 
 impl Commitment {
-    pub(super) fn commit_to_statement_mask<
+    pub(super) fn commit_statements_and_statement_mask<
         Language: schnorr::Language,
         ProtocolContext: Clone + Serialize,
     >(
         protocol_context: &ProtocolContext,
         language_public_parameters: &language::PublicParameters<Language>,
-        statements: Vec<StatementSpaceGroupElement<Language>>,
-        statement_mask: &StatementSpaceGroupElement<Language>,
-        commitment_randomness: ComputationalSecuritySizedNumber,
+        statements: Vec<StatementSpaceValue<Language>>,
+        statement_mask: &StatementSpaceValue<Language>,
+        commitment_randomness: &ComputationalSecuritySizedNumber,
     ) -> proofs::Result<Self> {
         let mut transcript = Proof::<Language, ProtocolContext>::setup_transcript(
             protocol_context,
             language_public_parameters,
             statements,
-            &statement_mask.value(),
+            &statement_mask,
         )?;
 
         transcript.append_uint(
             b"schnorr proof aggregation commitment round commitment randomness",
-            &commitment_randomness,
+            commitment_randomness,
         );
 
         // TODO: what size?
@@ -66,7 +66,7 @@ impl Commitment {
 impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
     Party<Language, ProtocolContext>
 {
-    pub fn commit_to_statement_mask(
+    pub fn commit_statements_and_statement_mask(
         self,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(
@@ -81,13 +81,17 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
 
         let commitment_randomness = ComputationalSecuritySizedNumber::random(rng);
 
-        let commitment = Commitment::commit_to_statement_mask::<Language, ProtocolContext>(
-            &self.protocol_context,
-            &self.language_public_parameters,
-            self.statements.clone(),
-            &statement_mask,
-            commitment_randomness,
-        )?;
+        let commitment =
+            Commitment::commit_statements_and_statement_mask::<Language, ProtocolContext>(
+                &self.protocol_context,
+                &self.language_public_parameters,
+                self.statements
+                    .iter()
+                    .map(|statement| statement.value())
+                    .collect(),
+                &statement_mask.value(),
+                &commitment_randomness,
+            )?;
 
         let decommitment_round_party = decommitment_round::Party::<Language, ProtocolContext> {
             language_public_parameters: self.language_public_parameters,

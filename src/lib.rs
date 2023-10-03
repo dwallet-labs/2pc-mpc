@@ -24,6 +24,9 @@ pub type StatisticalSecuritySizedNumber = U64;
 /// parameter, which is double in size, as collisions can be found in the root of the space.
 pub type CommitmentSizedNumber = <ComputationalSecuritySizedNumber as Concat>::Output;
 
+/// A unique identifier of a party in a MPC protocol.
+pub type PartyID = u16;
+
 #[cfg(feature = "benchmarking")]
 criterion_group!(
     benches,

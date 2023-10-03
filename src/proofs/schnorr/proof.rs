@@ -91,25 +91,6 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         .map(|proof| (proof, statements))
     }
 
-    pub(super) fn compute_statement_mask(
-        language_public_parameters: &PublicParameters<Language>,
-        rng: &mut impl CryptoRngCore,
-    ) -> proofs::Result<(
-        WitnessSpaceGroupElement<Language>,
-        StatementSpaceGroupElement<Language>,
-    )> {
-        let randomizer = WitnessSpaceGroupElement::<Language>::sample(
-            rng,
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
-        )?;
-
-        let statement_mask = Language::group_homomorphism(&randomizer, language_public_parameters)?;
-
-        Ok((randomizer, statement_mask))
-    }
-
     pub(super) fn prove_with_statements(
         protocol_context: &ProtocolContext,
         language_public_parameters: &PublicParameters<Language>,
@@ -117,19 +98,40 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         statements: Vec<StatementSpaceGroupElement<Language>>,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<Self> {
+        let (randomizer, statement_mask) =
+            Self::compute_statement_mask(language_public_parameters, rng)?;
+
+        Self::prove_inner(
+            protocol_context,
+            language_public_parameters,
+            witnesses,
+            statements.clone(),
+            randomizer,
+            statement_mask,
+        )
+    }
+
+    pub(super) fn prove_inner(
+        protocol_context: &ProtocolContext,
+        language_public_parameters: &PublicParameters<Language>,
+        witnesses: Vec<WitnessSpaceGroupElement<Language>>,
+        statements: Vec<StatementSpaceGroupElement<Language>>,
+        randomizer: WitnessSpaceGroupElement<Language>,
+        statement_mask: StatementSpaceGroupElement<Language>,
+    ) -> proofs::Result<Self> {
         if witnesses.is_empty() {
             return Err(Error::InvalidParameters);
         }
 
         let batch_size = witnesses.len();
 
-        let (randomizer, statement_mask) =
-            Self::compute_statement_mask(language_public_parameters, rng)?;
-
         let mut transcript = Self::setup_transcript(
             protocol_context,
             language_public_parameters,
-            statements.clone(),
+            statements
+                .iter()
+                .map(|statement| statement.value())
+                .collect(),
             &statement_mask.value(),
         )?;
 
@@ -165,7 +167,10 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         let mut transcript = Self::setup_transcript(
             protocol_context,
             language_public_parameters,
-            statements.clone(),
+            statements
+                .iter()
+                .map(|statement| statement.value())
+                .collect(),
             &self.statement_mask,
         )?;
 
@@ -203,10 +208,29 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         Err(Error::ProofVerification)
     }
 
+    pub(super) fn compute_statement_mask(
+        language_public_parameters: &PublicParameters<Language>,
+        rng: &mut impl CryptoRngCore,
+    ) -> proofs::Result<(
+        WitnessSpaceGroupElement<Language>,
+        StatementSpaceGroupElement<Language>,
+    )> {
+        let randomizer = WitnessSpaceGroupElement::<Language>::sample(
+            rng,
+            &language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters,
+        )?;
+
+        let statement_mask = Language::group_homomorphism(&randomizer, language_public_parameters)?;
+
+        Ok((randomizer, statement_mask))
+    }
+
     pub(super) fn setup_transcript(
         protocol_context: &ProtocolContext,
         language_public_parameters: &PublicParameters<Language>,
-        statements: Vec<StatementSpaceGroupElement<Language>>,
+        statements: Vec<StatementSpaceValue<Language>>,
         statement_mask_value: &StatementSpaceValue<Language>,
     ) -> proofs::Result<Transcript> {
         let mut transcript = Transcript::new(Language::NAME.as_bytes());
@@ -234,7 +258,7 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
 
         if statements.iter().any(|statement| {
             transcript
-                .serialize_to_transcript_as_json(b"statement value", &statement.value())
+                .serialize_to_transcript_as_json(b"statement value", &statement)
                 .is_err()
         }) {
             return Err(Error::InvalidParameters);
