@@ -670,17 +670,18 @@ pub(crate) mod tests {
             witnesses.clone(),
         );
 
+        let res = proof.verify(
+            &PhantomData,
+            language_public_parameters,
+            range_proof_public_parameters,
+            statements,
+            &mut OsRng,
+        );
+
         assert!(
-            proof
-                .verify(
-                    &PhantomData,
-                    language_public_parameters,
-                    range_proof_public_parameters,
-                    statements,
-                    &mut OsRng,
-                )
-                .is_ok(),
-            "valid enhanced proofs should verify"
+            res.is_ok(),
+            "valid enhanced proofs should verify, got error: {:?}",
+            res.err().unwrap()
         );
     }
 

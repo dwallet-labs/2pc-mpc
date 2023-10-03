@@ -144,10 +144,6 @@ impl<const NUM_RANGE_CLAIMS: usize>
         transcript: &mut Transcript,
         rng: &mut impl CryptoRngCore,
     ) -> crate::proofs::Result<()> {
-        let commitment_generators = PedersenGens::default();
-
-        let bulletproofs_generators = BulletproofGens::new(64, 1);
-
         let commitments: Vec<curve25519_dalek::ristretto::RistrettoPoint> = commitments
             .into_iter()
             .flat_map(|multicommitment| {
@@ -166,6 +162,9 @@ impl<const NUM_RANGE_CLAIMS: usize>
             .take(padded_commitments_length)
             .map(|commtiment| commtiment.compress())
             .collect();
+
+        let bulletproofs_generators = BulletproofGens::new(64, compressed_commitments.len());
+        let commitment_generators = PedersenGens::default();
 
         // TODO: convert their verification error to our range proof error?
         Ok(self.verify_multiple_with_rng(
