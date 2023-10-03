@@ -21,9 +21,6 @@ pub enum Error {
     #[error("invalid proof - did not satisfy the verification equation")]
     ProofVerification,
 
-    #[error("range verification failure - the response is out of range")]
-    ResponseOutOfRange,
-
     #[error("group error")]
     GroupInstantiation(#[from] group::Error),
 

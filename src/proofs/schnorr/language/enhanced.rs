@@ -683,4 +683,91 @@ pub(crate) mod tests {
             "valid enhanced proofs should verify"
         );
     }
+
+    #[allow(dead_code)]
+    pub(crate) fn proof_with_out_of_range_witness_fails<
+        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        const RANGE_CLAIM_LIMBS: usize,
+        const WITNESS_MASK_LIMBS: usize,
+        Lang: EnhancedLanguage<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+        >,
+    >(
+        language_public_parameters: &Lang::PublicParameters,
+        range_proof_public_parameters: &RangeProofPublicParameters<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            Lang,
+        >,
+        batch_size: usize,
+    ) where
+        Uint<RANGE_CLAIM_LIMBS>: Encoding,
+        Uint<WITNESS_MASK_LIMBS>: Encoding,
+    {
+        let mut witnesses = generate_witnesses::<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            Lang,
+        >(
+            &language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters,
+            batch_size,
+        );
+
+        let (constrained_witnesses, commitment_randomness, unconstrained_witness) =
+            witnesses.first().unwrap().clone().into();
+        let mut constrained_witnesses: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>;
+            NUM_RANGE_CLAIMS] = constrained_witnesses.into();
+        // just out of range by 1
+        constrained_witnesses[0] =
+            Uint::<{ WITNESS_MASK_LIMBS }>::from(&Uint::<RANGE_CLAIM_LIMBS>::MAX)
+                .wrapping_add(&Uint::<WITNESS_MASK_LIMBS>::ONE)
+                .into();
+        let out_of_range_witness = (
+            constrained_witnesses.into(),
+            commitment_randomness,
+            unconstrained_witness,
+        )
+            .into();
+
+        witnesses[0] = out_of_range_witness;
+
+        let (proof, statements) = generate_valid_proof::<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            Lang,
+        >(
+            language_public_parameters,
+            range_proof_public_parameters,
+            witnesses.clone(),
+        );
+
+        assert!(
+            matches!(
+                proof
+                    .verify(
+                        &PhantomData,
+                        language_public_parameters,
+                        range_proof_public_parameters,
+                        statements,
+                        &mut OsRng,
+                    )
+                    .err()
+                    .unwrap(),
+                proofs::Error::Bulletproofs(bulletproofs::ProofError::VerificationError)
+            ),
+            "out of range error should fail on range verification"
+        );
+    }
 }

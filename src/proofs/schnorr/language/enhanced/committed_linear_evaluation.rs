@@ -705,6 +705,48 @@ mod tests {
     #[case(1)]
     #[case(2)]
     #[case(3)]
+    fn proof_with_out_of_range_witness_fails(#[case] batch_size: usize) {
+        let (language_public_parameters, range_proof_public_parameters) =
+            language_public_parameters();
+
+        language::enhanced::tests::proof_with_out_of_range_witness_fails::<
+            { ristretto::SCALAR_LIMBS },
+            NUM_RANGE_CLAIMS,
+            { range::bulletproofs::RANGE_CLAIM_LIMBS },
+            WITNESS_MASK_LIMBS,
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                { ristretto::SCALAR_LIMBS },
+                { MASK_LIMBS },
+                RANGE_CLAIMS_PER_SCALAR,
+                RANGE_CLAIMS_PER_MASK,
+                { NUM_RANGE_CLAIMS },
+                { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                { WITNESS_MASK_LIMBS },
+                { DIMENSION },
+                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                paillier::EncryptionKey,
+                Pedersen<
+                    { DIMENSION },
+                    { secp256k1::SCALAR_LIMBS },
+                    secp256k1::Scalar,
+                    secp256k1::GroupElement,
+                >,
+                bulletproofs::RangeProof,
+            >,
+        >(
+            &language_public_parameters,
+            &range_proof_public_parameters,
+            batch_size,
+        )
+    }
+
+    #[rstest]
+    #[case(1)]
+    #[case(2)]
+    #[case(3)]
     fn invalid_proof_fails_verification(#[case] batch_size: usize) {
         let (language_public_parameters, _) = language_public_parameters();
 

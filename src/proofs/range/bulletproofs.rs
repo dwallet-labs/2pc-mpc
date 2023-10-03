@@ -142,6 +142,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
                 .map(|commitment| commitment.0.compress())
                 .collect();
 
+        // TODO: convert their verification error to our range proof error?
         Ok(self.verify_multiple_with_rng(
             &bulletproofs_generators,
             &commitment_generators,
