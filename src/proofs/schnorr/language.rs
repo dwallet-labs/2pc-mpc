@@ -278,7 +278,7 @@ mod tests {
                 )
                 .err()
                 .unwrap(),
-            Error::GroupInstantiation(group::Error::InvalidGroupElementError)),
+            Error::GroupInstantiation(group::Error::InvalidGroupElement)),
                     "proof with an invalid statement_mask value should generate an invalid parameter error when checking the element is not in the group"
             );
         }
@@ -296,7 +296,7 @@ mod tests {
                 )
                 .err()
                 .unwrap(),
-            Error::GroupInstantiation(group::Error::InvalidGroupElementError)),
+            Error::GroupInstantiation(group::Error::InvalidGroupElement)),
                     "proof with an invalid response value should generate an invalid parameter error when checking the element is not in the group"
             );
         }

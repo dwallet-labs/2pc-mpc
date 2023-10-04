@@ -24,17 +24,20 @@ impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
-    fn sample(rng: &mut impl CryptoRngCore, public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+    fn sample(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+    ) -> group::Result<Self> {
         // Classic rejection-sampling technique.
         loop {
             match Self::new(Uint::<LIMBS>::random(rng), public_parameters) {
-                Err(group::Error::UnsupportedPublicParametersError) => {
-                    return Err(group::Error::UnsupportedPublicParametersError);
+                Err(group::Error::UnsupportedPublicParameters) => {
+                    return Err(group::Error::UnsupportedPublicParameters);
                 }
-                Err(group::Error::InvalidPublicParametersError) => {
-                    return Err(group::Error::InvalidPublicParametersError);
+                Err(group::Error::InvalidPublicParameters) => {
+                    return Err(group::Error::InvalidPublicParameters);
                 }
-                Err(group::Error::InvalidGroupElementError) => {
+                Err(group::Error::InvalidGroupElement) => {
                     continue;
                 }
                 Ok(sampled_element) => {
@@ -65,16 +68,21 @@ where
     fn new(value: Self::Value, public_parameters: &Self::PublicParameters) -> group::Result<Self> {
         // A valid modulus must be odd,
         // and bigger than 3: `0` and `1` are invalid, `2` is even
-        if public_parameters.modulus.is_odd().unwrap_u8() == 0 || public_parameters.modulus < Uint::<LIMBS>::from(3u8) {
-            return Err(group::Error::UnsupportedPublicParametersError);
+        if public_parameters.modulus.is_odd().unwrap_u8() == 0
+            || public_parameters.modulus < Uint::<LIMBS>::from(3u8)
+        {
+            return Err(group::Error::UnsupportedPublicParameters);
         }
 
-        let element = DynResidue::<LIMBS>::new(&value, DynResidueParams::<LIMBS>::new(&public_parameters.modulus));
+        let element = DynResidue::<LIMBS>::new(
+            &value,
+            DynResidueParams::<LIMBS>::new(&public_parameters.modulus),
+        );
 
         // `element` is valid if and only if it has an inverse
         match element.invert().1.into() {
             true => Ok(Self(element)),
-            false => Err(group::Error::InvalidGroupElementError),
+            false => Err(group::Error::InvalidGroupElement),
         }
     }
 

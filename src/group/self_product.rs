@@ -36,7 +36,7 @@ where
 
         if N < 2 {
             // there is no use of using this struct for a "product group" of less than two groups.
-            return Err(group::Error::InvalidPublicParametersError);
+            return Err(group::Error::InvalidPublicParameters);
         }
 
         Ok(Self(flat_map_results(array::from_fn(|_| {
@@ -99,7 +99,7 @@ impl<const N: usize, G: group::GroupElement> group::GroupElement for GroupElemen
         let public_parameters = &public_parameters.public_parameters;
 
         if N == 0 {
-            return Err(group::Error::InvalidPublicParametersError);
+            return Err(group::Error::InvalidPublicParameters);
         }
 
         Ok(Self(flat_map_results(

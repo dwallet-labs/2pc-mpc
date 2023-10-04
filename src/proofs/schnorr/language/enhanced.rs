@@ -507,15 +507,19 @@ pub type RangeProofCommitmentSchemeCommitmentSpaceValue<
 pub(crate) mod tests {
     use std::{array, iter, marker::PhantomData};
 
-    use crypto_bigint::Random;
+    use crypto_bigint::{Random, Wrapping};
     use rand_core::OsRng;
 
     use super::*;
     use crate::{
-        proofs::schnorr::{
-            enhanced, language,
-            language::{
-                StatementSpaceGroupElement, WitnessSpaceGroupElement, WitnessSpacePublicParameters,
+        proofs::{
+            range::bulletproofs::RANGE_CLAIM_BITS,
+            schnorr::{
+                enhanced, language,
+                language::{
+                    StatementSpaceGroupElement, WitnessSpaceGroupElement,
+                    WitnessSpacePublicParameters,
+                },
             },
         },
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
@@ -556,12 +560,36 @@ pub(crate) mod tests {
                 .unwrap()
                 .into();
 
+            let (constrained_witness_public_paramters, ..): (
+                &ConstrainedWitnessPublicParameters<NUM_RANGE_CLAIMS, WITNESS_MASK_LIMBS>,
+                &RangeProofCommitmentSchemeRandomnessSpacePublicParameters<
+                    RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                    NUM_RANGE_CLAIMS,
+                    RANGE_CLAIM_LIMBS,
+                    WITNESS_MASK_LIMBS,
+                    Lang,
+                >,
+                &UnboundedWitnessSpacePublicParameters<
+                    RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                    NUM_RANGE_CLAIMS,
+                    RANGE_CLAIM_LIMBS,
+                    WITNESS_MASK_LIMBS,
+                    Lang,
+                >,
+            ) = witness_space_public_parameters.into();
+
             (
                 array::from_fn(|_| {
-                    Uint::<{ WITNESS_MASK_LIMBS }>::from(&Uint::<RANGE_CLAIM_LIMBS>::random(
-                        &mut OsRng,
-                    ))
-                    .into()
+                    let mask = Uint::<WITNESS_MASK_LIMBS>::MAX
+                        >> (Uint::<WITNESS_MASK_LIMBS>::BITS - RANGE_CLAIM_BITS);
+
+                    let value = Uint::<{ WITNESS_MASK_LIMBS }>::random(&mut OsRng) & mask;
+
+                    power_of_two_moduli::GroupElement::new(
+                        value,
+                        &constrained_witness_public_paramters.public_parameters,
+                    )
+                    .unwrap()
                 })
                 .into(),
                 commitment_randomness,
@@ -768,10 +796,14 @@ pub(crate) mod tests {
             NUM_RANGE_CLAIMS] = constrained_witnesses.into();
 
         // just out of range by 1
-        constrained_witnesses[0] =
-            Uint::<{ WITNESS_MASK_LIMBS }>::from(&Uint::<RANGE_CLAIM_LIMBS>::MAX)
-                .wrapping_add(&Uint::<WITNESS_MASK_LIMBS>::ONE)
-                .into();
+        constrained_witnesses[0] = power_of_two_moduli::GroupElement::new(
+            (Uint::<WITNESS_MASK_LIMBS>::MAX
+                >> (Uint::<WITNESS_MASK_LIMBS>::BITS - RANGE_CLAIM_BITS))
+                .wrapping_add(&Uint::<WITNESS_MASK_LIMBS>::ONE),
+            &constrained_witnesses[0].public_parameters(),
+        )
+        .unwrap();
+
         let out_of_range_witness = (
             constrained_witnesses.into(),
             commitment_randomness,

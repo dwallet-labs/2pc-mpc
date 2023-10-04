@@ -13,8 +13,11 @@ pub mod proofs;
 mod traits;
 
 /// Represents an unsigned integer sized based on the computation security parameter, denoted as
-/// $\kappa$. Configured for 128-bit computational security using U128.
+/// $\kappa$.
 pub type ComputationalSecuritySizedNumber = U128;
+
+// TODO: what value should this be
+pub const COMPUTATIONAL_SECURITY_PARAMETERS: usize = 112;
 
 /// Represents an unsigned integer sized based on the statistical security parameter, denoted as
 /// $s$. Configured for 64-bit statistical security using U64.

@@ -68,7 +68,7 @@ impl<
         // TODO: this is generically true?
 
         if N == 0 {
-            return Err(group::Error::InvalidPublicParametersError);
+            return Err(group::Error::InvalidPublicParameters);
         }
 
         CommitmentScheme::new(&public_parameters.public_parameters).map(|c| Self(c))

@@ -352,8 +352,10 @@ pub(crate) mod tests {
         group::{ristretto, secp256k1, self_product},
         proofs::{
             range,
+            range::bulletproofs::RANGE_CLAIM_BITS,
             schnorr::{aggregation, language},
         },
+        ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
 
     pub(crate) fn public_parameters() -> (
@@ -403,8 +405,18 @@ pub(crate) mod tests {
         // TODO: think how we can generalize this with `new()` for `PublicParameters` (of encryption
         // of discrete log).
 
+        let constrained_witness_public_parameters =
+            power_of_two_moduli::PublicParameters::<WITNESS_MASK_LIMBS> {
+                sampling_bit_size: RANGE_CLAIM_BITS
+                    + ComputationalSecuritySizedNumber::BITS
+                    + StatisticalSecuritySizedNumber::BITS,
+            };
+
         let witness_space_public_parameters = (
-            self_product::PublicParameters::<{ RANGE_CLAIMS_PER_SCALAR }, ()>::new(()),
+            self_product::PublicParameters::<
+                RANGE_CLAIMS_PER_SCALAR,
+                power_of_two_moduli::PublicParameters<WITNESS_MASK_LIMBS>,
+            >::new(constrained_witness_public_parameters),
             bulletproofs_public_parameters
                 .as_ref()
                 .as_ref()

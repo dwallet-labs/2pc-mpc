@@ -25,6 +25,7 @@ use crate::{
 };
 
 pub const RANGE_CLAIM_LIMBS: usize = U64::LIMBS;
+pub const RANGE_CLAIM_BITS: usize = 32;
 
 impl<const NUM_RANGE_CLAIMS: usize>
     super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>
@@ -95,7 +96,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
             transcript,
             witnesses.as_slice(),
             commitments_randomness.as_slice(),
-            64,
+            RANGE_CLAIM_BITS,
             rng,
         )?;
 
@@ -172,7 +173,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
             &commitment_generators,
             transcript,
             compressed_commitments.as_slice(),
-            64,
+            RANGE_CLAIM_BITS,
             rng,
         )?)
     }

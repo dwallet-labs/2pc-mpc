@@ -22,9 +22,8 @@ use crate::{
         },
         Error, TranscriptProtocol,
     },
-    ComputationalSecuritySizedNumber,
+    ComputationalSecuritySizedNumber, COMPUTATIONAL_SECURITY_PARAMETERS,
 };
-
 // For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
 // Setting it to be 64-bit larger than the computational security parameter $\kappa$ allows us to
 // practically use any batch size (Rust does not allow a vector larger than $2^64$ elements,
@@ -136,7 +135,7 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         )?;
 
         let challenges: Vec<ChallengeSizedNumber> =
-            Self::compute_challenges(batch_size, &mut transcript)?;
+            Self::compute_challenges(batch_size, &mut transcript);
 
         // Using the "small exponents" method for batching;
         // the exponents actually need to account for the batch size.
@@ -175,7 +174,7 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         )?;
 
         let challenges: Vec<ChallengeSizedNumber> =
-            Self::compute_challenges(batch_size, &mut transcript)?;
+            Self::compute_challenges(batch_size, &mut transcript);
 
         let response = WitnessSpaceGroupElement::<Language>::new(
             self.response.clone(),
@@ -274,8 +273,8 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
     fn compute_challenges(
         batch_size: usize,
         transcript: &mut Transcript,
-    ) -> proofs::Result<Vec<ChallengeSizedNumber>> {
-        Ok((1..=batch_size)
+    ) -> Vec<ChallengeSizedNumber> {
+        (1..=batch_size)
             .map(|_| {
                 let challenge = transcript.challenge(b"challenge");
 
@@ -285,6 +284,6 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
 
                 challenge
             })
-            .collect())
+            .collect()
     }
 }

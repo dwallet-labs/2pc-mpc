@@ -203,6 +203,7 @@ where
             .collect();
 
         // TODO: make sure I did the range test
+        // TODO: sum commitments in aggregation or something
 
         self.schnorr_proof
             .verify(protocol_context, language_public_parameters, statements)

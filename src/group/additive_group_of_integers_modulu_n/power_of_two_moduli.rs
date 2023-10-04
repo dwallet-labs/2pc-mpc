@@ -1,6 +1,7 @@
 use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Random, Uint, Wrapping, Zero};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
@@ -8,6 +9,8 @@ use crate::{
         BoundedGroupElement, CyclicGroupElement, GroupElement as _, MulByGenerator, Samplable,
     },
 };
+
+// TODO: check that all my changed logic with bit_size is safe still
 
 /// An element of the additive group of integers for a power-of-two modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
@@ -20,18 +23,39 @@ where
 {
     fn sample(
         rng: &mut impl CryptoRngCore,
-        _public_parameters: &Self::PublicParameters,
+        public_parameters: &Self::PublicParameters,
     ) -> group::Result<Self> {
-        Ok(Self(Wrapping::<Uint<LIMBS>>::random(rng)))
+        if public_parameters.sampling_bit_size > Uint::<LIMBS>::BITS {
+            return Err(group::Error::InvalidPublicParameters);
+        }
+
+        let mask =
+            Uint::<LIMBS>::MAX >> (Uint::<LIMBS>::BITS - public_parameters.sampling_bit_size);
+
+        let value = Wrapping(Uint::<LIMBS>::random(rng) & mask);
+
+        Self::new(value.0, public_parameters)
     }
 }
+
+/// The public parameters of the additive group of integers modulo `n = 2^k` where k is the number
+/// of bits `Self::bits_size` $\mathbb{Z}_n^+$
+#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
+pub struct PublicParameters<const LIMBS: usize> {
+    pub sampling_bit_size: usize,
+}
+
 impl<const LIMBS: usize> group::GroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
     type Value = Uint<LIMBS>;
-    type PublicParameters = ();
-    fn public_parameters(&self) -> Self::PublicParameters {}
+    type PublicParameters = PublicParameters<LIMBS>;
+    fn public_parameters(&self) -> Self::PublicParameters {
+        PublicParameters {
+            sampling_bit_size: Uint::<LIMBS>::BITS,
+        }
+    }
     fn new(
         value: Self::Value,
         _public_parameters: &Self::PublicParameters,
@@ -53,7 +77,9 @@ impl<const LIMBS: usize> From<GroupElement<LIMBS>> for group::PublicParameters<G
 where
     Uint<LIMBS>: Encoding,
 {
-    fn from(_value: GroupElement<LIMBS>) -> Self {}
+    fn from(value: GroupElement<LIMBS>) -> Self {
+        value.public_parameters()
+    }
 }
 
 impl<const LIMBS: usize> Neg for GroupElement<LIMBS> {
