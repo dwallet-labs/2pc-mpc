@@ -202,6 +202,8 @@ where
             })
             .collect();
 
+        // TODO: make sure I did the range test
+
         self.schnorr_proof
             .verify(protocol_context, language_public_parameters, statements)
             .and(self.range_proof.verify(

@@ -1,7 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +12,10 @@ use crate::{
     proofs::{
         schnorr,
         schnorr::{
-            aggregation::{commitment_round::Commitment, decommitment_round::Decommitment},
+            aggregation::{
+                commitment_round::Commitment, decommitment_round::Decommitment,
+                proof_aggregation_round,
+            },
             language,
             language::{StatementSpaceGroupElement, WitnessSpaceGroupElement, WitnessSpaceValue},
             Proof,
@@ -22,9 +25,7 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize)]
-pub struct ProofShare<Language: schnorr::Language, ProtocolContext: Clone + Serialize>(
-    pub(super) Proof<Language, ProtocolContext>,
-);
+pub struct ProofShare<Language: schnorr::Language>(pub(super) WitnessSpaceValue<Language>);
 
 pub struct Party<Language: schnorr::Language, ProtocolContext: Clone + Serialize> {
     pub(super) language_public_parameters: language::PublicParameters<Language>,
@@ -42,23 +43,40 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
     pub fn generate_proof_share(
         self,
         decommitments: HashMap<PartyID, Decommitment<Language>>,
-    ) -> proofs::Result<ProofShare<Language, ProtocolContext>> {
+    ) -> proofs::Result<(
+        proof_aggregation_round::Party<Language, ProtocolContext>,
+        ProofShare<Language>,
+    )> {
         // TODO: now we are using the same protocol context for us and for decommitments, this is
         // faulty and is a security issue. Instead, we must somehow construct the protocol
         // context from our own, but given their party id (and anyother information which we might
         // need.) Otherwise, we can't assure that we're putting the party id to the
         // transcript.
 
-        let previous_round_party_ids: Vec<PartyID> = self.commitments.keys().map(|k| *k).collect();
-        let current_round_party_ids: Vec<PartyID> = decommitments.keys().map(|k| *k).collect();
+        let previous_round_party_ids: HashSet<PartyID> =
+            self.commitments.keys().map(|k| *k).collect();
+        // First remove parties that didn't participate in the previous round, as they shouldn't be
+        // allowed to join the session half-way, and we can self-heal this malicious behaviour
+        // without needing to stop the session and report
+        let decommitments: HashMap<PartyID, Decommitment<Language>> = decommitments
+            .into_iter()
+            .filter(|(party_id, _)| previous_round_party_ids.contains(party_id))
+            .collect();
+        let current_round_party_ids: HashSet<PartyID> = decommitments.keys().map(|k| *k).collect();
 
-        if current_round_party_ids != previous_round_party_ids {
-            return Err(super::Error::ParticipatingPartiesChangedFromPreviousRound)?;
+        let unresponsive_parties: Vec<PartyID> = current_round_party_ids
+            .symmetric_difference(&previous_round_party_ids)
+            .cloned()
+            .collect();
+
+        if !unresponsive_parties.is_empty() {
+            return Err(super::Error::UnresponsiveParties(unresponsive_parties))?;
         }
 
         let reconstructed_commitments: proofs::Result<HashMap<PartyID, Commitment>> = decommitments
             .iter()
             .map(|(party_id, decommitment)| {
+                // TODO: this can be optimized by doing the initial transcript once for all
                 Commitment::commit_statements_and_statement_mask::<Language, ProtocolContext>(
                     // TODO: insert the party id of the other party somehow, and maybe other
                     // things.
@@ -85,8 +103,8 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
 
         let statement_masks: group::Result<Vec<StatementSpaceGroupElement<Language>>> =
             decommitments
-                .iter()
-                .map(|(_, decommitment)| {
+                .values()
+                .map(|decommitment| {
                     StatementSpaceGroupElement::<Language>::new(
                         decommitment.statement_mask,
                         &self
@@ -151,21 +169,38 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             })
             .collect();
 
-        Ok(ProofShare(Proof::<Language, ProtocolContext>::prove_inner(
-            // TODO: we don't need to pass any party id here. Maybe we should seperate these types.
+        let response = Proof::<Language, ProtocolContext>::prove_inner(
+            // TODO: we don't need to pass any party id here. Maybe we should seperate these
+            // types.
             &self.protocol_context,
             &self.language_public_parameters,
             self.witnesses,
-            aggregated_statements,
+            aggregated_statements.clone(),
             self.randomizer,
-            aggregated_statement_mask,
-        )?))
-    }
+            aggregated_statement_mask.clone(),
+        )?
+        .response;
 
-    pub fn aggregate_proof_shares(
-        proof_shares: HashMap<PartyID, Decommitment<Language>>,
-    ) -> proofs::Result<Proof<Language, ProtocolContext>> {
-        // TODO: should move this to a finalization round?
-        todo!()
+        let proof_share = ProofShare(response);
+
+        let response = WitnessSpaceGroupElement::<Language>::new(
+            response,
+            &self
+                .language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters,
+        )?;
+
+        let proof_aggregation_round_party =
+            proof_aggregation_round::Party::<Language, ProtocolContext> {
+                language_public_parameters: self.language_public_parameters,
+                protocol_context: self.protocol_context,
+                previous_round_party_ids,
+                aggregated_statements,
+                aggregated_statement_mask,
+                response,
+            };
+
+        Ok((proof_aggregation_round_party, proof_share))
     }
 }

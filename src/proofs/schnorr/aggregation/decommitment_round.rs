@@ -11,7 +11,7 @@ use crate::{
     proofs::{
         schnorr,
         schnorr::{
-            aggregation::{commitment_round::Commitment, proof_round},
+            aggregation::{commitment_round::Commitment, proof_share_round},
             language,
             language::{StatementSpaceGroupElement, StatementSpaceValue, WitnessSpaceGroupElement},
         },
@@ -44,7 +44,7 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
         commitments: HashMap<PartyID, Commitment>,
     ) -> (
         Decommitment<Language>,
-        proof_round::Party<Language, ProtocolContext>,
+        proof_share_round::Party<Language, ProtocolContext>,
     ) {
         let decommitment = Decommitment::<Language> {
             statements: self
@@ -56,7 +56,7 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             commitment_randomness: self.commitment_randomness,
         };
 
-        let proof_round_party = proof_round::Party::<Language, ProtocolContext> {
+        let proof_share_round_party = proof_share_round::Party::<Language, ProtocolContext> {
             language_public_parameters: self.language_public_parameters,
             protocol_context: self.protocol_context,
             witnesses: self.witnesses,
@@ -66,6 +66,6 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             commitments,
         };
 
-        (decommitment, proof_round_party)
+        (decommitment, proof_share_round_party)
     }
 }

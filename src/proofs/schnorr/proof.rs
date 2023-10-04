@@ -56,9 +56,9 @@ pub struct Proof<
 impl<Language: language::Language, ProtocolContext: Clone + Serialize>
     Proof<Language, ProtocolContext>
 {
-    fn new(
-        statement_mask: StatementSpaceGroupElement<Language>,
-        response: WitnessSpaceGroupElement<Language>,
+    pub(super) fn new(
+        statement_mask: &StatementSpaceGroupElement<Language>,
+        response: &WitnessSpaceGroupElement<Language>,
     ) -> Self {
         Self {
             statement_mask: statement_mask.value(),
@@ -152,7 +152,7 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
                 .reduce(|a, b| a + b)
                 .unwrap();
 
-        Ok(Self::new(statement_mask, response))
+        Ok(Self::new(&statement_mask, &response))
     }
 
     /// Verify a batched Schnorr zero-knowledge proof.
@@ -242,6 +242,7 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
             language_public_parameters,
         )?;
 
+        // TODO: should I now remove these?
         transcript.serialize_to_transcript_as_json(
             b"witness space public parameters",
             &language_public_parameters

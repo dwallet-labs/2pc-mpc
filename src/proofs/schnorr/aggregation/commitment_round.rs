@@ -56,7 +56,6 @@ impl Commitment {
             commitment_randomness,
         );
 
-        // TODO: what size?
         Ok(Commitment(transcript.challenge(
             b"schnorr proof aggregation commitment round commitment",
         )))

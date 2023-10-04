@@ -16,18 +16,22 @@ use crate::{
 
 pub mod commitment_round;
 pub mod decommitment_round;
-pub mod proof_round;
+pub mod proof_aggregation_round;
+pub mod proof_share_round;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("participating parties changed from previous round")]
-    ParticipatingPartiesChangedFromPreviousRound,
+    #[error("parties {:?} participated in the previous round of the session but not in the current", .0)]
+    UnresponsiveParties(Vec<PartyID>),
 
     #[error("parties {:?} maliciously attempted to bypass the commitment round by sending decommitment which does not match their commitment", .0)]
     WrongDecommitment(Vec<PartyID>),
 
     #[error("parties {:?} decommitted on a wrong number of statements", .0)]
     WrongNumberOfDecommittedStatements(Vec<PartyID>),
+
+    #[error("parties {:?} sent an invalid proof share value", .0)]
+    InvalidProofShare(Vec<PartyID>),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
