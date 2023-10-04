@@ -27,6 +27,7 @@ use crate::{
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct ProofShare<Language: schnorr::Language>(pub(super) WitnessSpaceValue<Language>);
 
+#[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<Language: schnorr::Language, ProtocolContext: Clone + Serialize> {
     pub(super) party_id: PartyID,
     pub(super) language_public_parameters: language::PublicParameters<Language>,

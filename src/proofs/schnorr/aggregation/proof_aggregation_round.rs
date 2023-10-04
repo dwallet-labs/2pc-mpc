@@ -21,6 +21,7 @@ use crate::{
     PartyID,
 };
 
+#[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<Language: schnorr::Language, ProtocolContext: Clone + Serialize> {
     pub(super) party_id: PartyID,
     pub(super) language_public_parameters: language::PublicParameters<Language>,

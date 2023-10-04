@@ -284,7 +284,8 @@ mod benches {
         commitments::Pedersen,
         group::secp256k1,
         proofs::schnorr::{
-            language, language::commitment_of_discrete_log::tests::language_public_parameters,
+            aggregation, language,
+            language::commitment_of_discrete_log::tests::language_public_parameters,
         },
     };
 
@@ -292,6 +293,20 @@ mod benches {
         let language_public_parameters = language_public_parameters();
 
         language::benchmark::<
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                Pedersen<
+                    1,
+                    { secp256k1::SCALAR_LIMBS },
+                    secp256k1::Scalar,
+                    secp256k1::GroupElement,
+                >,
+            >,
+        >(language_public_parameters.clone(), c);
+
+        aggregation::benchmark::<
             Language<
                 { secp256k1::SCALAR_LIMBS },
                 secp256k1::Scalar,

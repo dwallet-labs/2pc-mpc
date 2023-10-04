@@ -77,7 +77,7 @@ pub struct GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePu
 }
 
 #[cfg(any(test, feature = "benchmarking"))]
-mod tests {
+pub(crate) mod tests {
     use std::{iter, marker::PhantomData};
 
     use rand_core::OsRng;
@@ -348,7 +348,7 @@ mod benches {
 
         g.sample_size(10);
 
-        for batch_size in [1, 10, 100] {
+        for batch_size in [1, 10, 100, 1000] {
             let witnesses = generate_witnesses::<Lang>(
                 &language_public_parameters
                     .as_ref()

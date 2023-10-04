@@ -203,7 +203,8 @@ where
             .collect();
 
         // TODO: make sure I did the range test
-        // TODO: sum commitments in aggregation or something
+        // TODO: sum commitments in aggregation or something - maybe this can actually remove the
+        // multicommitment code?
 
         self.schnorr_proof
             .verify(protocol_context, language_public_parameters, statements)

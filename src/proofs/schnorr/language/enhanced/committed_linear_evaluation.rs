@@ -870,7 +870,7 @@ mod benches {
         proofs::{
             range,
             schnorr::{
-                language,
+                aggregation, language,
                 language::committed_linear_evaluation::tests::{
                     public_parameters, DIMENSION, MASK_LIMBS, NUM_RANGE_CLAIMS,
                     RANGE_CLAIMS_PER_MASK,
@@ -940,5 +940,30 @@ mod benches {
             &range_proof_public_parameters,
             c,
         );
+
+        aggregation::benchmark::<
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                { ristretto::SCALAR_LIMBS },
+                { MASK_LIMBS },
+                RANGE_CLAIMS_PER_SCALAR,
+                RANGE_CLAIMS_PER_MASK,
+                { NUM_RANGE_CLAIMS },
+                { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                { WITNESS_MASK_LIMBS },
+                { DIMENSION },
+                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                paillier::EncryptionKey,
+                Pedersen<
+                    { DIMENSION },
+                    { secp256k1::SCALAR_LIMBS },
+                    secp256k1::Scalar,
+                    secp256k1::GroupElement,
+                >,
+                bulletproofs::RangeProof,
+            >,
+        >(language_public_parameters, c);
     }
 }
