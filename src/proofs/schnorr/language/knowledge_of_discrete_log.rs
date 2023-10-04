@@ -93,7 +93,10 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
-    use crate::{group::secp256k1, proofs::schnorr::language};
+    use crate::{
+        group::secp256k1,
+        proofs::schnorr::{aggregation, language},
+    };
 
     pub(crate) fn language_public_parameters(
     ) -> language::PublicParameters<Language<secp256k1::Scalar, secp256k1::GroupElement>> {
@@ -121,6 +124,24 @@ mod tests {
         language::tests::valid_proof_verifies::<Language<secp256k1::Scalar, secp256k1::GroupElement>>(
             language_public_parameters,
             batch_size,
+        )
+    }
+
+    #[rstest]
+    #[case(1, 1)]
+    #[case(1, 2)]
+    #[case(2, 1)]
+    #[case(2, 3)]
+    #[case(5, 2)]
+    fn aggregates(#[case] number_of_parties: usize, #[case] batch_size: usize) {
+        let language_public_parameters = language_public_parameters();
+        let witnesses = language::tests::generate_witnesses_for_aggregation::<
+            Language<secp256k1::Scalar, secp256k1::GroupElement>,
+        >(&language_public_parameters, number_of_parties, batch_size);
+
+        aggregation::tests::aggregates::<Language<secp256k1::Scalar, secp256k1::GroupElement>>(
+            &language_public_parameters,
+            witnesses,
         )
     }
 

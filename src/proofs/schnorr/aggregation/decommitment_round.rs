@@ -19,7 +19,7 @@ use crate::{
     ComputationalSecuritySizedNumber, PartyID,
 };
 
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(PartialEq, Serialize, Deserialize, Clone)]
 pub struct Decommitment<Language: schnorr::Language> {
     pub(super) statements: Vec<StatementSpaceValue<Language>>,
     pub(super) statement_mask: StatementSpaceValue<Language>,
@@ -27,6 +27,7 @@ pub struct Decommitment<Language: schnorr::Language> {
 }
 
 pub struct Party<Language: schnorr::Language, ProtocolContext: Clone + Serialize> {
+    pub(super) party_id: PartyID,
     pub(super) language_public_parameters: language::PublicParameters<Language>,
     pub(super) protocol_context: ProtocolContext,
     pub(super) witnesses: Vec<WitnessSpaceGroupElement<Language>>,
@@ -46,6 +47,11 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
         Decommitment<Language>,
         proof_share_round::Party<Language, ProtocolContext>,
     ) {
+        let commitments = commitments
+            .into_iter()
+            .filter(|(party_id, _)| *party_id != self.party_id)
+            .collect();
+
         let decommitment = Decommitment::<Language> {
             statements: self
                 .statements
@@ -57,6 +63,7 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
         };
 
         let proof_share_round_party = proof_share_round::Party::<Language, ProtocolContext> {
+            party_id: self.party_id,
             language_public_parameters: self.language_public_parameters,
             protocol_context: self.protocol_context,
             witnesses: self.witnesses,

@@ -32,6 +32,9 @@ pub enum Error {
 
     #[error("parties {:?} sent an invalid proof share value", .0)]
     InvalidProofShare(Vec<PartyID>),
+
+    #[error("parties {:?} sent a proof share that does not pass verification", .0)]
+    ProofShareVerification(Vec<PartyID>),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -46,9 +49,10 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
     Party<Language, ProtocolContext>
 {
     pub fn begin_session(
-        witnesses: Vec<language::WitnessSpaceGroupElement<Language>>,
+        party_id: PartyID,
         language_public_parameters: language::PublicParameters<Language>,
         protocol_context: ProtocolContext,
+        witnesses: Vec<language::WitnessSpaceGroupElement<Language>>,
     ) -> proofs::Result<commitment_round::Party<Language, ProtocolContext>> {
         let statements: proofs::Result<Vec<StatementSpaceGroupElement<Language>>> = witnesses
             .iter()
@@ -57,10 +61,123 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
         let statements = statements?;
 
         Ok(commitment_round::Party {
+            party_id,
             language_public_parameters,
             protocol_context,
             witnesses,
             statements,
         })
+    }
+}
+
+#[cfg(any(test, feature = "benchmarking"))]
+pub(crate) mod tests {
+    use std::collections::HashMap;
+
+    use rand_core::OsRng;
+
+    use super::*;
+    use crate::proofs::schnorr::{
+        aggregation::{
+            commitment_round::Commitment, decommitment_round::Decommitment,
+            proof_share_round::ProofShare,
+        },
+        language::WitnessSpaceGroupElement,
+        Language,
+    };
+
+    #[allow(dead_code)]
+    pub(crate) fn aggregates<Lang: Language>(
+        language_public_parameters: &Lang::PublicParameters,
+        witnesses: Vec<Vec<WitnessSpaceGroupElement<Lang>>>,
+    ) {
+        let commitment_round_parties: HashMap<PartyID, commitment_round::Party<Lang, ()>> =
+            witnesses
+                .into_iter()
+                .enumerate()
+                .map(|(party_id, witnesses)| {
+                    let party_id: u16 = party_id.try_into().unwrap();
+                    (
+                        party_id,
+                        Party::begin_session(
+                            party_id,
+                            language_public_parameters.clone(),
+                            (),
+                            witnesses,
+                        )
+                        .unwrap(),
+                    )
+                })
+                .collect();
+
+        let commitments_and_decommitment_round_parties: HashMap<
+            PartyID,
+            (Commitment, decommitment_round::Party<Lang, ()>),
+        > = commitment_round_parties
+            .into_iter()
+            .map(|(party_id, party)| {
+                (
+                    party_id,
+                    party
+                        .commit_statements_and_statement_mask(&mut OsRng)
+                        .unwrap(),
+                )
+            })
+            .collect();
+
+        let commitments: HashMap<PartyID, Commitment> = commitments_and_decommitment_round_parties
+            .iter()
+            .map(|(party_id, (commitment, _))| (*party_id, *commitment))
+            .collect();
+
+        let decommitments_and_proof_share_round_parties: HashMap<
+            PartyID,
+            (Decommitment<Lang>, proof_share_round::Party<Lang, ()>),
+        > = commitments_and_decommitment_round_parties
+            .into_iter()
+            .map(|(party_id, (_, party))| {
+                (
+                    party_id,
+                    party.decommit_statements_and_statement_mask(commitments.clone()),
+                )
+            })
+            .collect();
+
+        let decommitments: HashMap<PartyID, Decommitment<Lang>> =
+            decommitments_and_proof_share_round_parties
+                .iter()
+                .map(|(party_id, (decommitment, _))| (*party_id, decommitment.clone()))
+                .collect();
+
+        let proof_shares_and_proof_aggregation_round_parties: HashMap<
+            PartyID,
+            (ProofShare<Lang>, proof_aggregation_round::Party<Lang, ()>),
+        > = decommitments_and_proof_share_round_parties
+            .into_iter()
+            .map(|(party_id, (_, party))| {
+                (
+                    party_id,
+                    party.generate_proof_share(decommitments.clone()).unwrap(),
+                )
+            })
+            .collect();
+
+        let proof_shares: HashMap<PartyID, ProofShare<Lang>> =
+            proof_shares_and_proof_aggregation_round_parties
+                .iter()
+                .map(|(party_id, (proof_share, _))| (*party_id, proof_share.clone())) // TODO: why can't copy
+                .collect();
+
+        let (_, (_, party)) = proof_shares_and_proof_aggregation_round_parties
+            .into_iter()
+            .next()
+            .unwrap();
+
+        let res = party.aggregate_proof_shares(proof_shares.clone());
+        assert!(
+            res.is_ok(),
+            "valid proof aggregation sessions should yield verifiable aggregated proofs, instead got error: {:?}",
+            res.err()
+        );
     }
 }

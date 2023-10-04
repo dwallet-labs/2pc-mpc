@@ -573,6 +573,44 @@ pub(crate) mod tests {
         .collect()
     }
 
+    pub(crate) fn generate_witnesses_for_aggregation<
+        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        const RANGE_CLAIM_LIMBS: usize,
+        const WITNESS_MASK_LIMBS: usize,
+        Lang: EnhancedLanguage<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+        >,
+    >(
+        language_public_parameters: &Lang::PublicParameters,
+        number_of_parties: usize,
+        batch_size: usize,
+    ) -> Vec<Vec<WitnessSpaceGroupElement<Lang>>>
+    where
+        Uint<RANGE_CLAIM_LIMBS>: Encoding,
+        Uint<WITNESS_MASK_LIMBS>: Encoding,
+    {
+        iter::repeat_with(|| {
+            generate_witnesses::<
+                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                NUM_RANGE_CLAIMS,
+                RANGE_CLAIM_LIMBS,
+                WITNESS_MASK_LIMBS,
+                Lang,
+            >(
+                &language_public_parameters
+                    .as_ref()
+                    .witness_space_public_parameters,
+                batch_size,
+            )
+        })
+        .take(number_of_parties)
+        .collect()
+    }
+
     pub(crate) fn generate_valid_proof<
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const NUM_RANGE_CLAIMS: usize,

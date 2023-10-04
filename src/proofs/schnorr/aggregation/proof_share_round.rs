@@ -24,10 +24,11 @@ use crate::{
     PartyID,
 };
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct ProofShare<Language: schnorr::Language>(pub(super) WitnessSpaceValue<Language>);
 
 pub struct Party<Language: schnorr::Language, ProtocolContext: Clone + Serialize> {
+    pub(super) party_id: PartyID,
     pub(super) language_public_parameters: language::PublicParameters<Language>,
     pub(super) protocol_context: ProtocolContext,
     pub(super) witnesses: Vec<WitnessSpaceGroupElement<Language>>,
@@ -44,8 +45,8 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
         self,
         decommitments: HashMap<PartyID, Decommitment<Language>>,
     ) -> proofs::Result<(
-        proof_aggregation_round::Party<Language, ProtocolContext>,
         ProofShare<Language>,
+        proof_aggregation_round::Party<Language, ProtocolContext>,
     )> {
         // TODO: now we are using the same protocol context for us and for decommitments, this is
         // faulty and is a security issue. Instead, we must somehow construct the protocol
@@ -60,6 +61,7 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
         // without needing to stop the session and report
         let decommitments: HashMap<PartyID, Decommitment<Language>> = decommitments
             .into_iter()
+            .filter(|(party_id, _)| *party_id != self.party_id)
             .filter(|(party_id, _)| previous_round_party_ids.contains(party_id))
             .collect();
         let current_round_party_ids: HashSet<PartyID> = decommitments.keys().map(|k| *k).collect();
@@ -193,6 +195,7 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
 
         let proof_aggregation_round_party =
             proof_aggregation_round::Party::<Language, ProtocolContext> {
+                party_id: self.party_id,
                 language_public_parameters: self.language_public_parameters,
                 protocol_context: self.protocol_context,
                 previous_round_party_ids,
@@ -201,6 +204,6 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
                 response,
             };
 
-        Ok((proof_aggregation_round_party, proof_share))
+        Ok((proof_share, proof_aggregation_round_party))
     }
 }

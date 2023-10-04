@@ -20,17 +20,18 @@ use crate::{
         },
         TranscriptProtocol,
     },
-    CommitmentSizedNumber, ComputationalSecuritySizedNumber,
+    CommitmentSizedNumber, ComputationalSecuritySizedNumber, PartyID,
 };
 
 pub struct Party<Language: schnorr::Language, ProtocolContext: Clone + Serialize> {
+    pub(super) party_id: PartyID,
     pub(super) language_public_parameters: language::PublicParameters<Language>,
     pub(super) protocol_context: ProtocolContext,
     pub(super) witnesses: Vec<WitnessSpaceGroupElement<Language>>,
     pub(super) statements: Vec<StatementSpaceGroupElement<Language>>,
 }
 
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(PartialEq, Serialize, Deserialize, Clone, Copy)]
 pub struct Commitment(CommitmentSizedNumber);
 
 impl Commitment {
@@ -73,7 +74,7 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
         decommitment_round::Party<Language, ProtocolContext>,
     )> {
         let (randomizer, statement_mask) =
-            Proof::<Language, ProtocolContext>::compute_statement_mask(
+            Proof::<Language, ProtocolContext>::sample_randomizer_and_statement_mask(
                 &self.language_public_parameters,
                 rng,
             )?;
@@ -93,6 +94,7 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             )?;
 
         let decommitment_round_party = decommitment_round::Party::<Language, ProtocolContext> {
+            party_id: self.party_id,
             language_public_parameters: self.language_public_parameters,
             protocol_context: self.protocol_context,
             witnesses: self.witnesses,

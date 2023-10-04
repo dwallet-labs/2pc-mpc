@@ -99,7 +99,7 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<Self> {
         let (randomizer, statement_mask) =
-            Self::compute_statement_mask(language_public_parameters, rng)?;
+            Self::sample_randomizer_and_statement_mask(language_public_parameters, rng)?;
 
         Self::prove_inner(
             protocol_context,
@@ -208,7 +208,7 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         Err(Error::ProofVerification)
     }
 
-    pub(super) fn compute_statement_mask(
+    pub(super) fn sample_randomizer_and_statement_mask(
         language_public_parameters: &PublicParameters<Language>,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(

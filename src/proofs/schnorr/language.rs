@@ -98,6 +98,23 @@ mod tests {
         .collect()
     }
 
+    pub(crate) fn generate_witnesses_for_aggregation<Lang: Language>(
+        language_public_parameters: &Lang::PublicParameters,
+        number_of_parties: usize,
+        batch_size: usize,
+    ) -> Vec<Vec<WitnessSpaceGroupElement<Lang>>> {
+        iter::repeat_with(|| {
+            generate_witnesses::<Lang>(
+                &language_public_parameters
+                    .as_ref()
+                    .witness_space_public_parameters,
+                batch_size,
+            )
+        })
+        .take(number_of_parties)
+        .collect()
+    }
+
     pub(crate) fn generate_witness<Lang: Language>(
         language_public_parameters: &Lang::PublicParameters,
     ) -> WitnessSpaceGroupElement<Lang> {

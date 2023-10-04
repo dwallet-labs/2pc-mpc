@@ -22,6 +22,7 @@ use crate::{
 };
 
 pub struct Party<Language: schnorr::Language, ProtocolContext: Clone + Serialize> {
+    pub(super) party_id: PartyID,
     pub(super) language_public_parameters: language::PublicParameters<Language>,
     pub(super) protocol_context: ProtocolContext,
     pub(super) previous_round_party_ids: HashSet<PartyID>,
@@ -46,9 +47,11 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
         // without needing to stop the session and report
         let proof_shares: HashMap<PartyID, ProofShare<Language>> = proof_shares
             .into_iter()
+            .filter(|(party_id, _)| *party_id != self.party_id)
             .filter(|(party_id, _)| self.previous_round_party_ids.contains(party_id))
             .collect();
-        let current_round_party_ids: HashSet<PartyID> = proof_shares.keys().map(|k| *k).collect();
+
+        let current_round_party_ids: HashSet<PartyID> = proof_shares.keys().copied().collect();
 
         let unresponsive_parties: Vec<PartyID> = current_round_party_ids
             .symmetric_difference(&self.previous_round_party_ids)
@@ -130,6 +133,10 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
                 })
                 .map(|(party_id, _)| party_id)
                 .collect();
+
+            return Err(super::Error::ProofShareVerification(
+                proof_share_cheating_parties,
+            ))?;
         }
 
         Ok((aggregated_proof, self.aggregated_statements))
