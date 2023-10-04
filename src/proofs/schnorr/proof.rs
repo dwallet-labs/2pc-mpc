@@ -143,6 +143,7 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         // but in practice the exponentiation (i.e. `scalar_mul`) could use
         // the real bound: `128 + log2(BatchSize)+2 < 192` to increase performance.
         // We leave that as future work in case this becomes a bottleneck.
+        // TODO
         let response = randomizer
             + witnesses
                 .into_iter()

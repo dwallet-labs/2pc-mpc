@@ -247,7 +247,7 @@ mod benches {
 
                 g.bench_function(
                     format!(
-                        "compute statements for {number_of_parties} over {batch_size} statements"
+                        "compute statements for {number_of_parties} parties over {batch_size} statements"
                     ),
                     |bench| {
                         bench.iter(|| {
@@ -293,7 +293,7 @@ mod benches {
 
                 g.bench_function(
                     format!(
-                        "commitment round for {number_of_parties} over {batch_size} statements"
+                        "commitment round for {number_of_parties} parties over {batch_size} statements"
                     ),
                     |bench| {
                         bench.iter(|| {
@@ -334,7 +334,7 @@ mod benches {
 
                 g.bench_function(
                     format!(
-                        "decommitment round for {number_of_parties} over {batch_size} statements"
+                        "decommitment round for {number_of_parties} parties over {batch_size} statements"
                     ),
                     |bench| {
                         bench.iter(|| {
@@ -371,7 +371,7 @@ mod benches {
 
                 g.bench_function(
                     format!(
-                        "proof share round for {number_of_parties} over {batch_size} statements"
+                        "proof share round for {number_of_parties} parties over {batch_size} statements"
                     ),
                     |bench| {
                         bench.iter(|| {
@@ -409,7 +409,7 @@ mod benches {
                 proof_shares.insert(party_id, proof_share);
 
                 g.bench_function(
-                    format!("proof aggregation round for {number_of_parties} over {batch_size} statements"),
+                    format!("proof aggregation round for {number_of_parties} parties over {batch_size} statements"),
                     |bench| {
                         bench.iter(|| {
                             assert!(proof_aggregation_round_party.clone()
