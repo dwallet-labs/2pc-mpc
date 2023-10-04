@@ -18,6 +18,7 @@ use crate::{
 
 pub mod committed_linear_evaluation;
 pub mod encryption_of_discrete_log;
+pub mod encryption_of_tuple;
 
 pub type ConstrainedWitnessGroupElement<
     const NUM_RANGE_CLAIMS: usize,

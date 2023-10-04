@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
-pub use enhanced::{committed_linear_evaluation, encryption_of_discrete_log, EnhancedLanguage};
+pub use enhanced::{
+    committed_linear_evaluation, encryption_of_discrete_log, encryption_of_tuple, EnhancedLanguage,
+};
 use proofs::Result;
 use serde::{Deserialize, Serialize};
 
