@@ -25,6 +25,8 @@ use crate::{
 #[cfg_attr(test, derive(Debug))]
 pub struct GroupElement<const LIMBS: usize>(DynResidue<LIMBS>);
 
+// TODO: same shtick with value
+
 impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,

@@ -549,7 +549,7 @@ mod tests {
         let bulletproofs_public_parameters =
             range::bulletproofs::PublicParameters::<NUM_RANGE_CLAIMS>::default();
 
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N);
+        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
 
         let paillier_encryption_key =
             paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();

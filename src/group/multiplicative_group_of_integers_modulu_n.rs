@@ -10,7 +10,7 @@ use crypto_bigint::{
     Encoding, Integer, Random, Uint,
 };
 use group::GroupElement as _;
-use serde::{Deserialize, Serialize};
+use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 use subtle::{Choice, ConstantTimeEq};
 
 use crate::{group, group::Samplable};
@@ -63,18 +63,7 @@ where
     Uint<LIMBS>: Encoding,
 {
     fn new(value: Uint<LIMBS>, public_parameters: &PublicParameters<LIMBS>) -> group::Result<Self> {
-        // A valid modulus must be odd,
-        // and bigger than 3: `0` and `1` are invalid, `2` is even
-        if public_parameters.modulus.is_odd().unwrap_u8() == 0
-            || public_parameters.modulus < Uint::<LIMBS>::from(3u8)
-        {
-            return Err(group::Error::UnsupportedPublicParameters);
-        }
-
-        let element = DynResidue::<LIMBS>::new(
-            &value,
-            DynResidueParams::<LIMBS>::new(&public_parameters.modulus),
-        );
+        let element = DynResidue::<LIMBS>::new(&value, public_parameters.params);
 
         Ok(Self(*element.as_montgomery()))
     }
@@ -91,12 +80,56 @@ where
 
 /// The public parameters of the multiplicative group of integers modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
-#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct PublicParameters<const LIMBS: usize>
 where
     Uint<LIMBS>: Encoding,
 {
-    pub modulus: Uint<LIMBS>,
+    pub(crate) params: DynResidueParams<LIMBS>,
+}
+
+impl<const LIMBS: usize> Serialize for PublicParameters<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.params.modulus().serialize(serializer)
+    }
+}
+
+impl<'de, const LIMBS: usize> Deserialize<'de> for PublicParameters<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let modulus = Uint::<LIMBS>::deserialize(deserializer)?;
+
+        Ok(PublicParameters::new(modulus).map_err(|e| Error::custom(e))?)
+    }
+}
+
+impl<const LIMBS: usize> PublicParameters<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    pub fn new(modulus: Uint<LIMBS>) -> group::Result<Self> {
+        // A valid modulus must be odd,
+        // and bigger than 3: `0` and `1` are invalid, `2` is even
+        if modulus.is_odd().unwrap_u8() == 0 || modulus < Uint::<LIMBS>::from(3u8) {
+            return Err(group::Error::UnsupportedPublicParameters);
+        }
+
+        // TODO: checked_new()
+        Ok(Self {
+            params: DynResidueParams::<LIMBS>::new(&modulus),
+        })
+    }
 }
 
 impl<const LIMBS: usize> group::GroupElement for GroupElement<LIMBS>
@@ -111,21 +144,7 @@ where
     }
 
     fn new(value: Self::Value, public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        // A valid modulus must be odd,
-        // and bigger than 3: `0` and `1` are invalid, `2` is even
-        if public_parameters.modulus.is_odd().unwrap_u8() == 0
-            || public_parameters.modulus < Uint::<LIMBS>::from(3u8)
-        {
-            return Err(group::Error::UnsupportedPublicParameters);
-        }
-
-        // TODO: new_checked()
-
-        // TODO: maybe we can have the value already be in montgomery form? is that safe?
-        let element = DynResidue::<LIMBS>::from_montgomery(
-            value.0,
-            DynResidueParams::<LIMBS>::new(&public_parameters.modulus),
-        );
+        let element = DynResidue::<LIMBS>::from_montgomery(value.0, public_parameters.params);
 
         // // `element` is valid if and only if it has an inverse
         // match element.invert().1.into() {
@@ -159,7 +178,7 @@ where
 {
     fn from(value: GroupElement<LIMBS>) -> Self {
         PublicParameters {
-            modulus: *value.0.params().modulus(),
+            params: *value.0.params(),
         }
     }
 }

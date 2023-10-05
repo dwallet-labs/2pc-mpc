@@ -404,7 +404,7 @@ pub(crate) mod tests {
         let bulletproofs_public_parameters =
             range::bulletproofs::PublicParameters::<{ RANGE_CLAIMS_PER_SCALAR }>::default();
 
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N);
+        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
 
         // TODO: think how we can generalize this with `new()` for `PublicParameters` (of encryption
         // of discrete log).
@@ -476,7 +476,7 @@ pub(crate) mod tests {
         )
         .unwrap();
 
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N);
+        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
 
         let paillier_encryption_key =
             paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();
@@ -657,20 +657,20 @@ mod benches {
     pub(crate) fn benchmark(c: &mut Criterion) {
         let (language_public_parameters, range_proof_public_parameters) = public_parameters();
 
-        language::benchmark::<
-            Language<
-                { secp256k1::SCALAR_LIMBS },
-                { ristretto::SCALAR_LIMBS },
-                RANGE_CLAIMS_PER_SCALAR,
-                { range::bulletproofs::RANGE_CLAIM_LIMBS },
-                { WITNESS_MASK_LIMBS },
-                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-                secp256k1::Scalar,
-                secp256k1::GroupElement,
-                paillier::EncryptionKey,
-                bulletproofs::RangeProof,
-            >,
-        >(language_public_parameters.clone(), c);
+        // language::benchmark::<
+        //     Language<
+        //         { secp256k1::SCALAR_LIMBS },
+        //         { ristretto::SCALAR_LIMBS },
+        //         RANGE_CLAIMS_PER_SCALAR,
+        //         { range::bulletproofs::RANGE_CLAIM_LIMBS },
+        //         { WITNESS_MASK_LIMBS },
+        //         { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+        //         secp256k1::Scalar,
+        //         secp256k1::GroupElement,
+        //         paillier::EncryptionKey,
+        //         bulletproofs::RangeProof,
+        //     >,
+        // >(language_public_parameters.clone(), c);
 
         // range::benchmark::<
         //     { ristretto::SCALAR_LIMBS },

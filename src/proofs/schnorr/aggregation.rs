@@ -266,7 +266,7 @@ mod benches {
         Uint<RANGE_CLAIM_LIMBS>: Encoding,
         Uint<WITNESS_MASK_LIMBS>: Encoding,
     {
-        for number_of_parties in [1, 1000] {
+        for number_of_parties in [1000] {
             for batch_size in [1] {
                 // for number_of_parties in [1, 10, 100, 1000] {
                 //     for batch_size in [1, 10, 100, 1000] {
@@ -421,7 +421,7 @@ mod benches {
                 proof_share_round_party
                     .clone()
                     .generate_proof_share(decommitments.clone())
-                    .unwrap()
+                // .unwrap()
             })
         });
 

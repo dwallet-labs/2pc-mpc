@@ -400,7 +400,7 @@ pub(crate) mod tests {
         let bulletproofs_public_parameters =
             range::bulletproofs::PublicParameters::<{ RANGE_CLAIMS_PER_SCALAR }>::default();
 
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N);
+        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
 
         // TODO: think how we can generalize this with `new()` for `PublicParameters` (of encryption
         // of discrete log).
