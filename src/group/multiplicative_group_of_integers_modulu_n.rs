@@ -11,6 +11,7 @@ use crypto_bigint::{
 };
 use group::GroupElement as _;
 use serde::{Deserialize, Serialize};
+use subtle::{Choice, ConstantTimeEq};
 
 use crate::{group, group::Samplable};
 
@@ -30,7 +31,9 @@ where
     ) -> group::Result<Self> {
         // Classic rejection-sampling technique.
         loop {
-            match Self::new(Uint::<LIMBS>::random(rng), public_parameters) {
+            let value = Value::new(Uint::<LIMBS>::random(rng), public_parameters)?;
+
+            match Self::new(value, public_parameters) {
                 Err(group::Error::UnsupportedPublicParameters) => {
                     return Err(group::Error::UnsupportedPublicParameters);
                 }
@@ -48,6 +51,44 @@ where
     }
 }
 
+/// The value of a group element of the multiplicative group of integers modulo `n` $\mathbb{Z}_n^*$
+// TODO: is there some attack vector through deserialization of numbers not in montgomery form?
+#[derive(PartialEq, Eq, Clone, Debug, Copy, Serialize, Deserialize)]
+pub struct Value<const LIMBS: usize>(Uint<LIMBS>)
+where
+    Uint<LIMBS>: Encoding;
+
+impl<const LIMBS: usize> Value<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn new(value: Uint<LIMBS>, public_parameters: &PublicParameters<LIMBS>) -> group::Result<Self> {
+        // A valid modulus must be odd,
+        // and bigger than 3: `0` and `1` are invalid, `2` is even
+        if public_parameters.modulus.is_odd().unwrap_u8() == 0
+            || public_parameters.modulus < Uint::<LIMBS>::from(3u8)
+        {
+            return Err(group::Error::UnsupportedPublicParameters);
+        }
+
+        let element = DynResidue::<LIMBS>::new(
+            &value,
+            DynResidueParams::<LIMBS>::new(&public_parameters.modulus),
+        );
+
+        Ok(Self(*element.as_montgomery()))
+    }
+}
+
+impl<const LIMBS: usize> ConstantTimeEq for Value<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn ct_eq(&self, other: &Self) -> Choice {
+        self.0.ct_eq(&other.0)
+    }
+}
+
 /// The public parameters of the multiplicative group of integers modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
@@ -62,8 +103,12 @@ impl<const LIMBS: usize> group::GroupElement for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
-    type Value = Uint<LIMBS>;
+    type Value = Value<LIMBS>;
     type PublicParameters = PublicParameters<LIMBS>;
+
+    fn value(&self) -> Self::Value {
+        self.0.into()
+    }
 
     fn new(value: Self::Value, public_parameters: &Self::PublicParameters) -> group::Result<Self> {
         // A valid modulus must be odd,
@@ -74,9 +119,11 @@ where
             return Err(group::Error::UnsupportedPublicParameters);
         }
 
+        // TODO: new_checked()
+
         // TODO: maybe we can have the value already be in montgomery form? is that safe?
-        let element = DynResidue::<LIMBS>::new(
-            &value,
+        let element = DynResidue::<LIMBS>::from_montgomery(
+            value.0,
             DynResidueParams::<LIMBS>::new(&public_parameters.modulus),
         );
 
@@ -259,5 +306,59 @@ impl<const LIMBS: usize> From<GroupElement<LIMBS>> for Uint<LIMBS> {
 impl<'r, const LIMBS: usize> From<&'r GroupElement<LIMBS>> for Uint<LIMBS> {
     fn from(value: &'r GroupElement<LIMBS>) -> Self {
         value.0.retrieve()
+    }
+}
+
+impl<const LIMBS: usize> From<GroupElement<LIMBS>> for Value<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn from(value: GroupElement<LIMBS>) -> Self {
+        value.value()
+    }
+}
+
+impl<'r, const LIMBS: usize> From<&'r GroupElement<LIMBS>> for Value<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn from(value: &'r GroupElement<LIMBS>) -> Self {
+        value.value()
+    }
+}
+
+impl<const LIMBS: usize> From<GroupElement<LIMBS>> for DynResidue<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn from(value: GroupElement<LIMBS>) -> Self {
+        value.0
+    }
+}
+
+impl<'r, const LIMBS: usize> From<&'r GroupElement<LIMBS>> for DynResidue<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn from(value: &'r GroupElement<LIMBS>) -> Self {
+        value.0
+    }
+}
+
+impl<const LIMBS: usize> From<DynResidue<LIMBS>> for Value<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn from(value: DynResidue<LIMBS>) -> Self {
+        Value(*value.as_montgomery())
+    }
+}
+
+impl<'r, const LIMBS: usize> From<&'r DynResidue<LIMBS>> for Value<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn from(value: &'r DynResidue<LIMBS>) -> Self {
+        Value(*value.as_montgomery())
     }
 }

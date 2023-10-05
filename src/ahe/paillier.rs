@@ -91,14 +91,18 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
         // safe to `unwrap()` here, as encryption always returns a valid element in the
         // ciphertext group
 
+        // TODO: maybe have encrypt_with_randomness
+
         CiphertextGroupElement::new(
-            self.0.encrypt_with_randomness(
-                &(&<&PlaintextGroupElement as Into<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>>::into(
-                    plaintext,
-                ))
-                    .into(),
-                &randomness.into(),
-            ),
+            self.0
+                .encrypt_with_randomness_inner(
+                    &(&<&PlaintextGroupElement as Into<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>>::into(
+                        plaintext,
+                    ))
+                        .into(),
+                    &randomness.into(),
+                )
+                .into(),
             &CiphertextPublicParameters { modulus: self.0.n2 },
         )
         .unwrap()
@@ -179,7 +183,7 @@ impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, Encryption
     // todo: new()
     fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextGroupElement {
         PlaintextGroupElement::new(
-            self.0.decrypt(&ciphertext.into()),
+            self.0.decrypt_inner(ciphertext.into()),
             &odd_moduli::PublicParameters {
                 modulus: NonZero::new(self.0.encryption_key.n).unwrap(),
             },
