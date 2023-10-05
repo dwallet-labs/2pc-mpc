@@ -519,7 +519,7 @@ pub(crate) mod tests {
             Language<
                 { secp256k1::SCALAR_LIMBS },
                 { ristretto::SCALAR_LIMBS },
-                4,
+                { RANGE_CLAIMS_PER_SCALAR },
                 { range::bulletproofs::RANGE_CLAIM_LIMBS },
                 { WITNESS_MASK_LIMBS },
                 { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
@@ -551,7 +551,7 @@ pub(crate) mod tests {
             Language<
                 { secp256k1::SCALAR_LIMBS },
                 { ristretto::SCALAR_LIMBS },
-                4,
+                { RANGE_CLAIMS_PER_SCALAR },
                 { range::bulletproofs::RANGE_CLAIM_LIMBS },
                 { WITNESS_MASK_LIMBS },
                 { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
@@ -566,7 +566,7 @@ pub(crate) mod tests {
             Language<
                 { secp256k1::SCALAR_LIMBS },
                 { ristretto::SCALAR_LIMBS },
-                4,
+                { RANGE_CLAIMS_PER_SCALAR },
                 { range::bulletproofs::RANGE_CLAIM_LIMBS },
                 { WITNESS_MASK_LIMBS },
                 { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
@@ -593,7 +593,7 @@ pub(crate) mod tests {
             Language<
                 { secp256k1::SCALAR_LIMBS },
                 { ristretto::SCALAR_LIMBS },
-                4,
+                { RANGE_CLAIMS_PER_SCALAR },
                 { range::bulletproofs::RANGE_CLAIM_LIMBS },
                 { WITNESS_MASK_LIMBS },
                 { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
@@ -695,7 +695,11 @@ mod benches {
             c,
         );
 
-        aggregation::benchmark::<
+        aggregation::benchmark_enhanced::<
+            { ristretto::SCALAR_LIMBS },
+            { RANGE_CLAIMS_PER_SCALAR },
+            { range::bulletproofs::RANGE_CLAIM_LIMBS },
+            WITNESS_MASK_LIMBS,
             Language<
                 { secp256k1::SCALAR_LIMBS },
                 { ristretto::SCALAR_LIMBS },

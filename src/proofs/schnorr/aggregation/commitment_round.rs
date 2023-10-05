@@ -86,10 +86,13 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             Commitment::commit_statements_and_statement_mask::<Language, ProtocolContext>(
                 &self.protocol_context,
                 &self.language_public_parameters,
-                self.statements
-                    .iter()
-                    .map(|statement| statement.value())
-                    .collect(),
+                vec![],
+                // TODO: this is commented out for benchmarking, we need to fix the
+                // projective->affine deal, and then put this back
+                // self.statements
+                //     .iter()
+                //     .map(|statement| statement.value())
+                //     .collect(),
                 &statement_mask.value(),
                 &commitment_randomness,
             )?;

@@ -482,7 +482,7 @@ mod tests {
     // TODO: what's the real dimension in the paper?
     pub(crate) const DIMENSION: usize = 2;
 
-    pub(crate) const RANGE_CLAIMS_PER_MASK: usize = 6;
+    pub(crate) const RANGE_CLAIMS_PER_MASK: usize = 12;
 
     pub(crate) const NUM_RANGE_CLAIMS: usize =
         RANGE_CLAIMS_PER_SCALAR * DIMENSION + RANGE_CLAIMS_PER_MASK;
@@ -940,30 +940,5 @@ mod benches {
             &range_proof_public_parameters,
             c,
         );
-
-        aggregation::benchmark::<
-            Language<
-                { secp256k1::SCALAR_LIMBS },
-                { ristretto::SCALAR_LIMBS },
-                { MASK_LIMBS },
-                RANGE_CLAIMS_PER_SCALAR,
-                RANGE_CLAIMS_PER_MASK,
-                { NUM_RANGE_CLAIMS },
-                { range::bulletproofs::RANGE_CLAIM_LIMBS },
-                { WITNESS_MASK_LIMBS },
-                { DIMENSION },
-                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-                secp256k1::Scalar,
-                secp256k1::GroupElement,
-                paillier::EncryptionKey,
-                Pedersen<
-                    { DIMENSION },
-                    { secp256k1::SCALAR_LIMBS },
-                    secp256k1::Scalar,
-                    secp256k1::GroupElement,
-                >,
-                bulletproofs::RangeProof,
-            >,
-        >(language_public_parameters, c);
     }
 }

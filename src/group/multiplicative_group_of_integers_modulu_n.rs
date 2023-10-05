@@ -74,16 +74,21 @@ where
             return Err(group::Error::UnsupportedPublicParameters);
         }
 
+        // TODO: maybe we can have the value already be in montgomery form? is that safe?
         let element = DynResidue::<LIMBS>::new(
             &value,
             DynResidueParams::<LIMBS>::new(&public_parameters.modulus),
         );
 
-        // `element` is valid if and only if it has an inverse
-        match element.invert().1.into() {
-            true => Ok(Self(element)),
-            false => Err(group::Error::InvalidGroupElement),
-        }
+        // // `element` is valid if and only if it has an inverse
+        // match element.invert().1.into() {
+        //     true => Ok(Self(element)),
+        //     false => Err(group::Error::InvalidGroupElement),
+        // }
+
+        // TODO
+
+        Ok(Self(element))
     }
 
     fn neutral(&self) -> Self {

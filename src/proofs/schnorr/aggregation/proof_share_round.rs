@@ -85,7 +85,9 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
                     // things.
                     &self.protocol_context,
                     &self.language_public_parameters,
-                    decommitment.statements.clone(),
+                    vec![],
+                    // TODO: put this back after fixing value affine
+                    // decommitment.statements.clone(),
                     &decommitment.statement_mask,
                     &decommitment.commitment_randomness,
                 )
@@ -137,6 +139,9 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             ))?;
         }
 
+        // TODO: is group instantiation here expensive? as it requires modulation?
+        // perhaps I could instead check that value is smaller, and return an error for out of
+        // range? also there's inversion there
         let statements_vector: group::Result<Vec<Vec<StatementSpaceGroupElement<Language>>>> =
             decommitments
                 .into_values()

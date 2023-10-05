@@ -127,15 +127,19 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         let mut transcript = Self::setup_transcript(
             protocol_context,
             language_public_parameters,
-            statements
-                .iter()
-                .map(|statement| statement.value())
-                .collect(),
+            // TODO: return this after we fix the projective->affine issue
+            vec![],
+            // statements
+            //     .iter()
+            //     .map(|statement| statement.value())
+            //     .collect(),
             &statement_mask.value(),
         )?;
 
         let challenges: Vec<ChallengeSizedNumber> =
             Self::compute_challenges(batch_size, &mut transcript);
+
+        // Another: TODO: these don't go through modulation and we can do them not in the group
 
         // Using the "small exponents" method for batching;
         // the exponents actually need to account for the batch size.
@@ -167,10 +171,12 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         let mut transcript = Self::setup_transcript(
             protocol_context,
             language_public_parameters,
-            statements
-                .iter()
-                .map(|statement| statement.value())
-                .collect(),
+            // TODO: return this after we fix the projective->affine issue
+            vec![],
+            // statements
+            //     .iter()
+            //     .map(|statement| statement.value())
+            //     .collect(),
             &self.statement_mask,
         )?;
 

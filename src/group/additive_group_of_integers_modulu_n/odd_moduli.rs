@@ -74,6 +74,8 @@ where
     }
 
     fn scalar_mul<const RHS_LIMBS: usize>(&self, scalar: &Uint<RHS_LIMBS>) -> Self {
+        // TODO: this is very inefficient, think about optimizing. E.g. LIMBS = 2048, RHS = 128 for
+        // prove. This is a factor 16 useless.
         let scalar = DynResidue::new(
             &scalar.reduce(&self.public_parameters().modulus),
             *self.0.params(),

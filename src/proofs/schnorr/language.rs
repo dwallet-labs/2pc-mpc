@@ -363,7 +363,7 @@ mod benches {
             let statements = statements.unwrap();
 
             g.bench_function(
-                format!("schnorr::Proof::prove() over {batch_size} statements"),
+                format!("schnorr::Proof::prove_inner() over {batch_size} statements"),
                 |bench| {
                     bench.iter(|| {
                         Proof::<Lang, PhantomData<()>>::prove_with_statements(

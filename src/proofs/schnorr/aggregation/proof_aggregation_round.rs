@@ -103,6 +103,8 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
                 aggregated_reponse + proof_share
             });
 
+        // TODO: take transcript from previous round (opt.)
+
         let aggregated_proof = Proof::new(&self.aggregated_statement_mask, &response);
         if aggregated_proof
             .verify(

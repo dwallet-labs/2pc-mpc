@@ -531,7 +531,7 @@ pub(crate) mod tests {
         + ComputationalSecuritySizedNumber::LIMBS
         + StatisticalSecuritySizedNumber::LIMBS;
 
-    pub(crate) const RANGE_CLAIMS_PER_SCALAR: usize = 4;
+    pub(crate) const RANGE_CLAIMS_PER_SCALAR: usize = 8;
 
     pub(crate) fn generate_witnesses<
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
