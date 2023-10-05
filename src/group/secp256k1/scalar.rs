@@ -106,9 +106,14 @@ impl BoundedGroupElement<SCALAR_LIMBS> for Scalar {
 
 impl<const LIMBS: usize> From<Uint<LIMBS>> for Scalar {
     fn from(value: Uint<LIMBS>) -> Self {
-        Self(k256::Scalar::from_uint_unchecked(
-            value.reduce(&NonZero::new(ORDER).unwrap()),
-        ))
+        // TODO: can we also optimize for the 256-bit case? by comparing to q.
+        let value = if LIMBS < SCALAR_LIMBS {
+            (&value).into()
+        } else {
+            value.reduce(&NonZero::new(ORDER).unwrap())
+        };
+
+        Self(k256::Scalar::from_uint_unchecked(value))
     }
 }
 

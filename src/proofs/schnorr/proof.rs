@@ -241,38 +241,41 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
     ) -> proofs::Result<Transcript> {
         let mut transcript = Transcript::new(Language::NAME.as_bytes());
 
-        transcript.serialize_to_transcript_as_json(b"protocol context", protocol_context)?;
+        // TODO: replace `Serialize` with `Into<Vec<u8>>` and comment this back in, this is slower
+        // than originally imagined.
 
-        transcript.serialize_to_transcript_as_json(
-            b"language public parameters",
-            language_public_parameters,
-        )?;
-
-        // TODO: should I now remove these?
-        transcript.serialize_to_transcript_as_json(
-            b"witness space public parameters",
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
-        )?;
-
-        transcript.serialize_to_transcript_as_json(
-            b"statement space public parameters",
-            &language_public_parameters
-                .as_ref()
-                .statement_space_public_parameters,
-        )?;
-
-        if statements.iter().any(|statement| {
-            transcript
-                .serialize_to_transcript_as_json(b"statement value", &statement)
-                .is_err()
-        }) {
-            return Err(Error::InvalidParameters);
-        }
-
-        transcript
-            .serialize_to_transcript_as_json(b"statement mask value", statement_mask_value)?;
+        // transcript.serialize_to_transcript_as_json(b"protocol context", protocol_context)?;
+        //
+        // transcript.serialize_to_transcript_as_json(
+        //     b"language public parameters",
+        //     language_public_parameters,
+        // )?;
+        //
+        // // TODO: should I now remove these?
+        // transcript.serialize_to_transcript_as_json(
+        //     b"witness space public parameters",
+        //     &language_public_parameters
+        //         .as_ref()
+        //         .witness_space_public_parameters,
+        // )?;
+        //
+        // transcript.serialize_to_transcript_as_json(
+        //     b"statement space public parameters",
+        //     &language_public_parameters
+        //         .as_ref()
+        //         .statement_space_public_parameters,
+        // )?;
+        //
+        // if statements.iter().any(|statement| {
+        //     transcript
+        //         .serialize_to_transcript_as_json(b"statement value", &statement)
+        //         .is_err()
+        // }) {
+        //     return Err(Error::InvalidParameters);
+        // }
+        //
+        // transcript
+        //     .serialize_to_transcript_as_json(b"statement mask value", statement_mask_value)?;
 
         Ok(transcript)
     }
