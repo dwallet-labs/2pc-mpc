@@ -545,7 +545,7 @@ pub(crate) mod tests {
             WITNESS_MASK_LIMBS,
         >,
     >(
-        witness_space_public_parameters: &WitnessSpacePublicParameters<Lang>,
+        language_public_parameters: &Lang::PublicParameters,
         batch_size: usize,
     ) -> Vec<WitnessSpaceGroupElement<Lang>>
     where
@@ -556,7 +556,9 @@ pub(crate) mod tests {
             let (_, commitment_randomness, unconstrained_witness) =
                 WitnessSpaceGroupElement::<Lang>::sample(
                     &mut OsRng,
-                    &witness_space_public_parameters,
+                    &language_public_parameters
+                        .as_ref()
+                        .witness_space_public_parameters,
                 )
                 .unwrap()
                 .into();
@@ -577,7 +579,10 @@ pub(crate) mod tests {
                     WITNESS_MASK_LIMBS,
                     Lang,
                 >,
-            ) = witness_space_public_parameters.into();
+            ) = (&language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters)
+                .into();
 
             (
                 array::from_fn(|_| {
@@ -629,12 +634,7 @@ pub(crate) mod tests {
                 RANGE_CLAIM_LIMBS,
                 WITNESS_MASK_LIMBS,
                 Lang,
-            >(
-                &language_public_parameters
-                    .as_ref()
-                    .witness_space_public_parameters,
-                batch_size,
-            )
+            >(language_public_parameters, batch_size)
         })
         .take(number_of_parties)
         .collect()
@@ -718,12 +718,7 @@ pub(crate) mod tests {
             RANGE_CLAIM_LIMBS,
             WITNESS_MASK_LIMBS,
             Lang,
-        >(
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
-            batch_size,
-        );
+        >(language_public_parameters, batch_size);
 
         let (proof, statements) = generate_valid_proof::<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -784,12 +779,7 @@ pub(crate) mod tests {
             RANGE_CLAIM_LIMBS,
             WITNESS_MASK_LIMBS,
             Lang,
-        >(
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
-            batch_size,
-        );
+        >(language_public_parameters, batch_size);
 
         let (constrained_witnesses, commitment_randomness, unconstrained_witness) =
             witnesses.first().unwrap().clone().into();

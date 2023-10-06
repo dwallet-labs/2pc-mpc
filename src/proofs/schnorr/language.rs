@@ -89,12 +89,17 @@ pub(crate) mod tests {
     };
 
     pub(crate) fn generate_witnesses<Lang: Language>(
-        witness_space_public_parameters: &WitnessSpacePublicParameters<Lang>,
+        language_public_parameters: &Lang::PublicParameters,
         batch_size: usize,
     ) -> Vec<WitnessSpaceGroupElement<Lang>> {
         iter::repeat_with(|| {
-            WitnessSpaceGroupElement::<Lang>::sample(&mut OsRng, &witness_space_public_parameters)
-                .unwrap()
+            WitnessSpaceGroupElement::<Lang>::sample(
+                &mut OsRng,
+                &language_public_parameters
+                    .as_ref()
+                    .witness_space_public_parameters,
+            )
+            .unwrap()
         })
         .take(batch_size)
         .collect()
@@ -105,27 +110,15 @@ pub(crate) mod tests {
         number_of_parties: usize,
         batch_size: usize,
     ) -> Vec<Vec<WitnessSpaceGroupElement<Lang>>> {
-        iter::repeat_with(|| {
-            generate_witnesses::<Lang>(
-                &language_public_parameters
-                    .as_ref()
-                    .witness_space_public_parameters,
-                batch_size,
-            )
-        })
-        .take(number_of_parties)
-        .collect()
+        iter::repeat_with(|| generate_witnesses::<Lang>(language_public_parameters, batch_size))
+            .take(number_of_parties)
+            .collect()
     }
 
     pub(crate) fn generate_witness<Lang: Language>(
         language_public_parameters: &Lang::PublicParameters,
     ) -> WitnessSpaceGroupElement<Lang> {
-        let witnesses = generate_witnesses::<Lang>(
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
-            1,
-        );
+        let witnesses = generate_witnesses::<Lang>(language_public_parameters, 1);
 
         witnesses.first().unwrap().clone()
     }
@@ -153,12 +146,7 @@ pub(crate) mod tests {
         language_public_parameters: Lang::PublicParameters,
         batch_size: usize,
     ) {
-        let witnesses = generate_witnesses::<Lang>(
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
-            batch_size,
-        );
+        let witnesses = generate_witnesses::<Lang>(&language_public_parameters, batch_size);
 
         let (proof, statements) =
             generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone());
@@ -178,12 +166,7 @@ pub(crate) mod tests {
         language_public_parameters: Lang::PublicParameters,
         batch_size: usize,
     ) {
-        let witnesses = generate_witnesses::<Lang>(
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
-            batch_size,
-        );
+        let witnesses = generate_witnesses::<Lang>(&language_public_parameters, batch_size);
 
         let (valid_proof, statements) =
             generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone());
@@ -349,12 +332,7 @@ mod benches {
         g.sample_size(10);
 
         for batch_size in [1, 10, 100, 1000] {
-            let witnesses = generate_witnesses::<Lang>(
-                &language_public_parameters
-                    .as_ref()
-                    .witness_space_public_parameters,
-                batch_size,
-            );
+            let witnesses = generate_witnesses::<Lang>(&language_public_parameters, batch_size);
 
             let statements: proofs::Result<Vec<StatementSpaceGroupElement<Lang>>> = witnesses
                 .iter()

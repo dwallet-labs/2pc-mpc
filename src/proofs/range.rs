@@ -269,19 +269,14 @@ mod benches {
 
         g.sample_size(10);
 
-        for batch_size in [1, 10, 100] {
+        for batch_size in [1, 10, 100, 1000] {
             let witnesses = generate_witnesses::<
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 NUM_RANGE_CLAIMS,
                 RANGE_CLAIM_LIMBS,
                 WITNESS_MASK_LIMBS,
                 Lang,
-            >(
-                &language_public_parameters
-                    .as_ref()
-                    .witness_space_public_parameters,
-                batch_size,
-            );
+            >(language_public_parameters, batch_size);
 
             let (constrained_witnesses, commitment_randomnesses): (
                 Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,

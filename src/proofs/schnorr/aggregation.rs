@@ -209,42 +209,36 @@ pub(crate) mod tests {
 
 #[cfg(feature = "benchmarking")]
 mod benches {
-    use std::{collections::HashMap, marker::PhantomData};
+    use std::{collections::HashMap, iter, marker::PhantomData};
 
     use criterion::Criterion;
     use crypto_bigint::{Encoding, Uint};
     use rand_core::OsRng;
 
     use super::*;
-    use crate::proofs::schnorr::{
-        aggregation::{
-            commitment_round::Commitment, decommitment_round::Decommitment,
-            proof_share_round::ProofShare,
+    use crate::{
+        commitments,
+        proofs::schnorr::{
+            aggregation::{
+                commitment_round::Commitment, decommitment_round::Decommitment,
+                proof_share_round::ProofShare,
+            },
+            language::WitnessSpaceGroupElement,
+            EnhancedLanguage, Language, Proof,
         },
-        language::WitnessSpaceGroupElement,
-        EnhancedLanguage, Language, Proof,
     };
 
     pub(crate) fn benchmark<Lang: Language>(
         language_public_parameters: Lang::PublicParameters,
         c: &mut Criterion,
     ) {
-        for number_of_parties in [1, 10, 100, 1000] {
-            for batch_size in [1, 10, 100, 1000] {
-                let mut witnesses = language::tests::generate_witnesses_for_aggregation::<Lang>(
-                    &language_public_parameters,
-                    number_of_parties,
-                    batch_size,
-                );
+        for batch_size in [1, 10, 100, 1000] {
+            let mut witnesses = language::tests::generate_witnesses::<Lang>(
+                &language_public_parameters,
+                batch_size,
+            );
 
-                benchmark_internal::<Lang>(
-                    language_public_parameters.clone(),
-                    witnesses,
-                    number_of_parties,
-                    batch_size,
-                    c,
-                )
-            }
+            benchmark_internal::<Lang>(language_public_parameters.clone(), witnesses, batch_size, c)
         }
     }
 
@@ -266,48 +260,35 @@ mod benches {
         Uint<RANGE_CLAIM_LIMBS>: Encoding,
         Uint<WITNESS_MASK_LIMBS>: Encoding,
     {
-        for number_of_parties in [1000] {
-            for batch_size in [1] {
-                // for number_of_parties in [1, 10, 100, 1000] {
-                //     for batch_size in [1, 10, 100, 1000] {
-                let mut witnesses = language::enhanced::tests::generate_witnesses_for_aggregation::<
-                    RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                    NUM_RANGE_CLAIMS,
-                    RANGE_CLAIM_LIMBS,
-                    WITNESS_MASK_LIMBS,
-                    Lang,
-                >(
-                    &language_public_parameters, number_of_parties, batch_size
-                );
+        for batch_size in [1, 10, 100, 1000] {
+            let mut witnesses = language::enhanced::tests::generate_witnesses::<
+                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                NUM_RANGE_CLAIMS,
+                RANGE_CLAIM_LIMBS,
+                WITNESS_MASK_LIMBS,
+                Lang,
+            >(&language_public_parameters, batch_size);
 
-                benchmark_internal::<Lang>(
-                    language_public_parameters.clone(),
-                    witnesses,
-                    number_of_parties,
-                    batch_size,
-                    c,
-                )
-            }
+            benchmark_internal::<Lang>(language_public_parameters.clone(), witnesses, batch_size, c)
         }
     }
 
     fn benchmark_internal<Lang: Language>(
         language_public_parameters: Lang::PublicParameters,
-        witnesses: Vec<Vec<WitnessSpaceGroupElement<Lang>>>,
-        number_of_parties: usize,
+        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
         batch_size: usize,
         c: &mut Criterion,
     ) {
         let mut g = c.benchmark_group(format!(
-            "{:?} aggregation for {number_of_parties} parties over {batch_size} statements",
+            "{:?} aggregation over {batch_size} statements",
             Lang::NAME
         ));
 
         g.sample_size(10);
+
         // TODO: DRY-out, have enhanced witnesses generate accordingly
         let mut witnesses = witnesses;
         let party_id = (witnesses.len() - 1).try_into().unwrap();
-        let party_witnesses = witnesses.pop().unwrap();
 
         g.bench_function("compute statements", |bench| {
             bench.iter(|| {
@@ -315,7 +296,7 @@ mod benches {
                     party_id,
                     language_public_parameters.clone(),
                     (),
-                    party_witnesses.clone(),
+                    witnesses.clone(),
                 )
                 .unwrap()
             })
@@ -325,28 +306,9 @@ mod benches {
             party_id,
             language_public_parameters.clone(),
             (),
-            party_witnesses,
+            witnesses,
         )
         .unwrap();
-
-        let mut commitment_round_parties: HashMap<PartyID, commitment_round::Party<Lang, ()>> =
-            witnesses
-                .iter()
-                .enumerate()
-                .map(|(party_id, witnesses)| {
-                    let party_id: u16 = party_id.try_into().unwrap();
-                    (
-                        party_id,
-                        Party::<Lang, ()>::begin_session(
-                            party_id,
-                            language_public_parameters.clone(),
-                            (),
-                            witnesses.to_vec(),
-                        )
-                        .unwrap(),
-                    )
-                })
-                .collect();
 
         g.bench_function(format!("commitment round"), |bench| {
             bench.iter(|| {
@@ -357,107 +319,76 @@ mod benches {
             })
         });
 
-        let commitments_and_decommitment_round_parties: HashMap<
-            PartyID,
-            (Commitment, decommitment_round::Party<Lang, ()>),
-        > = commitment_round_parties
-            .into_iter()
-            .map(|(party_id, party)| {
-                (
-                    party_id,
-                    party
-                        .commit_statements_and_statement_mask(&mut OsRng)
-                        .unwrap(),
-                )
-            })
-            .collect();
-
         let (commitment, decommitment_round_party) = party
             .commit_statements_and_statement_mask(&mut OsRng)
             .unwrap();
 
-        let mut commitments: HashMap<PartyID, Commitment> =
-            commitments_and_decommitment_round_parties
-                .iter()
-                .map(|(party_id, (commitment, _))| (*party_id, *commitment))
-                .collect();
+        for number_of_parties in [1, 10, 100, 1000] {
+            let commitments: HashMap<PartyID, Commitment> =
+                iter::repeat_with(|| commitment.clone())
+                    .take(number_of_parties)
+                    .enumerate()
+                    .map(|(party_id, x)| (party_id.try_into().unwrap(), x))
+                    .collect();
 
-        commitments.insert(party_id, commitment);
+            g.bench_function(
+                format!("decommitment round for {number_of_parties} parties"),
+                |bench| {
+                    bench.iter(|| {
+                        decommitment_round_party
+                            .clone()
+                            .decommit_statements_and_statement_mask(commitments.clone())
+                    })
+                },
+            );
 
-        g.bench_function(format!("decommitment round"), |bench| {
-            bench.iter(|| {
-                decommitment_round_party
-                    .clone()
-                    .decommit_statements_and_statement_mask(commitments.clone())
-            })
-        });
+            let (decommitment, proof_share_round_party) = decommitment_round_party
+                .clone()
+                .decommit_statements_and_statement_mask(commitments);
 
-        let decommitments_and_proof_share_round_parties: HashMap<
-            PartyID,
-            (Decommitment<Lang>, proof_share_round::Party<Lang, ()>),
-        > = commitments_and_decommitment_round_parties
-            .into_iter()
-            .map(|(party_id, (_, party))| {
-                (
-                    party_id,
-                    party.decommit_statements_and_statement_mask(commitments.clone()),
-                )
-            })
-            .collect();
+            let decommitments: HashMap<PartyID, Decommitment<Lang>> =
+                iter::repeat_with(|| decommitment.clone())
+                    .take(number_of_parties)
+                    .enumerate()
+                    .map(|(party_id, x)| (party_id.try_into().unwrap(), x))
+                    .collect();
 
-        let (decommitment, proof_share_round_party) =
-            decommitment_round_party.decommit_statements_and_statement_mask(commitments);
+            g.bench_function(
+                format!("proof share round for {number_of_parties} parties"),
+                |bench| {
+                    bench.iter(|| {
+                        proof_share_round_party
+                            .clone()
+                            .generate_proof_share(decommitments.clone())
+                            .unwrap()
+                    })
+                },
+            );
 
-        let mut decommitments: HashMap<PartyID, Decommitment<Lang>> =
-            decommitments_and_proof_share_round_parties
-                .iter()
-                .map(|(party_id, (decommitment, _))| (*party_id, decommitment.clone()))
-                .collect();
+            let (proof_share, proof_aggregation_round_party) = proof_share_round_party
+                .clone()
+                .generate_proof_share(decommitments.clone())
+                .unwrap();
 
-        decommitments.insert(party_id, decommitment);
+            let proof_shares: HashMap<PartyID, ProofShare<Lang>> =
+                iter::repeat_with(|| proof_share.clone())
+                    .take(number_of_parties)
+                    .enumerate()
+                    .map(|(party_id, x)| (party_id.try_into().unwrap(), x))
+                    .collect();
 
-        g.bench_function(format!("proof share round"), |bench| {
-            bench.iter(|| {
-                proof_share_round_party
-                    .clone()
-                    .generate_proof_share(decommitments.clone())
-                // .unwrap()
-            })
-        });
-
-        let proof_shares_and_proof_aggregation_round_parties: HashMap<
-            PartyID,
-            (ProofShare<Lang>, proof_aggregation_round::Party<Lang, ()>),
-        > = decommitments_and_proof_share_round_parties
-            .into_iter()
-            .map(|(party_id, (_, party))| {
-                (
-                    party_id,
-                    party.generate_proof_share(decommitments.clone()).unwrap(),
-                )
-            })
-            .collect();
-
-        let (proof_share, proof_aggregation_round_party) = proof_share_round_party
-            .generate_proof_share(decommitments.clone())
-            .unwrap();
-
-        let mut proof_shares: HashMap<PartyID, ProofShare<Lang>> =
-            proof_shares_and_proof_aggregation_round_parties
-                .iter()
-                .map(|(party_id, (proof_share, _))| (*party_id, proof_share.clone())) // TODO: why can't copy
-                .collect();
-
-        proof_shares.insert(party_id, proof_share);
-
-        g.bench_function(format!("proof aggregation round"), |bench| {
-            bench.iter(|| {
-                assert!(proof_aggregation_round_party
-                    .clone()
-                    .aggregate_proof_shares(proof_shares.clone())
-                    .is_ok());
-            })
-        });
+            g.bench_function(
+                format!("proof aggregation round for {number_of_parties} parties"),
+                |bench| {
+                    bench.iter(|| {
+                        assert!(proof_aggregation_round_party
+                            .clone()
+                            .aggregate_proof_shares(proof_shares.clone())
+                            .is_ok());
+                    })
+                },
+            );
+        }
 
         g.finish();
     }

@@ -68,6 +68,9 @@ pub struct Language<
     _range_proof_choice: PhantomData<RangeProof>,
 }
 
+// TODO: remove this whole NUM_RANGE_CLAIMS deal once we have the pedersen proof. This is over
+// complicated and we're not going to use this code.
+
 impl<
         const SCALAR_LIMBS: usize,
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
@@ -883,30 +886,30 @@ mod benches {
     pub(crate) fn benchmark(c: &mut Criterion) {
         let (language_public_parameters, range_proof_public_parameters) = public_parameters();
 
-        language::benchmark::<
-            Language<
-                { secp256k1::SCALAR_LIMBS },
-                { ristretto::SCALAR_LIMBS },
-                { MASK_LIMBS },
-                RANGE_CLAIMS_PER_SCALAR,
-                RANGE_CLAIMS_PER_MASK,
-                { NUM_RANGE_CLAIMS },
-                { range::bulletproofs::RANGE_CLAIM_LIMBS },
-                { WITNESS_MASK_LIMBS },
-                { DIMENSION },
-                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-                secp256k1::Scalar,
-                secp256k1::GroupElement,
-                paillier::EncryptionKey,
-                Pedersen<
-                    { DIMENSION },
-                    { secp256k1::SCALAR_LIMBS },
-                    secp256k1::Scalar,
-                    secp256k1::GroupElement,
-                >,
-                bulletproofs::RangeProof,
-            >,
-        >(language_public_parameters.clone(), c);
+        // language::benchmark::<
+        //     Language<
+        //         { secp256k1::SCALAR_LIMBS },
+        //         { ristretto::SCALAR_LIMBS },
+        //         { MASK_LIMBS },
+        //         RANGE_CLAIMS_PER_SCALAR,
+        //         RANGE_CLAIMS_PER_MASK,
+        //         { NUM_RANGE_CLAIMS },
+        //         { range::bulletproofs::RANGE_CLAIM_LIMBS },
+        //         { WITNESS_MASK_LIMBS },
+        //         { DIMENSION },
+        //         { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+        //         secp256k1::Scalar,
+        //         secp256k1::GroupElement,
+        //         paillier::EncryptionKey,
+        //         Pedersen<
+        //             { DIMENSION },
+        //             { secp256k1::SCALAR_LIMBS },
+        //             secp256k1::Scalar,
+        //             secp256k1::GroupElement,
+        //         >,
+        //         bulletproofs::RangeProof,
+        //     >,
+        // >(language_public_parameters.clone(), c);
 
         range::benchmark::<
             { ristretto::SCALAR_LIMBS },
@@ -940,5 +943,34 @@ mod benches {
             &range_proof_public_parameters,
             c,
         );
+
+        aggregation::benchmark_enhanced::<
+            { ristretto::SCALAR_LIMBS },
+            { NUM_RANGE_CLAIMS },
+            { range::bulletproofs::RANGE_CLAIM_LIMBS },
+            WITNESS_MASK_LIMBS,
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                { ristretto::SCALAR_LIMBS },
+                { MASK_LIMBS },
+                RANGE_CLAIMS_PER_SCALAR,
+                RANGE_CLAIMS_PER_MASK,
+                { NUM_RANGE_CLAIMS },
+                { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                { WITNESS_MASK_LIMBS },
+                { DIMENSION },
+                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                paillier::EncryptionKey,
+                Pedersen<
+                    { DIMENSION },
+                    { secp256k1::SCALAR_LIMBS },
+                    secp256k1::Scalar,
+                    secp256k1::GroupElement,
+                >,
+                bulletproofs::RangeProof,
+            >,
+        >(language_public_parameters, c);
     }
 }

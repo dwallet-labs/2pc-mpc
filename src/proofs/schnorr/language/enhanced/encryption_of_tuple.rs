@@ -672,28 +672,28 @@ mod benches {
         //     >,
         // >(language_public_parameters.clone(), c);
 
-        // range::benchmark::<
-        //     { ristretto::SCALAR_LIMBS },
-        //     { RANGE_CLAIMS_PER_SCALAR },
-        //     { range::bulletproofs::RANGE_CLAIM_LIMBS },
-        //     WITNESS_MASK_LIMBS,
-        //     Language<
-        //         { secp256k1::SCALAR_LIMBS },
-        //         { ristretto::SCALAR_LIMBS },
-        //         RANGE_CLAIMS_PER_SCALAR,
-        //         { range::bulletproofs::RANGE_CLAIM_LIMBS },
-        //         { WITNESS_MASK_LIMBS },
-        //         { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-        //         secp256k1::Scalar,
-        //         secp256k1::GroupElement,
-        //         paillier::EncryptionKey,
-        //         bulletproofs::RangeProof,
-        //     >,
-        // >(
-        //     &language_public_parameters,
-        //     &range_proof_public_parameters,
-        //     c,
-        // );
+        range::benchmark::<
+            { ristretto::SCALAR_LIMBS },
+            { RANGE_CLAIMS_PER_SCALAR },
+            { range::bulletproofs::RANGE_CLAIM_LIMBS },
+            WITNESS_MASK_LIMBS,
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                { ristretto::SCALAR_LIMBS },
+                RANGE_CLAIMS_PER_SCALAR,
+                { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                { WITNESS_MASK_LIMBS },
+                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                paillier::EncryptionKey,
+                bulletproofs::RangeProof,
+            >,
+        >(
+            &language_public_parameters,
+            &range_proof_public_parameters,
+            c,
+        );
 
         aggregation::benchmark_enhanced::<
             { ristretto::SCALAR_LIMBS },
