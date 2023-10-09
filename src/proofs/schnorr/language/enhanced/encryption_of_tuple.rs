@@ -482,13 +482,7 @@ pub(crate) mod tests {
             paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();
 
         let ciphertext = paillier_encryption_key
-            .encrypt(
-                &plaintext,
-                &paillier_public_parameters
-                    .as_ref()
-                    .randomness_space_public_parameters,
-                &mut OsRng,
-            )
+            .encrypt(&plaintext, &paillier_public_parameters, &mut OsRng)
             .unwrap()
             .1
             .value();

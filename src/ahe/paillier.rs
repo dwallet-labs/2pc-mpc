@@ -229,44 +229,27 @@ pub(crate) mod tests {
 
     #[test]
     fn encrypt_decrypts() {
-        let plaintext_public_parameters: odd_moduli::PublicParameters<
-            { LargeBiPrimeSizedNumber::LIMBS },
-        > = odd_moduli::PublicParameters {
-            modulus: NonZero::new(N).unwrap(),
-        };
-
         let decryption_key = DecryptionKey::from(tiresias::DecryptionKey::new(
             tiresias::EncryptionKey::new(N),
             SECRET_KEY,
         ));
 
-        let randomness_public_parameters: multiplicative_group_of_integers_modulu_n::PublicParameters<
-            { LargeBiPrimeSizedNumber::LIMBS },
-        > = multiplicative_group_of_integers_modulu_n::PublicParameters::new(N).unwrap();
+        let public_parameters = PublicParameters::new(N).unwrap();
 
         ahe::tests::encrypt_decrypts::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey, DecryptionKey>(
             decryption_key,
-            plaintext_public_parameters,
-            randomness_public_parameters,
+            public_parameters,
         )
     }
 
     #[test]
     fn evaluates() {
-        let plaintext_public_parameters: odd_moduli::PublicParameters<
-            { LargeBiPrimeSizedNumber::LIMBS },
-        > = odd_moduli::PublicParameters {
-            modulus: NonZero::new(N).unwrap(),
-        };
-
         let decryption_key = DecryptionKey::from(tiresias::DecryptionKey::new(
             tiresias::EncryptionKey::new(N),
             SECRET_KEY,
         ));
 
-        let randomness_public_parameters: multiplicative_group_of_integers_modulu_n::PublicParameters<
-            { LargeBiPrimeSizedNumber::LIMBS },
-        > = multiplicative_group_of_integers_modulu_n::PublicParameters::new(N).unwrap();
+        let public_parameters = PublicParameters::new(N).unwrap();
 
         ahe::tests::evaluates::<
             MASK_LIMBS,
@@ -278,8 +261,7 @@ pub(crate) mod tests {
         >(
             decryption_key,
             secp256k1::scalar::PublicParameters::default(),
-            plaintext_public_parameters,
-            randomness_public_parameters,
+            public_parameters,
         )
     }
 }
