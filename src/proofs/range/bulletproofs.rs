@@ -86,8 +86,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
             .take(padded_witnesses_length)
             .collect();
 
-        // TODO: maybe use 32
-        let bulletproofs_generators = BulletproofGens::new(64, witnesses.len());
+        let bulletproofs_generators = BulletproofGens::new(32, witnesses.len());
         let commitment_generators = PedersenGens::default();
 
         let (proof, commitments) = bulletproofs::RangeProof::prove_multiple_with_rng(
@@ -164,7 +163,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
             .map(|commtiment| commtiment.compress())
             .collect();
 
-        let bulletproofs_generators = BulletproofGens::new(64, compressed_commitments.len());
+        let bulletproofs_generators = BulletproofGens::new(32, compressed_commitments.len());
         let commitment_generators = PedersenGens::default();
 
         // TODO: convert their verification error to our range proof error?
