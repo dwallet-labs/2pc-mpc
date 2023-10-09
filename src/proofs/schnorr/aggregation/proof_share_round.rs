@@ -85,9 +85,7 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
                     // things.
                     &self.protocol_context,
                     &self.language_public_parameters,
-                    vec![],
-                    // TODO: put this back after fixing value affine
-                    // decommitment.statements.clone(),
+                    decommitment.statements.clone(),
                     &decommitment.statement_mask,
                     &decommitment.commitment_randomness,
                 )

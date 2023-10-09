@@ -1,6 +1,5 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
-
 pub mod enhanced;
 
 use std::marker::PhantomData;
@@ -127,12 +126,10 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         let mut transcript = Self::setup_transcript(
             protocol_context,
             language_public_parameters,
-            // TODO: return this after we fix the projective->affine issue
-            vec![],
-            // statements
-            //     .iter()
-            //     .map(|statement| statement.value())
-            //     .collect(),
+            statements
+                .iter()
+                .map(|statement| statement.value())
+                .collect(),
             &statement_mask.value(),
         )?;
 
@@ -171,12 +168,10 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         let mut transcript = Self::setup_transcript(
             protocol_context,
             language_public_parameters,
-            // TODO: return this after we fix the projective->affine issue
-            vec![],
-            // statements
-            //     .iter()
-            //     .map(|statement| statement.value())
-            //     .collect(),
+            statements
+                .iter()
+                .map(|statement| statement.value())
+                .collect(),
             &self.statement_mask,
         )?;
 
@@ -244,38 +239,37 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         // TODO: replace `Serialize` with `Into<Vec<u8>>` and comment this back in, this is slower
         // than originally imagined.
 
-        // transcript.serialize_to_transcript_as_json(b"protocol context", protocol_context)?;
-        //
-        // transcript.serialize_to_transcript_as_json(
-        //     b"language public parameters",
-        //     language_public_parameters,
-        // )?;
-        //
-        // // TODO: should I now remove these?
-        // transcript.serialize_to_transcript_as_json(
-        //     b"witness space public parameters",
-        //     &language_public_parameters
-        //         .as_ref()
-        //         .witness_space_public_parameters,
-        // )?;
-        //
-        // transcript.serialize_to_transcript_as_json(
-        //     b"statement space public parameters",
-        //     &language_public_parameters
-        //         .as_ref()
-        //         .statement_space_public_parameters,
-        // )?;
-        //
-        // if statements.iter().any(|statement| {
-        //     transcript
-        //         .serialize_to_transcript_as_json(b"statement value", &statement)
-        //         .is_err()
-        // }) {
-        //     return Err(Error::InvalidParameters);
-        // }
-        //
-        // transcript
-        //     .serialize_to_transcript_as_json(b"statement mask value", statement_mask_value)?;
+        transcript.serialize_to_transcript_as_json(b"protocol context", protocol_context)?;
+
+        transcript.serialize_to_transcript_as_json(
+            b"language public parameters",
+            language_public_parameters,
+        )?;
+
+        transcript.serialize_to_transcript_as_json(
+            b"witness space public parameters",
+            &language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters,
+        )?;
+
+        transcript.serialize_to_transcript_as_json(
+            b"statement space public parameters",
+            &language_public_parameters
+                .as_ref()
+                .statement_space_public_parameters,
+        )?;
+
+        if statements.iter().any(|statement| {
+            transcript
+                .serialize_to_transcript_as_json(b"statement value", &statement)
+                .is_err()
+        }) {
+            return Err(Error::InvalidParameters);
+        }
+
+        transcript
+            .serialize_to_transcript_as_json(b"statement mask value", statement_mask_value)?;
 
         Ok(transcript)
     }

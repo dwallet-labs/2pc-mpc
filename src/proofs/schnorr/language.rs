@@ -340,6 +340,26 @@ mod benches {
                 .collect();
             let statements = statements.unwrap();
 
+            g.bench_function(format!(".value() over {batch_size} statements"), |bench| {
+                bench.iter(|| statements.iter().map(|x| x.value()).collect::<Vec<_>>())
+            });
+
+            let statements_values: Vec<_> = statements.iter().map(|x| x.value()).collect();
+
+            g.bench_function(
+                format!("schnorr::Proof::setup_transcript() over {batch_size} statements"),
+                |bench| {
+                    bench.iter(|| {
+                        Proof::<Lang, PhantomData<()>>::setup_transcript(
+                            &PhantomData,
+                            &language_public_parameters,
+                            statements_values.clone(),
+                            statements_values.first().unwrap(),
+                        )
+                    })
+                },
+            );
+
             g.bench_function(
                 format!("schnorr::Proof::prove_inner() over {batch_size} statements"),
                 |bench| {
