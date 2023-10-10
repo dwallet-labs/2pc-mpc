@@ -53,6 +53,8 @@ impl Commitment {
             &statement_mask,
         )?;
 
+        // TODO: party id?
+
         transcript.append_uint(
             b"schnorr proof aggregation commitment round commitment randomness",
             commitment_randomness,

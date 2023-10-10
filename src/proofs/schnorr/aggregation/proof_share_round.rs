@@ -137,11 +137,6 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             ))?;
         }
 
-        // return Err(proofs::Error::InvalidParameters); // TODO: deleteme
-
-        // TODO: is group instantiation here expensive? as it requires modulation?
-        // perhaps I could instead check that value is smaller, and return an error for out of
-        // range? also there's inversion there
         let statements_vector: group::Result<Vec<Vec<StatementSpaceGroupElement<Language>>>> =
             decommitments
                 .into_values()

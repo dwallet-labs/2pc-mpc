@@ -33,6 +33,7 @@ pub type PartyID = u16;
 #[cfg(feature = "benchmarking")]
 criterion_group!(
     benches,
+    proofs::transcript_protocol::benchmark,
     proofs::schnorr::knowledge_of_discrete_log::benchmark,
     proofs::schnorr::knowledge_of_decommitment::benchmark,
     proofs::schnorr::commitment_of_discrete_log::benchmark,

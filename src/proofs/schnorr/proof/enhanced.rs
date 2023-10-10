@@ -3,6 +3,7 @@
 
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use language::PublicParameters;
+use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -14,7 +15,7 @@ use crate::{
             language,
             language::{StatementSpaceGroupElement, WitnessSpaceGroupElement},
         },
-        Error, Transcript, TranscriptProtocol,
+        Error, TranscriptProtocol,
     },
     StatisticalSecuritySizedNumber,
 };

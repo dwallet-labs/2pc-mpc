@@ -5,6 +5,7 @@ use std::{array, iter};
 use bulletproofs::{self, BulletproofGens, PedersenGens};
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U64};
 use curve25519_dalek::traits::Identity;
+use merlin::Transcript;
 use ristretto::SCALAR_LIMBS;
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +21,6 @@ use crate::{
     proofs::{
         range,
         schnorr::language::{enhanced, enhanced::ConstrainedWitnessValue},
-        Transcript,
     },
 };
 
