@@ -113,7 +113,8 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             .is_err()
         {
             // TODO: this should be their own statement mask, not the aggregated one
-            // But the challenges should still remain the same
+            // But the challenges should still remain the same - I don't think so, should ask dolev
+            // again.
             let proof_share_cheating_parties: Vec<PartyID> = proof_shares
                 .into_iter()
                 .map(|(party_id, proof_share)| {

@@ -154,6 +154,10 @@ where
 
         // TODO
 
+        // TODO: better name? in Paillier finding non-invertable numbers is the same as factoring.
+        // or actually not, in N^2 modulus we can simply choose N, so we need to do similar checks
+        // to Tiresias with squaring and all. pub(crate) requires_inversion_check: bool,
+
         Ok(Self(element))
     }
 
