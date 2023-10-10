@@ -46,6 +46,7 @@ where
     CommitmentScheme: HomomorphicCommitmentScheme<
         SCALAR_LIMBS,
         MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+        // TODO: do we need to enforce that? I believe we don't care about randomness.
         RandomnessSpaceGroupElement = Scalar,
         CommitmentSpaceGroupElement = GroupElement,
     >,

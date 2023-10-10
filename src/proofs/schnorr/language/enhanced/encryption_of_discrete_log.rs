@@ -153,7 +153,7 @@ where
         let (_, group_public_parameters) = group_public_parameters.into();
 
         let base = GroupElement::new(
-            language_public_parameters.generator.clone(),
+            language_public_parameters.generator,
             group_public_parameters,
         )?;
 

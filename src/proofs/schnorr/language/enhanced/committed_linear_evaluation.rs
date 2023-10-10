@@ -880,30 +880,30 @@ mod benches {
     pub(crate) fn benchmark(c: &mut Criterion) {
         let (language_public_parameters, range_proof_public_parameters) = public_parameters();
 
-        // language::benchmark::<
-        //     Language<
-        //         { secp256k1::SCALAR_LIMBS },
-        //         { ristretto::SCALAR_LIMBS },
-        //         { MASK_LIMBS },
-        //         RANGE_CLAIMS_PER_SCALAR,
-        //         RANGE_CLAIMS_PER_MASK,
-        //         { NUM_RANGE_CLAIMS },
-        //         { range::bulletproofs::RANGE_CLAIM_LIMBS },
-        //         { WITNESS_MASK_LIMBS },
-        //         { DIMENSION },
-        //         { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-        //         secp256k1::Scalar,
-        //         secp256k1::GroupElement,
-        //         paillier::EncryptionKey,
-        //         Pedersen<
-        //             { DIMENSION },
-        //             { secp256k1::SCALAR_LIMBS },
-        //             secp256k1::Scalar,
-        //             secp256k1::GroupElement,
-        //         >,
-        //         bulletproofs::RangeProof,
-        //     >,
-        // >(language_public_parameters.clone(), c);
+        language::benchmark::<
+            Language<
+                { secp256k1::SCALAR_LIMBS },
+                { ristretto::SCALAR_LIMBS },
+                { MASK_LIMBS },
+                RANGE_CLAIMS_PER_SCALAR,
+                RANGE_CLAIMS_PER_MASK,
+                { NUM_RANGE_CLAIMS },
+                { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                { WITNESS_MASK_LIMBS },
+                { DIMENSION },
+                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                paillier::EncryptionKey,
+                Pedersen<
+                    { DIMENSION },
+                    { secp256k1::SCALAR_LIMBS },
+                    secp256k1::Scalar,
+                    secp256k1::GroupElement,
+                >,
+                bulletproofs::RangeProof,
+            >,
+        >(language_public_parameters.clone(), c);
 
         range::benchmark::<
             { ristretto::SCALAR_LIMBS },

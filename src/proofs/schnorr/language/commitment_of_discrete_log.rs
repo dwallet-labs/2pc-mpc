@@ -67,7 +67,7 @@ where
         let [value, randomness]: &[Scalar; 2] = witness.into();
 
         let base = GroupElement::new(
-            language_public_parameters.generator.clone(),
+            language_public_parameters.generator,
             &language_public_parameters
                 .groups_public_parameters
                 .statement_space_public_parameters

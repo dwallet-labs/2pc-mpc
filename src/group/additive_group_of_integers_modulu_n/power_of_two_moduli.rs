@@ -10,8 +10,6 @@ use crate::{
     },
 };
 
-// TODO: check that all my changed logic with bit_size is safe still
-
 /// An element of the additive group of integers for a power-of-two modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
 #[derive(PartialEq, Eq, Clone, Copy)]
