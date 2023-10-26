@@ -7,7 +7,7 @@ pub(crate) use benches::benchmark;
 use crypto_bigint::{Encoding, Uint};
 use language::GroupsPublicParameters;
 use schnorr::language;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::EnhancedLanguage;
 use crate::{
@@ -37,7 +37,7 @@ use crate::{
 /// `PrimeOrderGroupElement`.
 ///
 /// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Language<
     const SCALAR_LIMBS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,

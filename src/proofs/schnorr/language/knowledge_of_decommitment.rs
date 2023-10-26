@@ -4,7 +4,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
 use crate::{
@@ -27,7 +27,7 @@ use crate::{
 /// In the paper, we have prove (or cited a proof) it for any prime known-order group or for
 /// Paillier groups based on safe-primes; so it is safe to use with a `PrimeOrderGroupElement` or
 /// `PaillierGroupElement`.
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> {
     _scalar_choice: PhantomData<Scalar>,
     _group_element_choice: PhantomData<GroupElement>,

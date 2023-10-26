@@ -19,11 +19,12 @@ pub mod discrete_log_ratio_of_commited_values;
 pub mod enhanced;
 pub mod knowledge_of_decommitment;
 pub mod knowledge_of_discrete_log;
+// TODO: add + Serialize + for<'a> Deserialize<'a> to the trait ?!? why can't I
 
 /// A Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`.
 /// As defined in Appendix B. Schnorr Protocols in the paper.
-pub trait Language: Clone + Serialize {
+pub trait Language: Clone {
     /// An element of the witness space $(\HH_\pp, +)$
     type WitnessSpaceGroupElement: GroupElement + Samplable;
 

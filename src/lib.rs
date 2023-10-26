@@ -11,6 +11,7 @@ pub mod group;
 pub(crate) mod helpers;
 pub mod proofs;
 mod traits;
+mod dkg;
 
 /// Represents an unsigned integer sized based on the computation security parameter, denoted as
 /// $\kappa$.

@@ -4,7 +4,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
 use crate::{group, group::Samplable, proofs, proofs::schnorr};
@@ -20,7 +20,7 @@ use crate::{group, group::Samplable, proofs, proofs::schnorr};
 ///
 /// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
 /// `PrimeOrderGroupElement`.
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Language<Scalar, GroupElement> {
     _scalar_choice: PhantomData<Scalar>,
     _group_element_choice: PhantomData<GroupElement>,
