@@ -12,16 +12,13 @@ use crate::{
     proofs::{
         schnorr,
         schnorr::{
-            aggregation::{
-                commitment_round::Commitment, decommitment_round::Decommitment,
-                proof_aggregation_round,
-            },
+            aggregation::{decommitment_round::Decommitment, proof_aggregation_round},
             language,
             language::{StatementSpaceGroupElement, WitnessSpaceGroupElement, WitnessSpaceValue},
             Proof,
         },
     },
-    PartyID,
+    Commitment, PartyID,
 };
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
@@ -80,16 +77,23 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             .iter()
             .map(|(party_id, decommitment)| {
                 // TODO: this can be optimized by doing the initial transcript once for all
-                Commitment::commit_statements_and_statement_mask::<Language, ProtocolContext>(
+                Proof::<Language, ProtocolContext>::setup_transcript(
                     // TODO: insert the party id of the other party somehow, and maybe other
                     // things.
                     &self.protocol_context,
                     &self.language_public_parameters,
                     decommitment.statements.clone(),
                     &decommitment.statement_mask,
-                    &decommitment.commitment_randomness,
                 )
-                .map(|reconstructed_commitment| (*party_id, reconstructed_commitment))
+                .map(|mut transcript| {
+                    (
+                        *party_id,
+                        Commitment::commit_transcript(
+                            &mut transcript,
+                            &decommitment.commitment_randomness,
+                        ),
+                    )
+                })
             })
             .collect();
 

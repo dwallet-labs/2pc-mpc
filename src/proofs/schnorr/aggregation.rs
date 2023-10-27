@@ -3,7 +3,7 @@
 use std::marker::PhantomData;
 
 #[cfg(feature = "benchmarking")]
-pub(crate) use benches::{benchmark, benchmark_enhanced};
+pub(crate) use benches::benchmark;
 use serde::Serialize;
 
 use crate::{
@@ -78,13 +78,13 @@ pub(crate) mod tests {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::proofs::schnorr::{
-        aggregation::{
-            commitment_round::Commitment, decommitment_round::Decommitment,
-            proof_share_round::ProofShare,
+    use crate::{
+        proofs::schnorr::{
+            aggregation::{decommitment_round::Decommitment, proof_share_round::ProofShare},
+            language::WitnessSpaceGroupElement,
+            Language,
         },
-        language::WitnessSpaceGroupElement,
-        Language,
+        Commitment,
     };
 
     #[allow(dead_code)]
@@ -219,13 +219,11 @@ mod benches {
     use crate::{
         commitments,
         proofs::schnorr::{
-            aggregation::{
-                commitment_round::Commitment, decommitment_round::Decommitment,
-                proof_share_round::ProofShare,
-            },
+            aggregation::{decommitment_round::Decommitment, proof_share_round::ProofShare},
             language::WitnessSpaceGroupElement,
             EnhancedLanguage, Language, Proof,
         },
+        Commitment,
     };
 
     pub(crate) fn benchmark<Lang: Language>(

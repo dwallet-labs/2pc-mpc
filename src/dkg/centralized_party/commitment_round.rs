@@ -3,6 +3,8 @@
 
 use std::marker::PhantomData;
 
+use crypto_bigint::Random;
+use merlin::Transcript;
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 
@@ -10,25 +12,21 @@ use crate::{
     dkg::centralized_party::decommitment_round,
     group,
     group::{secp256k1, GroupElement as _, Samplable},
-    proofs::schnorr::{knowledge_of_discrete_log, language::GroupsPublicParameters, Proof},
+    proofs::{
+        schnorr::{knowledge_of_discrete_log, language::GroupsPublicParameters, Proof},
+        transcript_protocol::TranscriptProtocol,
+    },
+    Commitment, ComputationalSecuritySizedNumber,
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party {}
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Message {
-    proof: Proof<
-        knowledge_of_discrete_log::Language<secp256k1::Scalar, secp256k1::GroupElement>,
-        PhantomData<()>,
-    >,
-    public_key_share: group::Value<secp256k1::GroupElement>,
-}
-
 impl Party {
     pub fn sample_commit_and_prove_secret_key_share(
         rng: &mut OsRng,
-    ) -> (decommitment_round::Party, Message) {
+    ) -> (Commitment, decommitment_round::Party) {
+        // todo: no unwrap
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
@@ -56,19 +54,27 @@ impl Party {
         )
         .unwrap();
 
-        let public_key_share = public_key_share.first().unwrap().value(); // TODO: pattern match this? above
+        let public_key_share = *public_key_share.first().unwrap(); // TODO: pattern match this? above
 
-        let message = Message {
-            proof,
+        let mut transcript = Transcript::new(b"DKG commitment round of centralized party");
+        // TODO: this should be enough for the "bit" that says its party A sending.
+
+        // TODO: is protocol context the right thing here?
+        // TODO: party id? but its a DKG
+        transcript
+            .serialize_to_transcript_as_json(b"public key share", &public_key_share.value())
+            .unwrap();
+
+        let commitment_randomness = ComputationalSecuritySizedNumber::random(rng);
+        let commitment = Commitment::commit_transcript(&mut transcript, &commitment_randomness);
+
+        let party = decommitment_round::Party {
+            secret_key_share,
             public_key_share,
+            proof,
+            commitment_randomness,
         };
 
-        let party = decommitment_round::Party { secret_key_share };
-
-        // TODO: the commitment is g^xa? doesn't this mess with the whole idea of committing to
-        // public key shares?
-        // same for enc-dl
-
-        (party, message)
+        (commitment, party)
     }
 }

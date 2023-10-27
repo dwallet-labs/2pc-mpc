@@ -20,7 +20,7 @@ use crate::{
         },
         TranscriptProtocol,
     },
-    CommitmentSizedNumber, ComputationalSecuritySizedNumber, PartyID,
+    Commitment, CommitmentSizedNumber, ComputationalSecuritySizedNumber, PartyID,
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -30,40 +30,6 @@ pub struct Party<Language: schnorr::Language, ProtocolContext: Clone + Serialize
     pub(super) protocol_context: ProtocolContext,
     pub(super) witnesses: Vec<WitnessSpaceGroupElement<Language>>,
     pub(super) statements: Vec<StatementSpaceGroupElement<Language>>,
-}
-
-#[derive(PartialEq, Serialize, Deserialize, Clone, Copy)]
-pub struct Commitment(CommitmentSizedNumber);
-
-impl Commitment {
-    pub(super) fn commit_statements_and_statement_mask<
-        Language: schnorr::Language,
-        ProtocolContext: Clone + Serialize,
-    >(
-        protocol_context: &ProtocolContext,
-        language_public_parameters: &language::PublicParameters<Language>,
-        statements: Vec<StatementSpaceValue<Language>>,
-        statement_mask: &StatementSpaceValue<Language>,
-        commitment_randomness: &ComputationalSecuritySizedNumber,
-    ) -> proofs::Result<Self> {
-        let mut transcript = Proof::<Language, ProtocolContext>::setup_transcript(
-            protocol_context,
-            language_public_parameters,
-            statements,
-            &statement_mask,
-        )?;
-
-        // TODO: party id?
-
-        transcript.append_uint(
-            b"schnorr proof aggregation commitment round commitment randomness",
-            commitment_randomness,
-        );
-
-        Ok(Commitment(transcript.challenge(
-            b"schnorr proof aggregation commitment round commitment",
-        )))
-    }
 }
 
 impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
@@ -84,17 +50,19 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
 
         let commitment_randomness = ComputationalSecuritySizedNumber::random(rng);
 
-        let commitment =
-            Commitment::commit_statements_and_statement_mask::<Language, ProtocolContext>(
-                &self.protocol_context,
-                &self.language_public_parameters,
-                self.statements
-                    .iter()
-                    .map(|statement| statement.value())
-                    .collect(),
-                &statement_mask.value(),
-                &commitment_randomness,
-            )?;
+        let mut transcript = Proof::<Language, ProtocolContext>::setup_transcript(
+            &self.protocol_context,
+            &self.language_public_parameters,
+            self.statements
+                .iter()
+                .map(|statement| statement.value())
+                .collect(),
+            &statement_mask.value(),
+        )?;
+
+        // TODO: party id?
+
+        let commitment = Commitment::commit_transcript(&mut transcript, &commitment_randomness);
 
         let decommitment_round_party = decommitment_round::Party::<Language, ProtocolContext> {
             party_id: self.party_id,

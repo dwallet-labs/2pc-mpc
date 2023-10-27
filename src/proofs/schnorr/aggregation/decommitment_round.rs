@@ -11,12 +11,12 @@ use crate::{
     proofs::{
         schnorr,
         schnorr::{
-            aggregation::{commitment_round::Commitment, proof_share_round},
+            aggregation::proof_share_round,
             language,
             language::{StatementSpaceGroupElement, StatementSpaceValue, WitnessSpaceGroupElement},
         },
     },
-    ComputationalSecuritySizedNumber, PartyID,
+    Commitment, ComputationalSecuritySizedNumber, PartyID,
 };
 
 #[derive(PartialEq, Serialize, Deserialize, Clone)]

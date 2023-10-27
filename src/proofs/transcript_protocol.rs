@@ -7,7 +7,7 @@ use merlin::Transcript;
 use serde::Serialize;
 
 /// A transcript protocol for fiat-shamir transforms of interactive to non-interactive proofs.
-pub(super) trait TranscriptProtocol {
+pub(crate) trait TranscriptProtocol {
     fn serialize_to_transcript_as_json<T: Serialize>(
         &mut self,
         label: &'static [u8],
