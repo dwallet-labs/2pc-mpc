@@ -25,11 +25,10 @@ use crate::{
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<Language: schnorr::Language, ProtocolContext: Clone + Serialize> {
-    pub(super) party_id: PartyID,
-    pub(super) language_public_parameters: language::PublicParameters<Language>,
-    pub(super) protocol_context: ProtocolContext,
-    pub(super) witnesses: Vec<WitnessSpaceGroupElement<Language>>,
-    pub(super) statements: Vec<StatementSpaceGroupElement<Language>>,
+    pub party_id: PartyID,
+    pub language_public_parameters: language::PublicParameters<Language>,
+    pub protocol_context: ProtocolContext,
+    pub witnesses: Vec<WitnessSpaceGroupElement<Language>>,
 }
 
 impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
@@ -42,6 +41,13 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
         Commitment,
         decommitment_round::Party<Language, ProtocolContext>,
     )> {
+        let statements: proofs::Result<Vec<StatementSpaceGroupElement<Language>>> = self
+            .witnesses
+            .iter()
+            .map(|witness| Language::group_homomorphism(witness, &self.language_public_parameters))
+            .collect();
+        let statements = statements?;
+
         let (randomizer, statement_mask) =
             Proof::<Language, ProtocolContext>::sample_randomizer_and_statement_mask(
                 &self.language_public_parameters,
@@ -53,7 +59,7 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
         let mut transcript = Proof::<Language, ProtocolContext>::setup_transcript(
             &self.protocol_context,
             &self.language_public_parameters,
-            self.statements
+            statements
                 .iter()
                 .map(|statement| statement.value())
                 .collect(),
@@ -69,7 +75,7 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             language_public_parameters: self.language_public_parameters,
             protocol_context: self.protocol_context,
             witnesses: self.witnesses,
-            statements: self.statements,
+            statements,
             randomizer,
             statement_mask,
             commitment_randomness,

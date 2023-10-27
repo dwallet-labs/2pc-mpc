@@ -40,37 +40,6 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-// TODO: do we actually want this struct?
-pub struct Party<Language: schnorr::Language, ProtocolContext: Clone + Serialize> {
-    _language_choice: PhantomData<Language>,
-    _protocol_context_choice: PhantomData<ProtocolContext>,
-}
-
-impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
-    Party<Language, ProtocolContext>
-{
-    pub fn begin_session(
-        party_id: PartyID,
-        language_public_parameters: language::PublicParameters<Language>,
-        protocol_context: ProtocolContext,
-        witnesses: Vec<language::WitnessSpaceGroupElement<Language>>,
-    ) -> proofs::Result<commitment_round::Party<Language, ProtocolContext>> {
-        let statements: proofs::Result<Vec<StatementSpaceGroupElement<Language>>> = witnesses
-            .iter()
-            .map(|witness| Language::group_homomorphism(witness, &language_public_parameters))
-            .collect();
-        let statements = statements?;
-
-        Ok(commitment_round::Party {
-            party_id,
-            language_public_parameters,
-            protocol_context,
-            witnesses,
-            statements,
-        })
-    }
-}
-
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
     use std::collections::HashMap;
@@ -95,13 +64,12 @@ pub(crate) mod tests {
         let mut witnesses = witnesses;
 
         let party_id = (witnesses.len() - 1).try_into().unwrap();
-        let party = Party::begin_session(
+        let party = commitment_round::Party {
             party_id,
-            language_public_parameters.clone(),
-            (),
-            witnesses.pop().unwrap(),
-        )
-        .unwrap();
+            language_public_parameters: language_public_parameters.clone(),
+            protocol_context: (),
+            witnesses: witnesses.pop().unwrap(),
+        };
 
         let mut commitment_round_parties: HashMap<PartyID, commitment_round::Party<Lang, ()>> =
             witnesses
@@ -111,13 +79,12 @@ pub(crate) mod tests {
                     let party_id: u16 = party_id.try_into().unwrap();
                     (
                         party_id,
-                        Party::begin_session(
+                        commitment_round::Party {
                             party_id,
-                            language_public_parameters.clone(),
-                            (),
+                            language_public_parameters: language_public_parameters.clone(),
+                            protocol_context: (),
                             witnesses,
-                        )
-                        .unwrap(),
+                        },
                     )
                 })
                 .collect();
@@ -287,26 +254,12 @@ mod benches {
         // TODO: DRY-out, have enhanced witnesses generate accordingly
         let mut witnesses = witnesses;
         let party_id = (witnesses.len() - 1).try_into().unwrap();
-
-        g.bench_function("compute statements", |bench| {
-            bench.iter(|| {
-                Party::<Lang, ()>::begin_session(
-                    party_id,
-                    language_public_parameters.clone(),
-                    (),
-                    witnesses.clone(),
-                )
-                .unwrap()
-            })
-        });
-
-        let party = Party::<Lang, ()>::begin_session(
+        let party = commitment_round::Party {
             party_id,
-            language_public_parameters.clone(),
-            (),
-            witnesses,
-        )
-        .unwrap();
+            language_public_parameters: language_public_parameters.clone(),
+            protocol_context: (),
+            witnesses: witnesses.clone(),
+        };
 
         g.bench_function(format!("commitment round"), |bench| {
             bench.iter(|| {
