@@ -23,6 +23,7 @@ use crate::{
 pub struct Party {}
 
 impl Party {
+    // TODO: what's the point of this struct if no memebers, and this method does not get 'self'?
     pub fn sample_commit_and_prove_secret_key_share(
         rng: &mut OsRng,
     ) -> (Commitment, decommitment_round::Party) {

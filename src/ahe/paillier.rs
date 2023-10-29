@@ -25,7 +25,6 @@ pub struct EncryptionKey(tiresias::EncryptionKey);
 /// An Decryption Key of the Paillier Additively Homomorphic Encryption Scheme.
 #[derive(PartialEq, Clone)]
 pub struct DecryptionKey(tiresias::DecryptionKey);
-
 pub const PLAINTEXT_SPACE_SCALAR_LIMBS: usize = LargeBiPrimeSizedNumber::LIMBS;
 pub const RANDOMNESS_SPACE_SCALAR_LIMBS: usize = LargeBiPrimeSizedNumber::LIMBS;
 pub const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize = PaillierModulusSizedNumber::LIMBS;

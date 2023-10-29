@@ -15,6 +15,8 @@ use subtle::{Choice, ConstantTimeEq};
 
 use crate::{group, group::Samplable};
 
+// TODO: make this specific for Paillier, document.
+
 /// An element of the multiplicative group of integers modulo `n` $\mathbb{Z}_n^*$
 /// [Multiplicative group of integers modulo n](https://en.wikipedia.org/wiki/Multiplicative_group_of_integers_modulo_n)
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -157,6 +159,9 @@ where
         // TODO: better name? in Paillier finding non-invertable numbers is the same as factoring.
         // or actually not, in N^2 modulus we can simply choose N, so we need to do similar checks
         // to Tiresias with squaring and all. pub(crate) requires_inversion_check: bool,
+
+        // TODO: instead of inversion check which is generic, (or can take parameter in public
+        // parameters), check that element^2 != 0.
 
         Ok(Self(element))
     }
