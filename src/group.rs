@@ -5,7 +5,7 @@ use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
-use subtle::{Choice, ConstantTimeEq};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 pub mod direct_product;
 
@@ -75,7 +75,13 @@ pub trait GroupElement:
     ///
     /// In order to mitigate these risks and save on communication, we separate the value of the
     /// point from the group parameters.
-    type Value: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq + ConstantTimeEq + Copy;
+    type Value: Serialize
+        + for<'r> Deserialize<'r>
+        + Clone
+        + PartialEq
+        + ConstantTimeEq
+        + ConditionallySelectable
+        + Copy;
 
     /// Returns the value of this group element
     fn value(&self) -> Self::Value {
@@ -115,6 +121,45 @@ pub trait GroupElement:
 
     /// Constant-time Multiplication by (any bounded) natural number (scalar)
     fn scalar_mul<const LIMBS: usize>(&self, scalar: &Uint<LIMBS>) -> Self;
+
+    /// Constant-time Multiplication by (any bounded) natural number (scalar),     
+    /// with `scalar_bits` representing the number of (least significant) bits
+    /// to take into account for the scalar.
+    ///
+    /// NOTE: `scalar_bits` may be leaked in the time pattern.
+    fn scalar_mul_bounded<const LIMBS: usize>(
+        &self,
+        scalar: &Uint<LIMBS>,
+        scalar_bits: usize,
+    ) -> Self {
+        // A bench implementation for groups whose underlying implementation does not expose a
+        // bounded multiplication function, and operates in constant-time. Until such
+        // functionality will be exposed, we shall only optimize for the special case of
+        // `scalar_bits == 1`, which is both of particular interest for our proof system and easily
+        // implemented via a single addition.
+
+        // First take only the `scalar_bits` least significant bits
+        let mask = (Uint::<LIMBS>::ONE << scalar_bits).wrapping_sub(&Uint::<LIMBS>::ONE);
+        let scalar = scalar & mask;
+
+        // TODO: test
+        if scalar_bits == 1 {
+            let value = Self::Value::conditional_select(
+                &self.neutral().value(),
+                &self.value(),
+                scalar.ct_eq(&Uint::<LIMBS>::ONE),
+            );
+
+            // Safe to unwrap as the value comes from a valid group element of the same public
+            // parameters.
+            Self::new(value, &self.public_parameters()).unwrap()
+        } else {
+            // Call the underlying scalar mul function, which now only use the `scalar_bits` least
+            // significant bits, but will still take the same time to compute due to
+            // constant-timeness.
+            self.scalar_mul(&scalar)
+        }
+    }
 
     /// Double this point in constant-time.
     #[must_use]
@@ -203,4 +248,51 @@ pub trait Samplable: GroupElement {
         rng: &mut impl CryptoRngCore,
         public_parameters: &Self::PublicParameters,
     ) -> Result<Self>;
+}
+
+mod tests {
+    use crypto_bigint::U64;
+    use rand_core::OsRng;
+
+    use super::*;
+
+    #[test]
+    fn multiplies_bounded_scalar() {
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+
+        let scalar =
+            secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap();
+
+        assert_eq!(
+            scalar.scalar_mul_bounded(&U64::from(0u8), 1),
+            scalar.neutral()
+        );
+
+        assert_eq!(
+            scalar.scalar_mul_bounded(&U64::from(0u8), 1),
+            scalar.scalar_mul(&U64::from(0u8)),
+        );
+
+        assert_eq!(scalar.scalar_mul_bounded(&U64::from(1u8), 1), scalar);
+
+        assert_eq!(
+            scalar.scalar_mul_bounded(&U64::from(1u8), 1),
+            scalar.scalar_mul(&U64::from(1u8)),
+        );
+
+        assert_eq!(
+            scalar.scalar_mul_bounded(&U64::from(4u8), 1),
+            scalar.neutral()
+        );
+
+        assert_eq!(
+            scalar.scalar_mul_bounded(&U64::from(3u8), 1),
+            scalar.scalar_mul_bounded(&U64::from(1u8), 1),
+        );
+
+        assert_eq!(
+            scalar.scalar_mul_bounded(&U64::from(3u8), 2),
+            scalar.scalar_mul(&U64::from(3u8)),
+        );
+    }
 }

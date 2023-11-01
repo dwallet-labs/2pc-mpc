@@ -40,6 +40,8 @@ pub struct Party<
     ProtocolContext: Clone,
 > {
     pub(super) party_id: PartyID,
+    pub(super) threshold: PartyID,
+    pub(super) number_of_parties: PartyID,
     pub(super) language_public_parameters: Language::PublicParameters,
     pub(super) protocol_context: ProtocolContext,
     pub(super) witnesses: Vec<Language::WitnessSpaceGroupElement>,
@@ -79,6 +81,8 @@ impl<
             .filter(|(party_id, _)| previous_round_party_ids.contains(party_id))
             .collect();
         let current_round_party_ids: HashSet<PartyID> = decommitments.keys().map(|k| *k).collect();
+
+        let number_of_parties = decommitments.len() + 1;
 
         let unresponsive_parties: Vec<PartyID> = current_round_party_ids
             .symmetric_difference(&previous_round_party_ids)
@@ -210,6 +214,7 @@ impl<
         let responses = Proof::<REPETITIONS, Language, ProtocolContext>::prove_inner(
             // TODO: we don't need to pass any party id here. Maybe we should seperate these
             // types.
+            number_of_parties,
             &self.protocol_context,
             &self.language_public_parameters,
             self.witnesses,
@@ -234,6 +239,8 @@ impl<
         let proof_aggregation_round_party =
             proof_aggregation_round::Party::<REPETITIONS, Language, ProtocolContext> {
                 party_id: self.party_id,
+                threshold: self.threshold,
+                number_of_parties: self.number_of_parties,
                 language_public_parameters: self.language_public_parameters,
                 protocol_context: self.protocol_context,
                 previous_round_party_ids,

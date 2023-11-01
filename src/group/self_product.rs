@@ -8,7 +8,7 @@ use std::{
 
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
-use subtle::{Choice, ConstantTimeEq};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use crate::{
     group,
@@ -67,6 +67,18 @@ pub struct Value<const N: usize, GroupElementValue: Serialize + for<'a> Deserial
     #[serde(with = "crate::helpers::const_generic_array_serialization")] [GroupElementValue; N],
 );
 
+impl<
+        const N: usize,
+        GroupElementValue: Serialize + for<'a> Deserialize<'a> + ConditionallySelectable,
+    > ConditionallySelectable for Value<N, GroupElementValue>
+{
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self(<[GroupElementValue; N]>::conditional_select(
+            &a.0, &b.0, choice,
+        ))
+    }
+}
+
 impl<const N: usize, GroupElementValue: Serialize + for<'a> Deserialize<'a> + ConstantTimeEq>
     ConstantTimeEq for Value<N, GroupElementValue>
 {
@@ -113,6 +125,18 @@ impl<const N: usize, G: group::GroupElement> group::GroupElement for GroupElemen
 
     fn scalar_mul<const LIMBS: usize>(&self, scalar: &Uint<LIMBS>) -> Self {
         Self(self.0.clone().map(|element| element.scalar_mul(scalar)))
+    }
+
+    fn scalar_mul_bounded<const LIMBS: usize>(
+        &self,
+        scalar: &Uint<LIMBS>,
+        scalar_bits: usize,
+    ) -> Self {
+        Self(
+            self.0
+                .clone()
+                .map(|element| element.scalar_mul_bounded(scalar, scalar_bits)),
+        )
     }
 
     fn double(&self) -> Self {

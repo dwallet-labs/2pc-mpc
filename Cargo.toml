@@ -7,7 +7,7 @@ license = "Apache-2.0"
 [dependencies]
 crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint.git", features = ["rand_core", "serde"], default-features = false }
 serde = { version = "1.0", features = ["derive"] }
-subtle = "2.5"
+subtle = { version = "2.5", features = ["const-generics"] }
 subtle-ng = "2.5"
 thiserror = "1.0.47"
 k256 = { version = "0.13.1", features = ["arithmetic", "critical-section", "precomputed-tables", "serde"], default-features = false }

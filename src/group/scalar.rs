@@ -5,7 +5,7 @@ use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
-use subtle::{Choice, ConstantTimeEq};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use crate::{
     group,
@@ -46,6 +46,14 @@ impl<const SCALAR_LIMBS: usize, S: GroupElement> GroupElement for Scalar<SCALAR_
         Self(self.0.scalar_mul(scalar))
     }
 
+    fn scalar_mul_bounded<const LIMBS: usize>(
+        &self,
+        scalar: &Uint<LIMBS>,
+        scalar_bits: usize,
+    ) -> Self {
+        Self(self.0.scalar_mul_bounded(scalar, scalar_bits))
+    }
+
     fn double(&self) -> Self {
         Self(self.0.double())
     }
@@ -54,6 +62,12 @@ impl<const SCALAR_LIMBS: usize, S: GroupElement> GroupElement for Scalar<SCALAR_
 impl<V: ConstantTimeEq> ConstantTimeEq for Value<V> {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.0.ct_eq(&other.0)
+    }
+}
+
+impl<V: ConditionallySelectable> ConditionallySelectable for Value<V> {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self(V::conditional_select(&a.0, &b.0, choice))
     }
 }
 

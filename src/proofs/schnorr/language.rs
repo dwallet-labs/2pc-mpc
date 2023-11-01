@@ -151,6 +151,7 @@ pub(crate) mod tests {
         Vec<Lang::StatementSpaceGroupElement>,
     ) {
         Proof::prove(
+            0,
             &PhantomData,
             language_public_parameters,
             witnesses,
@@ -176,7 +177,7 @@ pub(crate) mod tests {
 
         assert!(
             proof
-                .verify(&PhantomData, &language_public_parameters, statements)
+                .verify(0, &PhantomData, &language_public_parameters, statements)
                 .is_ok(),
             "valid proofs should verify"
         );
@@ -209,6 +210,7 @@ pub(crate) mod tests {
             matches!(
                 valid_proof
                     .verify(
+                        0,
                         &PhantomData,
                         &language_public_parameters,
                         statements
@@ -232,6 +234,7 @@ pub(crate) mod tests {
             matches!(
                 invalid_proof
                     .verify(
+                        0,
                         &PhantomData,
                         &language_public_parameters,
                         statements.clone(),
@@ -250,6 +253,7 @@ pub(crate) mod tests {
             matches!(
                 invalid_proof
                     .verify(
+                        0,
                         &PhantomData,
                         &language_public_parameters,
                         statements.clone(),
@@ -268,6 +272,7 @@ pub(crate) mod tests {
             matches!(
                 invalid_proof
                     .verify(
+                        0,
                         &PhantomData,
                         &language_public_parameters,
                         statements.clone(),
@@ -285,7 +290,7 @@ pub(crate) mod tests {
 
             assert!(matches!(
             invalid_proof
-                .verify(
+                .verify(0,
                     &PhantomData,
                     &language_public_parameters,
                     statements.clone(),
@@ -303,7 +308,7 @@ pub(crate) mod tests {
 
             assert!(matches!(
             invalid_proof
-                .verify(
+                .verify(0,
                     &PhantomData,
                     &language_public_parameters,
                     statements.clone(),
@@ -334,6 +339,7 @@ pub(crate) mod tests {
             matches!(
                 proof
                     .verify(
+                        0,
                         &PhantomData,
                         &verifier_language_public_parameters,
                         statements,
@@ -402,6 +408,7 @@ mod benches {
                 |bench| {
                     bench.iter(|| {
                         Proof::<REPETITIONS, Lang, PhantomData<()>>::prove_with_statements(
+                            0,
                             &PhantomData,
                             &language_public_parameters,
                             witnesses.clone(),
@@ -414,6 +421,7 @@ mod benches {
             );
 
             let proof = Proof::<REPETITIONS, Lang, PhantomData<()>>::prove_with_statements(
+                0,
                 &PhantomData,
                 &language_public_parameters,
                 witnesses.clone(),
@@ -427,6 +435,7 @@ mod benches {
                 |bench| {
                     bench.iter(|| {
                         proof.verify(
+                            0,
                             &std::marker::PhantomData,
                             &language_public_parameters,
                             statements.clone(),

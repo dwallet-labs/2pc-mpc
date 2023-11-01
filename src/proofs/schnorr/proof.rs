@@ -78,6 +78,8 @@ impl<
     /// Prove a batched Schnorr zero-knowledge claim.
     /// Returns the zero-knowledge proof.
     pub fn prove(
+        // The number of parties participating in aggregation (set to 0 for local proofs)
+        number_of_parties: usize,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         witnesses: Vec<Language::WitnessSpaceGroupElement>,
@@ -117,6 +119,7 @@ impl<
         // witness of the language. or we take an upper bound for it.
 
         Self::prove_with_statements(
+            number_of_parties,
             protocol_context,
             language_public_parameters,
             witnesses,
@@ -127,6 +130,8 @@ impl<
     }
 
     pub(super) fn prove_with_statements(
+        // The number of parties participating in aggregation (set to 0 for local proofs)
+        number_of_parties: usize,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         witnesses: Vec<Language::WitnessSpaceGroupElement>,
@@ -137,6 +142,7 @@ impl<
             Self::sample_randomizers_and_statement_masks(language_public_parameters, rng)?;
 
         Self::prove_inner(
+            number_of_parties,
             protocol_context,
             language_public_parameters,
             witnesses,
@@ -147,6 +153,8 @@ impl<
     }
 
     pub(super) fn prove_inner(
+        // The number of parties participating in aggregation (set to 0 for local proofs)
+        number_of_parties: usize,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         witnesses: Vec<Language::WitnessSpaceGroupElement>,
@@ -188,7 +196,6 @@ impl<
         // We leave that as future work in case this becomes a bottleneck.
 
         // TODO: update comment now that it isn't necessairly 128 bit
-        // TODO: scalar_mul_bounded
 
         let responses = randomizers
             .into_iter()
@@ -199,7 +206,12 @@ impl<
                         .clone()
                         .into_iter()
                         .zip(challenges_for_iteration)
-                        .map(|(witness, challenge)| witness.scalar_mul(&challenge))
+                        .map(|(witness, challenge)| {
+                            witness.scalar_mul_bounded(
+                                &challenge,
+                                Language::challenge_bits(number_of_parties, batch_size),
+                            )
+                        })
                         .reduce(|a, b| a + b)
                         .unwrap()
             })
@@ -213,6 +225,8 @@ impl<
     /// Verify a batched Schnorr zero-knowledge proof.
     pub fn verify(
         &self,
+        // The number of parties participating in aggregation (set to 0 for local proofs)
+        number_of_parties: usize,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         statements: Vec<Language::StatementSpaceGroupElement>,
@@ -258,7 +272,6 @@ impl<
             }))?;
 
         // TODO: helper function that zips
-        // TODO: scalar_mul_bounded
         let reconstructed_response_statements: [Language::StatementSpaceGroupElement; REPETITIONS] =
             statement_masks
                 .into_iter()
@@ -269,7 +282,12 @@ impl<
                             .clone()
                             .into_iter()
                             .zip(challenges_for_iteration)
-                            .map(|(statement, challenge)| statement.scalar_mul(&challenge))
+                            .map(|(statement, challenge)| {
+                                statement.scalar_mul_bounded(
+                                    &challenge,
+                                    Language::challenge_bits(number_of_parties, batch_size),
+                                )
+                            })
                             .reduce(|a, b| a + b)
                             .unwrap()
                 })

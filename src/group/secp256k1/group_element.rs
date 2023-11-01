@@ -10,7 +10,7 @@ use k256::{
     AffinePoint, ProjectivePoint,
 };
 use serde::{Deserialize, Serialize};
-use subtle::{Choice, ConstantTimeEq};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use super::SCALAR_LIMBS;
 use crate::{
@@ -64,6 +64,12 @@ pub struct Value(AffinePoint);
 impl ConstantTimeEq for Value {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.0.ct_eq(&other.0)
+    }
+}
+
+impl ConditionallySelectable for Value {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self(AffinePoint::conditional_select(&a.0, &b.0, choice))
     }
 }
 

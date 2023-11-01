@@ -5,7 +5,7 @@ use std::ops::{Add, AddAssign, BitAnd, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
-use subtle::{Choice, ConstantTimeEq};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use crate::{
     group,
@@ -63,6 +63,19 @@ pub struct Value<FirstGroupElementValue, SecondGroupElementValue>(
     SecondGroupElementValue,
 );
 
+impl<
+        FirstGroupElementValue: ConditionallySelectable,
+        SecondGroupElementValue: ConditionallySelectable,
+    > ConditionallySelectable for Value<FirstGroupElementValue, SecondGroupElementValue>
+{
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self(
+            FirstGroupElementValue::conditional_select(&a.0, &b.0, choice),
+            SecondGroupElementValue::conditional_select(&a.1, &b.1, choice),
+        )
+    }
+}
+
 impl<FirstGroupElementValue: ConstantTimeEq, SecondGroupElementValue: ConstantTimeEq> ConstantTimeEq
     for Value<FirstGroupElementValue, SecondGroupElementValue>
 {
@@ -74,7 +87,7 @@ impl<FirstGroupElementValue: ConstantTimeEq, SecondGroupElementValue: ConstantTi
 impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
     group::GroupElement for GroupElement<FirstGroupElement, SecondGroupElement>
 {
-    type Value = Value<group::Value<FirstGroupElement>, group::Value<SecondGroupElement>>;
+    type Value = Value<FirstGroupElement::Value, SecondGroupElement::Value>;
 
     type PublicParameters =
         PublicParameters<FirstGroupElement::PublicParameters, SecondGroupElement::PublicParameters>;
@@ -100,10 +113,22 @@ impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupEle
         Self(self.0.scalar_mul(scalar), self.1.scalar_mul(scalar))
     }
 
+    fn scalar_mul_bounded<const LIMBS: usize>(
+        &self,
+        scalar: &Uint<LIMBS>,
+        scalar_bits: usize,
+    ) -> Self {
+        Self(
+            self.0.scalar_mul_bounded(scalar, scalar_bits),
+            self.1.scalar_mul_bounded(scalar, scalar_bits),
+        )
+    }
+
     fn double(&self) -> Self {
         Self(self.0.double(), self.1.double())
     }
 }
+
 impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
     From<GroupElement<FirstGroupElement, SecondGroupElement>>
     for group::Value<GroupElement<FirstGroupElement, SecondGroupElement>>

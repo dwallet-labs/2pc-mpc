@@ -26,6 +26,8 @@ pub struct Party<
     ProtocolContext: Clone,
 > {
     pub(super) party_id: PartyID,
+    pub(super) threshold: PartyID,
+    pub(super) number_of_parties: PartyID,
     pub(super) language_public_parameters: Language::PublicParameters,
     pub(super) protocol_context: ProtocolContext,
     pub(super) previous_round_party_ids: HashSet<PartyID>,
@@ -56,6 +58,8 @@ impl<
             .filter(|(party_id, _)| *party_id != self.party_id)
             .filter(|(party_id, _)| self.previous_round_party_ids.contains(party_id))
             .collect();
+
+        let number_of_parties = proof_shares.len() + 1;
 
         let current_round_party_ids: HashSet<PartyID> = proof_shares.keys().copied().collect();
 
@@ -126,6 +130,7 @@ impl<
         let aggregated_proof = Proof::new(&self.aggregated_statement_masks, &response?);
         if aggregated_proof
             .verify(
+                number_of_parties,
                 &self.protocol_context,
                 &self.language_public_parameters,
                 self.aggregated_statements.clone(),
@@ -149,6 +154,7 @@ impl<
                 .filter(|(_, proof)| {
                     proof
                         .verify(
+                            number_of_parties,
                             &self.protocol_context,
                             &self.language_public_parameters,
                             self.aggregated_statements.clone(),

@@ -11,10 +11,9 @@ use crypto_bigint::{
 };
 use group::GroupElement as _;
 use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
-use subtle::{Choice, ConstantTimeEq};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use crate::{group, group::Samplable};
-
 // TODO: make this specific for Paillier, document.
 
 /// An element of the multiplicative group of integers modulo `n` $\mathbb{Z}_n^*$
@@ -77,6 +76,15 @@ where
 {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.0.ct_eq(&other.0)
+    }
+}
+
+impl<const LIMBS: usize> ConditionallySelectable for Value<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self(Uint::<LIMBS>::conditional_select(&a.0, &b.0, choice))
     }
 }
 
@@ -174,6 +182,16 @@ where
         // This is inefficient, but in a hidden-order group, we can't do better than this as we
         // can't take the scalar modulus the order.
         Self(self.0.pow(scalar))
+    }
+
+    fn scalar_mul_bounded<const SCALAR_LIMBS: usize>(
+        &self,
+        scalar: &Uint<SCALAR_LIMBS>,
+        scalar_bits: usize,
+    ) -> Self {
+        // This is inefficient, but in a hidden-order group, we can't do better than this as we
+        // can't take the scalar modulus the order.
+        Self(self.0.pow_bounded_exp(scalar, scalar_bits))
     }
 
     fn double(&self) -> Self {

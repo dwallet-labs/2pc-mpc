@@ -8,7 +8,7 @@ use curve25519_dalek::{
     constants::RISTRETTO_BASEPOINT_POINT, ristretto, ristretto::RistrettoPoint, traits::Identity,
 };
 use serde::{Deserialize, Serialize};
-use subtle::{Choice, ConstantTimeEq};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use super::SCALAR_LIMBS;
 use crate::{
@@ -22,7 +22,7 @@ use crate::{
 
 /// An element of the ristretto prime group.
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct GroupElement(pub(crate) ristretto::RistrettoPoint);
+pub struct GroupElement(pub(crate) RistrettoPoint);
 
 /// The public parameters of the ristretto group.
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
@@ -50,9 +50,18 @@ impl Default for PublicParameters {
     }
 }
 
+// TODO: handle these errors, which arise because the underlying crate of ristretto uses different
+// subtle crate
 impl ConstantTimeEq for GroupElement {
     fn ct_eq(&self, _other: &Self) -> Choice {
         todo!()
+    }
+}
+
+impl ConditionallySelectable for GroupElement {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        todo!()
+        // Self(RistrettoPoint::conditional_select(&a.0, &b.0, choice))
     }
 }
 

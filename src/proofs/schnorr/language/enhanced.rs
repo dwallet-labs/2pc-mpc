@@ -731,6 +731,7 @@ pub(crate) mod tests {
         Uint<WITNESS_MASK_LIMBS>: Encoding,
     {
         enhanced::Proof::prove(
+            0,
             &PhantomData,
             language_public_parameters,
             range_proof_public_parameters,
@@ -792,6 +793,7 @@ pub(crate) mod tests {
         );
 
         let res = proof.verify(
+            0,
             &PhantomData,
             language_public_parameters,
             range_proof_public_parameters,
@@ -884,6 +886,7 @@ pub(crate) mod tests {
             matches!(
                 proof
                     .verify(
+                        0,
                         &PhantomData,
                         language_public_parameters,
                         range_proof_public_parameters,

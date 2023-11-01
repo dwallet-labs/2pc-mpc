@@ -5,7 +5,7 @@ use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, NonZero, Uint, U256};
 use serde::{Deserialize, Serialize};
-use subtle::{Choice, ConstantTimeEq};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use super::{GroupElement, SCALAR_LIMBS};
 // TODO: use original dalek repos.
@@ -25,9 +25,18 @@ use crate::{
 #[cfg_attr(test, derive(Debug))]
 pub struct Scalar(pub(crate) curve25519_dalek::scalar::Scalar);
 
+// TODO: handle these errors, which arise because the underlying crate of ristretto uses different
+// subtle crate
 impl ConstantTimeEq for Scalar {
     fn ct_eq(&self, _other: &Self) -> Choice {
         todo!()
+    }
+}
+
+impl ConditionallySelectable for Scalar {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        todo!()
+        // Self(curve25519_dalek::scalar::Scalar::conditional_select(&a.0, &b.0, choice))
     }
 }
 

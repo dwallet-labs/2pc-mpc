@@ -32,6 +32,8 @@ pub struct Party<
     ProtocolContext: Clone,
 > {
     pub party_id: PartyID,
+    pub threshold: PartyID,
+    pub number_of_parties: PartyID,
     pub language_public_parameters: Language::PublicParameters,
     pub protocol_context: ProtocolContext,
     pub witnesses: Vec<Language::WitnessSpaceGroupElement>,
@@ -87,6 +89,8 @@ impl<
         let decommitment_round_party =
             decommitment_round::Party::<REPETITIONS, Language, ProtocolContext> {
                 party_id: self.party_id,
+                threshold: self.threshold,
+                number_of_parties: self.number_of_parties,
                 language_public_parameters: self.language_public_parameters,
                 protocol_context: self.protocol_context,
                 witnesses: self.witnesses,

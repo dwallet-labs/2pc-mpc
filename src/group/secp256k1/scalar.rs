@@ -6,7 +6,7 @@ use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 use crypto_bigint::{rand_core::CryptoRngCore, NonZero, Uint, U256};
 use k256::elliptic_curve::{scalar::FromUintUnchecked, Field};
 use serde::{Deserialize, Serialize};
-use subtle::{Choice, ConstantTimeEq};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use super::{GroupElement, SCALAR_LIMBS};
 use crate::{
@@ -27,6 +27,12 @@ pub struct Scalar(pub(super) k256::Scalar);
 impl ConstantTimeEq for Scalar {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.0.ct_eq(&other.0)
+    }
+}
+
+impl ConditionallySelectable for Scalar {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self(k256::Scalar::conditional_select(&a.0, &b.0, choice))
     }
 }
 

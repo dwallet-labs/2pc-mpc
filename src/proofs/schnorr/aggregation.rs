@@ -11,6 +11,9 @@ pub mod proof_share_round;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("threshold not reached: received insufficient messages")]
+    ThresholdNotReached,
+
     #[error("parties {:?} participated in the previous round of the session but not in the current", .0)]
     UnresponsiveParties(Vec<PartyID>),
 
@@ -49,11 +52,14 @@ pub(crate) mod tests {
         language_public_parameters: &Lang::PublicParameters,
         witnesses: Vec<Vec<Lang::WitnessSpaceGroupElement>>,
     ) {
+        let number_of_parties = witnesses.len().try_into().unwrap();
         let mut witnesses = witnesses;
 
         let party_id = (witnesses.len() - 1).try_into().unwrap();
         let party = commitment_round::Party {
             party_id,
+            threshold: number_of_parties,
+            number_of_parties,
             language_public_parameters: language_public_parameters.clone(),
             protocol_context: (),
             witnesses: witnesses.pop().unwrap(),
@@ -71,6 +77,8 @@ pub(crate) mod tests {
                     party_id,
                     commitment_round::Party {
                         party_id,
+                        threshold: number_of_parties,
+                        number_of_parties,
                         language_public_parameters: language_public_parameters.clone(),
                         protocol_context: (),
                         witnesses,
@@ -117,13 +125,16 @@ pub(crate) mod tests {
             .map(|(party_id, (_, party))| {
                 (
                     party_id,
-                    party.decommit_statements_and_statement_mask(commitments.clone()),
+                    party
+                        .decommit_statements_and_statement_mask(commitments.clone())
+                        .unwrap(),
                 )
             })
             .collect();
 
-        let (decommitment, proof_share_round_party) =
-            decommitment_round_party.decommit_statements_and_statement_mask(commitments);
+        let (decommitment, proof_share_round_party) = decommitment_round_party
+            .decommit_statements_and_statement_mask(commitments)
+            .unwrap();
 
         let mut decommitments: HashMap<PartyID, Decommitment<REPETITIONS, Lang>> =
             decommitments_and_proof_share_round_parties
@@ -259,33 +270,33 @@ mod benches {
 
         g.sample_size(10);
 
-        // TODO: DRY-out, have enhanced witnesses generate accordingly
-        let mut witnesses = witnesses;
-        let party_id = (witnesses.len() - 1).try_into().unwrap();
-        let party = commitment_round::Party {
-            party_id,
-            language_public_parameters: language_public_parameters.clone(),
-            protocol_context: (),
-            witnesses: witnesses.clone(),
-        };
-
-        g.bench_function(format!("commitment round"), |bench| {
-            bench.iter(|| {
-                party
-                    .clone()
-                    .commit_statements_and_statement_mask(&mut OsRng)
-                    .unwrap()
-            })
-        });
-
-        let (commitment, decommitment_round_party) = party
-            .commit_statements_and_statement_mask(&mut OsRng)
-            .unwrap();
-
         for number_of_parties in [1, 10, 100, 1000] {
+            // TODO: DRY-out, have enhanced witnesses generate accordingly
+            let party_id = (witnesses.len() - 1).try_into().unwrap();
+            let party = commitment_round::Party {
+                party_id,
+                threshold: number_of_parties,
+                number_of_parties,
+                language_public_parameters: language_public_parameters.clone(),
+                protocol_context: (),
+                witnesses: witnesses.clone(),
+            };
+
+            g.bench_function(format!("commitment round"), |bench| {
+                bench.iter(|| {
+                    party
+                        .clone()
+                        .commit_statements_and_statement_mask(&mut OsRng)
+                        .unwrap()
+                })
+            });
+
+            let (commitment, decommitment_round_party) = party
+                .commit_statements_and_statement_mask(&mut OsRng)
+                .unwrap();
             let commitments: HashMap<PartyID, Commitment> =
                 iter::repeat_with(|| commitment.clone())
-                    .take(number_of_parties)
+                    .take(number_of_parties.into())
                     .enumerate()
                     .map(|(party_id, x)| (party_id.try_into().unwrap(), x))
                     .collect();
@@ -303,11 +314,12 @@ mod benches {
 
             let (decommitment, proof_share_round_party) = decommitment_round_party
                 .clone()
-                .decommit_statements_and_statement_mask(commitments);
+                .decommit_statements_and_statement_mask(commitments)
+                .unwrap();
 
             let decommitments: HashMap<PartyID, Decommitment<REPETITIONS, Lang>> =
                 iter::repeat_with(|| decommitment.clone())
-                    .take(number_of_parties)
+                    .take(number_of_parties.into())
                     .enumerate()
                     .map(|(party_id, x)| (party_id.try_into().unwrap(), x))
                     .collect();
@@ -331,7 +343,7 @@ mod benches {
 
             let proof_shares: HashMap<PartyID, ProofShare<REPETITIONS, Lang>> =
                 iter::repeat_with(|| proof_share.clone())
-                    .take(number_of_parties)
+                    .take(number_of_parties.into())
                     .enumerate()
                     .map(|(party_id, x)| (party_id.try_into().unwrap(), x))
                     .collect();

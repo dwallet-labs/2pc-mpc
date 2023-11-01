@@ -38,6 +38,8 @@ pub struct Party<
     ProtocolContext: Clone,
 > {
     pub(super) party_id: PartyID,
+    pub(super) threshold: PartyID,
+    pub(super) number_of_parties: PartyID,
     pub(super) language_public_parameters: Language::PublicParameters,
     pub(super) protocol_context: ProtocolContext,
     pub(super) witnesses: Vec<Language::WitnessSpaceGroupElement>,
@@ -56,14 +58,20 @@ impl<
     pub fn decommit_statements_and_statement_mask(
         self,
         commitments: HashMap<PartyID, Commitment>,
-    ) -> (
+    ) -> proofs::Result<(
         Decommitment<REPETITIONS, Language>,
         proof_share_round::Party<REPETITIONS, Language, ProtocolContext>,
-    ) {
-        let commitments = commitments
+    )> {
+        let commitments: HashMap<_, _> = commitments
             .into_iter()
             .filter(|(party_id, _)| *party_id != self.party_id)
             .collect();
+
+        // TODO: is this sufficient? later rounds check against the same party set so this should
+        // cover that. TODO: test this
+        if commitments.len() + 1 < self.threshold.into() {
+            return Err(super::Error::ThresholdNotReached)?;
+        }
 
         let decommitment = Decommitment::<REPETITIONS, Language> {
             statements: self
@@ -82,6 +90,8 @@ impl<
         let proof_share_round_party =
             proof_share_round::Party::<REPETITIONS, Language, ProtocolContext> {
                 party_id: self.party_id,
+                threshold: self.threshold,
+                number_of_parties: self.number_of_parties,
                 language_public_parameters: self.language_public_parameters,
                 protocol_context: self.protocol_context,
                 witnesses: self.witnesses,
@@ -91,6 +101,6 @@ impl<
                 commitments,
             };
 
-        (decommitment, proof_share_round_party)
+        Ok((decommitment, proof_share_round_party))
     }
 }
