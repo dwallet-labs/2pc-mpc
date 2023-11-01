@@ -6,73 +6,90 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    group,
     group::GroupElement,
     proofs,
     proofs::{
         schnorr,
-        schnorr::{
-            aggregation::proof_share_round,
-            language,
-            language::{StatementSpaceGroupElement, StatementSpaceValue, WitnessSpaceGroupElement},
-        },
+        schnorr::{aggregation::proof_share_round, language},
     },
     Commitment, ComputationalSecuritySizedNumber, PartyID,
 };
 
 #[derive(PartialEq, Serialize, Deserialize, Clone)]
-pub struct Decommitment<Language: schnorr::Language> {
-    pub(super) statements: Vec<StatementSpaceValue<Language>>,
-    pub(super) statement_mask: StatementSpaceValue<Language>,
+pub struct Decommitment<const REPETITIONS: usize, Language: language::Language<REPETITIONS>> {
+    pub(super) statements: Vec<group::Value<Language::StatementSpaceGroupElement>>,
+    #[serde(with = "crate::helpers::const_generic_array_serialization")]
+    pub(super) statement_masks: [group::Value<Language::StatementSpaceGroupElement>; REPETITIONS],
     pub(super) commitment_randomness: ComputationalSecuritySizedNumber,
 }
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
-pub struct Party<Language: schnorr::Language, ProtocolContext: Clone + Serialize> {
+pub struct Party<
+    // Number of times this proof should be repeated to achieve sufficient security
+    const REPETITIONS: usize,
+    // The language we are proving
+    // TODO: lets have some consistency. Somewhere this is called Lang, and then no 'language::` is
+    // necessairy. Here it's Language. Please just lets be consistent.
+    Language: language::Language<REPETITIONS>,
+    // A struct used by the protocol using this proof,
+    // used to provide extra necessary context that will parameterize the proof (and thus verifier
+    // code) and be inserted to the Fiat-Shamir transcript
+    ProtocolContext: Clone,
+> {
     pub(super) party_id: PartyID,
-    pub(super) language_public_parameters: language::PublicParameters<Language>,
+    pub(super) language_public_parameters: Language::PublicParameters,
     pub(super) protocol_context: ProtocolContext,
-    pub(super) witnesses: Vec<WitnessSpaceGroupElement<Language>>,
-    pub(super) statements: Vec<StatementSpaceGroupElement<Language>>,
-    pub(super) randomizer: WitnessSpaceGroupElement<Language>,
-    pub(super) statement_mask: StatementSpaceGroupElement<Language>,
+    pub(super) witnesses: Vec<Language::WitnessSpaceGroupElement>,
+    pub(super) statements: Vec<Language::StatementSpaceGroupElement>,
+    pub(super) randomizers: [Language::WitnessSpaceGroupElement; REPETITIONS],
+    pub(super) statement_masks: [Language::StatementSpaceGroupElement; REPETITIONS],
     pub(super) commitment_randomness: ComputationalSecuritySizedNumber,
 }
 
-impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
-    Party<Language, ProtocolContext>
+impl<
+        const REPETITIONS: usize,
+        Language: language::Language<REPETITIONS>,
+        ProtocolContext: Clone + Serialize,
+    > Party<REPETITIONS, Language, ProtocolContext>
 {
     pub fn decommit_statements_and_statement_mask(
         self,
         commitments: HashMap<PartyID, Commitment>,
     ) -> (
-        Decommitment<Language>,
-        proof_share_round::Party<Language, ProtocolContext>,
+        Decommitment<REPETITIONS, Language>,
+        proof_share_round::Party<REPETITIONS, Language, ProtocolContext>,
     ) {
         let commitments = commitments
             .into_iter()
             .filter(|(party_id, _)| *party_id != self.party_id)
             .collect();
 
-        let decommitment = Decommitment::<Language> {
+        let decommitment = Decommitment::<REPETITIONS, Language> {
             statements: self
                 .statements
                 .iter()
                 .map(|statement| statement.value())
                 .collect(),
-            statement_mask: self.statement_mask.value(),
+            // TODO: take this from previous round instead of computing values again here.
+            statement_masks: self
+                .statement_masks
+                .clone()
+                .map(|statement_mask| statement_mask.value()),
             commitment_randomness: self.commitment_randomness,
         };
 
-        let proof_share_round_party = proof_share_round::Party::<Language, ProtocolContext> {
-            party_id: self.party_id,
-            language_public_parameters: self.language_public_parameters,
-            protocol_context: self.protocol_context,
-            witnesses: self.witnesses,
-            statements: self.statements,
-            randomizer: self.randomizer,
-            statement_mask: self.statement_mask,
-            commitments,
-        };
+        let proof_share_round_party =
+            proof_share_round::Party::<REPETITIONS, Language, ProtocolContext> {
+                party_id: self.party_id,
+                language_public_parameters: self.language_public_parameters,
+                protocol_context: self.protocol_context,
+                witnesses: self.witnesses,
+                statements: self.statements,
+                randomizers: self.randomizers,
+                statement_masks: self.statement_masks,
+                commitments,
+            };
 
         (decommitment, proof_share_round_party)
     }

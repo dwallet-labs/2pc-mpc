@@ -8,13 +8,14 @@ use serde::{Deserialize, Serialize};
 use crate::{
     group,
     group::GroupElement as _,
+    helpers::flat_map_results,
     proofs,
     proofs::{
         schnorr,
         schnorr::{
             aggregation::{decommitment_round::Decommitment, proof_aggregation_round},
             language,
-            language::{StatementSpaceGroupElement, WitnessSpaceGroupElement, WitnessSpaceValue},
+            language::WitnessSpaceValue,
             Proof,
         },
     },
@@ -22,29 +23,44 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
-pub struct ProofShare<Language: schnorr::Language>(pub(super) WitnessSpaceValue<Language>);
+pub struct ProofShare<const REPETITIONS: usize, Language: schnorr::Language<REPETITIONS>>(
+    #[serde(with = "crate::helpers::const_generic_array_serialization")]
+    pub(super)  [WitnessSpaceValue<REPETITIONS, Language>; REPETITIONS],
+);
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
-pub struct Party<Language: schnorr::Language, ProtocolContext: Clone + Serialize> {
+pub struct Party<
+    // Number of times this proof should be repeated to achieve sufficient security
+    const REPETITIONS: usize,
+    // The language we are proving
+    Language: language::Language<REPETITIONS>,
+    // A struct used by the protocol using this proof,
+    // used to provide extra necessary context that will parameterize the proof (and thus verifier
+    // code) and be inserted to the Fiat-Shamir transcript
+    ProtocolContext: Clone,
+> {
     pub(super) party_id: PartyID,
-    pub(super) language_public_parameters: language::PublicParameters<Language>,
+    pub(super) language_public_parameters: Language::PublicParameters,
     pub(super) protocol_context: ProtocolContext,
-    pub(super) witnesses: Vec<WitnessSpaceGroupElement<Language>>,
-    pub(super) statements: Vec<StatementSpaceGroupElement<Language>>,
-    pub(super) randomizer: WitnessSpaceGroupElement<Language>,
-    pub(super) statement_mask: StatementSpaceGroupElement<Language>,
+    pub(super) witnesses: Vec<Language::WitnessSpaceGroupElement>,
+    pub(super) statements: Vec<Language::StatementSpaceGroupElement>,
+    pub(super) randomizers: [Language::WitnessSpaceGroupElement; REPETITIONS],
+    pub(super) statement_masks: [Language::StatementSpaceGroupElement; REPETITIONS],
     pub(super) commitments: HashMap<PartyID, Commitment>,
 }
 
-impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
-    Party<Language, ProtocolContext>
+impl<
+        const REPETITIONS: usize,
+        Language: language::Language<REPETITIONS>,
+        ProtocolContext: Clone + Serialize,
+    > Party<REPETITIONS, Language, ProtocolContext>
 {
     pub fn generate_proof_share(
         self,
-        decommitments: HashMap<PartyID, Decommitment<Language>>,
+        decommitments: HashMap<PartyID, Decommitment<REPETITIONS, Language>>,
     ) -> proofs::Result<(
-        ProofShare<Language>,
-        proof_aggregation_round::Party<Language, ProtocolContext>,
+        ProofShare<REPETITIONS, Language>,
+        proof_aggregation_round::Party<REPETITIONS, Language, ProtocolContext>,
     )> {
         // TODO: now we are using the same protocol context for us and for decommitments, this is
         // faulty and is a security issue. Instead, we must somehow construct the protocol
@@ -57,7 +73,7 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
         // First remove parties that didn't participate in the previous round, as they shouldn't be
         // allowed to join the session half-way, and we can self-heal this malicious behaviour
         // without needing to stop the session and report
-        let decommitments: HashMap<PartyID, Decommitment<Language>> = decommitments
+        let decommitments: HashMap<PartyID, Decommitment<REPETITIONS, Language>> = decommitments
             .into_iter()
             .filter(|(party_id, _)| *party_id != self.party_id)
             .filter(|(party_id, _)| previous_round_party_ids.contains(party_id))
@@ -77,13 +93,13 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             .iter()
             .map(|(party_id, decommitment)| {
                 // TODO: this can be optimized by doing the initial transcript once for all
-                Proof::<Language, ProtocolContext>::setup_transcript(
+                Proof::<REPETITIONS, Language, ProtocolContext>::setup_transcript(
                     // TODO: insert the party id of the other party somehow, and maybe other
                     // things.
                     &self.protocol_context,
                     &self.language_public_parameters,
                     decommitment.statements.clone(),
-                    &decommitment.statement_mask,
+                    &decommitment.statement_masks,
                 )
                 .map(|mut transcript| {
                     (
@@ -108,24 +124,22 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             return Err(super::Error::WrongDecommitment(miscommitting_parties))?;
         }
 
-        let statement_masks: group::Result<Vec<StatementSpaceGroupElement<Language>>> =
-            decommitments
-                .values()
-                .map(|decommitment| {
-                    StatementSpaceGroupElement::<Language>::new(
-                        decommitment.statement_mask,
+        let statement_masks: group::Result<
+            Vec<[Language::StatementSpaceGroupElement; REPETITIONS]>,
+        > = decommitments
+            .values()
+            .map(|decommitment| {
+                flat_map_results(decommitment.statement_masks.map(|statement_mask| {
+                    Language::StatementSpaceGroupElement::new(
+                        statement_mask,
                         &self
                             .language_public_parameters
                             .as_ref()
                             .statement_space_public_parameters,
                     )
-                })
-                .collect();
-
-        let aggregated_statement_mask = statement_masks?.into_iter().fold(
-            self.statement_mask,
-            |aggregated_statement_mask, statement_mask| aggregated_statement_mask + statement_mask,
-        );
+                }))
+            })
+            .collect();
 
         let number_of_statements = self.statements.len();
 
@@ -141,7 +155,24 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             ))?;
         }
 
-        let statements_vector: group::Result<Vec<Vec<StatementSpaceGroupElement<Language>>>> =
+        let aggregated_statement_masks = statement_masks?.into_iter().fold(
+            Ok(self.statement_masks),
+            |aggregated_statement_masks, statement_masks| {
+                aggregated_statement_masks.and_then(|aggregated_statement_masks| {
+                    aggregated_statement_masks
+                        .into_iter()
+                        .zip(statement_masks)
+                        .map(|(aggregated_statement_mask, statement_mask)| {
+                            aggregated_statement_mask + statement_mask
+                        })
+                        .collect::<Vec<_>>()
+                        .try_into()
+                        .map_err(|_| proofs::Error::Conversion)
+                })
+            },
+        )?;
+
+        let statements_vector: group::Result<Vec<Vec<Language::StatementSpaceGroupElement>>> =
             decommitments
                 .into_values()
                 .map(|decommitment| {
@@ -149,7 +180,7 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
                         .statements
                         .into_iter()
                         .map(|statement_value| {
-                            StatementSpaceGroupElement::<Language>::new(
+                            Language::StatementSpaceGroupElement::new(
                                 statement_value,
                                 &self
                                     .language_public_parameters
@@ -163,7 +194,7 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
 
         let statements_vector = statements_vector?;
 
-        let aggregated_statements: Vec<StatementSpaceGroupElement<Language>> = (0
+        let aggregated_statements: Vec<Language::StatementSpaceGroupElement> = (0
             ..number_of_statements)
             .map(|i| {
                 statements_vector
@@ -176,37 +207,39 @@ impl<Language: schnorr::Language, ProtocolContext: Clone + Serialize>
             })
             .collect();
 
-        let response = Proof::<Language, ProtocolContext>::prove_inner(
+        let responses = Proof::<REPETITIONS, Language, ProtocolContext>::prove_inner(
             // TODO: we don't need to pass any party id here. Maybe we should seperate these
             // types.
             &self.protocol_context,
             &self.language_public_parameters,
             self.witnesses,
             aggregated_statements.clone(),
-            self.randomizer,
-            aggregated_statement_mask.clone(),
+            self.randomizers,
+            aggregated_statement_masks.clone(),
         )?
-        .response;
+        .responses;
 
-        let proof_share = ProofShare(response);
+        let proof_share = ProofShare(responses);
 
-        let response = WitnessSpaceGroupElement::<Language>::new(
-            response,
-            &self
-                .language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
-        )?;
+        let responses = flat_map_results(responses.map(|value| {
+            Language::WitnessSpaceGroupElement::new(
+                value,
+                &self
+                    .language_public_parameters
+                    .as_ref()
+                    .witness_space_public_parameters,
+            )
+        }))?;
 
         let proof_aggregation_round_party =
-            proof_aggregation_round::Party::<Language, ProtocolContext> {
+            proof_aggregation_round::Party::<REPETITIONS, Language, ProtocolContext> {
                 party_id: self.party_id,
                 language_public_parameters: self.language_public_parameters,
                 protocol_context: self.protocol_context,
                 previous_round_party_ids,
                 aggregated_statements,
-                aggregated_statement_mask,
-                response,
+                aggregated_statement_masks,
+                responses,
             };
 
         Ok((proof_share, proof_aggregation_round_party))

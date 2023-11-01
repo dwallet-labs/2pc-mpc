@@ -2,21 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
-use language::PublicParameters;
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     group::{additive_group_of_integers_modulu_n::power_of_two_moduli, BoundedGroupElement},
     proofs,
-    proofs::{
-        range::RangeProof,
-        schnorr::{
-            language,
-            language::{StatementSpaceGroupElement, WitnessSpaceGroupElement},
-        },
-        Error, TranscriptProtocol,
-    },
+    proofs::{range::RangeProof, schnorr::language, Error, TranscriptProtocol},
     StatisticalSecuritySizedNumber,
 };
 
@@ -24,6 +16,8 @@ use crate::{
 /// Implements Appendix B. Schnorr Protocols in the paper.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Proof<
+    // Number of times this proof should be repeated to achieve sufficient security
+    const REPETITIONS: usize,
     // The range proof commitment scheme's message space scalar size in limbs
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     // The number of witnesses with range claims
@@ -35,6 +29,7 @@ pub struct Proof<
     const WITNESS_MASK_LIMBS: usize,
     // The enhanced language we are proving
     Language: language::enhanced::EnhancedLanguage<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -48,8 +43,9 @@ pub struct Proof<
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
 {
-    schnorr_proof: super::Proof<Language, ProtocolContext>,
+    schnorr_proof: super::Proof<REPETITIONS, Language, ProtocolContext>,
     range_proof: language::enhanced::RangeProof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -59,11 +55,13 @@ pub struct Proof<
 }
 
 impl<
+        const REPETITIONS: usize,
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const NUM_RANGE_CLAIMS: usize,
         const RANGE_CLAIM_LIMBS: usize,
         const WITNESS_MASK_LIMBS: usize,
         Language: language::enhanced::EnhancedLanguage<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -72,6 +70,7 @@ impl<
         ProtocolContext: Clone + Serialize,
     >
     Proof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -87,17 +86,18 @@ where
     /// Returns the zero-knowledge proof.
     pub fn prove(
         protocol_context: &ProtocolContext,
-        language_public_parameters: &PublicParameters<Language>,
+        language_public_parameters: &Language::PublicParameters,
         range_proof_public_parameters: &language::enhanced::RangeProofPublicParameters<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
             WITNESS_MASK_LIMBS,
             Language,
         >,
-        witnesses: Vec<WitnessSpaceGroupElement<Language>>,
+        witnesses: Vec<Language::WitnessSpaceGroupElement>,
         rng: &mut impl CryptoRngCore,
-    ) -> proofs::Result<(Self, Vec<StatementSpaceGroupElement<Language>>)> {
+    ) -> proofs::Result<(Self, Vec<Language::StatementSpaceGroupElement>)> {
         let mut transcript =
             Self::setup_range_proof(protocol_context, range_proof_public_parameters)?;
 
@@ -105,6 +105,7 @@ where
             Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
             Vec<
                 language::enhanced::RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
+                    REPETITIONS,
                     RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     NUM_RANGE_CLAIMS,
                     RANGE_CLAIM_LIMBS,
@@ -135,6 +136,7 @@ where
         // TODO: commitments are being computed twice. In order to avoid this, I would need to
         // somehow partially compute the group homomorphism, which is problematic..
         let (range_proof, _) = language::enhanced::RangeProof::<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -148,12 +150,13 @@ where
             rng,
         )?;
 
-        let (schnorr_proof, statements) = super::Proof::<Language, ProtocolContext>::prove(
-            protocol_context,
-            language_public_parameters,
-            witnesses,
-            rng,
-        )?;
+        let (schnorr_proof, statements) =
+            super::Proof::<REPETITIONS, Language, ProtocolContext>::prove(
+                protocol_context,
+                language_public_parameters,
+                witnesses,
+                rng,
+            )?;
 
         Ok((
             Proof {
@@ -168,15 +171,16 @@ where
     pub fn verify(
         &self,
         protocol_context: &ProtocolContext,
-        language_public_parameters: &PublicParameters<Language>,
+        language_public_parameters: &Language::PublicParameters,
         range_proof_public_parameters: &language::enhanced::RangeProofPublicParameters<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
             WITNESS_MASK_LIMBS,
             Language,
         >,
-        statements: Vec<StatementSpaceGroupElement<Language>>,
+        statements: Vec<Language::StatementSpaceGroupElement>,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<()> {
         // TODO: here we should validate all the sizes are good etc. for example WITNESS_MASK_LIMBS
@@ -187,6 +191,7 @@ where
 
         let commitments: Vec<
             language::enhanced::RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
+                REPETITIONS,
                 RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 NUM_RANGE_CLAIMS,
                 RANGE_CLAIM_LIMBS,
@@ -220,6 +225,7 @@ where
     fn setup_range_proof(
         protocol_context: &ProtocolContext,
         range_proof_public_parameters: &language::enhanced::RangeProofPublicParameters<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -255,6 +261,7 @@ where
         transcript.append_message(
             b"range proof used for the enhanced Schnorr proof",
             language::enhanced::RangeProof::<
+                REPETITIONS,
                 RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 NUM_RANGE_CLAIMS,
                 RANGE_CLAIM_LIMBS,

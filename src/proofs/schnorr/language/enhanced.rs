@@ -49,6 +49,7 @@ pub type ConstrainedWitnessPublicParameters<
 // But in the case of the witness mask, we actually pass it as WITNESS_MASK_LIMBS and it is of that
 // size.
 pub type EnhancedLanguageWitness<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -57,6 +58,7 @@ pub type EnhancedLanguageWitness<
 > = direct_product::ThreeWayGroupElement<
     ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, WITNESS_MASK_LIMBS>,
     RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -64,6 +66,7 @@ pub type EnhancedLanguageWitness<
         L,
     >,
     UnconstrainedWitnessSpaceGroupElement<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -73,6 +76,7 @@ pub type EnhancedLanguageWitness<
 >;
 
 pub type EnhancedLanguageStatement<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -80,6 +84,7 @@ pub type EnhancedLanguageStatement<
     L,
 > = direct_product::GroupElement<
     RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -87,6 +92,7 @@ pub type EnhancedLanguageStatement<
         L,
     >,
     RemainingStatementSpaceGroupElement<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -99,6 +105,8 @@ pub type EnhancedLanguageStatement<
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.
 /// As defined in Appendix B. Schnorr Protocols in the paper.
 pub trait EnhancedLanguage<
+    // Number of times schnorr proofs for this language should be repeated to achieve sufficient security
+    const REPETITIONS: usize,
     // The range proof commitment scheme's message space scalar size in limbs
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     // The number of witnesses with range claims
@@ -108,7 +116,9 @@ pub trait EnhancedLanguage<
     // The size of the witness mask. Must be equal to RANGE_CLAIM_LIMBS + ComputationalSecuritySizedNumber::LIMBS + StatisticalSecuritySizedNumber::LIMBS
     const WITNESS_MASK_LIMBS: usize,
 >: super::Language<
+    REPETITIONS,
     WitnessSpaceGroupElement=EnhancedLanguageWitness<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -116,6 +126,7 @@ pub trait EnhancedLanguage<
         Self
     >,
     StatementSpaceGroupElement=EnhancedLanguageStatement<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -176,12 +187,14 @@ where
 }
 
 pub type UnconstrainedWitnessSpaceGroupElement<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     const WITNESS_MASK_LIMBS: usize,
     L,
 > = <L as EnhancedLanguage<
+    REPETITIONS,
     RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
@@ -189,6 +202,7 @@ pub type UnconstrainedWitnessSpaceGroupElement<
 >>::UnboundedWitnessSpaceGroupElement;
 
 pub type UnboundedWitnessSpacePublicParameters<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -196,6 +210,7 @@ pub type UnboundedWitnessSpacePublicParameters<
     L,
 > = group::PublicParameters<
     UnconstrainedWitnessSpaceGroupElement<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -204,6 +219,7 @@ pub type UnboundedWitnessSpacePublicParameters<
     >,
 >;
 pub type UnboundedWitnessSpaceValue<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -211,6 +227,7 @@ pub type UnboundedWitnessSpaceValue<
     L,
 > = group::Value<
     UnconstrainedWitnessSpaceGroupElement<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -220,12 +237,14 @@ pub type UnboundedWitnessSpaceValue<
 >;
 
 pub type RemainingStatementSpaceGroupElement<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     const WITNESS_MASK_LIMBS: usize,
     L,
 > = <L as EnhancedLanguage<
+    REPETITIONS,
     RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
@@ -233,6 +252,7 @@ pub type RemainingStatementSpaceGroupElement<
 >>::RemainingStatementSpaceGroupElement;
 
 pub type RemainingStatementSpacePublicParameters<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -240,6 +260,7 @@ pub type RemainingStatementSpacePublicParameters<
     L,
 > = group::PublicParameters<
     RemainingStatementSpaceGroupElement<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -248,6 +269,7 @@ pub type RemainingStatementSpacePublicParameters<
     >,
 >;
 pub type RemainingStatementSpaceValue<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -255,6 +277,7 @@ pub type RemainingStatementSpaceValue<
     L,
 > = group::Value<
     RemainingStatementSpaceGroupElement<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -264,12 +287,14 @@ pub type RemainingStatementSpaceValue<
 >;
 
 pub type RangeProof<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
     const WITNESS_MASK_LIMBS: usize,
     L,
 > = <L as EnhancedLanguage<
+    REPETITIONS,
     RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
@@ -277,6 +302,7 @@ pub type RangeProof<
 >>::RangeProof;
 
 pub type RangeProofPublicParameters<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -287,6 +313,7 @@ pub type RangeProofPublicParameters<
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
     RangeProof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -296,6 +323,7 @@ pub type RangeProofPublicParameters<
 >;
 
 pub type RangeProofCommitmentScheme<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -306,6 +334,7 @@ pub type RangeProofCommitmentScheme<
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
     RangeProof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -315,6 +344,7 @@ pub type RangeProofCommitmentScheme<
 >;
 
 pub type RangeProofCommitmentSchemePublicParameters<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -325,6 +355,7 @@ pub type RangeProofCommitmentSchemePublicParameters<
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
     RangeProof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -334,6 +365,7 @@ pub type RangeProofCommitmentSchemePublicParameters<
 >;
 
 pub type RangeProofCommitmentSchemeMessageSpaceGroupElement<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -344,6 +376,7 @@ pub type RangeProofCommitmentSchemeMessageSpaceGroupElement<
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
     RangeProof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -353,6 +386,7 @@ pub type RangeProofCommitmentSchemeMessageSpaceGroupElement<
 >;
 
 pub type RangeProofCommitmentSchemeMessageSpacePublicParameters<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -363,6 +397,7 @@ pub type RangeProofCommitmentSchemeMessageSpacePublicParameters<
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
     RangeProof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -372,6 +407,7 @@ pub type RangeProofCommitmentSchemeMessageSpacePublicParameters<
 >;
 
 pub type RangeProofCommitmentSchemeMessageSpaceValue<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -382,6 +418,7 @@ pub type RangeProofCommitmentSchemeMessageSpaceValue<
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
     RangeProof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -391,6 +428,7 @@ pub type RangeProofCommitmentSchemeMessageSpaceValue<
 >;
 
 pub type RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -401,6 +439,7 @@ pub type RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
     RangeProof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -410,6 +449,7 @@ pub type RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
 >;
 
 pub type RangeProofCommitmentSchemeRandomnessSpacePublicParameters<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -420,6 +460,7 @@ pub type RangeProofCommitmentSchemeRandomnessSpacePublicParameters<
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
     RangeProof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -429,6 +470,7 @@ pub type RangeProofCommitmentSchemeRandomnessSpacePublicParameters<
 >;
 
 pub type RangeProofCommitmentSchemeRandomnessSpaceValue<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -439,6 +481,7 @@ pub type RangeProofCommitmentSchemeRandomnessSpaceValue<
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
     RangeProof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -448,6 +491,7 @@ pub type RangeProofCommitmentSchemeRandomnessSpaceValue<
 >;
 
 pub type RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -458,6 +502,7 @@ pub type RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
     RangeProof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -467,6 +512,7 @@ pub type RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
 >;
 
 pub type RangeProofCommitmentSchemeCommitmentSpacePublicParameters<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -477,6 +523,7 @@ pub type RangeProofCommitmentSchemeCommitmentSpacePublicParameters<
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
     RangeProof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -486,6 +533,7 @@ pub type RangeProofCommitmentSchemeCommitmentSpacePublicParameters<
 >;
 
 pub type RangeProofCommitmentSchemeCommitmentSpaceValue<
+    const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -496,6 +544,7 @@ pub type RangeProofCommitmentSchemeCommitmentSpaceValue<
     NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
     RangeProof<
+        REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
@@ -508,20 +557,14 @@ pub type RangeProofCommitmentSchemeCommitmentSpaceValue<
 pub(crate) mod tests {
     use std::{array, iter, marker::PhantomData};
 
-    use crypto_bigint::{Random, Wrapping};
+    use crypto_bigint::{Random, Wrapping, U128};
     use rand_core::OsRng;
 
     use super::*;
     use crate::{
         proofs::{
             range::bulletproofs::RANGE_CLAIM_BITS,
-            schnorr::{
-                enhanced, language,
-                language::{
-                    StatementSpaceGroupElement, WitnessSpaceGroupElement,
-                    WitnessSpacePublicParameters,
-                },
-            },
+            schnorr::{enhanced, language},
         },
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
@@ -534,11 +577,13 @@ pub(crate) mod tests {
     pub(crate) const RANGE_CLAIMS_PER_SCALAR: usize = 8;
 
     pub(crate) fn generate_witnesses<
+        const REPETITIONS: usize,
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const NUM_RANGE_CLAIMS: usize,
         const RANGE_CLAIM_LIMBS: usize,
         const WITNESS_MASK_LIMBS: usize,
         Lang: EnhancedLanguage<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -547,14 +592,14 @@ pub(crate) mod tests {
     >(
         language_public_parameters: &Lang::PublicParameters,
         batch_size: usize,
-    ) -> Vec<WitnessSpaceGroupElement<Lang>>
+    ) -> Vec<Lang::WitnessSpaceGroupElement>
     where
         Uint<RANGE_CLAIM_LIMBS>: Encoding,
         Uint<WITNESS_MASK_LIMBS>: Encoding,
     {
         iter::repeat_with(|| {
             let (_, commitment_randomness, unconstrained_witness) =
-                WitnessSpaceGroupElement::<Lang>::sample(
+                Lang::WitnessSpaceGroupElement::sample(
                     &mut OsRng,
                     &language_public_parameters
                         .as_ref()
@@ -566,6 +611,7 @@ pub(crate) mod tests {
             let (constrained_witness_public_paramters, ..): (
                 &ConstrainedWitnessPublicParameters<NUM_RANGE_CLAIMS, WITNESS_MASK_LIMBS>,
                 &RangeProofCommitmentSchemeRandomnessSpacePublicParameters<
+                    REPETITIONS,
                     RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     NUM_RANGE_CLAIMS,
                     RANGE_CLAIM_LIMBS,
@@ -573,6 +619,7 @@ pub(crate) mod tests {
                     Lang,
                 >,
                 &UnboundedWitnessSpacePublicParameters<
+                    REPETITIONS,
                     RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     NUM_RANGE_CLAIMS,
                     RANGE_CLAIM_LIMBS,
@@ -608,11 +655,13 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn generate_witnesses_for_aggregation<
+        const REPETITIONS: usize,
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const NUM_RANGE_CLAIMS: usize,
         const RANGE_CLAIM_LIMBS: usize,
         const WITNESS_MASK_LIMBS: usize,
         Lang: EnhancedLanguage<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -622,13 +671,14 @@ pub(crate) mod tests {
         language_public_parameters: &Lang::PublicParameters,
         number_of_parties: usize,
         batch_size: usize,
-    ) -> Vec<Vec<WitnessSpaceGroupElement<Lang>>>
+    ) -> Vec<Vec<Lang::WitnessSpaceGroupElement>>
     where
         Uint<RANGE_CLAIM_LIMBS>: Encoding,
         Uint<WITNESS_MASK_LIMBS>: Encoding,
     {
         iter::repeat_with(|| {
             generate_witnesses::<
+                REPETITIONS,
                 RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 NUM_RANGE_CLAIMS,
                 RANGE_CLAIM_LIMBS,
@@ -641,11 +691,13 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn generate_valid_proof<
+        const REPETITIONS: usize,
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const NUM_RANGE_CLAIMS: usize,
         const RANGE_CLAIM_LIMBS: usize,
         const WITNESS_MASK_LIMBS: usize,
         Lang: EnhancedLanguage<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -654,15 +706,17 @@ pub(crate) mod tests {
     >(
         language_public_parameters: &Lang::PublicParameters,
         range_proof_public_parameters: &language::enhanced::RangeProofPublicParameters<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
             WITNESS_MASK_LIMBS,
             Lang,
         >,
-        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
+        witnesses: Vec<Lang::WitnessSpaceGroupElement>,
     ) -> (
         enhanced::Proof<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -670,7 +724,7 @@ pub(crate) mod tests {
             Lang,
             PhantomData<()>,
         >,
-        Vec<StatementSpaceGroupElement<Lang>>,
+        Vec<Lang::StatementSpaceGroupElement>,
     )
     where
         Uint<RANGE_CLAIM_LIMBS>: Encoding,
@@ -688,11 +742,13 @@ pub(crate) mod tests {
 
     #[allow(dead_code)]
     pub(crate) fn valid_proof_verifies<
+        const REPETITIONS: usize,
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const NUM_RANGE_CLAIMS: usize,
         const RANGE_CLAIM_LIMBS: usize,
         const WITNESS_MASK_LIMBS: usize,
         Lang: EnhancedLanguage<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -701,6 +757,7 @@ pub(crate) mod tests {
     >(
         language_public_parameters: &Lang::PublicParameters,
         range_proof_public_parameters: &RangeProofPublicParameters<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -713,6 +770,7 @@ pub(crate) mod tests {
         Uint<WITNESS_MASK_LIMBS>: Encoding,
     {
         let witnesses = generate_witnesses::<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -721,6 +779,7 @@ pub(crate) mod tests {
         >(language_public_parameters, batch_size);
 
         let (proof, statements) = generate_valid_proof::<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -749,11 +808,13 @@ pub(crate) mod tests {
 
     #[allow(dead_code)]
     pub(crate) fn proof_with_out_of_range_witness_fails<
+        const REPETITIONS: usize,
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const NUM_RANGE_CLAIMS: usize,
         const RANGE_CLAIM_LIMBS: usize,
         const WITNESS_MASK_LIMBS: usize,
         Lang: EnhancedLanguage<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -762,6 +823,7 @@ pub(crate) mod tests {
     >(
         language_public_parameters: &Lang::PublicParameters,
         range_proof_public_parameters: &RangeProofPublicParameters<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -774,6 +836,7 @@ pub(crate) mod tests {
         Uint<WITNESS_MASK_LIMBS>: Encoding,
     {
         let mut witnesses = generate_witnesses::<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -805,6 +868,7 @@ pub(crate) mod tests {
         witnesses[0] = out_of_range_witness;
 
         let (proof, statements) = generate_valid_proof::<
+            REPETITIONS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,

@@ -12,6 +12,11 @@ use crate::{
     helpers::const_generic_array_serialization,
 };
 
+// TODO: the message generator should be a random power of the randomness generator, which can be
+// the generator of the group. we actually have a use-case here for a cyclic group without a
+// generator. Maybe I can just drop the cyclic group requirement. actually we need also the
+// randomness to be a different group than the message not sure we can use hashes to derive this
+
 /// A Batched Pedersen Commitment
 /// The public parameters ['PublicParameters'] for this commitment should be carefully constructed.
 #[derive(PartialEq, Clone)]

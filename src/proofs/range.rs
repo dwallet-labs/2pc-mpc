@@ -236,11 +236,13 @@ mod benches {
     };
 
     pub(crate) fn benchmark<
+        const REPETITIONS: usize,
         const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const NUM_RANGE_CLAIMS: usize,
         const RANGE_CLAIM_LIMBS: usize,
         const WITNESS_MASK_LIMBS: usize,
         Lang: EnhancedLanguage<
+            REPETITIONS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
@@ -252,13 +254,7 @@ mod benches {
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
-            language::enhanced::RangeProof<
-                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                NUM_RANGE_CLAIMS,
-                RANGE_CLAIM_LIMBS,
-                WITNESS_MASK_LIMBS,
-                Lang,
-            >,
+            Lang::RangeProof,
         >,
         c: &mut Criterion,
     ) where
@@ -271,6 +267,7 @@ mod benches {
 
         for batch_size in [1, 10, 100, 1000] {
             let witnesses = generate_witnesses::<
+                REPETITIONS,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 NUM_RANGE_CLAIMS,
                 RANGE_CLAIM_LIMBS,
@@ -282,6 +279,7 @@ mod benches {
                 Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
                 Vec<
                     language::enhanced::RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
+                        REPETITIONS,
                         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                         NUM_RANGE_CLAIMS,
                         RANGE_CLAIM_LIMBS,
@@ -314,6 +312,7 @@ mod benches {
                 |bench| {
                     bench.iter(|| {
                         language::enhanced::RangeProof::<
+                            REPETITIONS,
                             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                             NUM_RANGE_CLAIMS,
                             RANGE_CLAIM_LIMBS,
@@ -332,6 +331,7 @@ mod benches {
             );
 
             let (range_proof, commitments) = language::enhanced::RangeProof::<
+                REPETITIONS,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 NUM_RANGE_CLAIMS,
                 RANGE_CLAIM_LIMBS,

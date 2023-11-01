@@ -2,22 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 pub mod enhanced;
 
-use std::marker::PhantomData;
+use std::{array, marker::PhantomData};
 
 use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, U64};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    group,
     group::{GroupElement, Samplable},
+    helpers::flat_map_results,
     proofs,
     proofs::{
         schnorr::{
             language,
-            language::{
-                PublicParameters, StatementSpaceGroupElement, StatementSpaceValue,
-                WitnessSpaceGroupElement, WitnessSpaceValue,
-            },
+            language::{StatementSpaceValue, WitnessSpaceValue},
         },
         Error, TranscriptProtocol,
     },
@@ -38,29 +37,40 @@ pub(super) type ChallengeSizedNumber = ComputationalSecuritySizedNumber;
 /// Implements Appendix B. Schnorr Protocols in the paper.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Proof<
+    // Number of times this proof should be repeated to achieve sufficient security
+    const REPETITIONS: usize,
     // The language we are proving
-    Language: language::Language,
+    Language: language::Language<REPETITIONS>,
     // A struct used by the protocol using this proof,
     // used to provide extra necessary context that will parameterize the proof (and thus verifier
     // code) and be inserted to the Fiat-Shamir transcript
     ProtocolContext: Clone,
 > {
-    pub(super) statement_mask: StatementSpaceValue<Language>,
-    pub(super) response: WitnessSpaceValue<Language>,
+    #[serde(with = "crate::helpers::const_generic_array_serialization")]
+    pub(super) statement_masks: [StatementSpaceValue<REPETITIONS, Language>; REPETITIONS],
+    #[serde(with = "crate::helpers::const_generic_array_serialization")]
+    pub(super) responses: [WitnessSpaceValue<REPETITIONS, Language>; REPETITIONS],
 
     _protocol_context_choice: PhantomData<ProtocolContext>,
 }
 
-impl<Language: language::Language, ProtocolContext: Clone + Serialize>
-    Proof<Language, ProtocolContext>
+impl<
+        const REPETITIONS: usize,
+        Language: language::Language<REPETITIONS>,
+        ProtocolContext: Clone + Serialize,
+    > Proof<REPETITIONS, Language, ProtocolContext>
 {
     pub(super) fn new(
-        statement_mask: &StatementSpaceGroupElement<Language>,
-        response: &WitnessSpaceGroupElement<Language>,
+        statement_masks: &[Language::StatementSpaceGroupElement; REPETITIONS],
+        responses: &[Language::WitnessSpaceGroupElement; REPETITIONS],
     ) -> Self {
+        // TODO: this is the second time, after adding to transcript, that we call `.value()` for
+        // statement masks. Also, maybe get the values as parameter directly
         Self {
-            statement_mask: statement_mask.value(),
-            response: response.value(),
+            statement_masks: statement_masks
+                .clone()
+                .map(|statement_mask| statement_mask.value()),
+            responses: responses.clone().map(|response| response.value()),
             _protocol_context_choice: PhantomData,
         }
     }
@@ -69,15 +79,42 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
     /// Returns the zero-knowledge proof.
     pub fn prove(
         protocol_context: &ProtocolContext,
-        language_public_parameters: &PublicParameters<Language>,
-        witnesses: Vec<WitnessSpaceGroupElement<Language>>,
+        language_public_parameters: &Language::PublicParameters,
+        witnesses: Vec<Language::WitnessSpaceGroupElement>,
         rng: &mut impl CryptoRngCore,
-    ) -> proofs::Result<(Self, Vec<StatementSpaceGroupElement<Language>>)> {
-        let statements: proofs::Result<Vec<StatementSpaceGroupElement<Language>>> = witnesses
+    ) -> proofs::Result<(Self, Vec<Language::StatementSpaceGroupElement>)> {
+        let statements: proofs::Result<Vec<Language::StatementSpaceGroupElement>> = witnesses
             .iter()
             .map(|witness| Language::group_homomorphism(witness, language_public_parameters))
             .collect();
         let statements = statements?;
+
+        // TODOs
+        // 1. the challenge size in bits should be a (public) parameter (of the language). This also
+        //    means we need a "scalar_mul_bounded" trait
+        // 3. repetations (use const-generics):
+        //     - sample r randomizers -> statement-mask
+        //     - add all of them to the transcript.
+        //     - compute r vectors of batch_size challenges
+        //     - then for each such vector compute the response, the proof has r such responses + r
+        //       statement masks => array of R normal proofs.
+        // So maybe, we can use the same code just have one shared transcript for it
+        // verifying is the same, but again need to have the shared transcript.
+        // 4. range check - no need to check response is smaller than upper bound if we set the
+        //    witness size to a group of the specific size that we prove the range for.
+        // gap is for the prover not the verifier i.e. the verifier know that the witness is of
+        // witness size, i.e. response size, but prover had to have the witness even smaller than
+        // that
+        // 5. aggregation
+        // 6. randomizer should be bigger than the witness max size by 128-bit + challenge size.
+        //    witness max size should be defined in the public paramters, and then randomizer size
+        //    is bigger than that using above formula and is also dynamic. so the sampling should be
+        //    bounded. And then it doesn't need to be the phi(n) bullshit, we just need to have the
+        //    witness group be of size range claim upper bound + 128 + challenge size.
+        // language: (w, r) -> g^r*h^w (meaning a normal pedersen commitment, )
+        // 7. if we don't use multiplies of LIMB we need to do the range check.
+        // number of parties also need to be accounted for in aggregation for the size of the
+        // witness of the language. or we take an upper bound for it.
 
         Self::prove_with_statements(
             protocol_context,
@@ -91,31 +128,31 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
 
     pub(super) fn prove_with_statements(
         protocol_context: &ProtocolContext,
-        language_public_parameters: &PublicParameters<Language>,
-        witnesses: Vec<WitnessSpaceGroupElement<Language>>,
-        statements: Vec<StatementSpaceGroupElement<Language>>,
+        language_public_parameters: &Language::PublicParameters,
+        witnesses: Vec<Language::WitnessSpaceGroupElement>,
+        statements: Vec<Language::StatementSpaceGroupElement>,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<Self> {
-        let (randomizer, statement_mask) =
-            Self::sample_randomizer_and_statement_mask(language_public_parameters, rng)?;
+        let (randomizers, statement_masks) =
+            Self::sample_randomizers_and_statement_masks(language_public_parameters, rng)?;
 
         Self::prove_inner(
             protocol_context,
             language_public_parameters,
             witnesses,
             statements.clone(),
-            randomizer,
-            statement_mask,
+            randomizers,
+            statement_masks,
         )
     }
 
     pub(super) fn prove_inner(
         protocol_context: &ProtocolContext,
-        language_public_parameters: &PublicParameters<Language>,
-        witnesses: Vec<WitnessSpaceGroupElement<Language>>,
-        statements: Vec<StatementSpaceGroupElement<Language>>,
-        randomizer: WitnessSpaceGroupElement<Language>,
-        statement_mask: StatementSpaceGroupElement<Language>,
+        language_public_parameters: &Language::PublicParameters,
+        witnesses: Vec<Language::WitnessSpaceGroupElement>,
+        statements: Vec<Language::StatementSpaceGroupElement>,
+        randomizers: [Language::WitnessSpaceGroupElement; REPETITIONS],
+        statement_masks: [Language::StatementSpaceGroupElement; REPETITIONS],
     ) -> proofs::Result<Self> {
         if witnesses.is_empty() {
             return Err(Error::InvalidParameters);
@@ -130,10 +167,15 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
                 .iter()
                 .map(|statement| statement.value())
                 .collect(),
-            &statement_mask.value(),
+            &statement_masks
+                .clone()
+                .map(|statement_mask| statement_mask.value()),
         )?;
 
-        let challenges: Vec<ChallengeSizedNumber> =
+        // TODO: maybe sample should also return the value, so no expensive conversion is necessairy
+        // with `.value()`?
+
+        let challenges: [Vec<ChallengeSizedNumber>; REPETITIONS] =
             Self::compute_challenges(batch_size, &mut transcript);
 
         // Another: TODO: these don't go through modulation and we can do them not in the group
@@ -144,27 +186,41 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
         // but in practice the exponentiation (i.e. `scalar_mul`) could use
         // the real bound: `128 + log2(BatchSize)+2 < 192` to increase performance.
         // We leave that as future work in case this becomes a bottleneck.
-        // TODO
-        let response = randomizer
-            + witnesses
-                .into_iter()
-                .zip(challenges)
-                .map(|(witness, challenge)| witness.scalar_mul(&challenge))
-                .reduce(|a, b| a + b)
-                .unwrap();
 
-        Ok(Self::new(&statement_mask, &response))
+        // TODO: update comment now that it isn't necessairly 128 bit
+        // TODO: scalar_mul_bounded
+
+        let responses = randomizers
+            .into_iter()
+            .zip(challenges)
+            .map(|(randomizer, challenges_for_iteration)| {
+                randomizer
+                    + witnesses
+                        .clone()
+                        .into_iter()
+                        .zip(challenges_for_iteration)
+                        .map(|(witness, challenge)| witness.scalar_mul(&challenge))
+                        .reduce(|a, b| a + b)
+                        .unwrap()
+            })
+            .collect::<Vec<_>>()
+            .try_into()
+            .map_err(|_| proofs::Error::Conversion)?;
+
+        Ok(Self::new(&statement_masks, &responses))
     }
 
     /// Verify a batched Schnorr zero-knowledge proof.
     pub fn verify(
         &self,
         protocol_context: &ProtocolContext,
-        language_public_parameters: &PublicParameters<Language>,
-        statements: Vec<StatementSpaceGroupElement<Language>>,
+        language_public_parameters: &Language::PublicParameters,
+        statements: Vec<Language::StatementSpaceGroupElement>,
     ) -> proofs::Result<()> {
         let batch_size = statements.len();
 
+        // TODO: maybe here we can get statements as values already, esp. if we sample them this
+        // way?
         let mut transcript = Self::setup_transcript(
             protocol_context,
             language_public_parameters,
@@ -172,67 +228,89 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
                 .iter()
                 .map(|statement| statement.value())
                 .collect(),
-            &self.statement_mask,
+            &self.statement_masks,
         )?;
 
-        let challenges: Vec<ChallengeSizedNumber> =
+        let challenges: [Vec<ChallengeSizedNumber>; REPETITIONS] =
             Self::compute_challenges(batch_size, &mut transcript);
 
-        let response = WitnessSpaceGroupElement::<Language>::new(
-            self.response.clone(),
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
-        )?;
+        let responses = flat_map_results(self.responses.map(|response| {
+            Language::WitnessSpaceGroupElement::new(
+                response,
+                &language_public_parameters
+                    .as_ref()
+                    .witness_space_public_parameters,
+            )
+        }))?;
 
-        let statement_mask = StatementSpaceGroupElement::<Language>::new(
-            self.statement_mask.clone(),
-            &language_public_parameters
-                .as_ref()
-                .statement_space_public_parameters,
-        )?;
+        let statement_masks = flat_map_results(self.statement_masks.map(|statement_mask| {
+            Language::StatementSpaceGroupElement::new(
+                statement_mask,
+                &language_public_parameters
+                    .as_ref()
+                    .statement_space_public_parameters,
+            )
+        }))?;
 
-        let response_statement: StatementSpaceGroupElement<Language> =
-            Language::group_homomorphism(&response, language_public_parameters)?;
+        let response_statements: [Language::StatementSpaceGroupElement; REPETITIONS] =
+            flat_map_results(responses.map(|response| {
+                Language::group_homomorphism(&response, language_public_parameters)
+            }))?;
 
-        let reconstructed_response_statement: StatementSpaceGroupElement<Language> = statement_mask
-            + statements
+        // TODO: helper function that zips
+        // TODO: scalar_mul_bounded
+        let reconstructed_response_statements: [Language::StatementSpaceGroupElement; REPETITIONS] =
+            statement_masks
                 .into_iter()
                 .zip(challenges)
-                .map(|(statement, challenge)| statement.scalar_mul(&challenge))
-                .reduce(|a, b| a + b)
-                .unwrap();
+                .map(|(statement_mask, challenges_for_iteration)| {
+                    statement_mask
+                        + statements
+                            .clone()
+                            .into_iter()
+                            .zip(challenges_for_iteration)
+                            .map(|(statement, challenge)| statement.scalar_mul(&challenge))
+                            .reduce(|a, b| a + b)
+                            .unwrap()
+                })
+                .collect::<Vec<_>>()
+                .try_into()
+                .map_err(|_| proofs::Error::Conversion)?;
 
-        if response_statement == reconstructed_response_statement {
+        if response_statements == reconstructed_response_statements {
             return Ok(());
         }
         Err(Error::ProofVerification)
     }
 
-    pub(super) fn sample_randomizer_and_statement_mask(
-        language_public_parameters: &PublicParameters<Language>,
+    pub(super) fn sample_randomizers_and_statement_masks(
+        language_public_parameters: &Language::PublicParameters,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(
-        WitnessSpaceGroupElement<Language>,
-        StatementSpaceGroupElement<Language>,
+        [Language::WitnessSpaceGroupElement; REPETITIONS],
+        [Language::StatementSpaceGroupElement; REPETITIONS],
     )> {
-        let randomizer = WitnessSpaceGroupElement::<Language>::sample(
-            rng,
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
-        )?;
+        let randomizers = flat_map_results(array::from_fn(|_| {
+            Language::WitnessSpaceGroupElement::sample(
+                rng,
+                &language_public_parameters
+                    .as_ref()
+                    .witness_space_public_parameters,
+            )
+        }))?;
 
-        let statement_mask = Language::group_homomorphism(&randomizer, language_public_parameters)?;
+        let statement_masks = flat_map_results(randomizers.clone().map(|randomizer| {
+            Language::group_homomorphism(&randomizer, language_public_parameters)
+        }))?;
 
-        Ok((randomizer, statement_mask))
+        Ok((randomizers, statement_masks))
     }
 
     pub(super) fn setup_transcript(
         protocol_context: &ProtocolContext,
-        language_public_parameters: &PublicParameters<Language>,
-        statements: Vec<StatementSpaceValue<Language>>,
-        statement_mask_value: &StatementSpaceValue<Language>,
+        language_public_parameters: &Language::PublicParameters,
+        statements: Vec<group::Value<Language::StatementSpaceGroupElement>>,
+        statement_masks_values: &[group::Value<Language::StatementSpaceGroupElement>; REPETITIONS],
     ) -> proofs::Result<Transcript> {
         let mut transcript = Transcript::new(Language::NAME.as_bytes());
 
@@ -268,8 +346,13 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
             return Err(Error::InvalidParameters);
         }
 
-        transcript
-            .serialize_to_transcript_as_json(b"statement mask value", statement_mask_value)?;
+        if statement_masks_values.iter().any(|statement_mask| {
+            transcript
+                .serialize_to_transcript_as_json(b"statement mask value", &statement_mask)
+                .is_err()
+        }) {
+            return Err(Error::InvalidParameters);
+        }
 
         Ok(transcript)
     }
@@ -277,17 +360,19 @@ impl<Language: language::Language, ProtocolContext: Clone + Serialize>
     fn compute_challenges(
         batch_size: usize,
         transcript: &mut Transcript,
-    ) -> Vec<ChallengeSizedNumber> {
-        (1..=batch_size)
-            .map(|_| {
-                let challenge = transcript.challenge(b"challenge");
+    ) -> [Vec<ChallengeSizedNumber>; REPETITIONS] {
+        array::from_fn(|_| {
+            (1..=batch_size)
+                .map(|_| {
+                    let challenge = transcript.challenge(b"challenge");
 
-                // we don't have to do this because Merlin uses a PRF behind the scenes,
-                // but we do it anyways as a security best-practice
-                transcript.append_uint(b"challenge", &challenge);
+                    // we don't have to do this because Merlin uses a PRF behind the scenes,
+                    // but we do it anyways as a security best-practice
+                    transcript.append_uint(b"challenge", &challenge);
 
-                challenge
-            })
-            .collect()
+                    challenge
+                })
+                .collect()
+        })
     }
 }

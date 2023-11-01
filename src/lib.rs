@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod ahe;
 pub mod commitments;
-mod dkg;
+// mod dkg;
 pub mod group;
 pub(crate) mod helpers;
 pub mod proofs;

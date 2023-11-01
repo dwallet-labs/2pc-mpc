@@ -21,10 +21,15 @@ pub mod knowledge_of_decommitment;
 pub mod knowledge_of_discrete_log;
 // TODO: add + Serialize + for<'a> Deserialize<'a> to the trait ?!? why can't I
 
+// TODO: take REPETITIONS, add bits
+
 /// A Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`.
 /// As defined in Appendix B. Schnorr Protocols in the paper.
-pub trait Language: Clone {
+pub trait Language<
+    // Number of times schnorr proofs for this language should be repeated to achieve sufficient security
+    const REPETITIONS: usize,
+>: Clone {
     /// An element of the witness space $(\HH_\pp, +)$
     type WitnessSpaceGroupElement: GroupElement + Samplable;
 
@@ -39,37 +44,46 @@ pub trait Language: Clone {
     /// `WitnessSpaceGroupElement::PublicParameters` and
     /// `StatementSpaceGroupElement::PublicParameters`.
     type PublicParameters: AsRef<
-            GroupsPublicParameters<
-                group::PublicParameters<Self::WitnessSpaceGroupElement>,
-                group::PublicParameters<Self::StatementSpaceGroupElement>,
-            >,
-        > + Serialize
-        + PartialEq
-        + Clone;
+        GroupsPublicParameters<
+            group::PublicParameters<Self::WitnessSpaceGroupElement>,
+            group::PublicParameters<Self::StatementSpaceGroupElement>,
+        >,
+    > + Serialize
+    + PartialEq
+    + Clone;
 
     /// A unique string representing the name of this language; will be inserted to the Fiat-Shamir
     /// transcript.
     const NAME: &'static str;
 
+    // The number of bits to use for the challenge
+    fn challenge_bits(number_of_parties: usize, batch_size: usize) -> usize {
+        // TODO: what's the formula?
+        128
+    }
+
     /// A group homomorphism $\phi:\HH\to\GG$  from $(\HH_\pp, +)$, the witness space,
     /// to $(\GG_\pp,\cdot)$, the statement space space.
     fn group_homomorphism(
-        witness: &WitnessSpaceGroupElement<Self>,
-        language_public_parameters: &PublicParameters<Self>,
-    ) -> Result<StatementSpaceGroupElement<Self>>;
+        witness: &Self::WitnessSpaceGroupElement,
+        language_public_parameters: &Self::PublicParameters,
+    ) -> Result<Self::StatementSpaceGroupElement>;
 }
 
-pub(in crate::proofs) type PublicParameters<L> = <L as Language>::PublicParameters;
-pub(in crate::proofs) type WitnessSpaceGroupElement<L> = <L as Language>::WitnessSpaceGroupElement;
-pub(in crate::proofs) type WitnessSpacePublicParameters<L> =
-    group::PublicParameters<WitnessSpaceGroupElement<L>>;
-pub(in crate::proofs) type WitnessSpaceValue<L> = group::Value<WitnessSpaceGroupElement<L>>;
-
-pub(in crate::proofs) type StatementSpaceGroupElement<L> =
-    <L as Language>::StatementSpaceGroupElement;
-pub(in crate::proofs) type StatementSpacePublicParameters<L> =
-    group::PublicParameters<StatementSpaceGroupElement<L>>;
-pub(in crate::proofs) type StatementSpaceValue<L> = group::Value<StatementSpaceGroupElement<L>>;
+pub(in crate::proofs) type PublicParameters<const REPETITIONS: usize, L> =
+    <L as Language<REPETITIONS>>::PublicParameters;
+pub(in crate::proofs) type WitnessSpaceGroupElement<const REPETITIONS: usize, L> =
+    <L as Language<REPETITIONS>>::WitnessSpaceGroupElement;
+pub(in crate::proofs) type WitnessSpacePublicParameters<const REPETITIONS: usize, L> =
+    group::PublicParameters<WitnessSpaceGroupElement<REPETITIONS, L>>;
+pub(in crate::proofs) type WitnessSpaceValue<const REPETITIONS: usize, L> =
+    group::Value<WitnessSpaceGroupElement<REPETITIONS, L>>;
+pub(in crate::proofs) type StatementSpaceGroupElement<const REPETITIONS: usize, L> =
+    <L as Language<REPETITIONS>>::StatementSpaceGroupElement;
+pub(in crate::proofs) type StatementSpacePublicParameters<const REPETITIONS: usize, L> =
+    group::PublicParameters<StatementSpaceGroupElement<REPETITIONS, L>>;
+pub(in crate::proofs) type StatementSpaceValue<const REPETITIONS: usize, L> =
+    group::Value<StatementSpaceGroupElement<REPETITIONS, L>>;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
@@ -89,12 +103,12 @@ pub(crate) mod tests {
         proofs::{schnorr::Proof, Error},
     };
 
-    pub(crate) fn generate_witnesses<Lang: Language>(
+    pub(crate) fn generate_witnesses<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
         language_public_parameters: &Lang::PublicParameters,
         batch_size: usize,
-    ) -> Vec<WitnessSpaceGroupElement<Lang>> {
+    ) -> Vec<Lang::WitnessSpaceGroupElement> {
         iter::repeat_with(|| {
-            WitnessSpaceGroupElement::<Lang>::sample(
+            Lang::WitnessSpaceGroupElement::sample(
                 &mut OsRng,
                 &language_public_parameters
                     .as_ref()
@@ -106,30 +120,35 @@ pub(crate) mod tests {
         .collect()
     }
 
-    pub(crate) fn generate_witnesses_for_aggregation<Lang: Language>(
+    pub(crate) fn generate_witnesses_for_aggregation<
+        const REPETITIONS: usize,
+        Lang: Language<REPETITIONS>,
+    >(
         language_public_parameters: &Lang::PublicParameters,
         number_of_parties: usize,
         batch_size: usize,
-    ) -> Vec<Vec<WitnessSpaceGroupElement<Lang>>> {
-        iter::repeat_with(|| generate_witnesses::<Lang>(language_public_parameters, batch_size))
-            .take(number_of_parties)
-            .collect()
+    ) -> Vec<Vec<Lang::WitnessSpaceGroupElement>> {
+        iter::repeat_with(|| {
+            generate_witnesses::<REPETITIONS, Lang>(language_public_parameters, batch_size)
+        })
+        .take(number_of_parties)
+        .collect()
     }
 
-    pub(crate) fn generate_witness<Lang: Language>(
+    pub(crate) fn generate_witness<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
         language_public_parameters: &Lang::PublicParameters,
-    ) -> WitnessSpaceGroupElement<Lang> {
-        let witnesses = generate_witnesses::<Lang>(language_public_parameters, 1);
+    ) -> Lang::WitnessSpaceGroupElement {
+        let witnesses = generate_witnesses::<REPETITIONS, Lang>(language_public_parameters, 1);
 
         witnesses.first().unwrap().clone()
     }
 
-    pub(crate) fn generate_valid_proof<Lang: Language>(
+    pub(crate) fn generate_valid_proof<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
         language_public_parameters: &Lang::PublicParameters,
-        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
+        witnesses: Vec<Lang::WitnessSpaceGroupElement>,
     ) -> (
-        Proof<Lang, PhantomData<()>>,
-        Vec<StatementSpaceGroupElement<Lang>>,
+        Proof<REPETITIONS, Lang, PhantomData<()>>,
+        Vec<Lang::StatementSpaceGroupElement>,
     ) {
         Proof::prove(
             &PhantomData,
@@ -143,14 +162,17 @@ pub(crate) mod tests {
     // TODO: why is this considered as dead code, if its being called from a test in other modules?
 
     #[allow(dead_code)]
-    pub(crate) fn valid_proof_verifies<Lang: Language>(
+    pub(crate) fn valid_proof_verifies<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
         language_public_parameters: Lang::PublicParameters,
         batch_size: usize,
     ) {
-        let witnesses = generate_witnesses::<Lang>(&language_public_parameters, batch_size);
+        let witnesses =
+            generate_witnesses::<REPETITIONS, Lang>(&language_public_parameters, batch_size);
 
-        let (proof, statements) =
-            generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone());
+        let (proof, statements) = generate_valid_proof::<REPETITIONS, Lang>(
+            &language_public_parameters,
+            witnesses.clone(),
+        );
 
         assert!(
             proof
@@ -161,18 +183,24 @@ pub(crate) mod tests {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn invalid_proof_fails_verification<Lang: Language>(
-        invalid_witness_space_value: Option<WitnessSpaceValue<Lang>>,
-        invalid_statement_space_value: Option<StatementSpaceValue<Lang>>,
+    pub(crate) fn invalid_proof_fails_verification<
+        const REPETITIONS: usize,
+        Lang: Language<REPETITIONS>,
+    >(
+        invalid_witness_space_value: Option<WitnessSpaceValue<REPETITIONS, Lang>>,
+        invalid_statement_space_value: Option<StatementSpaceValue<REPETITIONS, Lang>>,
         language_public_parameters: Lang::PublicParameters,
         batch_size: usize,
     ) {
-        let witnesses = generate_witnesses::<Lang>(&language_public_parameters, batch_size);
+        let witnesses =
+            generate_witnesses::<REPETITIONS, Lang>(&language_public_parameters, batch_size);
 
-        let (valid_proof, statements) =
-            generate_valid_proof::<Lang>(&language_public_parameters, witnesses.clone());
+        let (valid_proof, statements) = generate_valid_proof::<REPETITIONS, Lang>(
+            &language_public_parameters,
+            witnesses.clone(),
+        );
 
-        let wrong_witness = generate_witness::<Lang>(&language_public_parameters);
+        let wrong_witness = generate_witness::<REPETITIONS, Lang>(&language_public_parameters);
 
         let wrong_statement =
             Lang::group_homomorphism(&wrong_witness, &language_public_parameters).unwrap();
@@ -198,7 +226,7 @@ pub(crate) mod tests {
         );
 
         let mut invalid_proof = valid_proof.clone();
-        invalid_proof.response = wrong_witness.value();
+        invalid_proof.responses = [wrong_witness.value(); REPETITIONS];
 
         assert!(
             matches!(
@@ -216,7 +244,7 @@ pub(crate) mod tests {
         );
 
         let mut invalid_proof = valid_proof.clone();
-        invalid_proof.statement_mask = wrong_statement.neutral().value();
+        invalid_proof.statement_masks = [wrong_statement.neutral().value(); REPETITIONS];
 
         assert!(
             matches!(
@@ -234,7 +262,7 @@ pub(crate) mod tests {
         );
 
         let mut invalid_proof = valid_proof.clone();
-        invalid_proof.response = wrong_witness.neutral().value();
+        invalid_proof.responses = [wrong_witness.neutral().value(); REPETITIONS];
 
         assert!(
             matches!(
@@ -253,7 +281,7 @@ pub(crate) mod tests {
 
         if let Some(invalid_statement_space_value) = invalid_statement_space_value {
             let mut invalid_proof = valid_proof.clone();
-            invalid_proof.statement_mask = invalid_statement_space_value;
+            invalid_proof.statement_masks = [invalid_statement_space_value; REPETITIONS];
 
             assert!(matches!(
             invalid_proof
@@ -271,7 +299,7 @@ pub(crate) mod tests {
 
         if let Some(invalid_witness_space_value) = invalid_witness_space_value {
             let mut invalid_proof = valid_proof.clone();
-            invalid_proof.response = invalid_witness_space_value;
+            invalid_proof.responses = [invalid_witness_space_value; REPETITIONS];
 
             assert!(matches!(
             invalid_proof
@@ -289,13 +317,18 @@ pub(crate) mod tests {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn proof_over_invalid_public_parameters_fails_verification<Lang: Language>(
+    pub(crate) fn proof_over_invalid_public_parameters_fails_verification<
+        const REPETITIONS: usize,
+        Lang: Language<REPETITIONS>,
+    >(
         prover_language_public_parameters: Lang::PublicParameters,
         verifier_language_public_parameters: Lang::PublicParameters,
-        witnesses: Vec<WitnessSpaceGroupElement<Lang>>,
+        witnesses: Vec<Lang::WitnessSpaceGroupElement>,
     ) {
-        let (proof, statements) =
-            generate_valid_proof::<Lang>(&prover_language_public_parameters, witnesses.clone());
+        let (proof, statements) = generate_valid_proof::<REPETITIONS, Lang>(
+            &prover_language_public_parameters,
+            witnesses.clone(),
+        );
 
         assert!(
             matches!(
@@ -324,7 +357,7 @@ mod benches {
     use super::*;
     use crate::proofs::schnorr::{language::tests::generate_witnesses, Proof};
 
-    pub(crate) fn benchmark<Lang: Language>(
+    pub(crate) fn benchmark<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
         language_public_parameters: Lang::PublicParameters,
         c: &mut Criterion,
     ) {
@@ -333,9 +366,10 @@ mod benches {
         g.sample_size(10);
 
         for batch_size in [1, 10, 100, 1000] {
-            let witnesses = generate_witnesses::<Lang>(&language_public_parameters, batch_size);
+            let witnesses =
+                generate_witnesses::<REPETITIONS, Lang>(&language_public_parameters, batch_size);
 
-            let statements: proofs::Result<Vec<StatementSpaceGroupElement<Lang>>> = witnesses
+            let statements: proofs::Result<Vec<Lang::StatementSpaceGroupElement>> = witnesses
                 .iter()
                 .map(|witness| Lang::group_homomorphism(witness, &language_public_parameters))
                 .collect();
@@ -351,11 +385,13 @@ mod benches {
                 format!("schnorr::Proof::setup_transcript() over {batch_size} statements"),
                 |bench| {
                     bench.iter(|| {
-                        Proof::<Lang, PhantomData<()>>::setup_transcript(
+                        Proof::<REPETITIONS, Lang, PhantomData<()>>::setup_transcript(
                             &PhantomData,
                             &language_public_parameters,
                             statements_values.clone(),
-                            statements_values.first().unwrap(),
+                            // just a stub value as the value doesn't affect the benchmarking of
+                            // this function
+                            &[*statements_values.first().unwrap(); REPETITIONS],
                         )
                     })
                 },
@@ -365,7 +401,7 @@ mod benches {
                 format!("schnorr::Proof::prove_inner() over {batch_size} statements"),
                 |bench| {
                     bench.iter(|| {
-                        Proof::<Lang, PhantomData<()>>::prove_with_statements(
+                        Proof::<REPETITIONS, Lang, PhantomData<()>>::prove_with_statements(
                             &PhantomData,
                             &language_public_parameters,
                             witnesses.clone(),
@@ -377,7 +413,7 @@ mod benches {
                 },
             );
 
-            let proof = Proof::<Lang, PhantomData<()>>::prove_with_statements(
+            let proof = Proof::<REPETITIONS, Lang, PhantomData<()>>::prove_with_statements(
                 &PhantomData,
                 &language_public_parameters,
                 witnesses.clone(),

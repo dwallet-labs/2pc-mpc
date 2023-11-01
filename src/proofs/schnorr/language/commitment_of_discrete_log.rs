@@ -6,13 +6,18 @@ use std::{marker::PhantomData, ops::Mul};
 pub(crate) use benches::benchmark;
 use serde::{Deserialize, Serialize};
 
-use super::{GroupsPublicParameters, StatementSpacePublicParameters, WitnessSpacePublicParameters};
+use super::GroupsPublicParameters;
 use crate::{
     commitments::HomomorphicCommitmentScheme,
     group::{self_product, BoundedGroupElement, CyclicGroupElement, Samplable},
     proofs,
-    proofs::schnorr,
+    proofs::{
+        schnorr,
+        schnorr::language::{StatementSpacePublicParameters, WitnessSpacePublicParameters},
+    },
 };
+
+pub(crate) const REPETITIONS: usize = 1;
 
 /// Commitment of Discrete Log Schnorr Language
 ///
@@ -32,7 +37,8 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentS
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
-impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> schnorr::Language
+impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
+    schnorr::Language<REPETITIONS>
     for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
 where
     Scalar: BoundedGroupElement<SCALAR_LIMBS>
@@ -52,8 +58,8 @@ where
     type StatementSpaceGroupElement = self_product::GroupElement<2, GroupElement>;
 
     type PublicParameters = PublicParameters<
-        WitnessSpacePublicParameters<Self>,
-        StatementSpacePublicParameters<Self>,
+        WitnessSpacePublicParameters<REPETITIONS, Self>,
+        StatementSpacePublicParameters<REPETITIONS, Self>,
         GroupElement::Value,
         CommitmentScheme::PublicParameters,
     >;
@@ -61,9 +67,9 @@ where
     const NAME: &'static str = "Commitment of Discrete Log";
 
     fn group_homomorphism(
-        witness: &super::WitnessSpaceGroupElement<Self>,
-        language_public_parameters: &super::PublicParameters<Self>,
-    ) -> proofs::Result<super::StatementSpaceGroupElement<Self>> {
+        witness: &Self::WitnessSpaceGroupElement,
+        language_public_parameters: &Self::PublicParameters,
+    ) -> proofs::Result<Self::StatementSpaceGroupElement> {
         let [value, randomness]: &[Scalar; 2] = witness.into();
 
         let base = GroupElement::new(
@@ -132,14 +138,14 @@ mod tests {
         proofs::schnorr::{aggregation, language},
     };
 
-    pub(crate) fn language_public_parameters() -> language::PublicParameters<
-        Language<
-            { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
-            secp256k1::GroupElement,
-            Pedersen<1, { secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
-        >,
-    > {
+    pub(crate) type Lang = Language<
+        { secp256k1::SCALAR_LIMBS },
+        secp256k1::Scalar,
+        secp256k1::GroupElement,
+        Pedersen<1, { secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
+    >;
+
+    pub(crate) fn language_public_parameters() -> language::PublicParameters<REPETITIONS, Lang> {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
@@ -197,19 +203,10 @@ mod tests {
     fn valid_proof_verifies(#[case] batch_size: usize) {
         let language_public_parameters = language_public_parameters();
 
-        language::tests::valid_proof_verifies::<
-            Language<
-                { secp256k1::SCALAR_LIMBS },
-                secp256k1::Scalar,
-                secp256k1::GroupElement,
-                Pedersen<
-                    1,
-                    { secp256k1::SCALAR_LIMBS },
-                    secp256k1::Scalar,
-                    secp256k1::GroupElement,
-                >,
-            >,
-        >(language_public_parameters, batch_size)
+        language::tests::valid_proof_verifies::<REPETITIONS, Lang>(
+            language_public_parameters,
+            batch_size,
+        )
     }
 
     #[rstest]
@@ -220,33 +217,13 @@ mod tests {
     #[case(5, 2)]
     fn aggregates(#[case] number_of_parties: usize, #[case] batch_size: usize) {
         let language_public_parameters = language_public_parameters();
-        let witnesses = language::tests::generate_witnesses_for_aggregation::<
-            Language<
-                { secp256k1::SCALAR_LIMBS },
-                secp256k1::Scalar,
-                secp256k1::GroupElement,
-                Pedersen<
-                    1,
-                    { secp256k1::SCALAR_LIMBS },
-                    secp256k1::Scalar,
-                    secp256k1::GroupElement,
-                >,
-            >,
-        >(&language_public_parameters, number_of_parties, batch_size);
+        let witnesses = language::tests::generate_witnesses_for_aggregation::<REPETITIONS, Lang>(
+            &language_public_parameters,
+            number_of_parties,
+            batch_size,
+        );
 
-        aggregation::tests::aggregates::<
-            Language<
-                { secp256k1::SCALAR_LIMBS },
-                secp256k1::Scalar,
-                secp256k1::GroupElement,
-                Pedersen<
-                    1,
-                    { secp256k1::SCALAR_LIMBS },
-                    secp256k1::Scalar,
-                    secp256k1::GroupElement,
-                >,
-            >,
-        >(&language_public_parameters, witnesses)
+        aggregation::tests::aggregates::<REPETITIONS, Lang>(&language_public_parameters, witnesses)
     }
 
     #[rstest]
@@ -259,19 +236,12 @@ mod tests {
         // No invalid values as secp256k1 statically defines group,
         // `k256::AffinePoint` assures deserialized values are on curve,
         // and `Value` can only be instantiated through deserialization
-        language::tests::invalid_proof_fails_verification::<
-            Language<
-                { secp256k1::SCALAR_LIMBS },
-                secp256k1::Scalar,
-                secp256k1::GroupElement,
-                Pedersen<
-                    1,
-                    { secp256k1::SCALAR_LIMBS },
-                    secp256k1::Scalar,
-                    secp256k1::GroupElement,
-                >,
-            >,
-        >(None, None, language_public_parameters, batch_size)
+        language::tests::invalid_proof_fails_verification::<REPETITIONS, Lang>(
+            None,
+            None,
+            language_public_parameters,
+            batch_size,
+        )
     }
 }
 
@@ -285,39 +255,15 @@ mod benches {
         group::secp256k1,
         proofs::schnorr::{
             aggregation, language,
-            language::commitment_of_discrete_log::tests::language_public_parameters,
+            language::commitment_of_discrete_log::tests::{language_public_parameters, Lang},
         },
     };
 
     pub(crate) fn benchmark(c: &mut Criterion) {
         let language_public_parameters = language_public_parameters();
 
-        language::benchmark::<
-            Language<
-                { secp256k1::SCALAR_LIMBS },
-                secp256k1::Scalar,
-                secp256k1::GroupElement,
-                Pedersen<
-                    1,
-                    { secp256k1::SCALAR_LIMBS },
-                    secp256k1::Scalar,
-                    secp256k1::GroupElement,
-                >,
-            >,
-        >(language_public_parameters.clone(), c);
+        language::benchmark::<REPETITIONS, Lang>(language_public_parameters.clone(), c);
 
-        aggregation::benchmark::<
-            Language<
-                { secp256k1::SCALAR_LIMBS },
-                secp256k1::Scalar,
-                secp256k1::GroupElement,
-                Pedersen<
-                    1,
-                    { secp256k1::SCALAR_LIMBS },
-                    secp256k1::Scalar,
-                    secp256k1::GroupElement,
-                >,
-            >,
-        >(language_public_parameters, c);
+        aggregation::benchmark::<REPETITIONS, Lang>(language_public_parameters, c);
     }
 }
