@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     commitments::{GroupsPublicParameters, HomomorphicCommitmentScheme},
     group,
-    group::{self_product, CyclicGroupElement, KnownOrderGroupElement, Samplable},
+    group::{self_product, BoundedGroupElement, KnownOrderGroupElement, Samplable},
     helpers::const_generic_array_serialization,
 };
 
@@ -17,8 +17,11 @@ use crate::{
 // generator. Maybe I can just drop the cyclic group requirement. actually we need also the
 // randomness to be a different group than the message not sure we can use hashes to derive this
 
+// TODO: scalar_mul_bounded
+
 /// A Batched Pedersen Commitment
 /// The public parameters ['PublicParameters'] for this commitment should be carefully constructed.
+/// TODO: Safe for cyclic groups, but doesn't need generator(s). Known order?
 #[derive(PartialEq, Clone)]
 pub struct Pedersen<
     const BATCH_SIZE: usize,
@@ -38,14 +41,15 @@ impl<const BATCH_SIZE: usize, const SCALAR_LIMBS: usize, Scalar, GroupElement>
     HomomorphicCommitmentScheme<SCALAR_LIMBS>
     for Pedersen<BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement>
 where
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
-        + CyclicGroupElement
+    Scalar: BoundedGroupElement<SCALAR_LIMBS>
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Samplable
         + Copy,
-    GroupElement: CyclicGroupElement,
+    GroupElement: group::GroupElement,
 {
+    // TODO: actually we can use a different randomizer and message spaces, e.g. allowing infinite
+    // range (integer commitments)
     type MessageSpaceGroupElement = MessageSpaceGroupElement<BATCH_SIZE, Scalar>;
     type RandomnessSpaceGroupElement = RandomnessSpaceGroupElement<Scalar>;
     type CommitmentSpaceGroupElement = CommitmentSpaceGroupElement<GroupElement>;

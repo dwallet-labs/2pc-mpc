@@ -113,7 +113,8 @@ impl<
         //    is bigger than that using above formula and is also dynamic. so the sampling should be
         //    bounded. And then it doesn't need to be the phi(n) bullshit, we just need to have the
         //    witness group be of size range claim upper bound + 128 + challenge size.
-        // language: (w, r) -> g^r*h^w (meaning a normal pedersen commitment, )
+        // language: (w, r) -> g^r*h^w (meaning a normal pedersen commitment, ) TODO: this is
+        // actually knowledge_of_decommitment with pedersen commitment and special group right?
         // 7. if we don't use multiplies of LIMB we need to do the range check.
         // number of parties also need to be accounted for in aggregation for the size of the
         // witness of the language. or we take an upper bound for it.

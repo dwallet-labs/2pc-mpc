@@ -13,7 +13,10 @@ use group::GroupElement as _;
 use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
-use crate::{group, group::Samplable};
+use crate::{
+    group,
+    group::{BoundedGroupElement, Samplable},
+};
 // TODO: make this specific for Paillier, document.
 
 /// An element of the multiplicative group of integers modulo `n` $\mathbb{Z}_n^*$
@@ -63,7 +66,10 @@ impl<const LIMBS: usize> Value<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
-    fn new(value: Uint<LIMBS>, public_parameters: &PublicParameters<LIMBS>) -> group::Result<Self> {
+    pub fn new(
+        value: Uint<LIMBS>,
+        public_parameters: &PublicParameters<LIMBS>,
+    ) -> group::Result<Self> {
         let element = DynResidue::<LIMBS>::new(&value, public_parameters.params);
 
         Ok(Self(*element.as_montgomery()))
@@ -343,6 +349,50 @@ where
     }
 }
 
+impl<const LIMBS: usize> Mul<GroupElement<LIMBS>> for GroupElement<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    type Output = GroupElement<LIMBS>;
+
+    fn mul(self, rhs: GroupElement<LIMBS>) -> Self::Output {
+        self.scalar_mul(&Uint::<LIMBS>::from(&rhs))
+    }
+}
+
+impl<const LIMBS: usize> Mul<&GroupElement<LIMBS>> for GroupElement<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    type Output = GroupElement<LIMBS>;
+
+    fn mul(self, rhs: &GroupElement<LIMBS>) -> Self::Output {
+        self.scalar_mul(&Uint::<LIMBS>::from(rhs))
+    }
+}
+
+impl<const LIMBS: usize> Mul<GroupElement<LIMBS>> for &GroupElement<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    type Output = GroupElement<LIMBS>;
+
+    fn mul(self, rhs: GroupElement<LIMBS>) -> Self::Output {
+        self.scalar_mul(&Uint::<LIMBS>::from(&rhs))
+    }
+}
+
+impl<const LIMBS: usize> Mul<&GroupElement<LIMBS>> for &GroupElement<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    type Output = GroupElement<LIMBS>;
+
+    fn mul(self, rhs: &GroupElement<LIMBS>) -> Self::Output {
+        self.scalar_mul(&Uint::<LIMBS>::from(rhs))
+    }
+}
+
 impl<const LIMBS: usize> From<GroupElement<LIMBS>> for Uint<LIMBS> {
     fn from(value: GroupElement<LIMBS>) -> Self {
         value.0.retrieve()
@@ -406,5 +456,17 @@ where
 {
     fn from(value: &'r DynResidue<LIMBS>) -> Self {
         Value(*value.as_montgomery())
+    }
+}
+
+impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn scalar_lower_bound_from_public_parameters(
+        public_parameters: &Self::PublicParameters,
+    ) -> Uint<LIMBS> {
+        // TODO: how to do this?
+        todo!()
     }
 }

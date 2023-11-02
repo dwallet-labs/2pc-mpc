@@ -56,7 +56,7 @@ pub trait Language<
     /// transcript.
     const NAME: &'static str;
 
-    // The number of bits to use for the challenge
+    /// The number of bits to use for the challenge
     fn challenge_bits(number_of_parties: usize, batch_size: usize) -> usize {
         // TODO: what's the formula?
         128

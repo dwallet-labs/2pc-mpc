@@ -10,7 +10,8 @@ use super::GroupsPublicParameters;
 use crate::{
     commitments,
     commitments::{pedersen, HomomorphicCommitmentScheme, Pedersen},
-    group::{self_product, CyclicGroupElement, KnownOrderGroupElement, Samplable},
+    group,
+    group::{self_product, CyclicGroupElement, GroupElement, KnownOrderGroupElement, Samplable},
     proofs,
     proofs::schnorr,
 };
@@ -38,12 +39,11 @@ impl<const SCALAR_LIMBS: usize, Scalar, GroupElement> schnorr::Language<REPETITI
     for Language<SCALAR_LIMBS, Scalar, GroupElement>
 where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
-        + CyclicGroupElement
         + Samplable
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Copy,
-    GroupElement: CyclicGroupElement,
+    GroupElement: group::GroupElement,
 {
     type WitnessSpaceGroupElement = self_product::GroupElement<3, Scalar>;
     type StatementSpaceGroupElement = self_product::GroupElement<2, GroupElement>;

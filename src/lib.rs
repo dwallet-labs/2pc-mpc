@@ -54,12 +54,13 @@ pub type PartyID = u16;
 #[cfg(feature = "benchmarking")]
 criterion_group!(
     benches,
-    proofs::transcript_protocol::benchmark,
-    proofs::schnorr::knowledge_of_discrete_log::benchmark,
-    proofs::schnorr::knowledge_of_decommitment::benchmark,
-    proofs::schnorr::commitment_of_discrete_log::benchmark,
-    proofs::schnorr::discrete_log_ratio_of_commited_values::benchmark,
-    proofs::schnorr::encryption_of_discrete_log::benchmark,
-    proofs::schnorr::encryption_of_tuple::benchmark,
-    proofs::schnorr::committed_linear_evaluation::benchmark,
+    // proofs::transcript_protocol::benchmark,
+    // proofs::schnorr::knowledge_of_discrete_log::benchmark,
+    proofs::schnorr::knowledge_of_decommitment::benchmark_zero_knowledge,
+    proofs::schnorr::knowledge_of_decommitment::benchmark_secp256k1_range_proof,
+    // proofs::schnorr::commitment_of_discrete_log::benchmark,
+    // proofs::schnorr::discrete_log_ratio_of_commited_values::benchmark,
+    // proofs::schnorr::encryption_of_discrete_log::benchmark,
+    // proofs::schnorr::encryption_of_tuple::benchmark,
+    // proofs::schnorr::committed_linear_evaluation::benchmark,
 );
