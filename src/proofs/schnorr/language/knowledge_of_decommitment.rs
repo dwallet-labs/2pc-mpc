@@ -153,7 +153,7 @@ mod tests {
         ahe::paillier::tests::N,
         commitments::{pedersen, Pedersen},
         group::{multiplicative_group_of_integers_modulu_n, secp256k1, GroupElement, Samplable},
-        proofs::schnorr::{aggregation, language},
+        proofs::schnorr::{aggregation, language, language::Language as _},
     };
 
     pub(crate) type Secp256k1Language<const REPETITIONS: usize> = Language<
@@ -298,6 +298,7 @@ mod tests {
             commitment_scheme_public_parameters: pedersen_public_parameters,
         }
     }
+
     #[rstest]
     #[case(1)]
     #[case(2)]
@@ -311,6 +312,7 @@ mod tests {
             batch_size,
         )
     }
+
     #[rstest]
     #[case(1)]
     #[case(2)]
@@ -343,14 +345,16 @@ mod tests {
     fn range_proof_rsa_causes_sigsegv() {
         let language_public_parameters = range_proof_rsa_language_public_parameters();
 
-        // language::tests::valid_proof_verifies::<128, RSALanguage>(language_public_parameters, 1)
-
-        let res = schnorr::Proof::<128, RSALanguage, ()>::sample_randomizers_and_statement_masks(
-            &language_public_parameters,
+        let bla = language::WitnessSpaceGroupElement::<128, RSALanguage>::sample(
             &mut OsRng,
-        );
+            &language_public_parameters
+                .as_ref()
+                .witness_space_public_parameters,
+        )
+        .unwrap();
 
-        let res2 = res.unwrap();
+        let bla2: [language::WitnessSpaceGroupElement<128, RSALanguage>; 116] =
+            std::array::from_fn(|_| bla);
     }
 
     #[rstest]
