@@ -264,8 +264,9 @@ mod benches {
         c: &mut Criterion,
     ) {
         let mut g = c.benchmark_group(format!(
-            "{:?} aggregation over {batch_size} statements",
-            Lang::NAME
+            "{:?} aggregation over {batch_size} statements with {:?} repetitions",
+            Lang::NAME,
+            REPETITIONS
         ));
 
         g.sample_size(10);
@@ -282,14 +283,17 @@ mod benches {
                 witnesses: witnesses.clone(),
             };
 
-            g.bench_function(format!("commitment round"), |bench| {
-                bench.iter(|| {
-                    party
-                        .clone()
-                        .commit_statements_and_statement_mask(&mut OsRng)
-                        .unwrap()
-                })
-            });
+            g.bench_function(
+                format!("commitment round for {number_of_parties} parties"),
+                |bench| {
+                    bench.iter(|| {
+                        party
+                            .clone()
+                            .commit_statements_and_statement_mask(&mut OsRng)
+                            .unwrap()
+                    })
+                },
+            );
 
             let (commitment, decommitment_round_party) = party
                 .commit_statements_and_statement_mask(&mut OsRng)

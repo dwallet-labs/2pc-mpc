@@ -298,7 +298,6 @@ mod tests {
             commitment_scheme_public_parameters: pedersen_public_parameters,
         }
     }
-
     #[rstest]
     #[case(1)]
     #[case(2)]
@@ -312,7 +311,6 @@ mod tests {
             batch_size,
         )
     }
-
     #[rstest]
     #[case(1)]
     #[case(2)]
@@ -339,6 +337,20 @@ mod tests {
             language_public_parameters,
             batch_size,
         )
+    }
+
+    #[test]
+    fn range_proof_rsa_causes_sigsegv() {
+        let language_public_parameters = range_proof_rsa_language_public_parameters();
+
+        // language::tests::valid_proof_verifies::<128, RSALanguage>(language_public_parameters, 1)
+
+        let res = schnorr::Proof::<128, RSALanguage, ()>::sample_randomizers_and_statement_masks(
+            &language_public_parameters,
+            &mut OsRng,
+        );
+
+        let res2 = res.unwrap();
     }
 
     #[rstest]

@@ -367,7 +367,11 @@ mod benches {
         language_public_parameters: Lang::PublicParameters,
         c: &mut Criterion,
     ) {
-        let mut g = c.benchmark_group(Lang::NAME);
+        let mut g = c.benchmark_group(format!(
+            "{:?} with {:?} repetitions",
+            Lang::NAME,
+            REPETITIONS
+        ));
 
         g.sample_size(10);
 
