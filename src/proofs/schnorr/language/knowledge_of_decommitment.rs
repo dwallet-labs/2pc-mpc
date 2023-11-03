@@ -144,6 +144,7 @@ impl<
 
 #[cfg(any(test, feature = "benchmarking"))]
 mod tests {
+    use crypto_bigint::{modular::runtime_mod::DynResidue, Random, U2048};
     use rand_core::OsRng;
     use rstest::rstest;
     use tiresias::LargeBiPrimeSizedNumber;
@@ -343,17 +344,18 @@ mod tests {
 
     #[test]
     fn range_proof_rsa_causes_sigsegv() {
-        let language_public_parameters = range_proof_rsa_language_public_parameters();
+        let group_public_parameters =
+            multiplicative_group_of_integers_modulu_n::PublicParameters::<
+                { LargeBiPrimeSizedNumber::LIMBS },
+            >::new(N)
+            .unwrap();
 
-        let bla = language::WitnessSpaceGroupElement::<128, RSALanguage>::sample(
-            &mut OsRng,
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
-        )
-        .unwrap();
+        let bla = DynResidue::<{ LargeBiPrimeSizedNumber::LIMBS }>::new(
+            &LargeBiPrimeSizedNumber::random(&mut OsRng),
+            group_public_parameters.params,
+        );
 
-        let bla2: [language::WitnessSpaceGroupElement<128, RSALanguage>; 116] =
+        let bla2: [DynResidue<{ LargeBiPrimeSizedNumber::LIMBS }>; 256] =
             std::array::from_fn(|_| bla);
     }
 
