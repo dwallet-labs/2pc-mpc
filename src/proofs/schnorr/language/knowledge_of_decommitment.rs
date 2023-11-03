@@ -343,20 +343,13 @@ mod tests {
     }
 
     #[test]
-    fn range_proof_rsa_causes_sigsegv() {
-        let group_public_parameters =
-            multiplicative_group_of_integers_modulu_n::PublicParameters::<
-                { LargeBiPrimeSizedNumber::LIMBS },
-            >::new(N)
-            .unwrap();
+    fn doesnt_crash_sigsegv2() {
+        let doesnt_crash: [u8; 1024 * 293 + 938] = std::array::from_fn(|_| 0u8);
+    }
 
-        let bla = DynResidue::<{ LargeBiPrimeSizedNumber::LIMBS }>::new(
-            &LargeBiPrimeSizedNumber::random(&mut OsRng),
-            group_public_parameters.params,
-        );
-
-        let bla2: [DynResidue<{ LargeBiPrimeSizedNumber::LIMBS }>; 256] =
-            std::array::from_fn(|_| bla);
+    #[test]
+    fn crashes_sigsegv() {
+        let crashes: [u8; 1024 * 293 + 939] = std::array::from_fn(|_| 0u8);
     }
 
     #[rstest]
