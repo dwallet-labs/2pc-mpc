@@ -349,7 +349,7 @@ mod tests {
 
     #[test]
     fn crashes_sigsegv() {
-        let crashes: [u8; 1024 * 293 + 939] = std::array::from_fn(|_| 0u8);
+        let mut crashes: [u8; 1024 * 1024 * 1024 * 2] = [0u8; 1024 * 1024 * 1024 * 2];
     }
 
     #[rstest]
