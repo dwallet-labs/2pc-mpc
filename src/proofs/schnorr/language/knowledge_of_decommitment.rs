@@ -342,16 +342,6 @@ mod tests {
         )
     }
 
-    #[test]
-    fn doesnt_crash_sigsegv2() {
-        let doesnt_crash: [u8; 1024 * 293 + 938] = std::array::from_fn(|_| 0u8);
-    }
-
-    #[test]
-    fn crashes_sigsegv() {
-        let mut crashes: [u8; 1024 * 1024 * 1024 * 2] = [0u8; 1024 * 1024 * 1024 * 2];
-    }
-
     #[rstest]
     #[case(1, 1)]
     #[case(1, 2)]
