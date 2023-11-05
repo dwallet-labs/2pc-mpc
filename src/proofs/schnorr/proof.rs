@@ -205,12 +205,12 @@ impl<
         let responses = randomizers
             .into_iter()
             .zip(challenges)
-            .map(|(randomizer, challenges_for_iteration)| {
+            .map(|(randomizer, challenges)| {
                 randomizer
                     + witnesses
                         .clone()
                         .into_iter()
-                        .zip(challenges_for_iteration)
+                        .zip(challenges)
                         .map(|(witness, challenge)| {
                             witness.scalar_mul_bounded(
                                 &challenge,
@@ -276,34 +276,95 @@ impl<
                 Language::group_homomorphism(&response, language_public_parameters)
             }))?;
 
-        // TODO: helper function that zips, rename challenges_for_iteration
         let reconstructed_response_statements: [Language::StatementSpaceGroupElement; REPETITIONS] =
-            statement_masks
-                .into_iter()
-                .zip(challenges)
-                .map(|(statement_mask, challenges_for_iteration)| {
-                    statement_mask
-                        + statements
-                            .clone()
-                            .into_iter()
-                            .zip(challenges_for_iteration)
-                            .map(|(statement, challenge)| {
-                                statement.scalar_mul_bounded(
-                                    &challenge,
-                                    Language::challenge_bits(number_of_parties, batch_size),
-                                )
-                            })
-                            .reduce(|a, b| a + b)
-                            .unwrap()
-                })
-                .collect::<Vec<_>>()
-                .try_into()
-                .map_err(|_| proofs::Error::Conversion)?;
+            Self::compute_linear_combination_with_challenges(
+                number_of_parties,
+                batch_size,
+                statement_masks,
+                statements,
+                challenges,
+            )?;
+
+        // // TODO: helper function that zips
+        // let reconstructed_response_statements: [Language::StatementSpaceGroupElement;
+        // REPETITIONS] =     statement_masks
+        //         .into_iter()
+        //         .zip(challenges)
+        //         .map(|(statement_mask, challenges)| {
+        //             statement_mask
+        //                 + statements .clone() .into_iter() .zip(challenges) .map(|(statement,
+        //                   challenge)| { statement.scalar_mul_bounded( &challenge,
+        //                   Language::challenge_bits(number_of_parties, batch_size), ) })
+        //                   .reduce(|a, b| a + b) .unwrap()
+        //         })
+        //         .collect::<Vec<_>>()
+        //         .try_into()
+        //         .map_err(|_| proofs::Error::Conversion)?;
 
         if response_statements == reconstructed_response_statements {
             return Ok(());
         }
         Err(Error::ProofVerification)
+    }
+
+    // TODO: name
+    fn compute_linear_combination_with_challenges<G: GroupElement>(
+        number_of_parties: usize,
+        batch_size: usize,
+        // TODO: name - its randomizers or statement masks
+        group_elements: [G; REPETITIONS],
+        // TODO: name - its witnesses or statements
+        group_elements2: Vec<G>,
+        challenges: [Vec<ChallengeSizedNumber>; REPETITIONS],
+    ) -> proofs::Result<[G; REPETITIONS]> {
+        let bitsize = Language::challenge_bits(number_of_parties, batch_size);
+
+        // TODO: htis gets 22% but should get 50%?
+
+        // TODO: name
+        let bla = group_elements
+            .into_iter()
+            .zip(challenges)
+            .map(|(statement_mask, challenges)| {
+                (
+                    statement_mask,
+                    group_elements2.clone().into_iter().zip(challenges),
+                )
+            });
+
+        let res: std::result::Result<[G; REPETITIONS], _> = if bitsize == 1 {
+            // A special case that deserves special handling for max. optimization
+            // TODO: explain
+            bla.map(|(statement_mask, blabla)| {
+                // Todo: and-then
+                blabla
+                    .filter(|(_, challenge)| {
+                        challenge & ChallengeSizedNumber::ONE != ChallengeSizedNumber::ZERO
+                    })
+                    .map(|(statement, _)| statement)
+                    .reduce(|a, b| a + b)
+                    .map_or(statement_mask.clone(), |x| statement_mask + x)
+            })
+            .collect::<Vec<_>>()
+        } else {
+            bla.map(|(statement_mask, blabla)| {
+                statement_mask
+                    + blabla
+                        .map(|(statement, challenge)| {
+                            statement.scalar_mul_bounded(
+                                &challenge,
+                                Language::challenge_bits(number_of_parties, batch_size),
+                            )
+                        })
+                        .reduce(|a, b| a + b)
+                        .unwrap()
+            })
+            .collect::<Vec<_>>()
+        }
+        .try_into();
+
+        // TODO: better way
+        Ok(res.map_err(|_| proofs::Error::Conversion)?)
     }
 
     pub(super) fn sample_randomizers_and_statement_masks(
