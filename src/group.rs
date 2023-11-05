@@ -1,8 +1,9 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
-
 use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
+#[cfg(feature = "benchmarking")]
+pub(crate) use benches::benchmark_scalar_mul_bounded;
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
@@ -141,18 +142,26 @@ pub trait GroupElement:
         // First take only the `scalar_bits` least significant bits
         let mask = (Uint::<LIMBS>::ONE << scalar_bits).wrapping_sub(&Uint::<LIMBS>::ONE);
         let scalar = scalar & mask;
+        // TODO: maybe remove this or at least the if
 
         // TODO: test
         if scalar_bits == 1 {
-            let value = Self::Value::conditional_select(
-                &self.neutral().value(),
-                &self.value(),
-                scalar.ct_eq(&Uint::<LIMBS>::ONE),
-            );
+            // // TODO: calls expensive `.value()` function
+            // let value = Self::Value::conditional_select(
+            //     &self.neutral().value(),
+            //     &self.value(),
+            //     scalar.ct_eq(&Uint::<LIMBS>::ONE),
+            // );
+            //
+            // // Safe to unwrap as the value comes from a valid group element of the same public
+            // // parameters.
+            // Self::new(value, &self.public_parameters()).unwrap()
 
-            // Safe to unwrap as the value comes from a valid group element of the same public
-            // parameters.
-            Self::new(value, &self.public_parameters()).unwrap()
+            if scalar == Uint::<LIMBS>::ONE {
+                self.clone()
+            } else {
+                self.neutral()
+            }
         } else {
             // Call the underlying scalar mul function, which now only use the `scalar_bits` least
             // significant bits, but will still take the same time to compute due to
@@ -259,13 +268,28 @@ mod tests {
     #[test]
     fn multiplies_bounded_scalar() {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
 
         let scalar =
             secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap();
 
+        let generator = secp256k1::GroupElement::new(
+            secp256k1_group_public_parameters.generator,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
+
+        let point = scalar * generator;
+
+        // assert_eq!(
+        //     scalar.scalar_mul_bounded(&U64::from(0u8), 1),
+        //     scalar.neutral()
+        // );
+
         assert_eq!(
-            scalar.scalar_mul_bounded(&U64::from(0u8), 1),
-            scalar.neutral()
+            point.scalar_mul_bounded(&U64::from(0u8), 1),
+            point.neutral()
         );
 
         assert_eq!(
@@ -273,11 +297,23 @@ mod tests {
             scalar.scalar_mul(&U64::from(0u8)),
         );
 
+        assert_eq!(
+            point.scalar_mul_bounded(&U64::from(0u8), 1),
+            point.scalar_mul(&U64::from(0u8)),
+        );
+
         assert_eq!(scalar.scalar_mul_bounded(&U64::from(1u8), 1), scalar);
+
+        assert_eq!(point.scalar_mul_bounded(&U64::from(1u8), 1), point);
 
         assert_eq!(
             scalar.scalar_mul_bounded(&U64::from(1u8), 1),
             scalar.scalar_mul(&U64::from(1u8)),
+        );
+
+        assert_eq!(
+            point.scalar_mul_bounded(&U64::from(1u8), 1),
+            point.scalar_mul(&U64::from(1u8)),
         );
 
         assert_eq!(
@@ -286,13 +322,72 @@ mod tests {
         );
 
         assert_eq!(
+            point.scalar_mul_bounded(&U64::from(4u8), 1),
+            point.neutral()
+        );
+
+        assert_eq!(
             scalar.scalar_mul_bounded(&U64::from(3u8), 1),
             scalar.scalar_mul_bounded(&U64::from(1u8), 1),
+        );
+
+        assert_eq!(
+            point.scalar_mul_bounded(&U64::from(3u8), 1),
+            point.scalar_mul_bounded(&U64::from(1u8), 1),
         );
 
         assert_eq!(
             scalar.scalar_mul_bounded(&U64::from(3u8), 2),
             scalar.scalar_mul(&U64::from(3u8)),
         );
+
+        assert_eq!(
+            point.scalar_mul_bounded(&U64::from(3u8), 2),
+            point.scalar_mul(&U64::from(3u8)),
+        );
+    }
+}
+
+#[cfg(feature = "benchmarking")]
+mod benches {
+    use criterion::Criterion;
+    use crypto_bigint::{Random, U256};
+    use rand_core::OsRng;
+
+    use crate::group::{secp256k1, GroupElement as _, Samplable};
+
+    pub(crate) fn benchmark_scalar_mul_bounded(c: &mut Criterion) {
+        let mut g = c.benchmark_group("scalar_mul_bounded()");
+
+        g.sample_size(10);
+
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
+
+        let scalar =
+            secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap();
+
+        let generator = secp256k1::GroupElement::new(
+            secp256k1_group_public_parameters.generator,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
+
+        let point = scalar * generator;
+
+        let exp = U256::random(&mut OsRng);
+
+        for bitsize in [1, 128, 256] {
+            g.bench_function(
+                format!("secp256k1 scalar by {:?}-bit exponent", bitsize),
+                |bench| bench.iter(|| scalar.scalar_mul_bounded(&exp, bitsize)),
+            );
+
+            g.bench_function(
+                format!("secp256k1 point by {:?}-bit exponent", bitsize),
+                |bench| bench.iter(|| point.scalar_mul_bounded(&exp, bitsize)),
+            );
+        }
     }
 }

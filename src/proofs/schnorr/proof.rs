@@ -198,6 +198,10 @@ impl<
 
         // TODO: update comment now that it isn't necessairly 128 bit
 
+        // TODO: if bit size is 1, filter out 0 challenges
+        // so can remove bench impl
+        // Multi addition for reptitions
+
         let responses = randomizers
             .into_iter()
             .zip(challenges)
@@ -272,7 +276,7 @@ impl<
                 Language::group_homomorphism(&response, language_public_parameters)
             }))?;
 
-        // TODO: helper function that zips
+        // TODO: helper function that zips, rename challenges_for_iteration
         let reconstructed_response_statements: [Language::StatementSpaceGroupElement; REPETITIONS] =
             statement_masks
                 .into_iter()
