@@ -167,94 +167,6 @@ mod tests {
         Pedersen<1, { secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
     >;
 
-    // TODO: name
-    pub(crate) type RSALanguage = Language<
-        128,
-        { LargeBiPrimeSizedNumber::LIMBS },
-        multiplicative_group_of_integers_modulu_n::GroupElement<{ LargeBiPrimeSizedNumber::LIMBS }>,
-        multiplicative_group_of_integers_modulu_n::GroupElement<{ LargeBiPrimeSizedNumber::LIMBS }>,
-        Pedersen<
-            1,
-            { LargeBiPrimeSizedNumber::LIMBS },
-            multiplicative_group_of_integers_modulu_n::GroupElement<
-                { LargeBiPrimeSizedNumber::LIMBS },
-            >,
-            multiplicative_group_of_integers_modulu_n::GroupElement<
-                { LargeBiPrimeSizedNumber::LIMBS },
-            >,
-        >,
-    >;
-
-    pub(crate) fn range_proof_rsa_language_public_parameters(
-    ) -> language::PublicParameters<128, RSALanguage> {
-        let group_public_parameters =
-            multiplicative_group_of_integers_modulu_n::PublicParameters::<
-                { LargeBiPrimeSizedNumber::LIMBS },
-            >::new(N)
-            .unwrap();
-
-        let generator =
-            multiplicative_group_of_integers_modulu_n::GroupElement::<
-                { LargeBiPrimeSizedNumber::LIMBS },
-            >::new(
-                multiplicative_group_of_integers_modulu_n::Value::<
-                    { LargeBiPrimeSizedNumber::LIMBS },
-                >::new(
-                    LargeBiPrimeSizedNumber::from(2u8), // TODO?
-                    &group_public_parameters,
-                )
-                .unwrap(),
-                &group_public_parameters,
-            )
-            .unwrap();
-
-        let message_generator = multiplicative_group_of_integers_modulu_n::GroupElement::<
-            { LargeBiPrimeSizedNumber::LIMBS },
-        >::sample(&mut OsRng, &group_public_parameters)
-        .unwrap()
-            * generator;
-
-        let randomness_generator = multiplicative_group_of_integers_modulu_n::GroupElement::<
-            { LargeBiPrimeSizedNumber::LIMBS },
-        >::sample(&mut OsRng, &group_public_parameters)
-        .unwrap()
-            * generator;
-
-        // TODO: this is not safe; we need a proper way to derive generators
-        let pedersen_public_parameters = pedersen::public_parameters::<
-            1,
-            { LargeBiPrimeSizedNumber::LIMBS },
-            multiplicative_group_of_integers_modulu_n::GroupElement<
-                { LargeBiPrimeSizedNumber::LIMBS },
-            >,
-            multiplicative_group_of_integers_modulu_n::GroupElement<
-                { LargeBiPrimeSizedNumber::LIMBS },
-            >,
-        >(
-            group_public_parameters.clone(),
-            group_public_parameters.clone(),
-            [message_generator.value()],
-            randomness_generator.value(),
-        );
-
-        PublicParameters {
-            groups_public_parameters: GroupsPublicParameters {
-                witness_space_public_parameters: group::PublicParameters::<
-                    self_product::GroupElement<
-                        2,
-                        multiplicative_group_of_integers_modulu_n::GroupElement<
-                            { LargeBiPrimeSizedNumber::LIMBS },
-                        >,
-                    >,
-                >::new(
-                    group_public_parameters.clone()
-                ),
-                statement_space_public_parameters: group_public_parameters,
-            },
-            commitment_scheme_public_parameters: pedersen_public_parameters,
-        }
-    }
-
     pub(crate) fn secp256k1_language_public_parameters<const REPETITIONS: usize>(
     ) -> language::PublicParameters<REPETITIONS, Secp256k1Language<REPETITIONS>> {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
@@ -329,21 +241,6 @@ mod tests {
             batch_size,
         )
     }
-
-    // TODO: fix this test by avoiding from_fn
-    // #[rstest]
-    // #[case(1)]
-    // #[case(2)]
-    // #[case(3)]
-    // // TODO: take pp and reps as parameters to avoid code duplication
-    // fn range_proof_rsa_valid_proof_verifies(#[case] batch_size: usize) {
-    //     let language_public_parameters = range_proof_rsa_language_public_parameters();
-    //
-    //     language::tests::valid_proof_verifies::<128, RSALanguage>(
-    //         language_public_parameters,
-    //         batch_size,
-    //     )
-    // }
 
     #[rstest]
     #[case(1, 1)]

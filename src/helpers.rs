@@ -10,9 +10,6 @@ pub fn flat_map_results<const N: usize, T, E: fmt::Debug>(
 ) -> Result<[T; N], E> {
     let res: Result<Vec<T>, E> = results.into_iter().collect();
 
-    // We know the iterator is of the right size, so this is safe to unwrap
-    res.map(|vec| {
-        let mut iter = vec.into_iter();
-        array::from_fn(|_| iter.next().unwrap())
-    })
+    // We know the vector is of the right size, so this is safe to unwrap
+    res.map(|vec| vec.try_into().ok().unwrap())
 }
