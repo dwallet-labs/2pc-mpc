@@ -1,3 +1,4 @@
+use std::hash::Hash;
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
@@ -57,6 +58,7 @@ pub trait GroupElement:
     + Into<Self::Value>
     + Into<Self::PublicParameters>
     + PartialEq
+    + Eq
     + Clone
 {
     /// The actual value of the group point used for encoding/decoding.
@@ -259,6 +261,7 @@ pub trait Samplable: GroupElement {
     ) -> Result<Self>;
 }
 
+#[cfg(test)]
 mod tests {
     use crypto_bigint::U64;
     use rand_core::OsRng;
@@ -282,10 +285,10 @@ mod tests {
 
         let point = scalar * generator;
 
-        // assert_eq!(
-        //     scalar.scalar_mul_bounded(&U64::from(0u8), 1),
-        //     scalar.neutral()
-        // );
+        assert_eq!(
+            scalar.scalar_mul_bounded(&U64::from(0u8), 1),
+            scalar.neutral()
+        );
 
         assert_eq!(
             point.scalar_mul_bounded(&U64::from(0u8), 1),

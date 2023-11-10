@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pub mod enhanced;
 
-use std::{array, marker::PhantomData};
+use std::{array, collections::HashMap, marker::PhantomData};
 
 use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, U64};
 use merlin::Transcript;
@@ -91,33 +91,18 @@ impl<
             .collect();
         let statements = statements?;
 
-        // TODOs
-        // 1. the challenge size in bits should be a (public) parameter (of the language). This also
-        //    means we need a "scalar_mul_bounded" trait
-        // 3. repetations (use const-generics):
-        //     - sample r randomizers -> statement-mask
-        //     - add all of them to the transcript.
-        //     - compute r vectors of batch_size challenges
-        //     - then for each such vector compute the response, the proof has r such responses + r
-        //       statement masks => array of R normal proofs.
-        // So maybe, we can use the same code just have one shared transcript for it
-        // verifying is the same, but again need to have the shared transcript.
+        // TODO
         // 4. range check - no need to check response is smaller than upper bound if we set the
         //    witness size to a group of the specific size that we prove the range for.
         // gap is for the prover not the verifier i.e. the verifier know that the witness is of
         // witness size, i.e. response size, but prover had to have the witness even smaller than
         // that
-        // 5. aggregation
         // 6. randomizer should be bigger than the witness max size by 128-bit + challenge size.
         //    witness max size should be defined in the public paramters, and then randomizer size
         //    is bigger than that using above formula and is also dynamic. so the sampling should be
         //    bounded. And then it doesn't need to be the phi(n) bullshit, we just need to have the
         //    witness group be of size range claim upper bound + 128 + challenge size.
-        // language: (w, r) -> g^r*h^w (meaning a normal pedersen commitment, ) TODO: this is
-        // actually knowledge_of_decommitment with pedersen commitment and special group right?
         // 7. if we don't use multiplies of LIMB we need to do the range check.
-        // number of parties also need to be accounted for in aggregation for the size of the
-        // witness of the language. or we take an upper bound for it.
 
         Self::prove_with_statements(
             number_of_parties,
@@ -198,27 +183,34 @@ impl<
 
         // TODO: update comment now that it isn't necessairly 128 bit
 
-        // TODO: if bit size is 1, filter out 0 challenges
-        // so can remove bench impl
-        // Multi addition for reptitions
-
+        let challenge_bit_size = Language::challenge_bits(number_of_parties, batch_size);
         let responses = randomizers
             .into_iter()
             .zip(challenges)
             .map(|(randomizer, challenges)| {
-                randomizer
-                    + witnesses
-                        .clone()
-                        .into_iter()
-                        .zip(challenges)
-                        .map(|(witness, challenge)| {
-                            witness.scalar_mul_bounded(
-                                &challenge,
-                                Language::challenge_bits(number_of_parties, batch_size),
-                            )
-                        })
-                        .reduce(|a, b| a + b)
-                        .unwrap()
+                witnesses
+                    .clone()
+                    .into_iter()
+                    .zip(challenges)
+                    .filter_map(|(witness, challenge)| {
+                        if challenge_bit_size == 1 {
+                            // A special case that needs special caring
+                            if challenge == ChallengeSizedNumber::ZERO {
+                                None
+                            } else {
+                                Some(witness)
+                            }
+                        } else {
+                            Some(witness.scalar_mul_bounded(&challenge, challenge_bit_size))
+                        }
+                    })
+                    .reduce(|a, b| a + b)
+                    .map_or(
+                        randomizer.clone(),
+                        |witnesses_and_challenges_linear_combination| {
+                            randomizer + witnesses_and_challenges_linear_combination
+                        },
+                    )
             })
             .collect::<Vec<_>>()
             .try_into()
@@ -276,95 +268,48 @@ impl<
                 Language::group_homomorphism(&response, language_public_parameters)
             }))?;
 
-        let reconstructed_response_statements: [Language::StatementSpaceGroupElement; REPETITIONS] =
-            Self::compute_linear_combination_with_challenges(
-                number_of_parties,
-                batch_size,
-                statement_masks,
-                statements,
-                challenges,
-            )?;
+        // TODO: filter 0 challenge
+        //                     .map_or(group_element.clone(), |x| group_element + x)
 
-        // // TODO: helper function that zips
-        // let reconstructed_response_statements: [Language::StatementSpaceGroupElement;
-        // REPETITIONS] =     statement_masks
-        //         .into_iter()
-        //         .zip(challenges)
-        //         .map(|(statement_mask, challenges)| {
-        //             statement_mask
-        //                 + statements .clone() .into_iter() .zip(challenges) .map(|(statement,
-        //                   challenge)| { statement.scalar_mul_bounded( &challenge,
-        //                   Language::challenge_bits(number_of_parties, batch_size), ) })
-        //                   .reduce(|a, b| a + b) .unwrap()
-        //         })
-        //         .collect::<Vec<_>>()
-        //         .try_into()
-        //         .map_err(|_| proofs::Error::Conversion)?;
+        // TODO: helper function that zips
+        let challenge_bit_size = Language::challenge_bits(number_of_parties, batch_size);
+        let reconstructed_response_statements: [Language::StatementSpaceGroupElement; REPETITIONS] =
+            statement_masks
+                .into_iter()
+                .zip(challenges)
+                .map(|(statement_mask, challenges)| {
+                    statements
+                        .clone()
+                        .into_iter()
+                        .zip(challenges)
+                        .filter_map(|(statement, challenge)| {
+                            if challenge_bit_size == 1 {
+                                // A special case that needs special caring
+                                if challenge == ChallengeSizedNumber::ZERO {
+                                    None
+                                } else {
+                                    Some(statement)
+                                }
+                            } else {
+                                Some(statement.scalar_mul_bounded(&challenge, challenge_bit_size))
+                            }
+                        })
+                        .reduce(|a, b| a + b)
+                        .map_or(
+                            statement_mask.clone(),
+                            |statements_and_challenges_linear_combination| {
+                                statement_mask + statements_and_challenges_linear_combination
+                            },
+                        )
+                })
+                .collect::<Vec<_>>()
+                .try_into()
+                .map_err(|_| proofs::Error::Conversion)?;
 
         if response_statements == reconstructed_response_statements {
             return Ok(());
         }
         Err(Error::ProofVerification)
-    }
-
-    // TODO: name
-    fn compute_linear_combination_with_challenges<G: GroupElement>(
-        number_of_parties: usize,
-        batch_size: usize,
-        // TODO: name - its randomizers or statement masks
-        group_elements: [G; REPETITIONS],
-        // TODO: name - its witnesses or statements
-        group_elements2: Vec<G>,
-        challenges: [Vec<ChallengeSizedNumber>; REPETITIONS],
-    ) -> proofs::Result<[G; REPETITIONS]> {
-        let bitsize = Language::challenge_bits(number_of_parties, batch_size);
-
-        // TODO: htis gets 22% but should get 50%?
-
-        // TODO: name
-        let bla = group_elements
-            .into_iter()
-            .zip(challenges)
-            .map(|(statement_mask, challenges)| {
-                (
-                    statement_mask,
-                    group_elements2.clone().into_iter().zip(challenges),
-                )
-            });
-
-        let res: std::result::Result<[G; REPETITIONS], _> = if bitsize == 1 {
-            // A special case that deserves special handling for max. optimization
-            // TODO: explain
-            bla.map(|(statement_mask, blabla)| {
-                // Todo: and-then
-                blabla
-                    .filter(|(_, challenge)| {
-                        challenge & ChallengeSizedNumber::ONE != ChallengeSizedNumber::ZERO
-                    })
-                    .map(|(statement, _)| statement)
-                    .reduce(|a, b| a + b)
-                    .map_or(statement_mask.clone(), |x| statement_mask + x)
-            })
-            .collect::<Vec<_>>()
-        } else {
-            bla.map(|(statement_mask, blabla)| {
-                statement_mask
-                    + blabla
-                        .map(|(statement, challenge)| {
-                            statement.scalar_mul_bounded(
-                                &challenge,
-                                Language::challenge_bits(number_of_parties, batch_size),
-                            )
-                        })
-                        .reduce(|a, b| a + b)
-                        .unwrap()
-            })
-            .collect::<Vec<_>>()
-        }
-        .try_into();
-
-        // TODO: better way
-        Ok(res.map_err(|_| proofs::Error::Conversion)?)
     }
 
     pub(super) fn sample_randomizers_and_statement_masks(

@@ -15,7 +15,7 @@ use crate::{
 };
 
 /// Newtype used to comply with Rust's local-type checks.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Scalar<const SCALAR_LIMBS: usize, S>(pub S);
 
 /// Newtype used to comply with Rust's local-type checks.
