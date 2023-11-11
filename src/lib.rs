@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod ahe;
 pub mod commitments;
-// mod dkg;
+pub mod dkg;
 pub mod group;
 pub(crate) mod helpers;
 pub mod proofs;
@@ -54,16 +54,16 @@ pub type PartyID = u16;
 #[cfg(feature = "benchmarking")]
 criterion_group!(
     benches,
-    // group::benchmark_scalar_mul_bounded,
-    // proofs::transcript_protocol::benchmark,
-    // proofs::schnorr::knowledge_of_discrete_log::benchmark,
-    // proofs::schnorr::knowledge_of_decommitment::benchmark_zero_knowledge,
+    group::benchmark_scalar_mul_bounded,
+    proofs::transcript_protocol::benchmark,
+    proofs::schnorr::knowledge_of_discrete_log::benchmark,
+    proofs::schnorr::knowledge_of_decommitment::benchmark_zero_knowledge,
     proofs::schnorr::knowledge_of_decommitment::benchmark_secp256k1_range_proof,
-    // TODO: in order for this to work, we need to fix stack problem
-    // proofs::schnorr::knowledge_of_decommitment::benchmark_rsa_range_proof,
-    // proofs::schnorr::commitment_of_discrete_log::benchmark,
-    // proofs::schnorr::discrete_log_ratio_of_commited_values::benchmark,
-    // proofs::schnorr::encryption_of_discrete_log::benchmark,
-    // proofs::schnorr::encryption_of_tuple::benchmark,
-    // proofs::schnorr::committed_linear_evaluation::benchmark,
+    TODO: in order for this to work, we need to fix stack problem
+    proofs::schnorr::knowledge_of_decommitment::benchmark_rsa_range_proof,
+    proofs::schnorr::commitment_of_discrete_log::benchmark,
+    proofs::schnorr::discrete_log_ratio_of_commited_values::benchmark,
+    proofs::schnorr::encryption_of_discrete_log::benchmark,
+    proofs::schnorr::encryption_of_tuple::benchmark,
+    proofs::schnorr::committed_linear_evaluation::benchmark,
 );

@@ -37,6 +37,14 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentS
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
+/// A Commitment of Discrete Log Schnorr Proof.
+pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme, ProtocolContext> =
+    schnorr::Proof<
+        REPETITIONS,
+        Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+        ProtocolContext,
+    >;
+
 impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
     schnorr::Language<REPETITIONS>
     for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>

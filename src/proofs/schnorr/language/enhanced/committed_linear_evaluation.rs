@@ -70,8 +70,45 @@ pub struct Language<
     _range_proof_choice: PhantomData<RangeProof>,
 }
 
-// TODO: remove this whole NUM_RANGE_CLAIMS deal once we have the pedersen proof. This is over
-// complicated and we're not going to use this code.
+/// A Committed Linear Evaluation Schnorr Proof.
+pub type Proof<
+    const SCALAR_LIMBS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const MASK_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIMS_PER_MASK: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    const DIMENSION: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    EncryptionKey,
+    CommitmentScheme,
+    RangeProof,
+    ProtocolContext,
+> = schnorr::Proof<
+    REPETITIONS,
+    Language<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        MASK_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIMS_PER_MASK,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        DIMENSION,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        CommitmentScheme,
+        RangeProof,
+    >,
+    ProtocolContext,
+>;
 
 impl<
         const SCALAR_LIMBS: usize,

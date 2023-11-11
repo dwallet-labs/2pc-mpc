@@ -3,9 +3,7 @@
 use std::{marker::PhantomData, ops::Mul};
 
 #[cfg(feature = "benchmarking")]
-pub(crate) use benches::{
-    benchmark_rsa_range_proof, benchmark_secp256k1_range_proof, benchmark_zero_knowledge,
-};
+pub(crate) use benches::{benchmark_secp256k1_range_proof, benchmark_zero_knowledge};
 use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
@@ -41,6 +39,20 @@ pub struct Language<
     _group_element_choice: PhantomData<GroupElement>,
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
+
+/// A Knowledge of Decommitment Schnorr Proof.
+pub type Proof<
+    const REPETITIONS: usize,
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+    ProtocolContext,
+> = schnorr::Proof<
+    REPETITIONS,
+    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+    ProtocolContext,
+>;
 
 impl<
         const REPETITIONS: usize,
@@ -311,12 +323,4 @@ mod benches {
 
         aggregation::benchmark::<128, Secp256k1Language<128>>(language_public_parameters, c);
     }
-
-    // pub(crate) fn benchmark_rsa_range_proof(c: &mut Criterion) {
-    //     let language_public_parameters = range_proof_rsa_language_public_parameters();
-    //
-    //     language::benchmark::<128, RSALanguage>(language_public_parameters.clone(), c);
-    //
-    //     aggregation::benchmark::<128, RSALanguage>(language_public_parameters, c);
-    // }
 }

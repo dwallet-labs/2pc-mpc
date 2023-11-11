@@ -35,6 +35,10 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
     _group_element_choice: PhantomData<GroupElement>,
 }
 
+/// A Ratio Between Committed Values is the Discrete Log Schnorr Proof.
+pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, ProtocolContext> =
+    schnorr::Proof<REPETITIONS, Language<SCALAR_LIMBS, Scalar, GroupElement>, ProtocolContext>;
+
 impl<const SCALAR_LIMBS: usize, Scalar, GroupElement> schnorr::Language<REPETITIONS>
     for Language<SCALAR_LIMBS, Scalar, GroupElement>
 where

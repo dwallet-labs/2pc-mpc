@@ -28,6 +28,10 @@ pub struct Language<Scalar, GroupElement> {
     _group_element_choice: PhantomData<GroupElement>,
 }
 
+/// A Knowledge of Discrete Log Schnorr Proof.
+pub type Proof<Scalar, GroupElement, ProtocolContext> =
+    schnorr::Proof<REPETITIONS, Language<Scalar, GroupElement>, ProtocolContext>;
+
 impl<Scalar, GroupElement> schnorr::Language<REPETITIONS> for Language<Scalar, GroupElement>
 where
     Scalar: group::GroupElement
