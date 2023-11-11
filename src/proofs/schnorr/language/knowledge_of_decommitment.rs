@@ -12,7 +12,7 @@ use crate::{
     group,
     group::{self_product, BoundedGroupElement, Samplable},
     proofs,
-    proofs::schnorr,
+    proofs::{schnorr, schnorr::aggregation},
 };
 
 /// Knowledge of Decommitment Schnorr Language.
@@ -39,20 +39,6 @@ pub struct Language<
     _group_element_choice: PhantomData<GroupElement>,
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
-
-/// A Knowledge of Decommitment Schnorr Proof.
-pub type Proof<
-    const REPETITIONS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    CommitmentScheme,
-    ProtocolContext,
-> = schnorr::Proof<
-    REPETITIONS,
-    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
-    ProtocolContext,
->;
 
 impl<
         const REPETITIONS: usize,
@@ -155,6 +141,76 @@ impl<
         &self.groups_public_parameters
     }
 }
+
+/// A Knowledge of Decommitment Schnorr Proof.
+pub type Proof<
+    const REPETITIONS: usize,
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+    ProtocolContext,
+> = schnorr::Proof<
+    REPETITIONS,
+    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+    ProtocolContext,
+>;
+
+/// A Knowledge of Decommitment Schnorr Proof Aggregation Commitment Round Party.
+pub type ProofAggregationCommitmentRoundParty<
+    const REPETITIONS: usize,
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+    ProtocolContext,
+> = aggregation::commitment_round::Party<
+    REPETITIONS,
+    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+    ProtocolContext,
+>;
+
+/// A Knowledge of Decommitment Schnorr Proof Aggregation Decommitment Round Party.
+pub type ProofAggregationDecommitmentRoundParty<
+    const REPETITIONS: usize,
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+    ProtocolContext,
+> = aggregation::decommitment_round::Party<
+    REPETITIONS,
+    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+    ProtocolContext,
+>;
+
+/// A Knowledge of Decommitment Schnorr Proof Aggregation Proof Share Round Party.
+pub type ProofAggregationProofShareRoundParty<
+    const REPETITIONS: usize,
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+    ProtocolContext,
+> = aggregation::proof_share_round::Party<
+    REPETITIONS,
+    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+    ProtocolContext,
+>;
+
+/// A Knowledge of Decommitment Schnorr Proof Aggregation Proof Aggregation Round Party.
+pub type ProofAggregationProofAggregationRoundParty<
+    const REPETITIONS: usize,
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+    ProtocolContext,
+> = aggregation::proof_aggregation_round::Party<
+    REPETITIONS,
+    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+    ProtocolContext,
+>;
 
 #[cfg(any(test, feature = "benchmarking"))]
 mod tests {

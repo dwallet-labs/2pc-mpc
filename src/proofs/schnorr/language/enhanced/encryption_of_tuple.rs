@@ -19,7 +19,7 @@ use crate::{
         BoundedGroupElement, GroupElement as _, KnownOrderScalar, Samplable,
     },
     proofs,
-    proofs::{range, schnorr},
+    proofs::{range, schnorr, schnorr::aggregation},
     AdditivelyHomomorphicEncryptionKey,
 };
 
@@ -57,36 +57,6 @@ pub struct Language<
     _encryption_key_choice: PhantomData<EncryptionKey>,
     _range_proof_choice: PhantomData<RangeProof>,
 }
-
-/// An Encryption of a Tuple Schnorr Proof.
-pub type Proof<
-    const SCALAR_LIMBS: usize,
-    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-    const RANGE_CLAIMS_PER_SCALAR: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    const WITNESS_MASK_LIMBS: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    EncryptionKey,
-    RangeProof,
-    ProtocolContext,
-> = schnorr::Proof<
-    REPETITIONS,
-    Language<
-        SCALAR_LIMBS,
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    >,
-    ProtocolContext,
->;
 
 impl<
         const SCALAR_LIMBS: usize,
@@ -374,6 +344,156 @@ impl<
         &self.groups_public_parameters
     }
 }
+
+/// An Encryption of a Tuple Schnorr Proof.
+pub type Proof<
+    const SCALAR_LIMBS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    EncryptionKey,
+    RangeProof,
+    ProtocolContext,
+> = schnorr::Proof<
+    REPETITIONS,
+    Language<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        RangeProof,
+    >,
+    ProtocolContext,
+>;
+
+/// An Encryption of a Tuple Schnorr Proof Aggregation Commitment Round Party.
+pub type ProofAggregationCommitmentRoundParty<
+    const SCALAR_LIMBS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    EncryptionKey,
+    RangeProof,
+    ProtocolContext,
+> = aggregation::commitment_round::Party<
+    REPETITIONS,
+    Language<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        RangeProof,
+    >,
+    ProtocolContext,
+>;
+
+/// An Encryption of a Tuple Schnorr Proof Aggregation Decommitment Round Party.
+pub type ProofAggregationDecommitmentRoundParty<
+    const SCALAR_LIMBS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    EncryptionKey,
+    RangeProof,
+    ProtocolContext,
+> = aggregation::decommitment_round::Party<
+    REPETITIONS,
+    Language<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        RangeProof,
+    >,
+    ProtocolContext,
+>;
+
+/// An Encryption of a Tuple Schnorr Proof Aggregation Proof Share Round Party.
+pub type ProofAggregationProofShareRoundParty<
+    const SCALAR_LIMBS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    EncryptionKey,
+    RangeProof,
+    ProtocolContext,
+> = aggregation::proof_share_round::Party<
+    REPETITIONS,
+    Language<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        RangeProof,
+    >,
+    ProtocolContext,
+>;
+
+/// An Encryption of a Tuple Schnorr Proof Aggregation Proof Aggregation Round Party.
+pub type ProofAggregationProofAggregationRoundParty<
+    const SCALAR_LIMBS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    EncryptionKey,
+    RangeProof,
+    ProtocolContext,
+> = aggregation::proof_aggregation_round::Party<
+    REPETITIONS,
+    Language<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        RangeProof,
+    >,
+    ProtocolContext,
+>;
 
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {

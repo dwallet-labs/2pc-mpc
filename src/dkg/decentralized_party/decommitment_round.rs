@@ -5,11 +5,12 @@ use crypto_bigint::{Encoding, Uint};
 use serde::Serialize;
 
 use crate::{
+    group,
     group::PrimeGroupElement,
     proofs,
     proofs::{
         range,
-        schnorr::{aggregation, encryption_of_discrete_log, language::enhanced},
+        schnorr::{encryption_of_discrete_log, language::enhanced},
     },
     AdditivelyHomomorphicEncryptionKey, Commitment,
 };
@@ -33,12 +34,18 @@ pub struct Party<
 > where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
+    group::ScalarValue<SCALAR_LIMBS, GroupElement>: From<Uint<SCALAR_LIMBS>>,
+    range::CommitmentSchemeMessageSpaceValue<
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        RangeProof,
+    >: From<enhanced::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
 {
     commitment_to_centralized_party_secret_key_share: Commitment,
     // TODO: like Proof
-    encryption_of_secret_share_decommitment_round_party: aggregation::decommitment_round::Party<
-        1,
-        encryption_of_discrete_log::Language<
+    encryption_of_secret_share_decommitment_round_party:
+        encryption_of_discrete_log::ProofAggregationDecommitmentRoundParty<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -49,9 +56,8 @@ pub struct Party<
             GroupElement,
             EncryptionKey,
             RangeProof,
+            ProtocolContext,
         >,
-        ProtocolContext,
-    >,
 }
 
 impl<
@@ -85,6 +91,7 @@ impl<
 where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
+    group::ScalarValue<SCALAR_LIMBS, GroupElement>: From<Uint<SCALAR_LIMBS>>,
     range::CommitmentSchemeMessageSpaceValue<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,

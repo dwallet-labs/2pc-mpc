@@ -13,7 +13,10 @@ use crate::{
     proofs,
     proofs::{
         schnorr,
-        schnorr::language::{StatementSpacePublicParameters, WitnessSpacePublicParameters},
+        schnorr::{
+            aggregation,
+            language::{StatementSpacePublicParameters, WitnessSpacePublicParameters},
+        },
     },
 };
 
@@ -36,14 +39,6 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentS
     _group_element_choice: PhantomData<GroupElement>,
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
-
-/// A Commitment of Discrete Log Schnorr Proof.
-pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme, ProtocolContext> =
-    schnorr::Proof<
-        REPETITIONS,
-        Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
-        ProtocolContext,
-    >;
 
 impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
     schnorr::Language<REPETITIONS>
@@ -132,6 +127,66 @@ impl<
         &self.groups_public_parameters
     }
 }
+
+/// A Commitment of Discrete Log Schnorr Proof.
+pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme, ProtocolContext> =
+    schnorr::Proof<
+        REPETITIONS,
+        Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+        ProtocolContext,
+    >;
+
+/// A Commitment of Discrete Log Schnorr Proof.
+pub type ProofAggregationCommitmentRoundParty<
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+    ProtocolContext,
+> = aggregation::commitment_round::Party<
+    REPETITIONS,
+    Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+    ProtocolContext,
+>;
+
+/// A Commitment of Discrete Log Schnorr Proof.
+pub type ProofAggregationDecommitmentRoundParty<
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+    ProtocolContext,
+> = aggregation::decommitment_round::Party<
+    REPETITIONS,
+    Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+    ProtocolContext,
+>;
+
+/// A Commitment of Discrete Log Schnorr Proof.
+pub type ProofAggregationProofShareRoundParty<
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+    ProtocolContext,
+> = aggregation::proof_share_round::Party<
+    REPETITIONS,
+    Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+    ProtocolContext,
+>;
+
+/// A Commitment of Discrete Log Schnorr Proof Aggregation Proof Aggregation Round Party.
+pub type ProofAggregationProofAggregationRoundParty<
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+    ProtocolContext,
+> = aggregation::proof_aggregation_round::Party<
+    REPETITIONS,
+    Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+    ProtocolContext,
+>;
 
 #[cfg(any(test, feature = "benchmarking"))]
 mod tests {

@@ -247,6 +247,10 @@ pub trait KnownOrderGroupElement<const SCALAR_LIMBS: usize>:
 }
 
 pub type Scalar<const SCALAR_LIMBS: usize, G> = <G as KnownOrderGroupElement<SCALAR_LIMBS>>::Scalar;
+pub type ScalarPublicParameters<const SCALAR_LIMBS: usize, G> =
+    PublicParameters<<G as KnownOrderGroupElement<SCALAR_LIMBS>>::Scalar>;
+pub type ScalarValue<const SCALAR_LIMBS: usize, G> =
+    Value<<G as KnownOrderGroupElement<SCALAR_LIMBS>>::Scalar>;
 
 /// A marker trait for elements of a (known) prime-order group.
 /// Any prime-order group is also cyclic.

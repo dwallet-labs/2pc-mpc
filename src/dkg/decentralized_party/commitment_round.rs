@@ -10,10 +10,7 @@ use crate::{
     group,
     group::PrimeGroupElement,
     proofs,
-    proofs::{
-        range,
-        schnorr::language::{enhanced, enhanced::RangeProof},
-    },
+    proofs::{range, schnorr::language::enhanced},
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
 };
 
@@ -36,6 +33,7 @@ pub struct Party<
 > where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
+    group::ScalarValue<SCALAR_LIMBS, GroupElement>: From<Uint<SCALAR_LIMBS>>,
 {
     pub group_public_parameters: GroupElement::PublicParameters,
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
@@ -76,6 +74,7 @@ impl<
 where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
+    group::ScalarValue<SCALAR_LIMBS, GroupElement>: From<Uint<SCALAR_LIMBS>>,
     range::CommitmentSchemeMessageSpaceValue<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,

@@ -7,7 +7,12 @@ pub(crate) use benches::benchmark;
 use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
-use crate::{group, group::Samplable, proofs, proofs::schnorr};
+use crate::{
+    group,
+    group::Samplable,
+    proofs,
+    proofs::{schnorr, schnorr::aggregation},
+};
 
 pub(crate) const REPETITIONS: usize = 1;
 
@@ -27,10 +32,6 @@ pub struct Language<Scalar, GroupElement> {
     _scalar_choice: PhantomData<Scalar>,
     _group_element_choice: PhantomData<GroupElement>,
 }
-
-/// A Knowledge of Discrete Log Schnorr Proof.
-pub type Proof<Scalar, GroupElement, ProtocolContext> =
-    schnorr::Proof<REPETITIONS, Language<Scalar, GroupElement>, ProtocolContext>;
 
 impl<Scalar, GroupElement> schnorr::Language<REPETITIONS> for Language<Scalar, GroupElement>
 where
@@ -93,6 +94,42 @@ impl<WitnessSpacePublicParameters, StatementSpacePublicParameters, GroupElementV
         &self.groups_public_parameters
     }
 }
+
+/// A Knowledge of Discrete Log Schnorr Proof.
+pub type Proof<Scalar, GroupElement, ProtocolContext> =
+    schnorr::Proof<REPETITIONS, Language<Scalar, GroupElement>, ProtocolContext>;
+
+/// A Knowledge of Discrete Log Schnorr Proof Aggregation Commitment Round Party.
+pub type ProofAggregationCommitmentRoundParty<Scalar, GroupElement, ProtocolContext> =
+    aggregation::commitment_round::Party<
+        REPETITIONS,
+        Language<Scalar, GroupElement>,
+        ProtocolContext,
+    >;
+
+/// A Knowledge of Discrete Log Schnorr Proof Aggregation Decommitment Round Party.
+pub type ProofAggregationDecommitmentRoundParty<Scalar, GroupElement, ProtocolContext> =
+    aggregation::decommitment_round::Party<
+        REPETITIONS,
+        Language<Scalar, GroupElement>,
+        ProtocolContext,
+    >;
+
+/// A Knowledge of Discrete Log Schnorr Proof Aggregation Proof Share Round Party.
+pub type ProofAggregationProofShareRoundParty<Scalar, GroupElement, ProtocolContext> =
+    aggregation::proof_share_round::Party<
+        REPETITIONS,
+        Language<Scalar, GroupElement>,
+        ProtocolContext,
+    >;
+
+/// A Knowledge of Discrete Log Schnorr Proof Aggregation Proof Aggregation Round Party.
+pub type ProofAggregationProofAggregationRoundParty<Scalar, GroupElement, ProtocolContext> =
+    aggregation::proof_aggregation_round::Party<
+        REPETITIONS,
+        Language<Scalar, GroupElement>,
+        ProtocolContext,
+    >;
 
 #[cfg(any(test, feature = "benchmarking"))]
 mod tests {

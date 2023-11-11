@@ -13,7 +13,7 @@ use crate::{
     group,
     group::{self_product, CyclicGroupElement, GroupElement, KnownOrderGroupElement, Samplable},
     proofs,
-    proofs::schnorr,
+    proofs::{schnorr, schnorr::aggregation},
 };
 
 pub(crate) const REPETITIONS: usize = 1;
@@ -34,11 +34,6 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
     _scalar_choice: PhantomData<Scalar>,
     _group_element_choice: PhantomData<GroupElement>,
 }
-
-/// A Ratio Between Committed Values is the Discrete Log Schnorr Proof.
-pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, ProtocolContext> =
-    schnorr::Proof<REPETITIONS, Language<SCALAR_LIMBS, Scalar, GroupElement>, ProtocolContext>;
-
 impl<const SCALAR_LIMBS: usize, Scalar, GroupElement> schnorr::Language<REPETITIONS>
     for Language<SCALAR_LIMBS, Scalar, GroupElement>
 where
@@ -143,6 +138,62 @@ impl<
         &self.groups_public_parameters
     }
 }
+
+/// A Ratio Between Committed Values is the Discrete Log Schnorr Proof.
+pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, ProtocolContext> =
+    schnorr::Proof<REPETITIONS, Language<SCALAR_LIMBS, Scalar, GroupElement>, ProtocolContext>;
+
+/// A Ratio Between Committed Values is the Discrete Log Schnorr Proof Proof Aggregation Commitment
+/// Round Party.
+pub type ProofAggregationCommitmentRoundParty<
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    ProtocolContext,
+> = aggregation::commitment_round::Party<
+    REPETITIONS,
+    Language<SCALAR_LIMBS, Scalar, GroupElement>,
+    ProtocolContext,
+>;
+
+/// A Ratio Between Committed Values is the Discrete Log Schnorr Proof Aggregation Decommitment
+/// Round Party.
+pub type ProofAggregationDecommitmentRoundParty<
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    ProtocolContext,
+> = aggregation::decommitment_round::Party<
+    REPETITIONS,
+    Language<SCALAR_LIMBS, Scalar, GroupElement>,
+    ProtocolContext,
+>;
+
+/// A Ratio Between Committed Values is the Discrete Log Schnorr Proof Aggregation Proof Share Round
+/// Party.
+pub type ProofAggregationProofShareRoundParty<
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    ProtocolContext,
+> = aggregation::proof_share_round::Party<
+    REPETITIONS,
+    Language<SCALAR_LIMBS, Scalar, GroupElement>,
+    ProtocolContext,
+>;
+
+/// A Ratio Between Committed Values is the Discrete Log Schnorr Proof Aggregation Proof Aggregation
+/// Round Party.
+pub type ProofAggregationProofAggregationRoundParty<
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    ProtocolContext,
+> = aggregation::proof_aggregation_round::Party<
+    REPETITIONS,
+    Language<SCALAR_LIMBS, Scalar, GroupElement>,
+    ProtocolContext,
+>;
 
 #[cfg(any(test, feature = "benchmarking"))]
 mod tests {
