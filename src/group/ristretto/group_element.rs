@@ -184,6 +184,12 @@ impl CyclicGroupElement for GroupElement {
     fn generator(&self) -> Self {
         Self(RISTRETTO_BASEPOINT_POINT)
     }
+
+    fn generator_from_public_parameters(
+        _public_parameters: &Self::PublicParameters,
+    ) -> Self::Value {
+        Self(RISTRETTO_BASEPOINT_POINT)
+    }
 }
 
 impl BoundedGroupElement<SCALAR_LIMBS> for GroupElement {

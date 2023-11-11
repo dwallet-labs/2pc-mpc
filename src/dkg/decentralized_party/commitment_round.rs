@@ -3,8 +3,7 @@
 
 use std::marker::PhantomData;
 
-use crypto_bigint::Uint;
-use rand_core::OsRng;
+use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 
 use crate::{
     ahe,
@@ -31,7 +30,7 @@ impl Party {
             { ahe::paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
         >,
         commitment_to_centralized_party_secret_key_share: Commitment,
-        rng: &mut OsRng,
+        rng: &mut impl CryptoRngCore,
     ) -> (Commitment, decommitment_round::Party) {
         // let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
         //

@@ -3,15 +3,14 @@
 
 use std::marker::PhantomData;
 
-use crypto_bigint::Random;
+use crypto_bigint::{rand_core::OsRng, Random};
 use merlin::Transcript;
-use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     dkg::centralized_party::decommitment_round,
     group,
-    group::{secp256k1, GroupElement as _, Samplable},
+    group::{secp256k1, GroupElement as _, PrimeGroupElement, Samplable},
     proofs::{
         schnorr::{knowledge_of_discrete_log, language::GroupsPublicParameters, Proof},
         transcript_protocol::TranscriptProtocol,
@@ -20,42 +19,59 @@ use crate::{
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
-pub struct Party {}
+pub struct Party<
+    const SCALAR_LIMBS: usize,
+    GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
+    ProtocolContext: Clone + Serialize,
+> {
+    pub group_public_parameters: GroupElement::PublicParameters,
+    pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+    // TODO: should we get this like that?
+    pub protocol_context: ProtocolContext,
+}
 
-impl Party {
-    // TODO: what's the point of this struct if no memebers, and this method does not get 'self'?
+impl<
+        const SCALAR_LIMBS: usize,
+        GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
+        ProtocolContext: Clone + Serialize,
+    > Party<SCALAR_LIMBS, GroupElement, ProtocolContext>
+{
     pub fn sample_commit_and_prove_secret_key_share(
+        self,
         rng: &mut OsRng,
-    ) -> (Commitment, decommitment_round::Party) {
-        // todo: no unwrap
-        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
-
-        let secp256k1_group_public_parameters =
-            secp256k1::group_element::PublicParameters::default();
-
+    ) -> crate::Result<(
+        Commitment,
+        decommitment_round::Party<SCALAR_LIMBS, GroupElement, ProtocolContext>,
+    )> {
         let secret_key_share =
-            secp256k1::Scalar::sample(rng, &secp256k1_scalar_public_parameters).unwrap();
+            GroupElement::Scalar::sample(rng, &self.scalar_group_public_parameters)?;
 
         let language_public_parameters = knowledge_of_discrete_log::PublicParameters {
             groups_public_parameters: GroupsPublicParameters {
-                witness_space_public_parameters: secp256k1_scalar_public_parameters,
-                statement_space_public_parameters: secp256k1_group_public_parameters.clone(),
+                witness_space_public_parameters: self.scalar_group_public_parameters.clone(),
+                statement_space_public_parameters: self.group_public_parameters.clone(),
             },
-            generator: secp256k1_group_public_parameters.generator,
+            generator: GroupElement::generator_from_public_parameters(
+                &self.group_public_parameters,
+            ),
         };
 
-        let (proof, public_key_share) = Proof::<
-            knowledge_of_discrete_log::Language<secp256k1::Scalar, secp256k1::GroupElement>,
-            PhantomData<()>,
+        let (proof, public_key_share) = knowledge_of_discrete_log::Proof::<
+            GroupElement::Scalar,
+            GroupElement,
+            ProtocolContext,
         >::prove(
-            &PhantomData,
+            0,
+            &self.protocol_context,
             &language_public_parameters,
             vec![secret_key_share],
             rng,
-        )
-        .unwrap();
+        )?;
 
-        let public_key_share = *public_key_share.first().unwrap(); // TODO: pattern match this? above
+        let public_key_share: GroupElement = public_key_share
+            .first()
+            .ok_or(crate::Error::APIMismatch)?
+            .clone();
 
         let mut transcript = Transcript::new(b"DKG commitment round of centralized party");
         // TODO: this should be enough for the "bit" that says its party A sending.
@@ -76,6 +92,6 @@ impl Party {
             commitment_randomness,
         };
 
-        (commitment, party)
+        Ok((commitment, party))
     }
 }

@@ -78,7 +78,8 @@ impl<
     /// Prove a batched Schnorr zero-knowledge claim.
     /// Returns the zero-knowledge proof.
     pub fn prove(
-        // The number of parties participating in aggregation (set to 0 for local proofs)
+        // The number of parties participating in aggregation (set to 0 for local proofs) - TODO:
+        // Option?
         number_of_parties: usize,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,

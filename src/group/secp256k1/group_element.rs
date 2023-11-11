@@ -202,6 +202,12 @@ impl CyclicGroupElement for GroupElement {
     fn generator(&self) -> Self {
         Self(ProjectivePoint::GENERATOR)
     }
+
+    fn generator_from_public_parameters(
+        _public_parameters: &Self::PublicParameters,
+    ) -> Self::Value {
+        Value(AffinePoint::GENERATOR)
+    }
 }
 
 impl BoundedGroupElement<SCALAR_LIMBS> for GroupElement {

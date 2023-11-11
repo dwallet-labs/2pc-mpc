@@ -51,6 +51,20 @@ impl Commitment {
 /// A unique identifier of a party in a MPC protocol.
 pub type PartyID = u16;
 
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("API mismatch")]
+    APIMismatch,
+
+    #[error("group error")]
+    Group(#[from] group::Error),
+
+    #[error("proofs error")]
+    Proofs(#[from] proofs::Error),
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
+
 #[cfg(feature = "benchmarking")]
 criterion_group!(
     benches,

@@ -207,6 +207,12 @@ where
     fn generator(&self) -> Self {
         Self(DynResidue::<LIMBS>::one(*self.0.params()))
     }
+
+    fn generator_from_public_parameters(
+        _public_parameters: &Self::PublicParameters,
+    ) -> Self::Value {
+        Uint::<LIMBS>::ONE
+    }
 }
 
 impl<const LIMBS: usize> Mul<Self> for GroupElement<LIMBS> {

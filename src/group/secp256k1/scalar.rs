@@ -290,6 +290,12 @@ impl CyclicGroupElement for Scalar {
     fn generator(&self) -> Self {
         Scalar(k256::Scalar::ONE)
     }
+
+    fn generator_from_public_parameters(
+        _public_parameters: &Self::PublicParameters,
+    ) -> Self::Value {
+        Scalar(k256::Scalar::ONE)
+    }
 }
 
 impl KnownOrderScalar<SCALAR_LIMBS> for Scalar {}
