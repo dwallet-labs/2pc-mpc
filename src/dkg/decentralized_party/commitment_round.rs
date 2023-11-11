@@ -1,29 +1,88 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::marker::PhantomData;
-
-use crypto_bigint::{rand_core::CryptoRngCore, Uint};
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
+use serde::Serialize;
 
 use crate::{
     ahe,
     dkg::decentralized_party::decommitment_round,
-    group::{
-        additive_group_of_integers_modulu_n::power_of_two_moduli, secp256k1, self_product,
-        Samplable,
-    },
+    group,
+    group::PrimeGroupElement,
+    proofs,
     proofs::{
         range,
-        range::bulletproofs::RANGE_CLAIM_BITS,
-        schnorr::{aggregation, encryption_of_discrete_log, language::GroupsPublicParameters},
+        schnorr::language::{enhanced, enhanced::RangeProof},
     },
-    Commitment, ComputationalSecuritySizedNumber, PartyID, StatisticalSecuritySizedNumber,
+    AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
-pub struct Party {}
+pub struct Party<
+    const SCALAR_LIMBS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    RangeProof: proofs::RangeProof<
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+    >,
+    ProtocolContext: Clone + Serialize,
+> where
+    Uint<RANGE_CLAIM_LIMBS>: Encoding,
+    Uint<WITNESS_MASK_LIMBS>: Encoding,
+{
+    pub group_public_parameters: GroupElement::PublicParameters,
+    pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+    // TODO: should we get this like that?
+    pub protocol_context: ProtocolContext,
+    pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
+    pub range_proof_public_parameters: RangeProof::PublicParameters,
+}
 
-impl Party {
+impl<
+        const SCALAR_LIMBS: usize,
+        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const RANGE_CLAIMS_PER_SCALAR: usize,
+        const RANGE_CLAIM_LIMBS: usize,
+        const WITNESS_MASK_LIMBS: usize,
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
+        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        RangeProof: proofs::RangeProof<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+        >,
+        ProtocolContext: Clone + Serialize,
+    >
+    Party<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        GroupElement,
+        EncryptionKey,
+        RangeProof,
+        ProtocolContext,
+    >
+where
+    Uint<RANGE_CLAIM_LIMBS>: Encoding,
+    Uint<WITNESS_MASK_LIMBS>: Encoding,
+    range::CommitmentSchemeMessageSpaceValue<
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        RangeProof,
+    >: From<enhanced::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
+{
     fn sample_and_commit_share_of_decentralize_party_secret_key_share(
         party_id: PartyID,
         threshold_paillier_associate_bi_prime: Uint<
@@ -31,7 +90,21 @@ impl Party {
         >,
         commitment_to_centralized_party_secret_key_share: Commitment,
         rng: &mut impl CryptoRngCore,
-    ) -> (Commitment, decommitment_round::Party) {
+    ) -> (
+        Commitment,
+        decommitment_round::Party<
+            SCALAR_LIMBS,
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+            ProtocolContext,
+        >,
+    ) {
         // let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
         //
         // let secp256k1_group_public_parameters =

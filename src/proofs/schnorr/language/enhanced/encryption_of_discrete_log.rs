@@ -162,7 +162,7 @@ where
             RANGE_CLAIM_LIMBS,
             RangeProof,
         >,
-        ahe::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        EncryptionKey::PublicParameters,
         group::PublicParameters<Scalar>,
         GroupElement::Value,
     >;

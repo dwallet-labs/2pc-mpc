@@ -77,7 +77,6 @@ impl<
         // TODO: this should be enough for the "bit" that says its party A sending.
 
         // TODO: is protocol context the right thing here?
-        // TODO: party id? but its a DKG
         transcript
             .serialize_to_transcript_as_json(b"public key share", &public_key_share.value())
             .unwrap();
