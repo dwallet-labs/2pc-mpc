@@ -46,6 +46,7 @@ impl<
         let secret_key_share =
             GroupElement::Scalar::sample(rng, &self.scalar_group_public_parameters)?;
 
+        // TODO: should get this as a member?
         let language_public_parameters = knowledge_of_discrete_log::PublicParameters {
             groups_public_parameters: GroupsPublicParameters {
                 witness_space_public_parameters: self.scalar_group_public_parameters.clone(),

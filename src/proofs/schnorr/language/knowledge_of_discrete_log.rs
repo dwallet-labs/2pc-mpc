@@ -11,7 +11,10 @@ use crate::{
     group,
     group::Samplable,
     proofs,
-    proofs::{schnorr, schnorr::aggregation},
+    proofs::{
+        schnorr,
+        schnorr::{aggregation, language},
+    },
 };
 
 pub(crate) const REPETITIONS: usize = 1;
@@ -94,6 +97,10 @@ impl<WitnessSpacePublicParameters, StatementSpacePublicParameters, GroupElementV
         &self.groups_public_parameters
     }
 }
+
+/// The Public Parameters of a Knowledge of Discrete Log Schnorr Language.
+pub type LanguagePublicParameters<Scalar, GroupElement> =
+    language::PublicParameters<REPETITIONS, Language<Scalar, GroupElement>>;
 
 /// A Knowledge of Discrete Log Schnorr Proof.
 pub type Proof<Scalar, GroupElement, ProtocolContext> =

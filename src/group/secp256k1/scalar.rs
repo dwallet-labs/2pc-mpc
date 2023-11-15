@@ -20,8 +20,7 @@ use crate::{
 
 /// A Scalar of the prime field $\mathbb{Z}_p$ over which the secp256k1 prime group is
 /// defined.
-#[derive(PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-#[cfg_attr(test, derive(Debug))]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Scalar(pub(super) k256::Scalar);
 
 impl ConstantTimeEq for Scalar {
@@ -50,6 +49,7 @@ impl Samplable for Scalar {
 pub struct PublicParameters {
     name: String,
     order: U256,
+    generator: Scalar,
 }
 
 impl Default for PublicParameters {
@@ -57,6 +57,7 @@ impl Default for PublicParameters {
         PublicParameters {
             name: "The finite field of integers modulo prime q $\\mathbb{Z}_q$".to_string(),
             order: ORDER,
+            generator: Scalar(k256::Scalar::ONE),
         }
     }
 }

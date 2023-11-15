@@ -53,6 +53,9 @@ pub type PartyID = u16;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("invalid parameters")]
+    InvalidParameters,
+
     #[error("API mismatch")]
     APIMismatch,
 

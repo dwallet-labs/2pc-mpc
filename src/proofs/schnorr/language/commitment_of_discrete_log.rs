@@ -14,7 +14,7 @@ use crate::{
     proofs::{
         schnorr,
         schnorr::{
-            aggregation,
+            aggregation, language,
             language::{StatementSpacePublicParameters, WitnessSpacePublicParameters},
         },
     },
@@ -127,6 +127,17 @@ impl<
         &self.groups_public_parameters
     }
 }
+
+/// The Public Parameters of a Commitment of Discrete Log Schnorr Language.
+pub type LanguagePublicParameters<
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+> = language::PublicParameters<
+    REPETITIONS,
+    Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+>;
 
 /// A Commitment of Discrete Log Schnorr Proof.
 pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme, ProtocolContext> =

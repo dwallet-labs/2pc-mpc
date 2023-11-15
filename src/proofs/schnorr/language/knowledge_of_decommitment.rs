@@ -12,7 +12,10 @@ use crate::{
     group,
     group::{self_product, BoundedGroupElement, Samplable},
     proofs,
-    proofs::{schnorr, schnorr::aggregation},
+    proofs::{
+        schnorr,
+        schnorr::{aggregation, language},
+    },
 };
 
 /// Knowledge of Decommitment Schnorr Language.
@@ -141,6 +144,18 @@ impl<
         &self.groups_public_parameters
     }
 }
+
+/// The Public Parameters of a Knowledge of Decommitment Schnorr Language.
+pub type LanguagePublicParameters<
+    const REPETITIONS: usize,
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+> = language::PublicParameters<
+    REPETITIONS,
+    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+>;
 
 /// A Knowledge of Decommitment Schnorr Proof.
 pub type Proof<

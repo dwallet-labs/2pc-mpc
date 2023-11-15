@@ -70,19 +70,19 @@ pub trait Language<
     ) -> Result<Self::StatementSpaceGroupElement>;
 }
 
-pub(in crate::proofs) type PublicParameters<const REPETITIONS: usize, L> =
+pub type PublicParameters<const REPETITIONS: usize, L> =
     <L as Language<REPETITIONS>>::PublicParameters;
-pub(in crate::proofs) type WitnessSpaceGroupElement<const REPETITIONS: usize, L> =
+pub type WitnessSpaceGroupElement<const REPETITIONS: usize, L> =
     <L as Language<REPETITIONS>>::WitnessSpaceGroupElement;
-pub(in crate::proofs) type WitnessSpacePublicParameters<const REPETITIONS: usize, L> =
+pub type WitnessSpacePublicParameters<const REPETITIONS: usize, L> =
     group::PublicParameters<WitnessSpaceGroupElement<REPETITIONS, L>>;
-pub(in crate::proofs) type WitnessSpaceValue<const REPETITIONS: usize, L> =
+pub type WitnessSpaceValue<const REPETITIONS: usize, L> =
     group::Value<WitnessSpaceGroupElement<REPETITIONS, L>>;
-pub(in crate::proofs) type StatementSpaceGroupElement<const REPETITIONS: usize, L> =
+pub type StatementSpaceGroupElement<const REPETITIONS: usize, L> =
     <L as Language<REPETITIONS>>::StatementSpaceGroupElement;
-pub(in crate::proofs) type StatementSpacePublicParameters<const REPETITIONS: usize, L> =
+pub type StatementSpacePublicParameters<const REPETITIONS: usize, L> =
     group::PublicParameters<StatementSpaceGroupElement<REPETITIONS, L>>;
-pub(in crate::proofs) type StatementSpaceValue<const REPETITIONS: usize, L> =
+pub type StatementSpaceValue<const REPETITIONS: usize, L> =
     group::Value<StatementSpaceGroupElement<REPETITIONS, L>>;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

@@ -13,7 +13,10 @@ use crate::{
     group,
     group::{self_product, CyclicGroupElement, GroupElement, KnownOrderGroupElement, Samplable},
     proofs,
-    proofs::{schnorr, schnorr::aggregation},
+    proofs::{
+        schnorr,
+        schnorr::{aggregation, language},
+    },
 };
 
 pub(crate) const REPETITIONS: usize = 1;
@@ -138,6 +141,10 @@ impl<
         &self.groups_public_parameters
     }
 }
+
+/// The Public Parameters of a Ratio Between Committed Values is the Discrete Log Schnorr Language.
+pub type LanguagePublicParameters<const SCALAR_LIMBS: usize, Scalar, GroupElement> =
+    language::PublicParameters<REPETITIONS, Language<SCALAR_LIMBS, Scalar, GroupElement>>;
 
 /// A Ratio Between Committed Values is the Discrete Log Schnorr Proof.
 pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, ProtocolContext> =
