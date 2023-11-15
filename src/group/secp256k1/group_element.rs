@@ -23,8 +23,7 @@ use crate::{
 };
 
 /// An element of the secp256k1 prime group.
-#[derive(PartialEq, Eq, Clone, Copy)]
-#[cfg_attr(test, derive(Debug))]
+#[derive(PartialEq, Eq, Clone, Debug, Copy)]
 pub struct GroupElement(pub(super) ProjectivePoint);
 
 /// The public parameters of the secp256k1 group.

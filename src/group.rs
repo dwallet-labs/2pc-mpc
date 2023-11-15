@@ -1,7 +1,10 @@
-use std::hash::Hash;
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
-use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
+use std::{
+    fmt::Debug,
+    hash::Hash,
+    ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign},
+};
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark_scalar_mul_bounded;
@@ -57,6 +60,7 @@ pub trait GroupElement:
     + for<'r> SubAssign<&'r Self>
     + Into<Self::Value>
     + Into<Self::PublicParameters>
+    + Debug
     + PartialEq
     + Eq
     + Clone
@@ -81,6 +85,7 @@ pub trait GroupElement:
     type Value: Serialize
         + for<'r> Deserialize<'r>
         + Clone
+        + Debug
         + PartialEq
         + ConstantTimeEq
         + ConditionallySelectable

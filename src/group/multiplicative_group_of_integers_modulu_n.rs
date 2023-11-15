@@ -21,8 +21,7 @@ use crate::{
 
 /// An element of the multiplicative group of integers modulo `n` $\mathbb{Z}_n^*$
 /// [Multiplicative group of integers modulo n](https://en.wikipedia.org/wiki/Multiplicative_group_of_integers_modulo_n)
-#[derive(PartialEq, Eq, Clone, Copy)]
-#[cfg_attr(test, derive(Debug))]
+#[derive(PartialEq, Eq, Clone, Debug, Copy)]
 pub struct GroupElement<const LIMBS: usize>(DynResidue<LIMBS>);
 
 impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
