@@ -147,7 +147,7 @@ pub type Proof<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme
         ProtocolContext,
     >;
 
-/// A Commitment of Discrete Log Schnorr Proof.
+/// A Commitment of Discrete Log Schnorr Proof Aggregation Commitment Round Party.
 pub type ProofAggregationCommitmentRoundParty<
     const SCALAR_LIMBS: usize,
     Scalar,
@@ -160,7 +160,7 @@ pub type ProofAggregationCommitmentRoundParty<
     ProtocolContext,
 >;
 
-/// A Commitment of Discrete Log Schnorr Proof.
+/// A Commitment of Discrete Log Schnorr Proof Aggregation Decommitment Round Party.
 pub type ProofAggregationDecommitmentRoundParty<
     const SCALAR_LIMBS: usize,
     Scalar,
@@ -173,7 +173,14 @@ pub type ProofAggregationDecommitmentRoundParty<
     ProtocolContext,
 >;
 
-/// A Commitment of Discrete Log Schnorr Proof.
+/// A Commitment of Discrete Log Schnorr Proof Aggregation Decommitment.
+pub type Decommitment<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> =
+    aggregation::decommitment_round::Decommitment<
+        REPETITIONS,
+        Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+    >;
+
+/// A Commitment of Discrete Log Schnorr Proof Share Round Party.
 pub type ProofAggregationProofShareRoundParty<
     const SCALAR_LIMBS: usize,
     Scalar,

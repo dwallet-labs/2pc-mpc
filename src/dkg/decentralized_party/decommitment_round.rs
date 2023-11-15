@@ -1,6 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
 use crypto_bigint::{Encoding, Uint};
 use serde::Serialize;
 
@@ -14,6 +15,7 @@ use crate::{
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
 };
+use crate::proofs::schnorr::aggregation::decommitment_round::Decommitment;
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
@@ -123,4 +125,13 @@ where
         RangeProof,
     >: From<enhanced::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
 {
+    // pub fn decommit_share_of_decentralize_party_public_key_share(
+    //     self,
+    //     commitments: HashMap<PartyID, Commitment>,
+    // ) -> proofs::Result<(
+    //     Decommitment<encryption_of_discrete_log::REPETITIONS, Language>,
+    //     proof_share_round::Party<REPETITIONS, Language, ProtocolContext>,
+    // )> {
+    //     
+    // }
 }

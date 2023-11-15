@@ -176,6 +176,13 @@ pub type ProofAggregationDecommitmentRoundParty<
     ProtocolContext,
 >;
 
+/// A Ratio Between Committed Values is the Discrete Log Schnorr Proof Aggregation Decommitment.
+pub type Decommitment<const SCALAR_LIMBS: usize, Scalar, GroupElement> =
+    aggregation::decommitment_round::Decommitment<
+        REPETITIONS,
+        Language<SCALAR_LIMBS, Scalar, GroupElement>,
+    >;
+
 /// A Ratio Between Committed Values is the Discrete Log Schnorr Proof Aggregation Proof Share Round
 /// Party.
 pub type ProofAggregationProofShareRoundParty<

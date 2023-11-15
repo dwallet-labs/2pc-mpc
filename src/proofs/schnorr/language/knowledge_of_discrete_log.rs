@@ -122,6 +122,10 @@ pub type ProofAggregationDecommitmentRoundParty<Scalar, GroupElement, ProtocolCo
         ProtocolContext,
     >;
 
+/// A Knowledge of Discrete Log Schnorr Proof Aggregation Decommitment.
+pub type Decommitment<Scalar, GroupElement> =
+    aggregation::decommitment_round::Decommitment<REPETITIONS, Language<Scalar, GroupElement>>;
+
 /// A Knowledge of Discrete Log Schnorr Proof Aggregation Proof Share Round Party.
 pub type ProofAggregationProofShareRoundParty<Scalar, GroupElement, ProtocolContext> =
     aggregation::proof_share_round::Party<
