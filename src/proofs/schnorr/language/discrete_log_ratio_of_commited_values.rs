@@ -37,6 +37,7 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
     _scalar_choice: PhantomData<Scalar>,
     _group_element_choice: PhantomData<GroupElement>,
 }
+
 impl<const SCALAR_LIMBS: usize, Scalar, GroupElement> schnorr::Language<REPETITIONS>
     for Language<SCALAR_LIMBS, Scalar, GroupElement>
 where
@@ -194,6 +195,16 @@ pub type ProofAggregationProofShareRoundParty<
     REPETITIONS,
     Language<SCALAR_LIMBS, Scalar, GroupElement>,
     ProtocolContext,
+>;
+
+/// A Ratio Between Committed Values is the Discrete Log Schnorr Proof Aggregation Proof Share.
+pub type ProofAggregationProofShareProofShareRoundParty<
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+> = aggregation::proof_share_round::ProofShare<
+    REPETITIONS,
+    Language<SCALAR_LIMBS, Scalar, GroupElement>,
 >;
 
 /// A Ratio Between Committed Values is the Discrete Log Schnorr Proof Aggregation Proof Aggregation

@@ -521,6 +521,34 @@ pub type ProofAggregationProofShareRoundParty<
     ProtocolContext,
 >;
 
+/// An Encryption of a Tuple Schnorr Proof Aggregation Proof Share.
+pub type ProofShare<
+    const SCALAR_LIMBS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    EncryptionKey,
+    RangeProof,
+> = aggregation::proof_share_round::ProofShare<
+    REPETITIONS,
+    Language<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        RangeProof,
+    >,
+>;
+
 /// An Encryption of a Tuple Schnorr Proof Aggregation Proof Aggregation Round Party.
 pub type ProofAggregationProofAggregationRoundParty<
     const SCALAR_LIMBS: usize,

@@ -225,6 +225,18 @@ pub type ProofAggregationProofShareRoundParty<
     ProtocolContext,
 >;
 
+/// A Knowledge of Decommitment Schnorr Proof Aggregation Proof Share.
+pub type ProofShare<
+    const REPETITIONS: usize,
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+> = aggregation::proof_share_round::ProofShare<
+    REPETITIONS,
+    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+>;
+
 /// A Knowledge of Decommitment Schnorr Proof Aggregation Proof Aggregation Round Party.
 pub type ProofAggregationProofAggregationRoundParty<
     const REPETITIONS: usize,

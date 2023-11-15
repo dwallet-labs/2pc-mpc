@@ -695,6 +695,44 @@ pub type ProofAggregationProofShareRoundParty<
     ProtocolContext,
 >;
 
+/// A Committed Linear Evaluation Schnorr Proof Aggregation Proof Share.
+pub type ProofShare<
+    const SCALAR_LIMBS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const MASK_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIMS_PER_MASK: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    const DIMENSION: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    EncryptionKey,
+    CommitmentScheme,
+    RangeProof,
+> = aggregation::proof_share_round::ProofShare<
+    REPETITIONS,
+    Language<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        MASK_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIMS_PER_MASK,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        DIMENSION,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        CommitmentScheme,
+        RangeProof,
+    >,
+>;
+
 /// A Committed Linear Evaluation Schnorr Proof Aggregation Proof Aggregation Round Party.
 pub type ProofAggregationProofAggregationRoundParty<
     const SCALAR_LIMBS: usize,

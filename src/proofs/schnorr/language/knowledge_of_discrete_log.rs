@@ -134,6 +134,10 @@ pub type ProofAggregationProofShareRoundParty<Scalar, GroupElement, ProtocolCont
         ProtocolContext,
     >;
 
+/// A Knowledge of Discrete Log Schnorr Proof Aggregation Proof Share.
+pub type ProofShare<Scalar, GroupElement> =
+    aggregation::proof_share_round::ProofShare<REPETITIONS, Language<Scalar, GroupElement>>;
+
 /// A Knowledge of Discrete Log Schnorr Proof Aggregation Proof Aggregation Round Party.
 pub type ProofAggregationProofAggregationRoundParty<Scalar, GroupElement, ProtocolContext> =
     aggregation::proof_aggregation_round::Party<

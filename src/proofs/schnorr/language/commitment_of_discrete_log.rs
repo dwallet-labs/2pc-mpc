@@ -193,6 +193,13 @@ pub type ProofAggregationProofShareRoundParty<
     ProtocolContext,
 >;
 
+/// A Commitment of Discrete Log Schnorr Proof Share.
+pub type ProofShare<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> =
+    aggregation::proof_share_round::ProofShare<
+        REPETITIONS,
+        Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+    >;
+
 /// A Commitment of Discrete Log Schnorr Proof Aggregation Proof Aggregation Round Party.
 pub type ProofAggregationProofAggregationRoundParty<
     const SCALAR_LIMBS: usize,

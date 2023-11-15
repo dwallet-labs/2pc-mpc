@@ -8,6 +8,7 @@ use serde::Serialize;
 
 use super::proof_share_round;
 use crate::{
+    dkg::decentralized_party::proof_aggregation_round,
     group,
     group::PrimeGroupElement,
     proofs,
@@ -73,8 +74,8 @@ pub struct Party<
             RangeProof,
         >,
     pub(super) commitment_to_centralized_party_secret_key_share: Commitment,
-    pub(super) encryption_of_secret_share_decommitment_round_party:
-        encryption_of_discrete_log::ProofAggregationDecommitmentRoundParty<
+    pub(super) encryption_of_secret_share_proof_share_round_party:
+        encryption_of_discrete_log::ProofAggregationProofShareRoundParty<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -129,11 +130,25 @@ where
         RangeProof,
     >: From<enhanced::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
 {
-    pub fn decommit_share_of_decentralize_party_public_key_share(
+    pub fn generate_proof_share(
         self,
-        commitments: HashMap<PartyID, Commitment>,
+        decommitments: HashMap<
+            PartyID,
+            encryption_of_discrete_log::Decommitment<
+                SCALAR_LIMBS,
+                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RANGE_CLAIMS_PER_SCALAR,
+                RANGE_CLAIM_LIMBS,
+                WITNESS_MASK_LIMBS,
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                GroupElement::Scalar,
+                GroupElement,
+                EncryptionKey,
+                RangeProof,
+            >,
+        >,
     ) -> proofs::Result<(
-        encryption_of_discrete_log::Decommitment<
+        encryption_of_discrete_log::ProofShare<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -145,7 +160,7 @@ where
             EncryptionKey,
             RangeProof,
         >,
-        proof_share_round::Party<
+        proof_aggregation_round::Party<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -158,44 +173,6 @@ where
             ProtocolContext,
         >,
     )> {
-        let (
-            encryption_of_secret_share_decommitment,
-            encryption_of_secret_share_proof_share_round_party,
-        ) = self
-            .encryption_of_secret_share_decommitment_round_party
-            .decommit_statements_and_statement_mask(commitments)?;
-
-        let proof_share_round_party = proof_share_round::Party::<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-            ProtocolContext,
-        > {
-            party_id: self.party_id,
-            threshold: self.threshold,
-            number_of_parties: self.number_of_parties,
-            group_public_parameters: self.group_public_parameters,
-            scalar_group_public_parameters: self.scalar_group_public_parameters,
-            encryption_scheme_public_parameters: self.encryption_scheme_public_parameters,
-            range_proof_public_parameters: self.range_proof_public_parameters,
-            encryption_of_discrete_log_language_public_parameters: self
-                .encryption_of_discrete_log_language_public_parameters,
-            commitment_to_centralized_party_secret_key_share: self
-                .commitment_to_centralized_party_secret_key_share,
-            encryption_of_secret_share_proof_share_round_party,
-            share_of_decentralize_party_secret_key_share: self
-                .share_of_decentralize_party_secret_key_share,
-        };
-
-        Ok((
-            encryption_of_secret_share_decommitment,
-            proof_share_round_party,
-        ))
+        todo!()
     }
 }
