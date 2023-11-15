@@ -14,7 +14,7 @@ use crate::{
     proofs::{
         range,
         schnorr::{
-            aggregation::decommitment_round::Decommitment, encryption_of_discrete_log,
+            aggregation::decommitment_round::Decommitment, encryption_of_discrete_log, language,
             language::enhanced,
         },
     },
@@ -129,4 +129,53 @@ where
         RangeProof,
     >: From<enhanced::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
 {
+    pub fn aggregate_proof_shares(
+        self,
+        proof_shares: HashMap<
+            PartyID,
+            encryption_of_discrete_log::ProofShare<
+                SCALAR_LIMBS,
+                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RANGE_CLAIMS_PER_SCALAR,
+                RANGE_CLAIM_LIMBS,
+                WITNESS_MASK_LIMBS,
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                GroupElement::Scalar,
+                GroupElement,
+                EncryptionKey,
+                RangeProof,
+            >,
+        >,
+    ) -> proofs::Result<(
+        encryption_of_discrete_log::Proof<
+            SCALAR_LIMBS,
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement::Scalar,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+            ProtocolContext,
+        >,
+        Vec<
+            encryption_of_discrete_log::StatementSpaceGroupElement<
+                SCALAR_LIMBS,
+                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RANGE_CLAIMS_PER_SCALAR,
+                RANGE_CLAIM_LIMBS,
+                WITNESS_MASK_LIMBS,
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                GroupElement::Scalar,
+                GroupElement,
+                EncryptionKey,
+                RangeProof,
+            >,
+        >,
+    )> {
+        self.encryption_of_secret_share_proof_aggregation_round_party
+            .aggregate_proof_shares(proof_shares)
+    }
 }

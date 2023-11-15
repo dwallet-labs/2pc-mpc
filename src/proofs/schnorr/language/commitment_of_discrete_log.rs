@@ -128,6 +128,28 @@ impl<
     }
 }
 
+/// The Witness Space Group Element of a Commitment of Discrete Log Schnorr Language.
+pub type WitnessSpaceGroupElement<
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+> = language::WitnessSpaceGroupElement<
+    REPETITIONS,
+    Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+>;
+
+/// The Statement Space Group Element of a Commitment of Discrete Log Schnorr Language.
+pub type StatementSpaceGroupElement<
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+> = language::StatementSpaceGroupElement<
+    REPETITIONS,
+    Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+>;
+
 /// The Public Parameters of a Commitment of Discrete Log Schnorr Language.
 pub type LanguagePublicParameters<
     const SCALAR_LIMBS: usize,

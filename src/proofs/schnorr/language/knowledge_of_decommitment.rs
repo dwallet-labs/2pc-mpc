@@ -146,6 +146,18 @@ impl<
 }
 
 /// The Public Parameters of a Knowledge of Decommitment Schnorr Language.
+pub type WitnessSpaceGroupElement<
+    const REPETITIONS: usize,
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+> = language::WitnessSpaceGroupElement<
+    REPETITIONS,
+    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+>;
+
+/// The Witness Space Group Element of a Knowledge of Decommitment Schnorr Language.
 pub type LanguagePublicParameters<
     const REPETITIONS: usize,
     const SCALAR_LIMBS: usize,
@@ -153,6 +165,18 @@ pub type LanguagePublicParameters<
     GroupElement,
     CommitmentScheme,
 > = language::PublicParameters<
+    REPETITIONS,
+    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+>;
+
+/// The Statement Space Group Element of a Knowledge of Decommitment Schnorr Language.
+pub type StatementSpaceGroupElement<
+    const REPETITIONS: usize,
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    CommitmentScheme,
+> = language::StatementSpaceGroupElement<
     REPETITIONS,
     Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
 >;

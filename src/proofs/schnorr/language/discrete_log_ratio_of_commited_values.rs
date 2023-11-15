@@ -143,6 +143,16 @@ impl<
     }
 }
 
+/// The Witness Space Group Element of a Ratio Between Committed Values is the Discrete Log Schnorr
+/// Language.
+pub type WitnessSpaceGroupElement<const SCALAR_LIMBS: usize, Scalar, GroupElement> =
+    language::WitnessSpaceGroupElement<REPETITIONS, Language<SCALAR_LIMBS, Scalar, GroupElement>>;
+
+/// The Statement Space Group Element of a Ratio Between Committed Values is the Discrete Log
+/// Schnorr Language.
+pub type StatementSpaceGroupElement<const SCALAR_LIMBS: usize, Scalar, GroupElement> =
+    language::StatementSpaceGroupElement<REPETITIONS, Language<SCALAR_LIMBS, Scalar, GroupElement>>;
+
 /// The Public Parameters of a Ratio Between Committed Values is the Discrete Log Schnorr Language.
 pub type LanguagePublicParameters<const SCALAR_LIMBS: usize, Scalar, GroupElement> =
     language::PublicParameters<REPETITIONS, Language<SCALAR_LIMBS, Scalar, GroupElement>>;

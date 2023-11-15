@@ -345,6 +345,62 @@ impl<
     }
 }
 
+/// The Witness Space Group Element of an Encryption of a Tuple Schnorr Language.
+pub type WitnessSpaceGroupElement<
+    const SCALAR_LIMBS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    EncryptionKey,
+    RangeProof,
+> = language::WitnessSpaceGroupElement<
+    REPETITIONS,
+    Language<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        RangeProof,
+    >,
+>;
+
+/// The Statement Space Group Element of an Encryption of a Tuple Schnorr Language.
+pub type StatementSpaceGroupElement<
+    const SCALAR_LIMBS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+    EncryptionKey,
+    RangeProof,
+> = language::StatementSpaceGroupElement<
+    REPETITIONS,
+    Language<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
+        EncryptionKey,
+        RangeProof,
+    >,
+>;
+
 /// The Public Parameters of an Encryption of a Tuple Schnorr Language.
 pub type LanguagePublicParameters<
     const SCALAR_LIMBS: usize,

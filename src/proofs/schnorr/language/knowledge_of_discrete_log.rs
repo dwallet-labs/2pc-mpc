@@ -98,6 +98,14 @@ impl<WitnessSpacePublicParameters, StatementSpacePublicParameters, GroupElementV
     }
 }
 
+/// The Witness Space Group Element of a Knowledge of Discrete Log Schnorr Language.
+pub type WitnessSpaceGroupElement<Scalar, GroupElement> =
+    language::WitnessSpaceGroupElement<REPETITIONS, Language<Scalar, GroupElement>>;
+
+/// The Statement Space Group Element of a Knowledge of Discrete Log Schnorr Language.
+pub type StatementSpaceGroupElement<Scalar, GroupElement> =
+    language::StatementSpaceGroupElement<REPETITIONS, Language<Scalar, GroupElement>>;
+
 /// The Public Parameters of a Knowledge of Discrete Log Schnorr Language.
 pub type LanguagePublicParameters<Scalar, GroupElement> =
     language::PublicParameters<REPETITIONS, Language<Scalar, GroupElement>>;
