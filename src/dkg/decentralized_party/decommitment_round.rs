@@ -87,7 +87,7 @@ pub struct Party<
             RangeProof,
             ProtocolContext,
         >,
-    pub(super) share_of_decentralize_party_secret_key_share: GroupElement::Scalar,
+    pub(super) share_of_decentralized_party_secret_key_share: GroupElement::Scalar,
 }
 
 impl<
@@ -189,8 +189,8 @@ where
             commitment_to_centralized_party_secret_key_share: self
                 .commitment_to_centralized_party_secret_key_share,
             encryption_of_secret_share_proof_share_round_party,
-            share_of_decentralize_party_secret_key_share: self
-                .share_of_decentralize_party_secret_key_share,
+            share_of_decentralized_party_secret_key_share: self
+                .share_of_decentralized_party_secret_key_share,
         };
 
         Ok((

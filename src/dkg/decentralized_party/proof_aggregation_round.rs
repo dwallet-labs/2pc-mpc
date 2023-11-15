@@ -87,7 +87,7 @@ pub struct Party<
             RangeProof,
             ProtocolContext,
         >,
-    pub(super) share_of_decentralize_party_secret_key_share: GroupElement::Scalar,
+    pub(super) share_of_decentralized_party_secret_key_share: GroupElement::Scalar,
 }
 
 impl<
@@ -146,7 +146,7 @@ where
                 RangeProof,
             >,
         >,
-    ) -> proofs::Result<(
+    ) -> crate::Result<(
         encryption_of_discrete_log::Proof<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -160,22 +160,26 @@ where
             RangeProof,
             ProtocolContext,
         >,
-        Vec<
-            encryption_of_discrete_log::StatementSpaceGroupElement<
-                SCALAR_LIMBS,
-                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                RANGE_CLAIMS_PER_SCALAR,
-                RANGE_CLAIM_LIMBS,
-                WITNESS_MASK_LIMBS,
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-                GroupElement::Scalar,
-                GroupElement,
-                EncryptionKey,
-                RangeProof,
-            >,
+        encryption_of_discrete_log::StatementSpaceGroupElement<
+            SCALAR_LIMBS,
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement::Scalar,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
         >,
     )> {
-        self.encryption_of_secret_share_proof_aggregation_round_party
-            .aggregate_proof_shares(proof_shares)
+        let (aggregated_proof, statements) = self
+            .encryption_of_secret_share_proof_aggregation_round_party
+            .aggregate_proof_shares(proof_shares)?;
+
+        let decentralized_party_public_key_share =
+            statements.first().ok_or(crate::Error::APIMismatch)?.clone();
+
+        Ok((aggregated_proof, decentralized_party_public_key_share))
     }
 }

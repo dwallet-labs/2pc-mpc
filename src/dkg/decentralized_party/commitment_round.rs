@@ -167,11 +167,11 @@ where
                 .randomness_space_public_parameters,
         )?;
 
-        let share_of_decentralize_party_secret_key_share =
+        let share_of_decentralized_party_secret_key_share =
             GroupElement::Scalar::sample(rng, &self.scalar_group_public_parameters)?;
 
         let share_of_decentralize_party_secret_key_share_uint: Uint<SCALAR_LIMBS> =
-            share_of_decentralize_party_secret_key_share.into();
+            share_of_decentralized_party_secret_key_share.into();
 
         let share_of_decentralize_party_secret_key_share_in_range_claim_base: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>;
             RANGE_CLAIMS_PER_SCALAR] = array::from_fn(|i| {
@@ -245,7 +245,7 @@ where
                 .encryption_of_discrete_log_language_public_parameters,
             commitment_to_centralized_party_secret_key_share,
             encryption_of_secret_share_decommitment_round_party,
-            share_of_decentralize_party_secret_key_share,
+            share_of_decentralized_party_secret_key_share,
         };
 
         Ok((
