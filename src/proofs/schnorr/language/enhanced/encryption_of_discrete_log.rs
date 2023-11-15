@@ -535,7 +535,7 @@ pub(crate) mod tests {
         group::{ristretto, secp256k1, self_product},
         proofs::{
             range,
-            range::bulletproofs::RANGE_CLAIM_BITS,
+            range::RangeProof,
             schnorr::{aggregation, language},
         },
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
@@ -580,7 +580,11 @@ pub(crate) mod tests {
 
         let constrained_witness_public_parameters =
             power_of_two_moduli::PublicParameters::<WITNESS_MASK_LIMBS> {
-                sampling_bit_size: RANGE_CLAIM_BITS
+                sampling_bit_size: <bulletproofs::RangeProof as RangeProof<
+                    { ristretto::SCALAR_LIMBS },
+                    RANGE_CLAIMS_PER_SCALAR,
+                    { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                >>::RANGE_CLAIM_BITS
                     + ComputationalSecuritySizedNumber::BITS
                     + StatisticalSecuritySizedNumber::BITS,
             };

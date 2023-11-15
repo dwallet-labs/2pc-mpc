@@ -69,6 +69,7 @@ pub struct Language<
     _commitment_choice: PhantomData<CommitmentScheme>,
     _range_proof_choice: PhantomData<RangeProof>,
 }
+
 impl<
         const SCALAR_LIMBS: usize,
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
@@ -713,8 +714,8 @@ mod tests {
         group::{ristretto, secp256k1, self_product},
         proofs::{
             range,
-            range::bulletproofs::RANGE_CLAIM_BITS,
             schnorr::{aggregation, language},
+            RangeProof,
         },
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
@@ -828,7 +829,11 @@ mod tests {
 
         let constrained_witness_public_parameters =
             power_of_two_moduli::PublicParameters::<WITNESS_MASK_LIMBS> {
-                sampling_bit_size: RANGE_CLAIM_BITS
+                sampling_bit_size: <bulletproofs::RangeProof as RangeProof<
+                    { ristretto::SCALAR_LIMBS },
+                    NUM_RANGE_CLAIMS,
+                    { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                >>::RANGE_CLAIM_BITS
                     + ComputationalSecuritySizedNumber::BITS
                     + StatisticalSecuritySizedNumber::BITS,
             };

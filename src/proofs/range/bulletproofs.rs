@@ -25,7 +25,6 @@ use crate::{
 };
 
 pub const RANGE_CLAIM_LIMBS: usize = U64::LIMBS;
-pub const RANGE_CLAIM_BITS: usize = 32;
 
 impl<const NUM_RANGE_CLAIMS: usize>
     super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>
@@ -38,6 +37,8 @@ impl<const NUM_RANGE_CLAIMS: usize>
         SCALAR_LIMBS,
         Pedersen<1, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>,
     >;
+
+    const RANGE_CLAIM_BITS: usize = 32;
 
     type PublicParameters = PublicParameters<NUM_RANGE_CLAIMS>;
 
@@ -86,7 +87,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
             .take(padded_witnesses_length)
             .collect();
 
-        let bulletproofs_generators = BulletproofGens::new(32, witnesses.len());
+        let bulletproofs_generators = BulletproofGens::new(<Self as super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS, witnesses.len());
         let commitment_generators = PedersenGens::default();
 
         let (proof, commitments) = bulletproofs::RangeProof::prove_multiple_with_rng(
@@ -95,7 +96,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
             transcript,
             witnesses.as_slice(),
             commitments_randomness.as_slice(),
-            RANGE_CLAIM_BITS,
+            <Self as super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS,
             rng,
         )?;
 
@@ -163,7 +164,8 @@ impl<const NUM_RANGE_CLAIMS: usize>
             .map(|commtiment| commtiment.compress())
             .collect();
 
-        let bulletproofs_generators = BulletproofGens::new(32, compressed_commitments.len());
+        let bulletproofs_generators =
+            BulletproofGens::new(<Self as super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS, compressed_commitments.len());
         let commitment_generators = PedersenGens::default();
 
         // TODO: convert their verification error to our range proof error?
@@ -172,7 +174,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
             &commitment_generators,
             transcript,
             compressed_commitments.as_slice(),
-            RANGE_CLAIM_BITS,
+            <Self as super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS,
             rng,
         )?)
     }

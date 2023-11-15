@@ -24,6 +24,9 @@ pub trait RangeProof<
     /// transcript.
     const NAME: &'static str;
 
+    /// The maximum number of bits this proof can prove for every witness.
+    const RANGE_CLAIM_BITS: usize;
+
     /// The commitment scheme used for the range proof
     type CommitmentScheme: HomomorphicCommitmentScheme<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>;
 

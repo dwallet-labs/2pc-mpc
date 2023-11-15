@@ -562,8 +562,9 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::{
+        group::ristretto,
         proofs::{
-            range::bulletproofs::RANGE_CLAIM_BITS,
+            range::RangeProof,
             schnorr::{enhanced, language},
         },
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
@@ -634,7 +635,12 @@ pub(crate) mod tests {
             (
                 array::from_fn(|_| {
                     let mask = Uint::<WITNESS_MASK_LIMBS>::MAX
-                        >> (Uint::<WITNESS_MASK_LIMBS>::BITS - RANGE_CLAIM_BITS);
+                        >> (Uint::<WITNESS_MASK_LIMBS>::BITS
+                            - <bulletproofs::RangeProof as RangeProof<
+                                { ristretto::SCALAR_LIMBS },
+                                RANGE_CLAIMS_PER_SCALAR,
+                                { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                            >>::RANGE_CLAIM_BITS);
 
                     let value = Uint::<{ WITNESS_MASK_LIMBS }>::random(&mut OsRng) & mask;
 
@@ -854,7 +860,12 @@ pub(crate) mod tests {
         // just out of range by 1
         constrained_witnesses[0] = power_of_two_moduli::GroupElement::new(
             (Uint::<WITNESS_MASK_LIMBS>::MAX
-                >> (Uint::<WITNESS_MASK_LIMBS>::BITS - RANGE_CLAIM_BITS))
+                >> (Uint::<WITNESS_MASK_LIMBS>::BITS
+                    - <bulletproofs::RangeProof as RangeProof<
+                        { ristretto::SCALAR_LIMBS },
+                        RANGE_CLAIMS_PER_SCALAR,
+                        { range::bulletproofs::RANGE_CLAIM_LIMBS },
+                    >>::RANGE_CLAIM_BITS))
                 .wrapping_add(&Uint::<WITNESS_MASK_LIMBS>::ONE),
             &constrained_witnesses[0].public_parameters(),
         )

@@ -238,6 +238,7 @@ pub trait KnownOrderGroupElement<const SCALAR_LIMBS: usize>:
 {
     type Scalar: KnownOrderScalar<SCALAR_LIMBS>
         + Mul<Self, Output = Self>
+        + Into<Uint<SCALAR_LIMBS>>
         + for<'r> Mul<&'r Self, Output = Self>;
 
     /// Returns the order of the group
