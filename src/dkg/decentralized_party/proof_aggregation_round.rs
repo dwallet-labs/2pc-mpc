@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use super::proof_share_round;
 use crate::{
-    dkg::decentralized_party::centralized_party_decommitment_proof_verification_round,
+    dkg::decentralized_party::decommitment_proof_verification_round,
     group,
     group::{GroupElement as _, PrimeGroupElement},
     proofs,
@@ -23,9 +23,16 @@ use crate::{
 };
 
 #[derive(PartialEq, Serialize, Deserialize, Clone)]
-pub struct DecentralizedPartySecretKeyShareEncryptionAndProof<GroupElementValue, CiphertextValue> {
-    pub(super) public_key_share: GroupElementValue,
-    pub(super) encryption_of_secret_key_share: CiphertextValue,
+pub struct SecretKeyShareEncryptionAndProof<
+    RangeProofCommitmentValue,
+    GroupElementValue,
+    CiphertextValue,
+    EncDLProof,
+> {
+    pub(in crate::dkg) public_key_share: GroupElementValue,
+    pub(in crate::dkg) range_proof_commitment: RangeProofCommitmentValue,
+    pub(in crate::dkg) encryption_of_secret_key_share: CiphertextValue,
+    pub(in crate::dkg) encryption_of_secret_key_share_proof: EncDLProof,
 }
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -150,11 +157,30 @@ where
             >,
         >,
     ) -> crate::Result<(
-        DecentralizedPartySecretKeyShareEncryptionAndProof<
+        SecretKeyShareEncryptionAndProof<
+            range::CommitmentSchemeCommitmentSpaceValue<
+                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RANGE_CLAIMS_PER_SCALAR,
+                RANGE_CLAIM_LIMBS,
+                RangeProof,
+            >,
             GroupElement::Value,
             group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
+            encryption_of_discrete_log::Proof<
+                SCALAR_LIMBS,
+                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RANGE_CLAIMS_PER_SCALAR,
+                RANGE_CLAIM_LIMBS,
+                WITNESS_MASK_LIMBS,
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                GroupElement::Scalar,
+                GroupElement,
+                EncryptionKey,
+                RangeProof,
+                ProtocolContext,
+            >,
         >,
-        centralized_party_decommitment_proof_verification_round::Party<
+        decommitment_proof_verification_round::Party<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -165,13 +191,13 @@ where
             EncryptionKey,
         >,
     )> {
-        let (aggregated_proof, statements) = self
+        let (encryption_of_secret_key_share_proof, statements) = self
             .encryption_of_secret_share_proof_aggregation_round_party
             .aggregate_proof_shares(proof_shares)?;
 
         // TODO: think if we can create a struct for the enhanced witness & statement that gives
         // better access to fields in a named way
-        let (_, remaining_statements) = statements
+        let (range_proof_commitment, remaining_statements) = statements
             .first()
             .ok_or(crate::Error::APIMismatch)?
             .clone()
@@ -183,14 +209,16 @@ where
         ) = remaining_statements.into();
 
         let decentralized_party_secret_key_share_encryption_and_proof =
-            DecentralizedPartySecretKeyShareEncryptionAndProof {
+            SecretKeyShareEncryptionAndProof {
                 public_key_share: (&decentralized_party_public_key_share).value(),
+                range_proof_commitment: (&range_proof_commitment).value(),
                 encryption_of_secret_key_share:
                     (&encryption_of_decentralized_party_secret_key_share).value(),
+                encryption_of_secret_key_share_proof,
             };
 
         let centralized_party_decommitment_proof_verification_round_party =
-            centralized_party_decommitment_proof_verification_round::Party::<
+            decommitment_proof_verification_round::Party::<
                 SCALAR_LIMBS,
                 RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RANGE_CLAIMS_PER_SCALAR,
