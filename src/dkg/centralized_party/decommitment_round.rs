@@ -33,8 +33,9 @@ pub struct Output<
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct PublicKeyShareDecommitmentAndProof<GroupElementValue, DLProof> {
-    proof: DLProof,
-    public_key_share: GroupElementValue,
+    pub(super) proof: DLProof,
+    pub(super) public_key_share: GroupElementValue,
+    pub(super) commitment_randomness: ComputationalSecuritySizedNumber,
 }
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -217,6 +218,7 @@ where
         > {
             proof: self.knowledge_of_discrete_log_proof,
             public_key_share: self.public_key_share.value(),
+            commitment_randomness: self.commitment_randomness,
         };
 
         let public_key = self.public_key_share.clone() + &decentralized_party_public_key_share;
