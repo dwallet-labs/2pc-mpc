@@ -52,10 +52,10 @@ pub struct Party<
     pub party_id: PartyID,
     pub threshold: PartyID,
     pub number_of_parties: PartyID,
-    pub group_public_parameters: GroupElement::PublicParameters,
-    pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     // TODO: should we get this like that?
     pub protocol_context: ProtocolContext,
+    pub group_public_parameters: GroupElement::PublicParameters,
+    pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
     pub range_proof_public_parameters: RangeProof::PublicParameters,
     // TODO: do I want to get it here as a member, or create it myself?
@@ -207,7 +207,7 @@ where
                 language_public_parameters: self
                     .encryption_of_discrete_log_language_public_parameters
                     .clone(),
-                protocol_context: self.protocol_context,
+                protocol_context: self.protocol_context.clone(),
                 witnesses: vec![(
                     share_of_decentralize_party_secret_key_share_witness,
                     range_proof_commitment_randomness,
@@ -237,6 +237,7 @@ where
             party_id: self.party_id,
             threshold: self.threshold,
             number_of_parties: self.number_of_parties,
+            protocol_context: self.protocol_context,
             group_public_parameters: self.group_public_parameters,
             scalar_group_public_parameters: self.scalar_group_public_parameters,
             encryption_scheme_public_parameters: self.encryption_scheme_public_parameters,

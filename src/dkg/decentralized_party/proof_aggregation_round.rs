@@ -65,6 +65,7 @@ pub struct Party<
     pub(super) party_id: PartyID,
     pub(super) threshold: PartyID,
     pub(super) number_of_parties: PartyID,
+    pub(super) protocol_context: ProtocolContext,
     pub(super) group_public_parameters: GroupElement::PublicParameters,
     pub(super) scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub(super) encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
@@ -189,6 +190,7 @@ where
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
+            ProtocolContext,
         >,
     )> {
         let (encryption_of_secret_key_share_proof, statements) = self
@@ -227,10 +229,13 @@ where
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 GroupElement,
                 EncryptionKey,
+                ProtocolContext,
             > {
                 party_id: self.party_id,
                 threshold: self.threshold,
                 number_of_parties: self.number_of_parties,
+                protocol_context: self.protocol_context,
+                group_public_parameters: self.group_public_parameters,
                 commitment_to_centralized_party_secret_key_share: self
                     .commitment_to_centralized_party_secret_key_share,
                 share_of_decentralized_party_secret_key_share: self

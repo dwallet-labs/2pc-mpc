@@ -33,9 +33,9 @@ pub struct Output<
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct PublicKeyShareDecommitmentAndProof<GroupElementValue, DLProof> {
-    pub(super) proof: DLProof,
-    pub(super) public_key_share: GroupElementValue,
-    pub(super) commitment_randomness: ComputationalSecuritySizedNumber,
+    pub(in crate::dkg) proof: DLProof,
+    pub(in crate::dkg) public_key_share: GroupElementValue,
+    pub(in crate::dkg) commitment_randomness: ComputationalSecuritySizedNumber,
 }
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
