@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     dkg::centralized_party::decommitment_round,
     group,
-    group::{secp256k1, GroupElement as _, PrimeGroupElement, Samplable},
+    group::{secp256k1, GroupElement as _, GroupElement, PrimeGroupElement, Samplable},
     proofs,
     proofs::{
         range,
@@ -75,6 +75,26 @@ pub struct Party<
     // TODO: should we get this like that? is it the same for both the centralized & decentralized
     // party (and all their parties?)
     pub protocol_context: ProtocolContext,
+}
+
+impl Commitment {
+    pub fn commit_public_key_share<GroupElement: group::GroupElement>(
+        public_key_share: &GroupElement,
+        commitment_randomness: &ComputationalSecuritySizedNumber,
+    ) -> crate::Result<Self> {
+        let mut transcript = Transcript::new(b"DKG commitment round of centralized party");
+        // TODO: this should be enough for the "bit" that says its party A sending.
+
+        // TODO: is protocol context the right thing here?
+        transcript
+            .serialize_to_transcript_as_json(b"public key share", &public_key_share.value())
+            .unwrap();
+
+        Ok(Commitment::commit_transcript(
+            &mut transcript,
+            &commitment_randomness,
+        ))
+    }
 }
 
 impl<
@@ -165,16 +185,10 @@ where
             .ok_or(crate::Error::APIMismatch)?
             .clone();
 
-        let mut transcript = Transcript::new(b"DKG commitment round of centralized party");
-        // TODO: this should be enough for the "bit" that says its party A sending.
-
-        // TODO: is protocol context the right thing here?
-        transcript
-            .serialize_to_transcript_as_json(b"public key share", &public_key_share.value())
-            .unwrap();
-
         let commitment_randomness = ComputationalSecuritySizedNumber::random(rng);
-        let commitment = Commitment::commit_transcript(&mut transcript, &commitment_randomness);
+
+        let commitment =
+            Commitment::commit_public_key_share(&public_key_share, &commitment_randomness)?;
 
         let party = decommitment_round::Party {
             group_public_parameters: self.group_public_parameters,

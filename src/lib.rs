@@ -65,8 +65,8 @@ pub enum Error {
     #[error("proofs error")]
     Proofs(#[from] proofs::Error),
 
-    #[error("the centralized party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment", .0)]
-    CentralizedPartyWrongDecommitment(),
+    #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]
+    WrongDecommitment,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

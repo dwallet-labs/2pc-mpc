@@ -205,17 +205,13 @@ where
             .clone()
             .into();
 
-        let (
-            encryption_of_decentralized_party_secret_key_share,
-            decentralized_party_public_key_share,
-        ) = remaining_statements.into();
+        let (encryption_of_secret_key_share, public_key_share) = remaining_statements.into();
 
         let decentralized_party_secret_key_share_encryption_and_proof =
             SecretKeyShareEncryptionAndProof {
-                public_key_share: (&decentralized_party_public_key_share).value(),
+                public_key_share: (&public_key_share).value(),
                 range_proof_commitment: (&range_proof_commitment).value(),
-                encryption_of_secret_key_share:
-                    (&encryption_of_decentralized_party_secret_key_share).value(),
+                encryption_of_secret_key_share: (&encryption_of_secret_key_share).value(),
                 encryption_of_secret_key_share_proof,
             };
 
@@ -236,12 +232,13 @@ where
                 number_of_parties: self.number_of_parties,
                 protocol_context: self.protocol_context,
                 group_public_parameters: self.group_public_parameters,
+                scalar_group_public_parameters: self.scalar_group_public_parameters,
                 commitment_to_centralized_party_secret_key_share: self
                     .commitment_to_centralized_party_secret_key_share,
                 share_of_decentralized_party_secret_key_share: self
                     .share_of_decentralized_party_secret_key_share,
-                decentralized_party_public_key_share,
-                encryption_of_decentralized_party_secret_key_share,
+                public_key_share,
+                encryption_of_secret_key_share,
             };
 
         Ok((
