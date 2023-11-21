@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 #[cfg(feature = "benchmarking")]

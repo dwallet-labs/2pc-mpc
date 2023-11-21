@@ -55,23 +55,6 @@ pub struct Party<
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
     pub range_proof_public_parameters: RangeProof::PublicParameters,
-    // TODO: do I want to get it here as a member, or create it myself?
-    // perhaps I should not take the other public parameters that are derived from it if so, or
-    // else there could be conflicts - like if the two passed public parameters are not the same in
-    // the langauge and outside it.
-    pub encryption_of_discrete_log_language_public_parameters:
-        encryption_of_discrete_log::LanguagePublicParameters<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            GroupElement::Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
     // TODO: should we get this like that? is it the same for both the centralized & decentralized
     // party (and all their parties?)
     pub protocol_context: ProtocolContext,
@@ -157,16 +140,11 @@ where
         let secret_key_share =
             GroupElement::Scalar::sample(rng, &self.scalar_group_public_parameters)?;
 
-        // TODO: should get this as a member?
-        let language_public_parameters = knowledge_of_discrete_log::PublicParameters {
-            groups_public_parameters: GroupsPublicParameters {
-                witness_space_public_parameters: self.scalar_group_public_parameters.clone(),
-                statement_space_public_parameters: self.group_public_parameters.clone(),
-            },
-            generator: GroupElement::generator_from_public_parameters(
-                &self.group_public_parameters,
-            ),
-        };
+        let language_public_parameters =
+            knowledge_of_discrete_log::PublicParameters::new::<GroupElement::Scalar, GroupElement>(
+                self.scalar_group_public_parameters.clone(),
+                self.group_public_parameters.clone(),
+            );
 
         let (knowledge_of_discrete_log_proof, public_key_share) = knowledge_of_discrete_log::Proof::<
             GroupElement::Scalar,
@@ -195,8 +173,6 @@ where
             scalar_group_public_parameters: self.scalar_group_public_parameters,
             encryption_scheme_public_parameters: self.encryption_scheme_public_parameters,
             range_proof_public_parameters: self.range_proof_public_parameters,
-            encryption_of_discrete_log_language_public_parameters: self
-                .encryption_of_discrete_log_language_public_parameters,
             protocol_context: self.protocol_context,
             secret_key_share,
             public_key_share,

@@ -52,8 +52,8 @@ where
     type StatementSpaceGroupElement = self_product::GroupElement<2, GroupElement>;
 
     type PublicParameters = PublicParameters<
-        super::WitnessSpacePublicParameters<REPETITIONS, Self>,
-        super::StatementSpacePublicParameters<REPETITIONS, Self>,
+        Scalar::PublicParameters,
+        GroupElement::PublicParameters,
         commitments::PublicParameters<
             SCALAR_LIMBS,
             Pedersen<1, SCALAR_LIMBS, Scalar, GroupElement>,
@@ -78,7 +78,7 @@ where
         // TODO: can we assure somehow that the generators are independent (message from
         // randomness)?
         let altered_base_commitment_scheme_public_parameters =
-            pedersen::public_parameters::<1, SCALAR_LIMBS, Scalar, GroupElement>(
+            pedersen::PublicParameters::new::<SCALAR_LIMBS, Scalar, GroupElement>(
                 language_public_parameters
                     .groups_public_parameters
                     .witness_space_public_parameters
@@ -111,34 +111,93 @@ where
 /// Language.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct PublicParameters<
-    WitnessSpacePublicParameters,
-    StatementSpacePublicParameters,
+    ScalarPublicParameters,
+    GroupElementPublicParameters,
     PedersenPublicParameters,
     GroupElementValue,
 > {
-    pub groups_public_parameters:
-        GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
+    pub groups_public_parameters: GroupsPublicParameters<
+        self_product::PublicParameters<3, ScalarPublicParameters>,
+        self_product::PublicParameters<2, GroupElementPublicParameters>,
+    >,
     commitment_scheme_public_parameters: PedersenPublicParameters,
     // The base $g$ by the discrete log (witness $x$) $g^x$ used as the public key in the paper.
     base_by_discrete_log: GroupElementValue,
 }
 
 impl<
-        WitnessSpacePublicParameters,
-        StatementSpacePublicParameters,
+        ScalarPublicParameters,
+        GroupElementPublicParameters,
         PedersenPublicParameters,
         GroupElementValue,
-    > AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
+    >
+    PublicParameters<
+        ScalarPublicParameters,
+        GroupElementPublicParameters,
+        PedersenPublicParameters,
+        GroupElementValue,
+    >
+{
+    pub fn new<const SCALAR_LIMBS: usize, Scalar, GroupElement>(
+        scalar_group_public_parameters: Scalar::PublicParameters,
+        group_public_parameters: GroupElement::PublicParameters,
+        commitment_scheme_public_parameters: PedersenPublicParameters,
+        base_by_discrete_log: GroupElement,
+    ) -> Self
+    where
+        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>
+            + KnownOrderGroupElement<SCALAR_LIMBS>
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy,
+        GroupElement: group::GroupElement<
+            Value = GroupElementValue,
+            PublicParameters = GroupElementPublicParameters,
+        >,
+    {
+        Self {
+            groups_public_parameters: GroupsPublicParameters {
+                witness_space_public_parameters: group::PublicParameters::<
+                    self_product::GroupElement<3, Scalar>,
+                >::new(
+                    scalar_group_public_parameters
+                ),
+                statement_space_public_parameters: group::PublicParameters::<
+                    self_product::GroupElement<2, GroupElement>,
+                >::new(group_public_parameters),
+            },
+            commitment_scheme_public_parameters,
+            base_by_discrete_log: base_by_discrete_log.value(),
+        }
+    }
+}
+
+impl<
+        ScalarPublicParameters,
+        GroupElementPublicParameters,
+        PedersenPublicParameters,
+        GroupElementValue,
+    >
+    AsRef<
+        GroupsPublicParameters<
+            self_product::PublicParameters<3, ScalarPublicParameters>,
+            self_product::PublicParameters<2, GroupElementPublicParameters>,
+        >,
+    >
     for PublicParameters<
-        WitnessSpacePublicParameters,
-        StatementSpacePublicParameters,
+        ScalarPublicParameters,
+        GroupElementPublicParameters,
         PedersenPublicParameters,
         GroupElementValue,
     >
 {
     fn as_ref(
         &self,
-    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
+    ) -> &GroupsPublicParameters<
+        self_product::PublicParameters<3, ScalarPublicParameters>,
+        self_product::PublicParameters<2, GroupElementPublicParameters>,
+    > {
         &self.groups_public_parameters
     }
 }
@@ -272,8 +331,7 @@ mod tests {
                 * generator;
 
         // TODO: this is not safe; we need a proper way to derive generators
-        let pedersen_public_parameters = pedersen::public_parameters::<
-            1,
+        let pedersen_public_parameters = pedersen::PublicParameters::new::<
             { secp256k1::SCALAR_LIMBS },
             secp256k1::Scalar,
             secp256k1::GroupElement,
@@ -284,22 +342,16 @@ mod tests {
             randomness_generator.value(),
         );
 
-        PublicParameters {
-            groups_public_parameters: GroupsPublicParameters {
-                witness_space_public_parameters: group::PublicParameters::<
-                    self_product::GroupElement<3, secp256k1::Scalar>,
-                >::new(
-                    secp256k1_scalar_public_parameters.clone()
-                ),
-                statement_space_public_parameters: group::PublicParameters::<
-                    self_product::GroupElement<2, secp256k1::GroupElement>,
-                >::new(
-                    secp256k1_group_public_parameters.clone()
-                ),
-            },
-            commitment_scheme_public_parameters: pedersen_public_parameters,
-            base_by_discrete_log: base_by_discrete_log.value(),
-        }
+        PublicParameters::new::<
+            { secp256k1::SCALAR_LIMBS },
+            secp256k1::Scalar,
+            secp256k1::GroupElement,
+        >(
+            secp256k1_scalar_public_parameters,
+            secp256k1_group_public_parameters,
+            pedersen_public_parameters,
+            base_by_discrete_log,
+        )
     }
 
     #[rstest]

@@ -65,7 +65,7 @@ pub type EnhancedLanguageWitness<
         WITNESS_MASK_LIMBS,
         L,
     >,
-    UnconstrainedWitnessSpaceGroupElement<
+    UnboundedWitnessSpaceGroupElement<
         REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
@@ -137,7 +137,7 @@ pub trait EnhancedLanguage<
         Uint<RANGE_CLAIM_LIMBS>: Encoding,
         Uint<WITNESS_MASK_LIMBS>: Encoding,
 {
-    /// The unconstrained part of the witness group element.
+    /// The unbounded part of the witness group element.
     type UnboundedWitnessSpaceGroupElement: GroupElement + Samplable;
 
     /// An element in the associated statement space, that will be the image of the homomorphism alongside the range proof commitment.
@@ -145,6 +145,94 @@ pub trait EnhancedLanguage<
 
     /// The range proof used to prove the constrained witnesses are within the range specified in the public parameters.
     type RangeProof: proofs::RangeProof<RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>;
+}
+
+impl<WitnessSpacePublicParameters, StatementSpacePublicParameters>
+    super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>
+{
+    pub fn new<
+        const REPETITIONS: usize,
+        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        const RANGE_CLAIM_LIMBS: usize,
+        const WITNESS_MASK_LIMBS: usize,
+        Lang: EnhancedLanguage<
+            REPETITIONS,
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+        >,
+    >(
+        range_proof_public_parameters: RangeProofPublicParameters<
+            REPETITIONS,
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            Lang,
+        >,
+        unbounded_witness_space_public_parameters: UnboundedWitnessSpacePublicParameters<
+            REPETITIONS,
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            Lang,
+        >,
+        remaining_statement_space_public_parameters: RemainingStatementSpacePublicParameters<
+            REPETITIONS,
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            Lang,
+        >,
+        sampling_bit_size: usize,
+    ) -> super::GroupsPublicParameters<
+        super::WitnessSpacePublicParameters<REPETITIONS, Lang>,
+        super::StatementSpacePublicParameters<REPETITIONS, Lang>,
+    >
+    where
+        Uint<RANGE_CLAIM_LIMBS>: Encoding,
+        Uint<WITNESS_MASK_LIMBS>: Encoding,
+    {
+        // TODO: what to do with `sampling_bit_size`? can it be consistent
+        // to all claims or do we need to get it individually?
+        let constrained_witness_public_parameters =
+            self_product::PublicParameters::<
+                NUM_RANGE_CLAIMS,
+                power_of_two_moduli::PublicParameters<WITNESS_MASK_LIMBS>,
+            >::new(power_of_two_moduli::PublicParameters { sampling_bit_size });
+
+        // TODO: solve double as-ref [by adding a function]
+        let range_proof_commitment_randomness_space_public_parameters =
+            range_proof_public_parameters
+                .as_ref()
+                .as_ref()
+                .randomness_space_public_parameters
+                .clone();
+
+        let range_proof_commitment_space_public_parameters = range_proof_public_parameters
+            .as_ref()
+            .as_ref()
+            .commitment_space_public_parameters
+            .clone();
+
+        super::GroupsPublicParameters {
+            witness_space_public_parameters: (
+                constrained_witness_public_parameters,
+                range_proof_commitment_randomness_space_public_parameters,
+                unbounded_witness_space_public_parameters,
+            )
+                .into(),
+            statement_space_public_parameters: (
+                range_proof_commitment_space_public_parameters,
+                remaining_statement_space_public_parameters,
+            )
+                .into(),
+        }
+    }
 }
 
 fn witness_mask_base_to_scalar<
@@ -186,7 +274,26 @@ where
     Ok(polynomial.evaluate(&delta))
 }
 
-pub type UnconstrainedWitnessSpaceGroupElement<
+pub type GroupsPublicParameters<
+    const NUM_RANGE_CLAIMS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    RangeProofCommitmentRandomnessSpacePublicParameters,
+    RangeProofCommitmentSpacePublicParameters,
+    UnboundedWitnessSpacePublicParameters,
+    RemainingStatementSpacePublicParameters,
+> = super::GroupsPublicParameters<
+    direct_product::ThreeWayPublicParameters<
+        ConstrainedWitnessPublicParameters<NUM_RANGE_CLAIMS, WITNESS_MASK_LIMBS>,
+        RangeProofCommitmentRandomnessSpacePublicParameters,
+        UnboundedWitnessSpacePublicParameters,
+    >,
+    direct_product::PublicParameters<
+        RangeProofCommitmentSpacePublicParameters,
+        RemainingStatementSpacePublicParameters,
+    >,
+>;
+
+pub type UnboundedWitnessSpaceGroupElement<
     const REPETITIONS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,
@@ -209,7 +316,7 @@ pub type UnboundedWitnessSpacePublicParameters<
     const WITNESS_MASK_LIMBS: usize,
     L,
 > = group::PublicParameters<
-    UnconstrainedWitnessSpaceGroupElement<
+    UnboundedWitnessSpaceGroupElement<
         REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
@@ -226,7 +333,7 @@ pub type UnboundedWitnessSpaceValue<
     const WITNESS_MASK_LIMBS: usize,
     L,
 > = group::Value<
-    UnconstrainedWitnessSpaceGroupElement<
+    UnboundedWitnessSpaceGroupElement<
         REPETITIONS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
@@ -599,7 +706,7 @@ pub(crate) mod tests {
         Uint<WITNESS_MASK_LIMBS>: Encoding,
     {
         iter::repeat_with(|| {
-            let (_, commitment_randomness, unconstrained_witness) =
+            let (_, commitment_randomness, unbounded_witness) =
                 Lang::WitnessSpaceGroupElement::sample(
                     &mut OsRng,
                     &language_public_parameters
@@ -652,7 +759,7 @@ pub(crate) mod tests {
                 })
                 .into(),
                 commitment_randomness,
-                unconstrained_witness,
+                unbounded_witness,
             )
                 .into()
         })
@@ -852,7 +959,7 @@ pub(crate) mod tests {
             Lang,
         >(language_public_parameters, batch_size);
 
-        let (constrained_witnesses, commitment_randomness, unconstrained_witness) =
+        let (constrained_witnesses, commitment_randomness, unbounded_witness) =
             witnesses.first().unwrap().clone().into();
         let mut constrained_witnesses: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>;
             NUM_RANGE_CLAIMS] = constrained_witnesses.into();
@@ -874,7 +981,7 @@ pub(crate) mod tests {
         let out_of_range_witness = (
             constrained_witnesses.into(),
             commitment_randomness,
-            unconstrained_witness,
+            unbounded_witness,
         )
             .into();
 

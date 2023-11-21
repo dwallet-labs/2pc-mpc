@@ -50,15 +50,14 @@ where
 {
     // TODO: actually we can use a different randomizer and message spaces, e.g. allowing infinite
     // range (integer commitments)
-    type MessageSpaceGroupElement = MessageSpaceGroupElement<BATCH_SIZE, Scalar>;
-    type RandomnessSpaceGroupElement = RandomnessSpaceGroupElement<Scalar>;
-    type CommitmentSpaceGroupElement = CommitmentSpaceGroupElement<GroupElement>;
+    type MessageSpaceGroupElement = self_product::GroupElement<BATCH_SIZE, Scalar>;
+    type RandomnessSpaceGroupElement = Scalar;
+    type CommitmentSpaceGroupElement = GroupElement;
     type PublicParameters = PublicParameters<
         BATCH_SIZE,
         GroupElement::Value,
-        MessageSpacePublicParameters<BATCH_SIZE, Scalar>,
-        RandomnessSpacePublicParameters<Scalar>,
-        CommitmentSpacePublicParameters<GroupElement>,
+        Scalar::PublicParameters,
+        GroupElement::PublicParameters,
     >;
 
     fn new(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
@@ -124,79 +123,85 @@ type CommitmentSpacePublicParameters<GroupElement> =
 pub struct PublicParameters<
     const BATCH_SIZE: usize,
     GroupElementValue,
-    MessageSpacePublicParameters,
-    RandomnessSpacePublicParameters,
-    CommitmentSpacePublicParameters,
+    ScalarPublicParameters,
+    GroupPublicParameters,
 > {
     pub groups_public_parameters: GroupsPublicParameters<
-        MessageSpacePublicParameters,
-        RandomnessSpacePublicParameters,
-        CommitmentSpacePublicParameters,
+        self_product::PublicParameters<BATCH_SIZE, ScalarPublicParameters>,
+        ScalarPublicParameters,
+        GroupPublicParameters,
     >,
     #[serde(with = "const_generic_array_serialization")]
     pub message_generators: [GroupElementValue; BATCH_SIZE],
     pub randomness_generator: GroupElementValue,
 }
 
-pub fn public_parameters<
-    const BATCH_SIZE: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar: group::GroupElement,
-    GroupElement: group::GroupElement,
->(
-    scalar_public_parameters: group::PublicParameters<Scalar>,
-    group_public_parameters: group::PublicParameters<GroupElement>,
-    message_generators: [group::Value<GroupElement>; BATCH_SIZE],
-    randomness_generator: group::Value<GroupElement>,
-) -> PublicParameters<
-    BATCH_SIZE,
-    group::Value<GroupElement>,
-    MessageSpacePublicParameters<BATCH_SIZE, Scalar>,
-    RandomnessSpacePublicParameters<Scalar>,
-    CommitmentSpacePublicParameters<GroupElement>,
-> {
-    PublicParameters {
-        groups_public_parameters: GroupsPublicParameters {
-            message_space_public_parameters:
-                MessageSpacePublicParameters::<BATCH_SIZE, Scalar>::new(
-                    scalar_public_parameters.clone(),
-                ),
-            randomness_space_public_parameters: scalar_public_parameters,
-            commitment_space_public_parameters: group_public_parameters,
-        },
-        message_generators,
-        randomness_generator,
-    }
-}
-
 impl<
         const BATCH_SIZE: usize,
         GroupElementValue,
-        MessageSpacePublicParameters,
-        RandomnessSpacePublicParameters,
-        CommitmentSpacePublicParameters,
+        ScalarPublicParameters: Clone,
+        GroupPublicParameters,
     >
+    PublicParameters<BATCH_SIZE, GroupElementValue, ScalarPublicParameters, GroupPublicParameters>
+{
+    // TODO: derive this using hashes or whatever is safe.
+    pub fn new<
+        const SCALAR_LIMBS: usize,
+        Scalar: group::GroupElement,
+        GroupElement: group::GroupElement,
+    >(
+        scalar_public_parameters: group::PublicParameters<Scalar>,
+        group_public_parameters: group::PublicParameters<GroupElement>,
+        message_generators: [group::Value<GroupElement>; BATCH_SIZE],
+        randomness_generator: group::Value<GroupElement>,
+    ) -> Self
+    where
+        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>
+            + BoundedGroupElement<SCALAR_LIMBS>
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Samplable
+            + Copy,
+        GroupElement: group::GroupElement<
+            Value = GroupElementValue,
+            PublicParameters = GroupPublicParameters,
+        >,
+    {
+        Self {
+            groups_public_parameters: GroupsPublicParameters {
+                message_space_public_parameters: self_product::PublicParameters::new(
+                    scalar_public_parameters.clone(),
+                ),
+                randomness_space_public_parameters: scalar_public_parameters,
+                commitment_space_public_parameters: group_public_parameters,
+            },
+            message_generators,
+            randomness_generator,
+        }
+    }
+}
+
+impl<const BATCH_SIZE: usize, GroupElementValue, ScalarPublicParameters, GroupPublicParameters>
     AsRef<
         GroupsPublicParameters<
-            MessageSpacePublicParameters,
-            RandomnessSpacePublicParameters,
-            CommitmentSpacePublicParameters,
+            self_product::PublicParameters<BATCH_SIZE, ScalarPublicParameters>,
+            ScalarPublicParameters,
+            GroupPublicParameters,
         >,
     >
     for PublicParameters<
         BATCH_SIZE,
         GroupElementValue,
-        MessageSpacePublicParameters,
-        RandomnessSpacePublicParameters,
-        CommitmentSpacePublicParameters,
+        ScalarPublicParameters,
+        GroupPublicParameters,
     >
 {
     fn as_ref(
         &self,
     ) -> &GroupsPublicParameters<
-        MessageSpacePublicParameters,
-        RandomnessSpacePublicParameters,
-        CommitmentSpacePublicParameters,
+        self_product::PublicParameters<BATCH_SIZE, ScalarPublicParameters>,
+        ScalarPublicParameters,
+        GroupPublicParameters,
     > {
         &self.groups_public_parameters
     }

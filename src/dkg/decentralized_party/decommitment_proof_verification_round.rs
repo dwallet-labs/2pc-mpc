@@ -102,16 +102,11 @@ where
             return Err(crate::Error::WrongDecommitment);
         }
 
-        // TODO: should get this as a member?
-        let language_public_parameters = knowledge_of_discrete_log::PublicParameters {
-            groups_public_parameters: GroupsPublicParameters {
-                witness_space_public_parameters: self.scalar_group_public_parameters.clone(),
-                statement_space_public_parameters: self.group_public_parameters.clone(),
-            },
-            generator: GroupElement::generator_from_public_parameters(
-                &self.group_public_parameters,
-            ),
-        };
+        let language_public_parameters =
+            knowledge_of_discrete_log::PublicParameters::new::<GroupElement::Scalar, GroupElement>(
+                self.scalar_group_public_parameters.clone(),
+                self.group_public_parameters.clone(),
+            );
 
         decommitment_and_proof.proof.verify(
             0,

@@ -72,19 +72,6 @@ pub struct Party<
     // TODO: should we get this like that? is it the same for both the centralized & decentralized
     // party (and all their parties?)
     pub(super) protocol_context: ProtocolContext,
-    pub(super) encryption_of_discrete_log_language_public_parameters:
-        encryption_of_discrete_log::LanguagePublicParameters<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            GroupElement::Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
     pub(super) secret_key_share: GroupElement::Scalar,
     pub(super) public_key_share: GroupElement,
     pub(super) knowledge_of_discrete_log_proof:
@@ -203,12 +190,40 @@ where
         )
             .into();
 
+        let encryption_of_discrete_log_language_public_parameters =
+            encryption_of_discrete_log::LanguagePublicParameters::<
+                SCALAR_LIMBS,
+                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RANGE_CLAIMS_PER_SCALAR,
+                RANGE_CLAIM_LIMBS,
+                WITNESS_MASK_LIMBS,
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                GroupElement::Scalar,
+                GroupElement,
+                EncryptionKey,
+                RangeProof,
+            >::new::<
+                SCALAR_LIMBS,
+                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RANGE_CLAIM_LIMBS,
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                GroupElement::Scalar,
+                GroupElement,
+                EncryptionKey,
+                RangeProof,
+            >(
+                self.scalar_group_public_parameters,
+                self.group_public_parameters,
+                self.range_proof_public_parameters,
+                self.encryption_scheme_public_parameters,
+            );
+
         decentralized_party_secret_key_share_encryption_and_proof
             .encryption_of_secret_key_share_proof
             .verify(
                 0,
                 &self.protocol_context,
-                &self.encryption_of_discrete_log_language_public_parameters,
+                &encryption_of_discrete_log_language_public_parameters,
                 vec![statement],
             )?;
 

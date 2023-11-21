@@ -103,7 +103,7 @@ pub trait GroupElement:
     /// instantiate a `GroupElement`), as well as static information hardcoded into the code
     /// (that, together with the dynamic information, uniquely identifies a group and will be used
     /// for Fiat-Shamir Transcripts).
-    type PublicParameters: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq;
+    type PublicParameters: Serialize + for<'r> Deserialize<'r> + Clone + PartialEq + Debug;
 
     /// Returns the public parameters of this group element
     fn public_parameters(&self) -> Self::PublicParameters {

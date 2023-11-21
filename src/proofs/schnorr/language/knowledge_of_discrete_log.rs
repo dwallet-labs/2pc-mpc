@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use super::GroupsPublicParameters;
 use crate::{
     group,
-    group::Samplable,
+    group::{CyclicGroupElement, Samplable},
     proofs,
     proofs::{
         schnorr,
@@ -49,8 +49,8 @@ where
     type StatementSpaceGroupElement = GroupElement;
 
     type PublicParameters = PublicParameters<
-        super::WitnessSpacePublicParameters<REPETITIONS, Self>,
-        super::StatementSpacePublicParameters<REPETITIONS, Self>,
+        Scalar::PublicParameters,
+        GroupElement::PublicParameters,
         group::Value<GroupElement>,
     >;
 
@@ -73,27 +73,50 @@ where
 
 /// The Public Parameters of the Knowledge of Discrete Log Schnorr Language.
 #[derive(Debug, PartialEq, Serialize, Clone)]
-pub struct PublicParameters<
-    WitnessSpacePublicParameters,
-    StatementSpacePublicParameters,
-    GroupElementValue,
-> {
+pub struct PublicParameters<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
+{
     pub groups_public_parameters:
-        GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>,
+        GroupsPublicParameters<ScalarPublicParameters, GroupElementPublicParameters>,
     pub generator: GroupElementValue,
 }
 
-impl<WitnessSpacePublicParameters, StatementSpacePublicParameters, GroupElementValue>
-    AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
-    for PublicParameters<
-        WitnessSpacePublicParameters,
-        StatementSpacePublicParameters,
-        GroupElementValue,
-    >
+impl<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
+    PublicParameters<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
+{
+    pub fn new<Scalar, GroupElement>(
+        scalar_group_public_parameters: Scalar::PublicParameters,
+        group_public_parameters: GroupElement::PublicParameters,
+    ) -> Self
+    where
+        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy,
+        GroupElement: group::GroupElement<
+                Value = GroupElementValue,
+                PublicParameters = GroupElementPublicParameters,
+            > + CyclicGroupElement,
+    {
+        // TODO: maybe we don't want the generator all the time?
+        let generator = GroupElement::generator_from_public_parameters(&group_public_parameters);
+        Self {
+            groups_public_parameters: GroupsPublicParameters {
+                witness_space_public_parameters: scalar_group_public_parameters,
+                statement_space_public_parameters: group_public_parameters,
+            },
+            generator,
+        }
+    }
+}
+
+impl<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
+    AsRef<GroupsPublicParameters<ScalarPublicParameters, GroupElementPublicParameters>>
+    for PublicParameters<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
 {
     fn as_ref(
         &self,
-    ) -> &GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters> {
+    ) -> &GroupsPublicParameters<ScalarPublicParameters, GroupElementPublicParameters> {
         &self.groups_public_parameters
     }
 }
@@ -172,13 +195,10 @@ mod tests {
         let secp256k1_group_public_parameters =
             secp256k1::group_element::PublicParameters::default();
 
-        PublicParameters {
-            groups_public_parameters: GroupsPublicParameters {
-                witness_space_public_parameters: secp256k1_scalar_public_parameters,
-                statement_space_public_parameters: secp256k1_group_public_parameters.clone(),
-            },
-            generator: secp256k1_group_public_parameters.generator,
-        }
+        PublicParameters::new::<secp256k1::Scalar, secp256k1::GroupElement>(
+            secp256k1_scalar_public_parameters,
+            secp256k1_group_public_parameters,
+        )
     }
 
     #[rstest]

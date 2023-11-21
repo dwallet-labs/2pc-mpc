@@ -70,19 +70,6 @@ pub struct Party<
     pub(super) scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub(super) encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
     pub(super) range_proof_public_parameters: RangeProof::PublicParameters,
-    pub(super) encryption_of_discrete_log_language_public_parameters:
-        encryption_of_discrete_log::LanguagePublicParameters<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            GroupElement::Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
     pub(super) commitment_to_centralized_party_secret_key_share: Commitment,
     pub(super) encryption_of_secret_share_proof_aggregation_round_party:
         encryption_of_discrete_log::ProofAggregationProofAggregationRoundParty<
