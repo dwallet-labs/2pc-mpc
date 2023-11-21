@@ -7,13 +7,17 @@ use crypto_bigint::{Encoding, Uint};
 use tiresias::secret_sharing::shamir::Polynomial;
 
 use crate::{
+    commitments::GroupsPublicParametersAccessors as _,
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
         BoundedGroupElement, GroupElement, Samplable,
     },
     proofs,
-    proofs::range,
+    proofs::{
+        range, range::CommitmentPublicParametersAccessor as _,
+        schnorr::language::GroupsPublicParametersAccessors as _,
+    },
 };
 
 pub mod committed_linear_evaluation;
@@ -205,18 +209,15 @@ impl<WitnessSpacePublicParameters, StatementSpacePublicParameters>
                 power_of_two_moduli::PublicParameters<WITNESS_MASK_LIMBS>,
             >::new(power_of_two_moduli::PublicParameters { sampling_bit_size });
 
-        // TODO: solve double as-ref [by adding a function]
         let range_proof_commitment_randomness_space_public_parameters =
             range_proof_public_parameters
-                .as_ref()
-                .as_ref()
-                .randomness_space_public_parameters
+                .commitment_public_parameters()
+                .randomness_space_public_parameters()
                 .clone();
 
         let range_proof_commitment_space_public_parameters = range_proof_public_parameters
-            .as_ref()
-            .as_ref()
-            .commitment_space_public_parameters
+            .commitment_public_parameters()
+            .commitment_space_public_parameters()
             .clone();
 
         super::GroupsPublicParameters {
@@ -709,9 +710,7 @@ pub(crate) mod tests {
             let (_, commitment_randomness, unbounded_witness) =
                 Lang::WitnessSpaceGroupElement::sample(
                     &mut OsRng,
-                    &language_public_parameters
-                        .as_ref()
-                        .witness_space_public_parameters,
+                    &language_public_parameters.witness_space_public_parameters(),
                 )
                 .unwrap()
                 .into();
@@ -734,10 +733,7 @@ pub(crate) mod tests {
                     WITNESS_MASK_LIMBS,
                     Lang,
                 >,
-            ) = (&language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters)
-                .into();
+            ) = (language_public_parameters.witness_space_public_parameters()).into();
 
             (
                 array::from_fn(|_| {

@@ -65,6 +65,19 @@ pub trait RangeProof<
     ) -> Result<()>;
 }
 
+pub trait CommitmentPublicParametersAccessor<CommitmentPublicParameters>:
+    AsRef<CommitmentPublicParameters>
+{
+    fn commitment_public_parameters(&self) -> &CommitmentPublicParameters {
+        self.as_ref()
+    }
+}
+
+impl<CommitmentPublicParameters, T: AsRef<CommitmentPublicParameters>>
+    CommitmentPublicParametersAccessor<CommitmentPublicParameters> for T
+{
+}
+
 pub type PublicParameters<
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const NUM_RANGE_CLAIMS: usize,

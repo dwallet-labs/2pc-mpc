@@ -10,8 +10,10 @@ use schnorr::language;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ahe, commitments,
-    commitments::HomomorphicCommitmentScheme,
+    ahe,
+    ahe::GroupsPublicParametersAccessors as _,
+    commitments,
+    commitments::{GroupsPublicParametersAccessors as _, HomomorphicCommitmentScheme},
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
@@ -19,7 +21,9 @@ use crate::{
     },
     helpers::flat_map_results,
     proofs,
-    proofs::{range, schnorr, schnorr::aggregation},
+    proofs::{
+        range, range::CommitmentPublicParametersAccessor as _, schnorr, schnorr::aggregation,
+    },
     AdditivelyHomomorphicEncryptionKey, ComputationalSecuritySizedNumber,
     StatisticalSecuritySizedNumber,
 };
@@ -197,10 +201,9 @@ where
 
         let (commitment_randomness, encryption_randomness) = remaining_witness.into();
 
-        let scalar_group_public_parameters = &language_public_parameters
+        let scalar_group_public_parameters = language_public_parameters
             .commitment_scheme_public_parameters
-            .as_ref()
-            .randomness_space_public_parameters;
+            .randomness_space_public_parameters();
 
         let scalar_group_order =
             Scalar::order_from_public_parameters(scalar_group_public_parameters);
@@ -212,9 +215,9 @@ where
             CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
         let range_proof_commitment_scheme = RangeProof::CommitmentScheme::new(
-            &language_public_parameters
+            language_public_parameters
                 .range_proof_public_parameters
-                .as_ref(),
+                .commitment_public_parameters(),
         )?;
 
         let ciphertexts =
@@ -269,10 +272,9 @@ where
                     ahe::PlaintextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
                 >(
                     coefficient_in_witness_base,
-                    &language_public_parameters
+                    language_public_parameters
                         .encryption_scheme_public_parameters
-                        .as_ref()
-                        .plaintext_space_public_parameters,
+                        .plaintext_space_public_parameters(),
                 )
             }),
         )?;
@@ -294,8 +296,7 @@ where
             mask_in_witness_mask_base,
             &language_public_parameters
                 .encryption_scheme_public_parameters
-                .as_ref()
-                .plaintext_space_public_parameters,
+                .plaintext_space_public_parameters(),
         )?;
 
         let coefficients_and_mask_commitment_message =
@@ -306,11 +307,10 @@ where
                 RangeProof,
             >::new(
                 coefficients_and_mask_in_witness_mask_base_value.into(),
-                &language_public_parameters
+                language_public_parameters
                     .range_proof_public_parameters
-                    .as_ref()
-                    .as_ref()
-                    .message_space_public_parameters,
+                    .commitment_public_parameters()
+                    .message_space_public_parameters(),
             )?;
 
         Ok((
@@ -590,20 +590,17 @@ where
         let unbounded_witness_space_public_parameters = (
             scalar_group_public_parameters,
             encryption_scheme_public_parameters
-                .as_ref()
-                .randomness_space_public_parameters
+                .randomness_space_public_parameters()
                 .clone(),
         )
             .into();
 
         let remaining_statement_space_public_parameters = (
             encryption_scheme_public_parameters
-                .as_ref()
-                .ciphertext_space_public_parameters
+                .ciphertext_space_public_parameters()
                 .clone(),
             commitment_scheme_public_parameters
-                .as_ref()
-                .commitment_space_public_parameters
+                .commitment_space_public_parameters()
                 .clone(),
         )
             .into();
@@ -1196,9 +1193,7 @@ mod tests {
             .map(|plaintext| {
                 paillier::PlaintextGroupElement::new(
                     plaintext,
-                    &paillier_public_parameters
-                        .as_ref()
-                        .plaintext_space_public_parameters,
+                    paillier_public_parameters.plaintext_space_public_parameters(),
                 )
                 .unwrap()
             })

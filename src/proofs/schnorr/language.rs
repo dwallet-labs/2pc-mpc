@@ -91,6 +91,36 @@ pub struct GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePu
     pub statement_space_public_parameters: StatementSpacePublicParameters,
 }
 
+pub trait GroupsPublicParametersAccessors<
+    'a,
+    WitnessSpacePublicParameters: 'a,
+    StatementSpacePublicParameters: 'a,
+>:
+    AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>
+{
+    fn witness_space_public_parameters(&'a self) -> &'a WitnessSpacePublicParameters {
+        &self.as_ref().witness_space_public_parameters
+    }
+
+    fn statement_space_public_parameters(&'a self) -> &'a StatementSpacePublicParameters {
+        &self.as_ref().statement_space_public_parameters
+    }
+}
+
+impl<
+        'a,
+        WitnessSpacePublicParameters: 'a,
+        StatementSpacePublicParameters: 'a,
+        T: AsRef<GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>>,
+    >
+    GroupsPublicParametersAccessors<
+        'a,
+        WitnessSpacePublicParameters,
+        StatementSpacePublicParameters,
+    > for T
+{
+}
+
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
     use std::{iter, marker::PhantomData};
@@ -110,9 +140,7 @@ pub(crate) mod tests {
         iter::repeat_with(|| {
             Lang::WitnessSpaceGroupElement::sample(
                 &mut OsRng,
-                &language_public_parameters
-                    .as_ref()
-                    .witness_space_public_parameters,
+                &language_public_parameters.witness_space_public_parameters(),
             )
             .unwrap()
         })

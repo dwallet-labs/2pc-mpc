@@ -12,14 +12,17 @@ use serde::{Deserialize, Serialize};
 use super::EnhancedLanguage;
 use crate::{
     ahe,
-    commitments::HomomorphicCommitmentScheme,
+    ahe::GroupsPublicParametersAccessors as _,
+    commitments::{GroupsPublicParametersAccessors as _, HomomorphicCommitmentScheme},
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
         BoundedGroupElement, CyclicGroupElement, GroupElement as _, Samplable,
     },
     proofs,
-    proofs::{range, schnorr, schnorr::aggregation},
+    proofs::{
+        range, range::CommitmentPublicParametersAccessor as _, schnorr, schnorr::aggregation,
+    },
     AdditivelyHomomorphicEncryptionKey, ComputationalSecuritySizedNumber,
     StatisticalSecuritySizedNumber,
 };
@@ -178,7 +181,7 @@ where
         let commitment_scheme = RangeProof::CommitmentScheme::new(
             language_public_parameters
                 .range_proof_public_parameters
-                .as_ref(),
+                .commitment_public_parameters(),
         )?;
 
         let discrete_log_in_witness_mask_base: [power_of_two_moduli::GroupElement<
@@ -213,8 +216,7 @@ where
             discrete_log_in_witness_mask_base,
             &language_public_parameters
                 .encryption_scheme_public_parameters
-                .as_ref()
-                .plaintext_space_public_parameters,
+                .plaintext_space_public_parameters(),
         )?;
 
         let discrete_log_commitment_message = range::CommitmentSchemeMessageSpaceGroupElement::<
@@ -224,12 +226,10 @@ where
             RangeProof,
         >::new(
             discrete_log_in_witness_mask_base_element.value().into(),
-            // TODO: no as-ref
             &language_public_parameters
                 .range_proof_public_parameters
-                .as_ref()
-                .as_ref()
-                .message_space_public_parameters,
+                .commitment_public_parameters()
+                .message_space_public_parameters(),
         )?;
 
         // TODO: Need to check that WITNESS_MASK_LIMBS is actually in a size fitting the range proof
@@ -455,14 +455,12 @@ where
         let generator = GroupElement::generator_from_public_parameters(&group_public_parameters);
 
         let unbounded_witness_space_public_parameters = encryption_scheme_public_parameters
-            .as_ref()
-            .randomness_space_public_parameters
+            .randomness_space_public_parameters()
             .clone();
 
         let remaining_statement_space_public_parameters = (
             encryption_scheme_public_parameters
-                .as_ref()
-                .ciphertext_space_public_parameters
+                .ciphertext_space_public_parameters()
                 .clone(),
             group_public_parameters,
         )

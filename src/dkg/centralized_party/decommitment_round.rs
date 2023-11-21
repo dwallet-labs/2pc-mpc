@@ -5,12 +5,15 @@ use crypto_bigint::{Encoding, Uint};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    ahe::GroupsPublicParametersAccessors as _,
+    commitments::GroupsPublicParametersAccessors as _,
     dkg::decentralized_party,
     group,
     group::{GroupElement as _, PrimeGroupElement},
     proofs,
     proofs::{
         range,
+        range::CommitmentPublicParametersAccessor as _,
         schnorr::{encryption_of_discrete_log, knowledge_of_discrete_log, language::enhanced},
     },
     AdditivelyHomomorphicEncryptionKey, ComputationalSecuritySizedNumber,
@@ -159,9 +162,8 @@ where
             decentralized_party_secret_key_share_encryption_and_proof.range_proof_commitment,
             &self
                 .range_proof_public_parameters
-                .as_ref()
-                .as_ref()
-                .commitment_space_public_parameters,
+                .commitment_public_parameters()
+                .commitment_space_public_parameters(),
         )?;
 
         let encryption_of_decentralized_party_secret_key_share =
@@ -170,8 +172,7 @@ where
                     .encryption_of_secret_key_share,
                 &self
                     .encryption_scheme_public_parameters
-                    .as_ref()
-                    .ciphertext_space_public_parameters,
+                    .ciphertext_space_public_parameters(),
             )?;
 
         let decentralized_party_public_key_share = GroupElement::new(

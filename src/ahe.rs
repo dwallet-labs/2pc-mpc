@@ -88,9 +88,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
     )> {
         let randomness = Self::RandomnessSpaceGroupElement::sample(
             rng,
-            &public_parameters
-                .as_ref()
-                .randomness_space_public_parameters,
+            &public_parameters.randomness_space_public_parameters(),
         )?;
 
         let ciphertext = self.encrypt_with_randomness(plaintext, &randomness);
@@ -232,9 +230,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
 
         let randomness = Self::RandomnessSpaceGroupElement::sample(
             rng,
-            &public_parameters
-                .as_ref()
-                .randomness_space_public_parameters,
+            &public_parameters.randomness_space_public_parameters(),
         )?;
 
         let evaluated_ciphertext = self
@@ -286,6 +282,55 @@ pub struct GroupsPublicParameters<
     pub plaintext_space_public_parameters: PlaintextSpacePublicParameters,
     pub randomness_space_public_parameters: RandomnessSpacePublicParameters,
     pub ciphertext_space_public_parameters: CiphertextSpacePublicParameters,
+}
+
+pub trait GroupsPublicParametersAccessors<
+    'a,
+    PlaintextSpacePublicParameters: 'a,
+    RandomnessSpacePublicParameters: 'a,
+    CiphertextSpacePublicParameters: 'a,
+>:
+    AsRef<
+    GroupsPublicParameters<
+        PlaintextSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CiphertextSpacePublicParameters,
+    >,
+>
+{
+    fn plaintext_space_public_parameters(&'a self) -> &'a PlaintextSpacePublicParameters {
+        &self.as_ref().plaintext_space_public_parameters
+    }
+
+    fn randomness_space_public_parameters(&'a self) -> &'a RandomnessSpacePublicParameters {
+        &self.as_ref().randomness_space_public_parameters
+    }
+
+    fn ciphertext_space_public_parameters(&'a self) -> &'a CiphertextSpacePublicParameters {
+        &self.as_ref().ciphertext_space_public_parameters
+    }
+}
+
+impl<
+        'a,
+        PlaintextSpacePublicParameters: 'a,
+        RandomnessSpacePublicParameters: 'a,
+        CiphertextSpacePublicParameters: 'a,
+        T: AsRef<
+            GroupsPublicParameters<
+                PlaintextSpacePublicParameters,
+                RandomnessSpacePublicParameters,
+                CiphertextSpacePublicParameters,
+            >,
+        >,
+    >
+    GroupsPublicParametersAccessors<
+        'a,
+        PlaintextSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CiphertextSpacePublicParameters,
+    > for T
+{
 }
 
 impl<
@@ -356,7 +401,7 @@ mod tests {
         let plaintext: EncryptionKey::PlaintextSpaceGroupElement =
             EncryptionKey::PlaintextSpaceGroupElement::new(
                 plaintext.into(),
-                &public_parameters.as_ref().plaintext_space_public_parameters,
+                &public_parameters.plaintext_space_public_parameters(),
             )
             .unwrap();
 
@@ -394,38 +439,38 @@ mod tests {
         let zero: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(0u64)).into();
         let zero = EncryptionKey::PlaintextSpaceGroupElement::new(
             zero.into(),
-            &public_parameters.as_ref().plaintext_space_public_parameters,
+            &public_parameters.plaintext_space_public_parameters(),
         )
         .unwrap();
 
         let one: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(1u64)).into();
         let one = EncryptionKey::PlaintextSpaceGroupElement::new(
             one.into(),
-            &public_parameters.as_ref().plaintext_space_public_parameters,
+            &public_parameters.plaintext_space_public_parameters(),
         )
         .unwrap();
         let two: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(2u64)).into();
         let two = EncryptionKey::PlaintextSpaceGroupElement::new(
             two.into(),
-            &public_parameters.as_ref().plaintext_space_public_parameters,
+            &public_parameters.plaintext_space_public_parameters(),
         )
         .unwrap();
         let five: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(5u64)).into();
         let five = EncryptionKey::PlaintextSpaceGroupElement::new(
             five.into(),
-            &public_parameters.as_ref().plaintext_space_public_parameters,
+            &public_parameters.plaintext_space_public_parameters(),
         )
         .unwrap();
         let seven: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(7u64)).into();
         let seven = EncryptionKey::PlaintextSpaceGroupElement::new(
             seven.into(),
-            &public_parameters.as_ref().plaintext_space_public_parameters,
+            &public_parameters.plaintext_space_public_parameters(),
         )
         .unwrap();
         let seventy_three: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = (&U64::from(73u64)).into();
         let seventy_three = EncryptionKey::PlaintextSpaceGroupElement::new(
             seventy_three.into(),
-            &public_parameters.as_ref().plaintext_space_public_parameters,
+            &public_parameters.plaintext_space_public_parameters(),
         )
         .unwrap();
 
@@ -451,7 +496,7 @@ mod tests {
             (&U64::from(1u64 * 5 + 0 * 7 + 73 * 2)).into();
         let expected_evaluation_result = EncryptionKey::PlaintextSpaceGroupElement::new(
             expected_evaluation_result.into(),
-            &public_parameters.as_ref().plaintext_space_public_parameters,
+            &public_parameters.plaintext_space_public_parameters(),
         )
         .unwrap();
 

@@ -8,6 +8,7 @@ use serde::Serialize;
 
 use crate::{
     ahe, commitments,
+    commitments::GroupsPublicParametersAccessors as _,
     dkg::decentralized_party::decommitment_round,
     group,
     group::{
@@ -17,6 +18,7 @@ use crate::{
     proofs,
     proofs::{
         range,
+        range::CommitmentPublicParametersAccessor as _,
         schnorr::{encryption_of_discrete_log, language::enhanced},
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
@@ -145,9 +147,8 @@ where
             rng,
             &self
                 .range_proof_public_parameters
-                .as_ref()
-                .as_ref()
-                .randomness_space_public_parameters,
+                .commitment_public_parameters()
+                .randomness_space_public_parameters(),
         )?;
 
         let share_of_decentralized_party_secret_key_share =

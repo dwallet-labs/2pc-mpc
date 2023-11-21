@@ -9,8 +9,9 @@ use crate::{
     commitments,
     commitments::{
         CommitmentSpaceGroupElement, CommitmentSpacePublicParameters, GroupsPublicParameters,
-        HomomorphicCommitmentScheme, MessageSpaceGroupElement, MessageSpacePublicParameters,
-        RandomnessSpaceGroupElement, RandomnessSpacePublicParameters,
+        GroupsPublicParametersAccessors as _, HomomorphicCommitmentScheme,
+        MessageSpaceGroupElement, MessageSpacePublicParameters, RandomnessSpaceGroupElement,
+        RandomnessSpacePublicParameters,
     },
     group,
     group::self_product,
@@ -137,25 +138,20 @@ where
     pub fn new(public_parameters: PP) -> Self {
         let message_space_public_parameters =
             self_product::PublicParameters::<N, MessageSpacePublicParameters>::new(
-                public_parameters
-                    .as_ref()
-                    .message_space_public_parameters
-                    .clone(),
+                public_parameters.message_space_public_parameters().clone(),
             );
 
         let randomness_space_public_parameters =
             self_product::PublicParameters::<N, RandomnessSpacePublicParameters>::new(
                 public_parameters
-                    .as_ref()
-                    .randomness_space_public_parameters
+                    .randomness_space_public_parameters()
                     .clone(),
             );
 
         let commitment_space_public_parameters =
             self_product::PublicParameters::<N, CommitmentSpacePublicParameters>::new(
                 public_parameters
-                    .as_ref()
-                    .commitment_space_public_parameters
+                    .commitment_space_public_parameters()
                     .clone(),
             );
 

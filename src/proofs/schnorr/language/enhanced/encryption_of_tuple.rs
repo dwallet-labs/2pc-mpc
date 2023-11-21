@@ -12,14 +12,17 @@ use serde::{Deserialize, Serialize};
 use super::EnhancedLanguage;
 use crate::{
     ahe,
-    commitments::HomomorphicCommitmentScheme,
+    ahe::GroupsPublicParametersAccessors as _,
+    commitments::{GroupsPublicParametersAccessors as _, HomomorphicCommitmentScheme},
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
         BoundedGroupElement, GroupElement as _, KnownOrderScalar, Samplable,
     },
     proofs,
-    proofs::{range, schnorr, schnorr::aggregation},
+    proofs::{
+        range, range::CommitmentPublicParametersAccessor as _, schnorr, schnorr::aggregation,
+    },
     AdditivelyHomomorphicEncryptionKey, ComputationalSecuritySizedNumber,
     StatisticalSecuritySizedNumber,
 };
@@ -168,7 +171,7 @@ where
         let commitment_scheme = RangeProof::CommitmentScheme::new(
             language_public_parameters
                 .range_proof_public_parameters
-                .as_ref(),
+                .commitment_public_parameters(),
         )?;
 
         let ciphertext =
@@ -176,8 +179,7 @@ where
                 language_public_parameters.ciphertext,
                 &language_public_parameters
                     .encryption_scheme_public_parameters
-                    .as_ref()
-                    .ciphertext_space_public_parameters,
+                    .ciphertext_space_public_parameters(),
             )?;
 
         let scalar_witness_mask_base: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>;
@@ -208,10 +210,9 @@ where
             ahe::PlaintextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         >(
             scalar_witness_mask_base,
-            &language_public_parameters
+            language_public_parameters
                 .encryption_scheme_public_parameters
-                .as_ref()
-                .plaintext_space_public_parameters,
+                .plaintext_space_public_parameters(),
         )?;
 
         let scalar_commitment_message = range::CommitmentSchemeMessageSpaceGroupElement::<
@@ -223,9 +224,8 @@ where
             scalar_witness_mask_base_element.value().into(),
             &language_public_parameters
                 .range_proof_public_parameters
-                .as_ref() // TODO: solve this double as-ref mess
-                .as_ref()
-                .message_space_public_parameters,
+                .commitment_public_parameters()
+                .message_space_public_parameters(),
         )?;
 
         // TODO: Need to check that WITNESS_MASK_LIMBS is actually in a size fitting the range proof
@@ -450,16 +450,14 @@ where
 
         let unbounded_witness_space_public_parameters = self_product::PublicParameters::<2, _>::new(
             encryption_scheme_public_parameters
-                .as_ref()
-                .randomness_space_public_parameters
+                .randomness_space_public_parameters()
                 .clone(),
         );
 
         let remaining_statement_space_public_parameters =
             self_product::PublicParameters::<2, _>::new(
                 encryption_scheme_public_parameters
-                    .as_ref()
-                    .ciphertext_space_public_parameters
+                    .ciphertext_space_public_parameters()
                     .clone(),
             );
 
@@ -902,9 +900,7 @@ pub(crate) mod tests {
 
         let plaintext = paillier::PlaintextGroupElement::new(
             Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from_u64(42u64),
-            &paillier_public_parameters
-                .as_ref()
-                .plaintext_space_public_parameters,
+            paillier_public_parameters.plaintext_space_public_parameters(),
         )
         .unwrap();
 

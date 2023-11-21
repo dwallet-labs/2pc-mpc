@@ -10,10 +10,12 @@ use crate::{
     group::GroupElement as _,
     helpers::flat_map_results,
     proofs,
-    proofs::schnorr::{aggregation::proof_share_round::ProofShare, language, Proof},
+    proofs::schnorr::{
+        aggregation::proof_share_round::ProofShare, language,
+        language::GroupsPublicParametersAccessors as _, Proof,
+    },
     PartyID,
 };
-
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
     // Number of times this proof should be repeated to achieve sufficient security
@@ -85,8 +87,7 @@ impl<
                             value,
                             &self
                                 .language_public_parameters
-                                .as_ref()
-                                .witness_space_public_parameters,
+                                .witness_space_public_parameters(),
                         )
                     })),
                 )

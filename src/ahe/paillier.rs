@@ -10,14 +10,15 @@ use serde::{Deserialize, Serialize};
 use tiresias::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 
 use crate::{
-    ahe, group,
+    ahe,
+    ahe::GroupsPublicParametersAccessors as _,
+    group,
     group::{
         additive_group_of_integers_modulu_n::odd_moduli, paillier::PlaintextPublicParameters,
         GroupElement,
     },
     AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
 };
-
 /// An Encryption Key of the Paillier Additively Homomorphic Encryption Scheme.
 #[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct EncryptionKey(tiresias::EncryptionKey);
@@ -42,8 +43,7 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
         // TODO: this actually now should always succeed and the check should be in evaluate()
         Ok(Self(tiresias::EncryptionKey::new(
             *encryption_scheme_public_parameters
-                .as_ref()
-                .plaintext_space_public_parameters
+                .plaintext_space_public_parameters()
                 .modulus,
         )))
         // // In order to assure circuit-privacy, the computation in

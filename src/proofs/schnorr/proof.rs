@@ -16,7 +16,9 @@ use crate::{
     proofs::{
         schnorr::{
             language,
-            language::{StatementSpaceValue, WitnessSpaceValue},
+            language::{
+                GroupsPublicParametersAccessors as _, StatementSpaceValue, WitnessSpaceValue,
+            },
         },
         Error, TranscriptProtocol,
     },
@@ -249,18 +251,14 @@ impl<
         let responses = flat_map_results(self.responses.map(|response| {
             Language::WitnessSpaceGroupElement::new(
                 response,
-                &language_public_parameters
-                    .as_ref()
-                    .witness_space_public_parameters,
+                language_public_parameters.witness_space_public_parameters(),
             )
         }))?;
 
         let statement_masks = flat_map_results(self.statement_masks.map(|statement_mask| {
             Language::StatementSpaceGroupElement::new(
                 statement_mask,
-                &language_public_parameters
-                    .as_ref()
-                    .statement_space_public_parameters,
+                language_public_parameters.statement_space_public_parameters(),
             )
         }))?;
 
@@ -323,9 +321,7 @@ impl<
         let randomizers = flat_map_results(array::from_fn(|_| {
             Language::WitnessSpaceGroupElement::sample(
                 rng,
-                &language_public_parameters
-                    .as_ref()
-                    .witness_space_public_parameters,
+                language_public_parameters.witness_space_public_parameters(),
             )
         }))?;
 
@@ -356,16 +352,12 @@ impl<
 
         transcript.serialize_to_transcript_as_json(
             b"witness space public parameters",
-            &language_public_parameters
-                .as_ref()
-                .witness_space_public_parameters,
+            language_public_parameters.witness_space_public_parameters(),
         )?;
 
         transcript.serialize_to_transcript_as_json(
             b"statement space public parameters",
-            &language_public_parameters
-                .as_ref()
-                .statement_space_public_parameters,
+            language_public_parameters.statement_space_public_parameters(),
         )?;
 
         if statements.iter().any(|statement| {

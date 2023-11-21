@@ -6,7 +6,9 @@ use std::{marker::PhantomData, ops::Mul};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    commitments::{GroupsPublicParameters, HomomorphicCommitmentScheme},
+    commitments::{
+        GroupsPublicParameters, GroupsPublicParametersAccessors, HomomorphicCommitmentScheme,
+    },
     group,
     group::{self_product, BoundedGroupElement, KnownOrderGroupElement, Samplable},
     helpers::const_generic_array_serialization,
@@ -64,9 +66,7 @@ where
         let message_generators = public_parameters.message_generators.clone().map(|value| {
             GroupElement::new(
                 value,
-                &public_parameters
-                    .as_ref()
-                    .commitment_space_public_parameters,
+                public_parameters.commitment_space_public_parameters(),
             )
         });
 
@@ -79,9 +79,7 @@ where
 
         let randomness_generator = GroupElement::new(
             public_parameters.randomness_generator.clone(),
-            &public_parameters
-                .as_ref()
-                .commitment_space_public_parameters,
+            &public_parameters.commitment_space_public_parameters(),
         )?;
 
         Ok(Self {

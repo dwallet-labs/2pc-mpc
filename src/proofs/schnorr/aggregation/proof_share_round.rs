@@ -15,7 +15,7 @@ use crate::{
         schnorr::{
             aggregation::{decommitment_round::Decommitment, proof_aggregation_round},
             language,
-            language::WitnessSpaceValue,
+            language::{GroupsPublicParametersAccessors as _, WitnessSpaceValue},
             Proof,
         },
     },
@@ -138,8 +138,7 @@ impl<
                         statement_mask,
                         &self
                             .language_public_parameters
-                            .as_ref()
-                            .statement_space_public_parameters,
+                            .statement_space_public_parameters(),
                     )
                 }))
             })
@@ -188,8 +187,7 @@ impl<
                                 statement_value,
                                 &self
                                     .language_public_parameters
-                                    .as_ref()
-                                    .statement_space_public_parameters,
+                                    .statement_space_public_parameters(),
                             )
                         })
                         .collect()
@@ -231,8 +229,7 @@ impl<
                 value,
                 &self
                     .language_public_parameters
-                    .as_ref()
-                    .witness_space_public_parameters,
+                    .witness_space_public_parameters(),
             )
         }))?;
 

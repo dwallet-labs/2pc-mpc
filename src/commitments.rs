@@ -1,6 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+pub use multicommitment::MultiCommitment;
 pub use pedersen::Pedersen;
 use serde::{Deserialize, Serialize};
 
@@ -11,8 +12,6 @@ use crate::{
 
 pub mod multicommitment;
 pub mod pedersen;
-
-pub use multicommitment::MultiCommitment;
 
 /// A Homomorphic Commitment Scheme
 ///
@@ -74,6 +73,55 @@ pub struct GroupsPublicParameters<
     pub message_space_public_parameters: MessageSpacePublicParameters,
     pub randomness_space_public_parameters: RandomnessSpacePublicParameters,
     pub commitment_space_public_parameters: CommitmentSpacePublicParameters,
+}
+
+pub trait GroupsPublicParametersAccessors<
+    'a,
+    MessageSpacePublicParameters: 'a,
+    RandomnessSpacePublicParameters: 'a,
+    CommitmentSpacePublicParameters: 'a,
+>:
+    AsRef<
+    GroupsPublicParameters<
+        MessageSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CommitmentSpacePublicParameters,
+    >,
+>
+{
+    fn message_space_public_parameters(&'a self) -> &'a MessageSpacePublicParameters {
+        &self.as_ref().message_space_public_parameters
+    }
+
+    fn randomness_space_public_parameters(&'a self) -> &'a RandomnessSpacePublicParameters {
+        &self.as_ref().randomness_space_public_parameters
+    }
+
+    fn commitment_space_public_parameters(&'a self) -> &'a CommitmentSpacePublicParameters {
+        &self.as_ref().commitment_space_public_parameters
+    }
+}
+
+impl<
+        'a,
+        MessageSpacePublicParameters: 'a,
+        RandomnessSpacePublicParameters: 'a,
+        CommitmentSpacePublicParameters: 'a,
+        T: AsRef<
+            GroupsPublicParameters<
+                MessageSpacePublicParameters,
+                RandomnessSpacePublicParameters,
+                CommitmentSpacePublicParameters,
+            >,
+        >,
+    >
+    GroupsPublicParametersAccessors<
+        'a,
+        MessageSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CommitmentSpacePublicParameters,
+    > for T
+{
 }
 
 pub type PublicParameters<const MESSAGE_SPACE_SCALAR_LIMBS: usize, C> =
