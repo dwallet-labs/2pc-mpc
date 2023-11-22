@@ -29,7 +29,7 @@ pub mod knowledge_of_discrete_log;
 pub trait Language<
     // Number of times schnorr proofs for this language should be repeated to achieve sufficient security
     const REPETITIONS: usize,
->: Clone {
+>: Clone + PartialEq {
     /// An element of the witness space $(\HH_\pp, +)$
     type WitnessSpaceGroupElement: GroupElement + Samplable;
 

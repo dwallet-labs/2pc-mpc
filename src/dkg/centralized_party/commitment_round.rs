@@ -51,13 +51,13 @@ pub struct Party<
         RangeProof,
     >: From<enhanced::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
 {
-    pub group_public_parameters: GroupElement::PublicParameters,
+    pub protocol_context: ProtocolContext,
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+    pub group_public_parameters: GroupElement::PublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
     pub range_proof_public_parameters: RangeProof::PublicParameters,
     // TODO: should we get this like that? is it the same for both the centralized & decentralized
     // party (and all their parties?)
-    pub protocol_context: ProtocolContext,
 }
 
 impl Commitment {

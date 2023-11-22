@@ -43,7 +43,7 @@ pub(crate) const REPETITIONS: usize = 1;
 /// `PrimeOrderGroupElement`.
 ///
 /// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Language<
     const SCALAR_LIMBS: usize,
     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
@@ -858,8 +858,9 @@ pub(crate) mod tests {
         group::{ristretto, secp256k1, self_product},
         proofs::{
             range,
-            range::RangeProof,
+            range::bulletproofs,
             schnorr::{aggregation, language},
+            RangeProof,
         },
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };

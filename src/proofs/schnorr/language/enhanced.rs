@@ -236,6 +236,231 @@ impl<WitnessSpacePublicParameters, StatementSpacePublicParameters>
     }
 }
 
+pub trait EnhancedLanguageWitnessAccessors<
+    const REPETITIONS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    Lang: EnhancedLanguage<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+    >,
+> where
+    Uint<RANGE_CLAIM_LIMBS>: Encoding,
+    Uint<WITNESS_MASK_LIMBS>: Encoding,
+{
+    fn constrained_witness(
+        &self,
+    ) -> &ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, WITNESS_MASK_LIMBS>;
+
+    fn range_proof_commitment_randomness(
+        &self,
+    ) -> &RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Lang,
+    >;
+
+    fn unbounded_witness(
+        &self,
+    ) -> &UnboundedWitnessSpaceGroupElement<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Lang,
+    >;
+}
+
+impl<
+        const REPETITIONS: usize,
+        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        const RANGE_CLAIM_LIMBS: usize,
+        const WITNESS_MASK_LIMBS: usize,
+        Lang: EnhancedLanguage<
+            REPETITIONS,
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+        >,
+    >
+    EnhancedLanguageWitnessAccessors<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Lang,
+    >
+    for EnhancedLanguageWitness<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Lang,
+    >
+where
+    Uint<RANGE_CLAIM_LIMBS>: Encoding,
+    Uint<WITNESS_MASK_LIMBS>: Encoding,
+{
+    fn constrained_witness(
+        &self,
+    ) -> &ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, WITNESS_MASK_LIMBS> {
+        let (constrained_witness, ..): (_, _, _) = self.into();
+
+        constrained_witness
+    }
+
+    fn range_proof_commitment_randomness(
+        &self,
+    ) -> &RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Lang,
+    > {
+        let (_, randomness, _) = self.into();
+
+        randomness
+    }
+
+    fn unbounded_witness(
+        &self,
+    ) -> &UnboundedWitnessSpaceGroupElement<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Lang,
+    > {
+        let (_, _, unbounded_witness) = self.into();
+
+        unbounded_witness
+    }
+}
+
+pub trait EnhancedLanguageStatementAccessors<
+    const REPETITIONS: usize,
+    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const RANGE_CLAIM_LIMBS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    Lang: EnhancedLanguage<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+    >,
+> where
+    Uint<RANGE_CLAIM_LIMBS>: Encoding,
+    Uint<WITNESS_MASK_LIMBS>: Encoding,
+{
+    fn range_proof_commitment(
+        &self,
+    ) -> &RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Lang,
+    >;
+
+    fn remaining_statement(
+        &self,
+    ) -> &RemainingStatementSpaceGroupElement<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Lang,
+    >;
+}
+
+impl<
+        const REPETITIONS: usize,
+        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        const RANGE_CLAIM_LIMBS: usize,
+        const WITNESS_MASK_LIMBS: usize,
+        Lang: EnhancedLanguage<
+            REPETITIONS,
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+        >,
+    >
+    EnhancedLanguageStatementAccessors<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Lang,
+    >
+    for EnhancedLanguageStatement<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Lang,
+    >
+where
+    Uint<RANGE_CLAIM_LIMBS>: Encoding,
+    Uint<WITNESS_MASK_LIMBS>: Encoding,
+{
+    fn range_proof_commitment(
+        &self,
+    ) -> &RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Lang,
+    > {
+        let (range_proof_commitment, _) = self.into();
+
+        range_proof_commitment
+    }
+
+    fn remaining_statement(
+        &self,
+    ) -> &RemainingStatementSpaceGroupElement<
+        REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        Lang,
+    > {
+        let (_, remaining_statement) = self.into();
+
+        remaining_statement
+    }
+
+    // TODO: new
+    // TODO: refactor all languages using this trick
+}
+
 fn witness_mask_base_to_scalar<
     const RANGE_CLAIMS_PER_WITNESS: usize,
     const RANGE_CLAIM_LIMBS: usize,
@@ -672,6 +897,7 @@ pub(crate) mod tests {
     use crate::{
         group::ristretto,
         proofs::{
+            range,
             range::RangeProof,
             schnorr::{enhanced, language},
         },
@@ -739,7 +965,7 @@ pub(crate) mod tests {
                 array::from_fn(|_| {
                     let mask = Uint::<WITNESS_MASK_LIMBS>::MAX
                         >> (Uint::<WITNESS_MASK_LIMBS>::BITS
-                            - <bulletproofs::RangeProof as RangeProof<
+                            - <range::bulletproofs::RangeProof as RangeProof<
                                 { ristretto::SCALAR_LIMBS },
                                 RANGE_CLAIMS_PER_SCALAR,
                                 { range::bulletproofs::RANGE_CLAIM_LIMBS },
@@ -964,7 +1190,7 @@ pub(crate) mod tests {
         constrained_witnesses[0] = power_of_two_moduli::GroupElement::new(
             (Uint::<WITNESS_MASK_LIMBS>::MAX
                 >> (Uint::<WITNESS_MASK_LIMBS>::BITS
-                    - <bulletproofs::RangeProof as RangeProof<
+                    - <range::bulletproofs::RangeProof as RangeProof<
                         { ristretto::SCALAR_LIMBS },
                         RANGE_CLAIMS_PER_SCALAR,
                         { range::bulletproofs::RANGE_CLAIM_LIMBS },

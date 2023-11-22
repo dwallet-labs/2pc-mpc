@@ -37,7 +37,7 @@ pub(super) type ChallengeSizedNumber = ComputationalSecuritySizedNumber;
 
 /// A Batched Schnorr Zero-Knowledge Proof.
 /// Implements Appendix B. Schnorr Protocols in the paper.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Proof<
     // Number of times this proof should be repeated to achieve sufficient security
     const REPETITIONS: usize,

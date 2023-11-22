@@ -15,8 +15,9 @@ use crate::{
     proofs::{
         range,
         schnorr::{
-            aggregation::decommitment_round::Decommitment, encryption_of_discrete_log, language,
-            language::enhanced,
+            aggregation::decommitment_round::Decommitment,
+            encryption_of_discrete_log, language,
+            language::{enhanced, enhanced::EnhancedLanguageStatementAccessors as _},
         },
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
@@ -186,6 +187,7 @@ where
 
         // TODO: think if we can create a struct for the enhanced witness & statement that gives
         // better access to fields in a named way
+        // TODO: refactor this in encryption_of_discrete_log
         let (range_proof_commitment, remaining_statements) = statements
             .first()
             .ok_or(crate::Error::APIMismatch)?

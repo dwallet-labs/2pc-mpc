@@ -101,7 +101,7 @@ where
         RangeProof,
     >: From<enhanced::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
 {
-    fn sample_and_commit_share_of_decentralize_party_secret_key_share(
+    pub fn sample_and_commit_share_of_decentralize_party_secret_key_share(
         self,
         commitment_to_centralized_party_secret_key_share: Commitment,
         rng: &mut impl CryptoRngCore,
@@ -124,13 +124,14 @@ where
         // maybe we want to allow in the interface of the range proof to prove smaller chunks or
         // smth if not, maybe we want to assure SCALAR_LIMBS % RANGE_CLAIM_BITS == 0 or
         // SCALAR_LIMBS < RANGE_CLAIM_BITS. in any case this check is incorrect.
-        if RangeProof::RANGE_CLAIM_BITS != 0
-            || (SCALAR_LIMBS / RangeProof::RANGE_CLAIM_BITS)
-                + ((SCALAR_LIMBS % RangeProof::RANGE_CLAIM_BITS) % 2)
-                != RANGE_CLAIMS_PER_SCALAR
-        {
-            return Err(crate::Error::InvalidParameters);
-        }
+        // TODO: what check should I do here
+        // if RangeProof::RANGE_CLAIM_BITS != 0
+        //     || (SCALAR_LIMBS / RangeProof::RANGE_CLAIM_BITS)
+        //         + ((SCALAR_LIMBS % RangeProof::RANGE_CLAIM_BITS) % 2)
+        //         != RANGE_CLAIMS_PER_SCALAR
+        // {
+        //     return Err(crate::Error::InvalidParameters);
+        // }
 
         let encryption_randomness = EncryptionKey::RandomnessSpaceGroupElement::sample(
             rng,

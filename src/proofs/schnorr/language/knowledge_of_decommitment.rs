@@ -30,7 +30,7 @@ use crate::{
 /// In the paper, we have prove (or cited a proof) it for any prime known-order group or for
 /// Paillier groups based on safe-primes; so it is safe to use with a `PrimeOrderGroupElement` or
 /// `PaillierGroupElement`.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Language<
     const REPETITIONS: usize,
     const SCALAR_LIMBS: usize,

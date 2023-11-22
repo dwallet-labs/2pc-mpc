@@ -24,11 +24,19 @@ use crate::{
     },
 };
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RangeProof(bulletproofs::RangeProof);
+
+impl PartialEq for RangeProof {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.to_bytes() == other.0.to_bytes()
+    }
+}
+
 pub const RANGE_CLAIM_LIMBS: usize = U64::LIMBS;
 
 impl<const NUM_RANGE_CLAIMS: usize>
-    super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>
-    for bulletproofs::RangeProof
+    super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS> for RangeProof
 {
     const NAME: &'static str = "Bulletproofs over the Ristretto group";
 
@@ -133,7 +141,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
         .take(number_of_witnesses)
         .collect();
 
-        Ok((proof, commitments?))
+        Ok((RangeProof(proof), commitments?))
     }
 
     fn verify(
@@ -169,7 +177,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
         let commitment_generators = PedersenGens::default();
 
         // TODO: convert their verification error to our range proof error?
-        Ok(self.verify_multiple_with_rng(
+        Ok(self.0.verify_multiple_with_rng(
             &bulletproofs_generators,
             &commitment_generators,
             transcript,
@@ -269,7 +277,7 @@ impl<const NUM_RANGE_CLAIMS: usize, const WITNESS_MASK_LIMBS: usize>
         SCALAR_LIMBS,
         NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
-        bulletproofs::RangeProof,
+        RangeProof,
     >
 where
     Uint<WITNESS_MASK_LIMBS>: Encoding,

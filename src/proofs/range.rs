@@ -19,7 +19,7 @@ pub trait RangeProof<
     const NUM_RANGE_CLAIMS: usize,
     // An upper bound over the range claims (the lower bound is fixed to zero.)
     const RANGE_CLAIM_LIMBS: usize,
->: Serialize + for<'a> Deserialize<'a> + Clone where
+>: Serialize + for<'a> Deserialize<'a> + Clone + PartialEq where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
 {
     /// A unique string representing the name of this range proof; will be inserted to the Fiat-Shamir
