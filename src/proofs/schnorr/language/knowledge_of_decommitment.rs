@@ -10,7 +10,7 @@ use super::GroupsPublicParameters;
 use crate::{
     commitments::{HomomorphicCommitmentScheme, Pedersen},
     group,
-    group::{self_product, BoundedGroupElement, Samplable},
+    group::{direct_product, self_product, BoundedGroupElement, Samplable},
     proofs,
     proofs::{
         schnorr,
@@ -91,12 +91,35 @@ where
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<Self::StatementSpaceGroupElement> {
-        let [value, randomness]: &[Scalar; 2] = witness.into();
-
         let commitment_scheme =
             CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
-        Ok(commitment_scheme.commit(&[*value].into(), randomness))
+        Ok(commitment_scheme.commit(
+            &[*witness.commitment_message()].into(),
+            witness.commitment_randomness(),
+        ))
+    }
+}
+
+pub trait WitnessAccessors<Scalar: group::GroupElement> {
+    fn commitment_message(&self) -> &Scalar;
+
+    fn commitment_randomness(&self) -> &Scalar;
+}
+
+impl<Scalar: group::GroupElement> WitnessAccessors<Scalar>
+    for self_product::GroupElement<2, Scalar>
+{
+    fn commitment_message(&self) -> &Scalar {
+        let value: &[Scalar; 2] = self.into();
+
+        &value[0]
+    }
+
+    fn commitment_randomness(&self) -> &Scalar {
+        let value: &[Scalar; 2] = self.into();
+
+        &value[1]
     }
 }
 

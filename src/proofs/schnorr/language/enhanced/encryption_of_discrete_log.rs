@@ -21,7 +21,19 @@ use crate::{
     },
     proofs,
     proofs::{
-        range, range::CommitmentPublicParametersAccessor as _, schnorr, schnorr::aggregation,
+        range,
+        range::CommitmentPublicParametersAccessor as _,
+        schnorr,
+        schnorr::{
+            aggregation,
+            language::{
+                enhanced::{
+                    ConstrainedWitnessGroupElement, EnhancedLanguageWitnessAccessors as _,
+                    RemainingStatementSpaceGroupElement, UnboundedWitnessSpaceGroupElement,
+                },
+                GroupsPublicParametersAccessors,
+            },
+        },
     },
     AdditivelyHomomorphicEncryptionKey, ComputationalSecuritySizedNumber,
     StatisticalSecuritySizedNumber,
@@ -157,22 +169,9 @@ where
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<Self::StatementSpaceGroupElement> {
-        let (
-            discrete_log_in_witness_mask_base_element,
-            commitment_randomness,
-            encryption_randomness,
-        ) = witness.into();
-
-        let (_, group_public_parameters) = (&language_public_parameters
-            .groups_public_parameters
-            .statement_space_public_parameters)
-            .into();
-
-        let (_, group_public_parameters) = group_public_parameters.into();
-
         let base = GroupElement::new(
             language_public_parameters.generator,
-            group_public_parameters,
+            language_public_parameters.group_public_parameters(),
         )?;
 
         let encryption_key =
@@ -186,7 +185,7 @@ where
 
         let discrete_log_in_witness_mask_base: [power_of_two_moduli::GroupElement<
             WITNESS_MASK_LIMBS,
-        >; RANGE_CLAIMS_PER_SCALAR] = (*discrete_log_in_witness_mask_base_element).into();
+        >; RANGE_CLAIMS_PER_SCALAR] = (*witness.constrained_witness()).into();
 
         let discrete_log_in_witness_mask_base: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_SCALAR] =
             discrete_log_in_witness_mask_base
@@ -225,7 +224,7 @@ where
             RANGE_CLAIM_LIMBS,
             RangeProof,
         >::new(
-            discrete_log_in_witness_mask_base_element.value().into(),
+            witness.constrained_witness().value().into(),
             &language_public_parameters
                 .range_proof_public_parameters
                 .commitment_public_parameters()
@@ -236,10 +235,15 @@ where
         // commitment scheme without going through modulation, and to implement `From` to
         // transition.
         Ok((
-            commitment_scheme.commit(&discrete_log_commitment_message, commitment_randomness),
+            commitment_scheme.commit(
+                &discrete_log_commitment_message,
+                witness.range_proof_commitment_randomness(),
+            ),
             (
-                encryption_key
-                    .encrypt_with_randomness(&discrete_log_plaintext, encryption_randomness),
+                encryption_key.encrypt_with_randomness(
+                    &discrete_log_plaintext,
+                    witness.encryption_randomness(),
+                ),
                 discrete_log_scalar * base,
             )
                 .into(),
@@ -311,6 +315,88 @@ where
     >;
 
     type RangeProof = RangeProof;
+}
+
+pub trait EnhancedLanguageWitnessAccessors<
+    const NUM_RANGE_CLAIMS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    RangeProofCommitmentSchemeRandomnessSpaceGroupElement: group::GroupElement,
+    RandomnessSpaceGroupElement: group::GroupElement,
+>:
+    super::EnhancedLanguageWitnessAccessors<
+    NUM_RANGE_CLAIMS,
+    WITNESS_MASK_LIMBS,
+    RangeProofCommitmentSchemeRandomnessSpaceGroupElement,
+    RandomnessSpaceGroupElement,
+>
+{
+    fn encryption_randomness(&self) -> &RandomnessSpaceGroupElement {
+        self.unbounded_witness()
+    }
+}
+
+impl<
+        const NUM_RANGE_CLAIMS: usize,
+        const WITNESS_MASK_LIMBS: usize,
+        RangeProofCommitmentSchemeRandomnessSpaceGroupElement: group::GroupElement,
+        RandomnessSpaceGroupElement: group::GroupElement,
+    >
+    EnhancedLanguageWitnessAccessors<
+        NUM_RANGE_CLAIMS,
+        WITNESS_MASK_LIMBS,
+        RangeProofCommitmentSchemeRandomnessSpaceGroupElement,
+        RandomnessSpaceGroupElement,
+    >
+    for direct_product::ThreeWayGroupElement<
+        ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, WITNESS_MASK_LIMBS>,
+        RangeProofCommitmentSchemeRandomnessSpaceGroupElement,
+        RandomnessSpaceGroupElement,
+    >
+{
+}
+
+pub trait EnhancedLanguageStatementAccessors<
+    'a,
+    RangeProofCommitmentSchemeCommitmentSpaceGroupElement: 'a + group::GroupElement,
+    CiphertextSpaceGroupElement: 'a + group::GroupElement,
+    GroupElement: 'a + group::GroupElement,
+>:
+    super::EnhancedLanguageStatementAccessors<
+    RangeProofCommitmentSchemeCommitmentSpaceGroupElement,
+    direct_product::GroupElement<CiphertextSpaceGroupElement, GroupElement>,
+>
+{
+    fn encryption_of_discrete_log(&'a self) -> &'a CiphertextSpaceGroupElement {
+        let (encryption_of_discrete_log, _) = self.remaining_statement().into();
+
+        encryption_of_discrete_log
+    }
+
+    // TODO: is there a better name?
+    fn generator_by_discrete_log(&'a self) -> &'a GroupElement {
+        let (_, generator_by_discrete_log) = self.remaining_statement().into();
+
+        generator_by_discrete_log
+    }
+}
+
+impl<
+        'a,
+        RangeProofCommitmentSchemeCommitmentSpaceGroupElement: 'a + group::GroupElement,
+        CiphertextSpaceGroupElement: 'a + group::GroupElement,
+        GroupElement: 'a + group::GroupElement,
+    >
+    EnhancedLanguageStatementAccessors<
+        'a,
+        RangeProofCommitmentSchemeCommitmentSpaceGroupElement,
+        CiphertextSpaceGroupElement,
+        GroupElement,
+    >
+    for direct_product::GroupElement<
+        RangeProofCommitmentSchemeCommitmentSpaceGroupElement,
+        direct_product::GroupElement<CiphertextSpaceGroupElement, GroupElement>,
+    >
+{
 }
 
 /// The Public Parameters of the Encryption of Discrete Log Schnorr Language
@@ -503,6 +589,15 @@ where
             scalar_group_public_parameters,
             generator,
         }
+    }
+
+    fn group_public_parameters(&self) -> &GroupElementPublicParameters {
+        let (_, remaining_stataement_public_parameters) =
+            self.statement_space_public_parameters().into();
+
+        let (_, group_public_parameters) = remaining_stataement_public_parameters.into();
+
+        group_public_parameters
     }
 }
 

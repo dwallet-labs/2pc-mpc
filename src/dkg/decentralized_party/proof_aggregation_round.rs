@@ -17,7 +17,13 @@ use crate::{
         schnorr::{
             aggregation::decommitment_round::Decommitment,
             encryption_of_discrete_log, language,
-            language::{enhanced, enhanced::EnhancedLanguageStatementAccessors as _},
+            language::{
+                enhanced,
+                enhanced::{
+                    encryption_of_discrete_log::EnhancedLanguageStatementAccessors as _,
+                    EnhancedLanguageStatementAccessors as _,
+                },
+            },
         },
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
@@ -185,22 +191,13 @@ where
             .encryption_of_secret_share_proof_aggregation_round_party
             .aggregate_proof_shares(proof_shares)?;
 
-        // TODO: think if we can create a struct for the enhanced witness & statement that gives
-        // better access to fields in a named way
-        // TODO: refactor this in encryption_of_discrete_log
-        let (range_proof_commitment, remaining_statements) = statements
-            .first()
-            .ok_or(crate::Error::APIMismatch)?
-            .clone()
-            .into();
-
-        let (encryption_of_secret_key_share, public_key_share) = remaining_statements.into();
+        let statement = statements.first().ok_or(crate::Error::APIMismatch)?;
 
         let decentralized_party_secret_key_share_encryption_and_proof =
             SecretKeyShareEncryptionAndProof {
-                public_key_share: (&public_key_share).value(),
-                range_proof_commitment: (&range_proof_commitment).value(),
-                encryption_of_secret_key_share: (&encryption_of_secret_key_share).value(),
+                public_key_share: (&statement.generator_by_discrete_log()).value(),
+                range_proof_commitment: (statement.range_proof_commitment()).value(),
+                encryption_of_secret_key_share: (&statement.encryption_of_discrete_log()).value(),
                 encryption_of_secret_key_share_proof,
             };
 
@@ -226,8 +223,8 @@ where
                     .commitment_to_centralized_party_secret_key_share,
                 share_of_decentralized_party_secret_key_share: self
                     .share_of_decentralized_party_secret_key_share,
-                public_key_share,
-                encryption_of_secret_key_share,
+                public_key_share: statement.generator_by_discrete_log().clone(),
+                encryption_of_secret_key_share: statement.encryption_of_discrete_log().clone(),
             };
 
         Ok((

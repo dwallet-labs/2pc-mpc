@@ -180,7 +180,6 @@ where
             &self.group_public_parameters,
         )?;
 
-        // TODO: have some verify function where you input those seperately
         let statement = (
             range_proof_commitment,
             (
@@ -222,7 +221,9 @@ where
         decentralized_party_secret_key_share_encryption_and_proof
             .encryption_of_secret_key_share_proof
             .verify(
-                0,
+                // TODO: there actually are `n` parties, but we don't know how many, so what to do
+                // here?
+                None,
                 &self.protocol_context,
                 &encryption_of_discrete_log_language_public_parameters,
                 vec![statement],

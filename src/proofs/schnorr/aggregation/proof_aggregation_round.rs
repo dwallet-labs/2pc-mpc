@@ -16,6 +16,7 @@ use crate::{
     },
     PartyID,
 };
+
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
     // Number of times this proof should be repeated to achieve sufficient security
@@ -131,7 +132,7 @@ impl<
         let aggregated_proof = Proof::new(&self.aggregated_statement_masks, &response?);
         if aggregated_proof
             .verify(
-                number_of_parties,
+                Some(number_of_parties),
                 &self.protocol_context,
                 &self.language_public_parameters,
                 self.aggregated_statements.clone(),
@@ -155,7 +156,7 @@ impl<
                 .filter(|(_, proof)| {
                     proof
                         .verify(
-                            number_of_parties,
+                            Some(number_of_parties),
                             &self.protocol_context,
                             &self.language_public_parameters,
                             self.aggregated_statements.clone(),

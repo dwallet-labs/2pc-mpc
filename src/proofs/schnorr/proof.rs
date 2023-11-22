@@ -80,14 +80,14 @@ impl<
     /// Prove a batched Schnorr zero-knowledge claim.
     /// Returns the zero-knowledge proof.
     pub fn prove(
-        // The number of parties participating in aggregation (set to 0 for local proofs) - TODO:
-        // Option?
-        number_of_parties: usize,
+        number_of_parties: Option<usize>,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         witnesses: Vec<Language::WitnessSpaceGroupElement>,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(Self, Vec<Language::StatementSpaceGroupElement>)> {
+        let number_of_parties = number_of_parties.unwrap_or(0);
+
         let statements: proofs::Result<Vec<Language::StatementSpaceGroupElement>> = witnesses
             .iter()
             .map(|witness| Language::group_homomorphism(witness, language_public_parameters))
@@ -225,12 +225,13 @@ impl<
     /// Verify a batched Schnorr zero-knowledge proof.
     pub fn verify(
         &self,
-        // The number of parties participating in aggregation (set to 0 for local proofs)
-        number_of_parties: usize,
+        number_of_parties: Option<usize>,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         statements: Vec<Language::StatementSpaceGroupElement>,
     ) -> proofs::Result<()> {
+        let number_of_parties = number_of_parties.unwrap_or(0);
+
         let batch_size = statements.len();
 
         // TODO: maybe here we can get statements as values already, esp. if we sample them this

@@ -15,7 +15,7 @@ use crate::{
     proofs,
     proofs::{
         schnorr,
-        schnorr::{aggregation, language},
+        schnorr::{aggregation, language, language::GroupsPublicParametersAccessors},
     },
 };
 
@@ -66,8 +66,6 @@ where
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<Self::StatementSpaceGroupElement> {
-        let [message, first_randomness, second_randomness]: &[Scalar; 3] = witness.into();
-
         let commitment_scheme =
             Pedersen::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
@@ -80,13 +78,11 @@ where
         let altered_base_commitment_scheme_public_parameters =
             pedersen::PublicParameters::new::<SCALAR_LIMBS, Scalar, GroupElement>(
                 language_public_parameters
-                    .groups_public_parameters
-                    .witness_space_public_parameters
+                    .witness_space_public_parameters()
                     .public_parameters
                     .clone(),
                 language_public_parameters
-                    .groups_public_parameters
-                    .statement_space_public_parameters
+                    .statement_space_public_parameters()
                     .public_parameters
                     .clone(),
                 [language_public_parameters.base_by_discrete_log],
@@ -100,10 +96,46 @@ where
             Pedersen::new(&altered_base_commitment_scheme_public_parameters)?;
 
         Ok([
-            commitment_scheme.commit(&[*message].into(), first_randomness),
-            altered_base_commitment_scheme.commit(&[*message].into(), second_randomness),
+            commitment_scheme.commit(
+                &[witness.commitment_message().clone()].into(),
+                witness.first_commitment_randomness(),
+            ),
+            altered_base_commitment_scheme.commit(
+                &[witness.commitment_message().clone()].into(),
+                witness.second_commitment_randomness(),
+            ),
         ]
         .into())
+    }
+}
+
+pub trait WitnessAccessors<Scalar: group::GroupElement> {
+    fn commitment_message(&self) -> &Scalar;
+
+    fn first_commitment_randomness(&self) -> &Scalar;
+
+    fn second_commitment_randomness(&self) -> &Scalar;
+}
+
+impl<Scalar: group::GroupElement> WitnessAccessors<Scalar>
+    for self_product::GroupElement<3, Scalar>
+{
+    fn commitment_message(&self) -> &Scalar {
+        let value: &[Scalar; 3] = self.into();
+
+        &value[0]
+    }
+
+    fn first_commitment_randomness(&self) -> &Scalar {
+        let value: &[Scalar; 3] = self.into();
+
+        &value[1]
+    }
+
+    fn second_commitment_randomness(&self) -> &Scalar {
+        let value: &[Scalar; 3] = self.into();
+
+        &value[2]
     }
 }
 

@@ -109,7 +109,7 @@ where
             );
 
         decommitment_and_proof.proof.verify(
-            0,
+            None,
             &self.protocol_context,
             &language_public_parameters,
             vec![centralized_party_public_key_share.clone()],

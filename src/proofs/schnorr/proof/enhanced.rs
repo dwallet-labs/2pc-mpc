@@ -85,8 +85,6 @@ where
     /// Prove an enhanced batched Schnorr zero-knowledge claim.
     /// Returns the zero-knowledge proof.
     pub fn prove(
-        // The number of parties participating in aggregation (set to 0 for local proofs)
-        number_of_parties: usize,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         range_proof_public_parameters: &language::enhanced::RangeProofPublicParameters<
@@ -154,7 +152,7 @@ where
 
         let (schnorr_proof, statements) =
             super::Proof::<REPETITIONS, Language, ProtocolContext>::prove(
-                number_of_parties,
+                None,
                 protocol_context,
                 language_public_parameters,
                 witnesses,
@@ -219,7 +217,7 @@ where
 
         self.schnorr_proof
             .verify(
-                number_of_parties,
+                None,
                 protocol_context,
                 language_public_parameters,
                 statements,

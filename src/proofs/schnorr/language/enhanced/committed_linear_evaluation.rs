@@ -22,7 +22,16 @@ use crate::{
     helpers::flat_map_results,
     proofs,
     proofs::{
-        range, range::CommitmentPublicParametersAccessor as _, schnorr, schnorr::aggregation,
+        range,
+        range::CommitmentPublicParametersAccessor as _,
+        schnorr,
+        schnorr::{
+            aggregation,
+            language::enhanced::{
+                ConstrainedWitnessGroupElement, EnhancedLanguageStatementAccessors as _,
+                EnhancedLanguageWitnessAccessors as _,
+            },
+        },
     },
     AdditivelyHomomorphicEncryptionKey, ComputationalSecuritySizedNumber,
     StatisticalSecuritySizedNumber,
@@ -193,14 +202,6 @@ where
             return Err(proofs::Error::InvalidParameters);
         }
 
-        let (
-            coefficients_and_mask_in_witness_mask_base,
-            range_proof_commitment_randomness,
-            remaining_witness,
-        ) = witness.into();
-
-        let (commitment_randomness, encryption_randomness) = remaining_witness.into();
-
         let scalar_group_public_parameters = language_public_parameters
             .commitment_scheme_public_parameters
             .randomness_space_public_parameters();
@@ -229,10 +230,10 @@ where
             }))?;
 
         let coefficients_and_mask_in_witness_mask_base_value =
-            coefficients_and_mask_in_witness_mask_base.value();
+            witness.constrained_witness().value();
         let coefficients_and_mask_in_witness_mask_base: [power_of_two_moduli::GroupElement<
             WITNESS_MASK_LIMBS,
-        >; NUM_RANGE_CLAIMS] = (*coefficients_and_mask_in_witness_mask_base).into();
+        >; NUM_RANGE_CLAIMS] = (witness.constrained_witness().clone()).into();
 
         let coefficients_and_mask_in_witness_mask_base: [Uint<WITNESS_MASK_LIMBS>;
             NUM_RANGE_CLAIMS] =
@@ -316,7 +317,7 @@ where
         Ok((
             range_proof_commitment_scheme.commit(
                 &coefficients_and_mask_commitment_message,
-                range_proof_commitment_randomness,
+                witness.range_proof_commitment_randomness(),
             ),
             (
                 encryption_key.evaluate_circuit_private_linear_combination_with_randomness(
@@ -324,9 +325,12 @@ where
                     &ciphertexts,
                     &scalar_group_order,
                     &mask,
-                    encryption_randomness,
+                    witness.encryption_randomness(),
                 )?,
-                commitment_scheme.commit(&coefficients_as_scalar.into(), commitment_randomness),
+                commitment_scheme.commit(
+                    &coefficients_as_scalar.into(),
+                    witness.commitment_randomness(),
+                ),
             )
                 .into(),
         )
@@ -417,6 +421,107 @@ where
     >;
 
     type RangeProof = RangeProof;
+}
+
+pub trait EnhancedLanguageWitnessAccessors<
+    'a,
+    const NUM_RANGE_CLAIMS: usize,
+    const WITNESS_MASK_LIMBS: usize,
+    RangeProofCommitmentSchemeRandomnessSpaceGroupElement: 'a + group::GroupElement,
+    CommitmentRandomnessSpaceGroupElement: 'a + group::GroupElement,
+    EncryptionRandomnessSpaceGroupElement: 'a + group::GroupElement,
+>:
+    super::EnhancedLanguageWitnessAccessors<
+    NUM_RANGE_CLAIMS,
+    WITNESS_MASK_LIMBS,
+    RangeProofCommitmentSchemeRandomnessSpaceGroupElement,
+    direct_product::GroupElement<
+        CommitmentRandomnessSpaceGroupElement,
+        EncryptionRandomnessSpaceGroupElement,
+    >,
+>
+{
+    fn commitment_randomness(&'a self) -> &'a CommitmentRandomnessSpaceGroupElement {
+        let (commitment_randomness, _) = self.unbounded_witness().into();
+
+        commitment_randomness
+    }
+
+    fn encryption_randomness(&'a self) -> &'a EncryptionRandomnessSpaceGroupElement {
+        let (_, encryption_randomness) = self.unbounded_witness().into();
+
+        encryption_randomness
+    }
+}
+
+impl<
+        'a,
+        const NUM_RANGE_CLAIMS: usize,
+        const WITNESS_MASK_LIMBS: usize,
+        RangeProofCommitmentSchemeRandomnessSpaceGroupElement: 'a + group::GroupElement,
+        CommitmentRandomnessSpaceGroupElement: 'a + group::GroupElement,
+        EncryptionRandomnessSpaceGroupElement: 'a + group::GroupElement,
+    >
+    EnhancedLanguageWitnessAccessors<
+        'a,
+        NUM_RANGE_CLAIMS,
+        WITNESS_MASK_LIMBS,
+        RangeProofCommitmentSchemeRandomnessSpaceGroupElement,
+        CommitmentRandomnessSpaceGroupElement,
+        EncryptionRandomnessSpaceGroupElement,
+    >
+    for direct_product::ThreeWayGroupElement<
+        ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, WITNESS_MASK_LIMBS>,
+        RangeProofCommitmentSchemeRandomnessSpaceGroupElement,
+        direct_product::GroupElement<
+            CommitmentRandomnessSpaceGroupElement,
+            EncryptionRandomnessSpaceGroupElement,
+        >,
+    >
+{
+}
+
+pub trait EnhancedLanguageStatementAccessors<
+    'a,
+    RangeProofCommitmentSchemeCommitmentSpaceGroupElement: 'a + group::GroupElement,
+    CiphertextSpaceGroupElement: 'a + group::GroupElement,
+    GroupElement: 'a + group::GroupElement,
+>:
+    super::EnhancedLanguageStatementAccessors<
+    RangeProofCommitmentSchemeCommitmentSpaceGroupElement,
+    direct_product::GroupElement<CiphertextSpaceGroupElement, GroupElement>,
+>
+{
+    fn evaluated_encryption(&'a self) -> &'a CiphertextSpaceGroupElement {
+        let (evaluated_encryption, _) = self.remaining_statement().into();
+
+        evaluated_encryption
+    }
+
+    fn coefficients_commitment(&'a self) -> &'a GroupElement {
+        let (_, coefficient_commitments) = self.remaining_statement().into();
+
+        coefficient_commitments
+    }
+}
+
+impl<
+        'a,
+        RangeProofCommitmentSchemeCommitmentSpaceGroupElement: 'a + group::GroupElement,
+        CiphertextSpaceGroupElement: 'a + group::GroupElement,
+        GroupElement: 'a + group::GroupElement,
+    >
+    EnhancedLanguageStatementAccessors<
+        'a,
+        RangeProofCommitmentSchemeCommitmentSpaceGroupElement,
+        CiphertextSpaceGroupElement,
+        GroupElement,
+    >
+    for direct_product::GroupElement<
+        RangeProofCommitmentSchemeCommitmentSpaceGroupElement,
+        direct_product::GroupElement<CiphertextSpaceGroupElement, GroupElement>,
+    >
+{
 }
 
 /// The Public Parameters of the Committed Linear Evaluation Schnorr Language

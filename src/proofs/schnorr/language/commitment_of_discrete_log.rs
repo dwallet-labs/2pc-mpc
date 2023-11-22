@@ -76,8 +76,6 @@ where
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<Self::StatementSpaceGroupElement> {
-        let [value, randomness]: &[Scalar; 2] = witness.into();
-
         let base = GroupElement::new(
             language_public_parameters.generator,
             &language_public_parameters
@@ -90,10 +88,35 @@ where
             CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
         Ok([
-            commitment_scheme.commit(&[*value].into(), randomness),
-            *value * base,
+            commitment_scheme.commit(
+                &[witness.commitment_message().clone()].into(),
+                witness.commitment_randomness(),
+            ),
+            witness.commitment_message().clone() * base,
         ]
         .into())
+    }
+}
+
+pub trait WitnessAccessors<Scalar: group::GroupElement> {
+    fn commitment_message(&self) -> &Scalar;
+
+    fn commitment_randomness(&self) -> &Scalar;
+}
+
+impl<Scalar: group::GroupElement> WitnessAccessors<Scalar>
+    for self_product::GroupElement<2, Scalar>
+{
+    fn commitment_message(&self) -> &Scalar {
+        let value: &[Scalar; 2] = self.into();
+
+        &value[0]
+    }
+
+    fn commitment_randomness(&self) -> &Scalar {
+        let value: &[Scalar; 2] = self.into();
+
+        &value[1]
     }
 }
 
