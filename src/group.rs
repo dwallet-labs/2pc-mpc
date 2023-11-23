@@ -186,6 +186,10 @@ pub type Value<G> = <G as GroupElement>::Value;
 
 pub type PublicParameters<G> = <G as GroupElement>::PublicParameters;
 
+// TODO: think about working with associated types for the scalar value instead of working with
+// const-generics for Uint. This could reduce massively the bloat of number of generics, as well as
+// the `Encoding` requirements.
+
 /// An element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in additive
 /// notation.
 pub trait BoundedGroupElement<const SCALAR_LIMBS: usize>: GroupElement {

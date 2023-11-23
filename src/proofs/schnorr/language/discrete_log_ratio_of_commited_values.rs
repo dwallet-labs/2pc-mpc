@@ -42,11 +42,7 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
 impl<const SCALAR_LIMBS: usize, Scalar, GroupElement> schnorr::Language<REPETITIONS>
     for Language<SCALAR_LIMBS, Scalar, GroupElement>
 where
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Copy,
+    Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
     GroupElement: group::GroupElement,
 {
     type WitnessSpaceGroupElement = self_product::GroupElement<3, Scalar>;
@@ -171,19 +167,18 @@ impl<
         GroupElementValue,
     >
 {
-    pub fn new<const SCALAR_LIMBS: usize, Scalar, GroupElement>(
+    pub fn new<
+        const SCALAR_LIMBS: usize,
+        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
+        GroupElement,
+    >(
         scalar_group_public_parameters: Scalar::PublicParameters,
         group_public_parameters: GroupElement::PublicParameters,
         commitment_scheme_public_parameters: PedersenPublicParameters,
         base_by_discrete_log: GroupElement,
     ) -> Self
     where
-        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>
-            + KnownOrderGroupElement<SCALAR_LIMBS>
-            + Samplable
-            + Mul<GroupElement, Output = GroupElement>
-            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-            + Copy,
+        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
         GroupElement: group::GroupElement<
             Value = GroupElementValue,
             PublicParameters = GroupElementPublicParameters,

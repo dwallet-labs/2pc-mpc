@@ -96,7 +96,7 @@ impl<
         const WITNESS_MASK_LIMBS: usize,
         const DIMENSION: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
+        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
         GroupElement: group::GroupElement,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         CommitmentScheme,
@@ -122,11 +122,6 @@ impl<
 where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
-    Scalar: KnownOrderScalar<SCALAR_LIMBS>
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Copy,
     Scalar::Value: From<Uint<SCALAR_LIMBS>>,
     CommitmentScheme: HomomorphicCommitmentScheme<
         SCALAR_LIMBS,
@@ -350,7 +345,7 @@ impl<
         const WITNESS_MASK_LIMBS: usize,
         const DIMENSION: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
+        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
         GroupElement: group::GroupElement,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         CommitmentScheme,
@@ -383,11 +378,6 @@ impl<
 where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
-    Scalar: KnownOrderScalar<SCALAR_LIMBS>
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Copy,
     Scalar::Value: From<Uint<SCALAR_LIMBS>>,
     CommitmentScheme: HomomorphicCommitmentScheme<
         SCALAR_LIMBS,
@@ -607,7 +597,7 @@ where
         const RANGE_CLAIMS_PER_MASK: usize,
         const RANGE_CLAIM_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
+        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
         GroupElement,
         EncryptionKey,
         CommitmentScheme,
@@ -622,12 +612,7 @@ where
     ) -> Self
     where
         Uint<RANGE_CLAIM_LIMBS>: Encoding,
-        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>
-            + KnownOrderScalar<SCALAR_LIMBS>
-            + Samplable
-            + Mul<GroupElement, Output = GroupElement>
-            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-            + Copy,
+        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
         GroupElement: group::GroupElement<PublicParameters = GroupPublicParameters>,
         Scalar::Value: From<Uint<SCALAR_LIMBS>>,
         CommitmentScheme: HomomorphicCommitmentScheme<

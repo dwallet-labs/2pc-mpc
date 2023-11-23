@@ -37,14 +37,8 @@ pub struct Language<Scalar, GroupElement> {
     _group_element_choice: PhantomData<GroupElement>,
 }
 
-impl<Scalar, GroupElement> schnorr::Language<REPETITIONS> for Language<Scalar, GroupElement>
-where
-    Scalar: group::GroupElement
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Copy,
-    GroupElement: group::GroupElement,
+impl<Scalar: LanguageScalar<GroupElement>, GroupElement: group::GroupElement>
+    schnorr::Language<REPETITIONS> for Language<Scalar, GroupElement>
 {
     type WitnessSpaceGroupElement = Scalar;
     type StatementSpaceGroupElement = GroupElement;
@@ -84,16 +78,12 @@ pub struct PublicParameters<ScalarPublicParameters, GroupElementPublicParameters
 impl<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
     PublicParameters<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
 {
-    pub fn new<Scalar, GroupElement>(
+    pub fn new<Scalar: LanguageScalar<GroupElement>, GroupElement>(
         scalar_group_public_parameters: Scalar::PublicParameters,
         group_public_parameters: GroupElement::PublicParameters,
     ) -> Self
     where
-        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>
-            + Samplable
-            + Mul<GroupElement, Output = GroupElement>
-            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-            + Copy,
+        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
         GroupElement: group::GroupElement<
                 Value = GroupElementValue,
                 PublicParameters = GroupElementPublicParameters,

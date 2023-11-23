@@ -2,13 +2,37 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod knowledge_of_discrete_log {
-    use crate::proofs::{
-        schnorr,
-        schnorr::{
-            aggregation, language,
-            language::knowledge_of_discrete_log::{Language, REPETITIONS},
+    use std::ops::Mul;
+
+    use crate::{
+        group,
+        group::Samplable,
+        proofs::{
+            schnorr,
+            schnorr::{
+                aggregation, language,
+                language::knowledge_of_discrete_log::{Language, REPETITIONS},
+            },
         },
     };
+
+    pub trait LanguageScalar<GroupElement>:
+        group::GroupElement
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy
+    {
+    }
+
+    impl<GroupElement, T> LanguageScalar<GroupElement> for T where
+        T: group::GroupElement
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy
+    {
+    }
 
     /// The Witness Space Group Element of a Knowledge of Discrete Log Schnorr Language.
     pub type WitnessSpaceGroupElement<Scalar, GroupElement> =
@@ -68,10 +92,56 @@ pub mod knowledge_of_discrete_log {
 }
 
 pub mod knowledge_of_decommitment {
-    use crate::proofs::{
-        schnorr,
-        schnorr::{aggregation, language, language::knowledge_of_decommitment::Language},
+    use std::ops::Mul;
+
+    use crate::{
+        commitments::HomomorphicCommitmentScheme,
+        group::{self_product, BoundedGroupElement, Samplable},
+        proofs::{
+            schnorr,
+            schnorr::{aggregation, language, language::knowledge_of_decommitment::Language},
+        },
     };
+
+    pub trait LanguageScalar<const SCALAR_LIMBS: usize, GroupElement>:
+        BoundedGroupElement<SCALAR_LIMBS>
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy
+    {
+    }
+
+    impl<const SCALAR_LIMBS: usize, GroupElement, T> LanguageScalar<SCALAR_LIMBS, GroupElement> for T where
+        T: BoundedGroupElement<SCALAR_LIMBS>
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy
+    {
+    }
+
+    pub trait LanguageCommitmentScheme<const SCALAR_LIMBS: usize, Scalar, GroupElement>:
+        HomomorphicCommitmentScheme<
+        SCALAR_LIMBS,
+        MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+        RandomnessSpaceGroupElement = Scalar,
+        CommitmentSpaceGroupElement = GroupElement,
+    >
+    {
+    }
+
+    impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, T>
+        LanguageCommitmentScheme<SCALAR_LIMBS, Scalar, GroupElement> for T
+    where
+        T: HomomorphicCommitmentScheme<
+            SCALAR_LIMBS,
+            MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+            RandomnessSpaceGroupElement = Scalar,
+            CommitmentSpaceGroupElement = GroupElement,
+        >,
+    {
+    }
 
     /// The Public Parameters of a Knowledge of Decommitment Schnorr Language.
     pub type WitnessSpaceGroupElement<
@@ -205,13 +275,36 @@ pub mod knowledge_of_decommitment {
 }
 
 pub mod discrete_log_ratio_of_commited_values {
-    use crate::proofs::{
-        schnorr,
-        schnorr::{
-            aggregation, language,
-            language::discrete_log_ratio_of_commited_values::{Language, REPETITIONS},
+    use std::ops::Mul;
+
+    use crate::{
+        group::{KnownOrderGroupElement, Samplable},
+        proofs::{
+            schnorr,
+            schnorr::{
+                aggregation, language,
+                language::discrete_log_ratio_of_commited_values::{Language, REPETITIONS},
+            },
         },
     };
+
+    pub trait LanguageScalar<const SCALAR_LIMBS: usize, GroupElement>:
+        KnownOrderGroupElement<SCALAR_LIMBS>
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy
+    {
+    }
+
+    impl<const SCALAR_LIMBS: usize, GroupElement, T> LanguageScalar<SCALAR_LIMBS, GroupElement> for T where
+        T: KnownOrderGroupElement<SCALAR_LIMBS>
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy
+    {
+    }
 
     /// The Witness Space Group Element of a Ratio Between Committed Values is the Discrete Log
     /// Schnorr Language.
@@ -309,13 +402,59 @@ pub mod discrete_log_ratio_of_commited_values {
 }
 
 pub mod commitment_of_discrete_log {
-    use crate::proofs::{
-        schnorr,
-        schnorr::{
-            aggregation, language,
-            language::commitment_of_discrete_log::{Language, REPETITIONS},
+    use std::ops::Mul;
+
+    use crate::{
+        commitments::HomomorphicCommitmentScheme,
+        group::{self_product, BoundedGroupElement, Samplable},
+        proofs::{
+            schnorr,
+            schnorr::{
+                aggregation, language,
+                language::commitment_of_discrete_log::{Language, REPETITIONS},
+            },
         },
     };
+
+    pub trait LanguageScalar<const SCALAR_LIMBS: usize, GroupElement>:
+        BoundedGroupElement<SCALAR_LIMBS>
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy
+    {
+    }
+
+    impl<const SCALAR_LIMBS: usize, GroupElement, T> LanguageScalar<SCALAR_LIMBS, GroupElement> for T where
+        T: BoundedGroupElement<SCALAR_LIMBS>
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy
+    {
+    }
+
+    pub trait LanguageCommitmentScheme<const SCALAR_LIMBS: usize, Scalar, GroupElement>:
+        HomomorphicCommitmentScheme<
+        SCALAR_LIMBS,
+        MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+        RandomnessSpaceGroupElement = Scalar,
+        CommitmentSpaceGroupElement = GroupElement,
+    >
+    {
+    }
+
+    impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, T>
+        LanguageCommitmentScheme<SCALAR_LIMBS, Scalar, GroupElement> for T
+    where
+        T: HomomorphicCommitmentScheme<
+            SCALAR_LIMBS,
+            MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+            RandomnessSpaceGroupElement = Scalar,
+            CommitmentSpaceGroupElement = GroupElement,
+        >,
+    {
+    }
 
     /// The Witness Space Group Element of a Commitment of Discrete Log Schnorr Language.
     pub type WitnessSpaceGroupElement<
@@ -431,13 +570,40 @@ pub mod commitment_of_discrete_log {
 }
 
 pub mod encryption_of_tuple {
-    use crate::proofs::{
-        schnorr,
-        schnorr::{
-            aggregation, language,
-            language::enhanced::encryption_of_tuple::{Language, REPETITIONS},
+    use std::ops::Mul;
+
+    use crate::{
+        group::{BoundedGroupElement, KnownOrderScalar, Samplable},
+        proofs::{
+            schnorr,
+            schnorr::{
+                aggregation, language,
+                language::enhanced::encryption_of_tuple::{Language, REPETITIONS},
+            },
         },
     };
+
+    pub trait LanguageScalar<const SCALAR_LIMBS: usize, GroupElement>:
+        KnownOrderScalar<SCALAR_LIMBS>
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + Mul<Self, Output = Self>
+        + for<'r> Mul<&'r Self, Output = Self>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy
+    {
+    }
+
+    impl<const SCALAR_LIMBS: usize, GroupElement, T> LanguageScalar<SCALAR_LIMBS, GroupElement> for T where
+        T: KnownOrderScalar<SCALAR_LIMBS>
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + Mul<Self, Output = Self>
+            + for<'r> Mul<&'r Self, Output = Self>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy
+    {
+    }
 
     /// The Witness Space Group Element of an Encryption of a Tuple Schnorr Language.
     pub type WitnessSpaceGroupElement<
@@ -731,13 +897,40 @@ pub mod encryption_of_tuple {
 }
 
 pub mod encryption_of_discrete_log {
-    use crate::proofs::{
-        schnorr,
-        schnorr::{
-            aggregation, language,
-            language::enhanced::encryption_of_discrete_log::{Language, REPETITIONS},
+    use std::ops::Mul;
+
+    use crate::{
+        group::{BoundedGroupElement, Samplable},
+        proofs::{
+            schnorr,
+            schnorr::{
+                aggregation, language,
+                language::enhanced::encryption_of_discrete_log::{Language, REPETITIONS},
+            },
         },
     };
+
+    pub trait LanguageScalar<const SCALAR_LIMBS: usize, GroupElement>:
+        BoundedGroupElement<SCALAR_LIMBS>
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + Mul<Self, Output = Self>
+        + for<'r> Mul<&'r Self, Output = Self>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy
+    {
+    }
+
+    impl<const SCALAR_LIMBS: usize, GroupElement, T> LanguageScalar<SCALAR_LIMBS, GroupElement> for T where
+        T: BoundedGroupElement<SCALAR_LIMBS>
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + Mul<Self, Output = Self>
+            + for<'r> Mul<&'r Self, Output = Self>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy
+    {
+    }
 
     /// The Witness Space Group Element of an Encryption of Discrete Log Schnorr Language.
     pub type WitnessSpaceGroupElement<
@@ -1031,13 +1224,40 @@ pub mod encryption_of_discrete_log {
 }
 
 pub mod committed_linear_evaluation {
-    use crate::proofs::{
-        schnorr,
-        schnorr::{
-            aggregation, language,
-            language::enhanced::committed_linear_evaluation::{Language, REPETITIONS},
+    use std::ops::Mul;
+
+    use crate::{
+        group::{KnownOrderScalar, Samplable},
+        proofs::{
+            schnorr,
+            schnorr::{
+                aggregation, language,
+                language::enhanced::committed_linear_evaluation::{Language, REPETITIONS},
+            },
         },
     };
+
+    pub trait LanguageScalar<const SCALAR_LIMBS: usize, GroupElement>:
+        KnownOrderScalar<SCALAR_LIMBS>
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + Mul<Self, Output = Self>
+        + for<'r> Mul<&'r Self, Output = Self>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy
+    {
+    }
+
+    impl<const SCALAR_LIMBS: usize, GroupElement, T> LanguageScalar<SCALAR_LIMBS, GroupElement> for T where
+        T: KnownOrderScalar<SCALAR_LIMBS>
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + Mul<Self, Output = Self>
+            + for<'r> Mul<&'r Self, Output = Self>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy
+    {
+    }
 
     /// The Witness Space Group Element of a Committed Linear Evaluation Schnorr Language.
     pub type WitnessSpaceGroupElement<

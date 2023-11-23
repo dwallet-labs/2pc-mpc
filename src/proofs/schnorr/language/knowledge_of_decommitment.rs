@@ -47,25 +47,11 @@ pub struct Language<
 impl<
         const REPETITIONS: usize,
         const SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        CommitmentScheme,
+        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
+        GroupElement: group::GroupElement,
+        CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, Scalar, GroupElement>,
     > schnorr::Language<REPETITIONS>
     for Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
-where
-    Scalar: BoundedGroupElement<SCALAR_LIMBS>
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Copy,
-    GroupElement: group::GroupElement,
-    CommitmentScheme: HomomorphicCommitmentScheme<
-        SCALAR_LIMBS,
-        MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
-        // TODO: do we need to enforce that? I believe we don't care about randomness.
-        RandomnessSpaceGroupElement = Scalar,
-        CommitmentSpaceGroupElement = GroupElement,
-    >,
 {
     type WitnessSpaceGroupElement = self_product::GroupElement<2, Scalar>;
     type StatementSpaceGroupElement = GroupElement;
@@ -163,28 +149,19 @@ impl<ScalarPublicParameters, GroupElementPublicParameters, CommitmentSchemePubli
     pub fn new<
         const REPETITIONS: usize,
         const SCALAR_LIMBS: usize,
-        Scalar,
+        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
         GroupElement,
-        CommitmentScheme,
+        CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, Scalar, GroupElement>,
     >(
         scalar_group_public_parameters: Scalar::PublicParameters,
         group_public_parameters: GroupElement::PublicParameters,
         commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
     ) -> Self
     where
-        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>
-            + BoundedGroupElement<SCALAR_LIMBS>
-            + Samplable
-            + Mul<GroupElement, Output = GroupElement>
-            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-            + Copy,
+        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
         GroupElement: group::GroupElement<PublicParameters = GroupElementPublicParameters>,
         CommitmentScheme: HomomorphicCommitmentScheme<
             SCALAR_LIMBS,
-            MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
-            // TODO: do we need to enforce that? I believe we don't care about randomness.
-            RandomnessSpaceGroupElement = Scalar,
-            CommitmentSpaceGroupElement = GroupElement,
             PublicParameters = CommitmentSchemePublicParameters,
         >,
     {

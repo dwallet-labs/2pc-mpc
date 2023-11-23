@@ -79,7 +79,7 @@ impl<
         const RANGE_CLAIM_LIMBS: usize,
         const WITNESS_MASK_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
+        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
         GroupElement: group::GroupElement,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         RangeProof,
@@ -99,13 +99,6 @@ impl<
 where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
-    Scalar: KnownOrderScalar<SCALAR_LIMBS>
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Mul<Scalar, Output = Scalar>
-        + for<'r> Mul<&'r Scalar, Output = Scalar>
-        + Copy,
     Scalar::Value: From<Uint<SCALAR_LIMBS>>,
     range::CommitmentSchemeMessageSpaceValue<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -265,7 +258,7 @@ impl<
         const RANGE_CLAIM_LIMBS: usize,
         const WITNESS_MASK_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar: group::GroupElement,
+        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
         GroupElement: group::GroupElement,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         RangeProof,
@@ -292,13 +285,6 @@ impl<
 where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
-    Scalar: KnownOrderScalar<SCALAR_LIMBS>
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Mul<Scalar, Output = Scalar>
-        + for<'r> Mul<&'r Scalar, Output = Scalar>
-        + Copy,
     Scalar::Value: From<Uint<SCALAR_LIMBS>>,
     range::CommitmentSchemeMessageSpaceValue<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -475,7 +461,7 @@ where
         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const RANGE_CLAIM_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
+        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
         GroupElement: group::GroupElement,
         EncryptionKey,
         RangeProof,
@@ -487,15 +473,8 @@ where
     ) -> Self
     where
         Uint<RANGE_CLAIM_LIMBS>: Encoding,
-        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>
-            + KnownOrderScalar<SCALAR_LIMBS>
-            + Samplable
-            + Mul<GroupElement, Output = GroupElement>
-            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-            + Mul<Scalar, Output = Scalar>
-            + for<'r> Mul<&'r Scalar, Output = Scalar>
-            + Copy,
         Scalar::Value: From<Uint<SCALAR_LIMBS>>,
+        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
         range::CommitmentSchemeMessageSpaceValue<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,

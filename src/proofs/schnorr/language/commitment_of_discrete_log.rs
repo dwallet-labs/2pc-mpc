@@ -44,22 +44,13 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentS
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
-impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>
-    schnorr::Language<REPETITIONS>
+impl<
+        const SCALAR_LIMBS: usize,
+        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
+        GroupElement: CyclicGroupElement,
+        CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, Scalar, GroupElement>,
+    > schnorr::Language<REPETITIONS>
     for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
-where
-    Scalar: BoundedGroupElement<SCALAR_LIMBS>
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Copy,
-    GroupElement: CyclicGroupElement,
-    CommitmentScheme: HomomorphicCommitmentScheme<
-        SCALAR_LIMBS,
-        MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
-        RandomnessSpaceGroupElement = Scalar,
-        CommitmentSpaceGroupElement = GroupElement,
-    >,
 {
     type WitnessSpaceGroupElement = self_product::GroupElement<2, Scalar>;
     type StatementSpaceGroupElement = self_product::GroupElement<2, GroupElement>;
@@ -179,27 +170,24 @@ impl<
         GroupElementValue,
     >
 {
-    pub fn new<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme>(
+    pub fn new<
+        const SCALAR_LIMBS: usize,
+        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
+        GroupElement: CyclicGroupElement,
+        CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, Scalar, GroupElement>,
+    >(
         scalar_group_public_parameters: Scalar::PublicParameters,
         group_public_parameters: GroupElement::PublicParameters,
         commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
     ) -> Self
     where
-        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>
-            + BoundedGroupElement<SCALAR_LIMBS>
-            + Samplable
-            + Mul<GroupElement, Output = GroupElement>
-            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-            + Copy,
+        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
         GroupElement: group::GroupElement<
-                Value = GroupElementValue,
-                PublicParameters = GroupElementPublicParameters,
-            > + CyclicGroupElement,
+            Value = GroupElementValue,
+            PublicParameters = GroupElementPublicParameters,
+        >,
         CommitmentScheme: HomomorphicCommitmentScheme<
             SCALAR_LIMBS,
-            MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
-            RandomnessSpaceGroupElement = Scalar,
-            CommitmentSpaceGroupElement = GroupElement,
             PublicParameters = CommitmentSchemePublicParameters,
         >,
     {
