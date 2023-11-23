@@ -4,6 +4,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::{benchmark_secp256k1_range_proof, benchmark_zero_knowledge};
+pub use language::aliases::knowledge_of_decommitment::*;
 use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
@@ -223,136 +224,6 @@ impl<ScalarPublicParameters, GroupElementPublicParameters, CommitmentSchemePubli
         &self.groups_public_parameters
     }
 }
-
-/// The Public Parameters of a Knowledge of Decommitment Schnorr Language.
-pub type WitnessSpaceGroupElement<
-    const REPETITIONS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    CommitmentScheme,
-> = language::WitnessSpaceGroupElement<
-    REPETITIONS,
-    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
->;
-
-/// The Witness Space Group Element of a Knowledge of Decommitment Schnorr Language.
-pub type LanguagePublicParameters<
-    const REPETITIONS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    CommitmentScheme,
-> = language::PublicParameters<
-    REPETITIONS,
-    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
->;
-
-/// The Statement Space Group Element of a Knowledge of Decommitment Schnorr Language.
-pub type StatementSpaceGroupElement<
-    const REPETITIONS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    CommitmentScheme,
-> = language::StatementSpaceGroupElement<
-    REPETITIONS,
-    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
->;
-
-/// A Knowledge of Decommitment Schnorr Proof.
-pub type Proof<
-    const REPETITIONS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    CommitmentScheme,
-    ProtocolContext,
-> = schnorr::Proof<
-    REPETITIONS,
-    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
-    ProtocolContext,
->;
-
-/// A Knowledge of Decommitment Schnorr Proof Aggregation Commitment Round Party.
-pub type ProofAggregationCommitmentRoundParty<
-    const REPETITIONS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    CommitmentScheme,
-    ProtocolContext,
-> = aggregation::commitment_round::Party<
-    REPETITIONS,
-    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
-    ProtocolContext,
->;
-
-/// A Knowledge of Decommitment Schnorr Proof Aggregation Decommitment Round Party.
-pub type ProofAggregationDecommitmentRoundParty<
-    const REPETITIONS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    CommitmentScheme,
-    ProtocolContext,
-> = aggregation::decommitment_round::Party<
-    REPETITIONS,
-    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
-    ProtocolContext,
->;
-
-/// A Knowledge of Decommitment Schnorr Proof Aggregation Decommitment.
-pub type Decommitment<
-    const REPETITIONS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    CommitmentScheme,
-> = aggregation::decommitment_round::Decommitment<
-    REPETITIONS,
-    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
->;
-
-/// A Knowledge of Decommitment Schnorr Proof Aggregation Proof Share Round Party.
-pub type ProofAggregationProofShareRoundParty<
-    const REPETITIONS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    CommitmentScheme,
-    ProtocolContext,
-> = aggregation::proof_share_round::Party<
-    REPETITIONS,
-    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
-    ProtocolContext,
->;
-
-/// A Knowledge of Decommitment Schnorr Proof Aggregation Proof Share.
-pub type ProofShare<
-    const REPETITIONS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    CommitmentScheme,
-> = aggregation::proof_share_round::ProofShare<
-    REPETITIONS,
-    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
->;
-
-/// A Knowledge of Decommitment Schnorr Proof Aggregation Proof Aggregation Round Party.
-pub type ProofAggregationProofAggregationRoundParty<
-    const REPETITIONS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    CommitmentScheme,
-    ProtocolContext,
-> = aggregation::proof_aggregation_round::Party<
-    REPETITIONS,
-    Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
-    ProtocolContext,
->;
 
 #[cfg(any(test, feature = "benchmarking"))]
 mod tests {

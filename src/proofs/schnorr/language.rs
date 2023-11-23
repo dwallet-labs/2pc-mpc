@@ -14,11 +14,13 @@ use crate::{
     proofs,
 };
 
+mod aliases;
 pub mod commitment_of_discrete_log;
 pub mod discrete_log_ratio_of_commited_values;
 pub mod enhanced;
 pub mod knowledge_of_decommitment;
 pub mod knowledge_of_discrete_log;
+
 // TODO: add + Serialize + for<'a> Deserialize<'a> to the trait ?!? why can't I
 
 // TODO: take REPETITIONS, add bits

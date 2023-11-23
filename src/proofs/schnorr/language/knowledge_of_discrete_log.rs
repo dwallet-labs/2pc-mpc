@@ -4,6 +4,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
+pub use language::aliases::knowledge_of_discrete_log::*;
 use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
@@ -120,62 +121,6 @@ impl<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
         &self.groups_public_parameters
     }
 }
-
-/// The Witness Space Group Element of a Knowledge of Discrete Log Schnorr Language.
-pub type WitnessSpaceGroupElement<Scalar, GroupElement> =
-    language::WitnessSpaceGroupElement<REPETITIONS, Language<Scalar, GroupElement>>;
-
-/// The Statement Space Group Element of a Knowledge of Discrete Log Schnorr Language.
-pub type StatementSpaceGroupElement<Scalar, GroupElement> =
-    language::StatementSpaceGroupElement<REPETITIONS, Language<Scalar, GroupElement>>;
-
-/// The Public Parameters of a Knowledge of Discrete Log Schnorr Language.
-pub type LanguagePublicParameters<Scalar, GroupElement> =
-    language::PublicParameters<REPETITIONS, Language<Scalar, GroupElement>>;
-
-/// A Knowledge of Discrete Log Schnorr Proof.
-pub type Proof<Scalar, GroupElement, ProtocolContext> =
-    schnorr::Proof<REPETITIONS, Language<Scalar, GroupElement>, ProtocolContext>;
-
-/// A Knowledge of Discrete Log Schnorr Proof Aggregation Commitment Round Party.
-pub type ProofAggregationCommitmentRoundParty<Scalar, GroupElement, ProtocolContext> =
-    aggregation::commitment_round::Party<
-        REPETITIONS,
-        Language<Scalar, GroupElement>,
-        ProtocolContext,
-    >;
-
-/// A Knowledge of Discrete Log Schnorr Proof Aggregation Decommitment Round Party.
-pub type ProofAggregationDecommitmentRoundParty<Scalar, GroupElement, ProtocolContext> =
-    aggregation::decommitment_round::Party<
-        REPETITIONS,
-        Language<Scalar, GroupElement>,
-        ProtocolContext,
-    >;
-
-/// A Knowledge of Discrete Log Schnorr Proof Aggregation Decommitment.
-pub type Decommitment<Scalar, GroupElement> =
-    aggregation::decommitment_round::Decommitment<REPETITIONS, Language<Scalar, GroupElement>>;
-
-/// A Knowledge of Discrete Log Schnorr Proof Aggregation Proof Share Round Party.
-pub type ProofAggregationProofShareRoundParty<Scalar, GroupElement, ProtocolContext> =
-    aggregation::proof_share_round::Party<
-        REPETITIONS,
-        Language<Scalar, GroupElement>,
-        ProtocolContext,
-    >;
-
-/// A Knowledge of Discrete Log Schnorr Proof Aggregation Proof Share.
-pub type ProofShare<Scalar, GroupElement> =
-    aggregation::proof_share_round::ProofShare<REPETITIONS, Language<Scalar, GroupElement>>;
-
-/// A Knowledge of Discrete Log Schnorr Proof Aggregation Proof Aggregation Round Party.
-pub type ProofAggregationProofAggregationRoundParty<Scalar, GroupElement, ProtocolContext> =
-    aggregation::proof_aggregation_round::Party<
-        REPETITIONS,
-        Language<Scalar, GroupElement>,
-        ProtocolContext,
-    >;
 
 #[cfg(any(test, feature = "benchmarking"))]
 mod tests {
