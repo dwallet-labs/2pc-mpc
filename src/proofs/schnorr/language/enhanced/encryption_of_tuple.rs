@@ -108,7 +108,6 @@ where
     >: From<super::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
     RangeProof: proofs::RangeProof<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        RANGE_CLAIMS_PER_SCALAR,
         RANGE_CLAIM_LIMBS,
     >,
 {
@@ -146,7 +145,7 @@ where
             RANGE_CLAIM_LIMBS,
             RangeProof,
         >,
-        RangeProof::PublicParameters,
+        RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
         ahe::RandomnessSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         ahe::CiphertextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         ahe::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
@@ -294,7 +293,6 @@ where
     >: From<super::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
     RangeProof: proofs::RangeProof<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        RANGE_CLAIMS_PER_SCALAR,
         RANGE_CLAIM_LIMBS,
     >,
 {
@@ -467,7 +465,7 @@ where
         RangeProof,
     >(
         scalar_group_public_parameters: Scalar::PublicParameters,
-        range_proof_public_parameters: RangeProof::PublicParameters,
+        range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
         encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
         ciphertext: ahe::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
     ) -> Self
@@ -483,9 +481,8 @@ where
         >: From<super::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
         RangeProof: proofs::RangeProof<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
             RANGE_CLAIM_LIMBS,
-            PublicParameters = RangeProofPublicParameters,
+            PublicParameters<RANGE_CLAIMS_PER_SCALAR> = RangeProofPublicParameters,
         >,
         range::CommitmentSchemeRandomnessSpaceGroupElement<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,

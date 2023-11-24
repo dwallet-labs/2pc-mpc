@@ -15,8 +15,6 @@ pub mod bulletproofs;
 pub trait RangeProof<
     // The commitment scheme's message space scalar size in limbs
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-    // The number of witnesses with range claims
-    const NUM_RANGE_CLAIMS: usize,
     // An upper bound over the range claims (the lower bound is fixed to zero.)
     const RANGE_CLAIM_LIMBS: usize,
 >: Serialize + for<'a> Deserialize<'a> + Clone + PartialEq where
@@ -30,15 +28,15 @@ pub trait RangeProof<
     const RANGE_CLAIM_BITS: usize;
 
     /// The commitment scheme used for the range proof
-    type CommitmentScheme: HomomorphicCommitmentScheme<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>;
+    type CommitmentScheme<const NUM_RANGE_CLAIMS: usize>: HomomorphicCommitmentScheme<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>;
 
     /// The public parameters of the range proof.
     ///
     /// Includes the public parameters of the commitment scheme, and any range claims if the scheme permits such.
     ///
     /// SECURITY NOTE: Needs to be inserted to the  Fiat-Shamir Transcript of the proof protocol.
-    type PublicParameters: AsRef<
-        commitments::PublicParameters<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>
+    type PublicParameters<const NUM_RANGE_CLAIMS: usize>: AsRef<
+        commitments::PublicParameters<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme<NUM_RANGE_CLAIMS>>
     > + Serialize
     + for<'r> Deserialize<'r>
     + Clone
@@ -46,20 +44,20 @@ pub trait RangeProof<
 
     /// Proves in zero-knowledge that all witnesses committed in `commitment` are bounded by their corresponding
     /// range upper bound in range_claims.
-    fn prove(
-        public_parameters: &Self::PublicParameters,
+    fn prove<const NUM_RANGE_CLAIMS: usize>(
+        public_parameters: &Self::PublicParameters<NUM_RANGE_CLAIMS>,
         witnesses: Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
-        commitments_randomness: Vec<commitments::RandomnessSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
+        commitments_randomness: Vec<commitments::RandomnessSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme<NUM_RANGE_CLAIMS>>>,
         transcript: &mut Transcript,
         rng: &mut impl CryptoRngCore,
-    ) -> Result<(Self, Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>)>;
+    ) -> Result<(Self, Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme<NUM_RANGE_CLAIMS>>>)>;
 
     /// Verifies that all witnesses committed in `commitment` are bounded by their corresponding
     /// range upper bound in range_claims.
-    fn verify(
+    fn verify<const NUM_RANGE_CLAIMS: usize>(
         &self,
-        public_parameters: &Self::PublicParameters,
-        commitments: Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme>>,
+        public_parameters: &Self::PublicParameters<NUM_RANGE_CLAIMS>,
+        commitments: Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme<NUM_RANGE_CLAIMS>>>,
         transcript: &mut Transcript,
         rng: &mut impl CryptoRngCore,
     ) -> Result<()>;
@@ -85,9 +83,8 @@ pub type PublicParameters<
     Proof,
 > = <Proof as RangeProof<
     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-    NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
->>::PublicParameters;
+>>::PublicParameters<NUM_RANGE_CLAIMS>;
 
 pub type CommitmentScheme<
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
@@ -96,9 +93,8 @@ pub type CommitmentScheme<
     Proof,
 > = <Proof as RangeProof<
     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-    NUM_RANGE_CLAIMS,
     RANGE_CLAIM_LIMBS,
->>::CommitmentScheme;
+>>::CommitmentScheme<NUM_RANGE_CLAIMS>;
 
 pub type CommitmentSchemePublicParameters<
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
@@ -109,9 +105,8 @@ pub type CommitmentSchemePublicParameters<
     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     <Proof as RangeProof<
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
-    >>::CommitmentScheme,
+    >>::CommitmentScheme<NUM_RANGE_CLAIMS>,
 >;
 
 pub type CommitmentSchemeMessageSpaceGroupElement<
@@ -123,9 +118,8 @@ pub type CommitmentSchemeMessageSpaceGroupElement<
     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     <Proof as RangeProof<
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
-    >>::CommitmentScheme,
+    >>::CommitmentScheme<NUM_RANGE_CLAIMS>,
 >;
 
 pub type CommitmentSchemeMessageSpacePublicParameters<
@@ -137,9 +131,8 @@ pub type CommitmentSchemeMessageSpacePublicParameters<
     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     <Proof as RangeProof<
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
-    >>::CommitmentScheme,
+    >>::CommitmentScheme<NUM_RANGE_CLAIMS>,
 >;
 
 pub type CommitmentSchemeMessageSpaceValue<
@@ -151,9 +144,8 @@ pub type CommitmentSchemeMessageSpaceValue<
     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     <Proof as RangeProof<
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
-    >>::CommitmentScheme,
+    >>::CommitmentScheme<NUM_RANGE_CLAIMS>,
 >;
 
 pub type CommitmentSchemeRandomnessSpaceGroupElement<
@@ -165,9 +157,8 @@ pub type CommitmentSchemeRandomnessSpaceGroupElement<
     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     <Proof as RangeProof<
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
-    >>::CommitmentScheme,
+    >>::CommitmentScheme<NUM_RANGE_CLAIMS>,
 >;
 
 pub type CommitmentSchemeRandomnessSpacePublicParameters<
@@ -179,9 +170,8 @@ pub type CommitmentSchemeRandomnessSpacePublicParameters<
     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     <Proof as RangeProof<
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
-    >>::CommitmentScheme,
+    >>::CommitmentScheme<NUM_RANGE_CLAIMS>,
 >;
 
 pub type CommitmentSchemeRandomnessSpaceValue<
@@ -193,9 +183,8 @@ pub type CommitmentSchemeRandomnessSpaceValue<
     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     <Proof as RangeProof<
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
-    >>::CommitmentScheme,
+    >>::CommitmentScheme<NUM_RANGE_CLAIMS>,
 >;
 
 pub type CommitmentSchemeCommitmentSpaceGroupElement<
@@ -207,9 +196,8 @@ pub type CommitmentSchemeCommitmentSpaceGroupElement<
     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     <Proof as RangeProof<
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
-    >>::CommitmentScheme,
+    >>::CommitmentScheme<NUM_RANGE_CLAIMS>,
 >;
 
 pub type CommitmentSchemeCommitmentSpacePublicParameters<
@@ -221,9 +209,8 @@ pub type CommitmentSchemeCommitmentSpacePublicParameters<
     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     <Proof as RangeProof<
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
-    >>::CommitmentScheme,
+    >>::CommitmentScheme<NUM_RANGE_CLAIMS>,
 >;
 
 pub type CommitmentSchemeCommitmentSpaceValue<
@@ -235,9 +222,8 @@ pub type CommitmentSchemeCommitmentSpaceValue<
     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     <Proof as RangeProof<
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
-    >>::CommitmentScheme,
+    >>::CommitmentScheme<NUM_RANGE_CLAIMS>,
 >;
 
 #[cfg(feature = "benchmarking")]
@@ -287,7 +273,6 @@ mod benches {
             let witnesses = generate_witnesses::<
                 REPETITIONS,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                NUM_RANGE_CLAIMS,
                 RANGE_CLAIM_LIMBS,
                 WITNESS_MASK_LIMBS,
                 Lang,
@@ -299,7 +284,6 @@ mod benches {
                     language::enhanced::RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
                         REPETITIONS,
                         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                        NUM_RANGE_CLAIMS,
                         RANGE_CLAIM_LIMBS,
                         WITNESS_MASK_LIMBS,
                         Lang,
@@ -332,7 +316,6 @@ mod benches {
                         language::enhanced::RangeProof::<
                             REPETITIONS,
                             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                            NUM_RANGE_CLAIMS,
                             RANGE_CLAIM_LIMBS,
                             WITNESS_MASK_LIMBS,
                             Lang,
@@ -351,7 +334,6 @@ mod benches {
             let (range_proof, commitments) = language::enhanced::RangeProof::<
                 REPETITIONS,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                NUM_RANGE_CLAIMS,
                 RANGE_CLAIM_LIMBS,
                 WITNESS_MASK_LIMBS,
                 Lang,

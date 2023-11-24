@@ -35,12 +35,10 @@ impl PartialEq for RangeProof {
 
 pub const RANGE_CLAIM_LIMBS: usize = U64::LIMBS;
 
-impl<const NUM_RANGE_CLAIMS: usize>
-    super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS> for RangeProof
-{
+impl super::RangeProof<SCALAR_LIMBS, RANGE_CLAIM_LIMBS> for RangeProof {
     const NAME: &'static str = "Bulletproofs over the Ristretto group";
 
-    type CommitmentScheme = MultiCommitment<
+    type CommitmentScheme<const NUM_RANGE_CLAIMS: usize> = MultiCommitment<
         NUM_RANGE_CLAIMS,
         SCALAR_LIMBS,
         Pedersen<1, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>,
@@ -48,19 +46,27 @@ impl<const NUM_RANGE_CLAIMS: usize>
 
     const RANGE_CLAIM_BITS: usize = 32;
 
-    type PublicParameters = PublicParameters<NUM_RANGE_CLAIMS>;
+    type PublicParameters<const NUM_RANGE_CLAIMS: usize> = PublicParameters<NUM_RANGE_CLAIMS>;
 
-    fn prove(
-        _public_parameters: &Self::PublicParameters,
+    fn prove<const NUM_RANGE_CLAIMS: usize>(
+        _public_parameters: &Self::PublicParameters<NUM_RANGE_CLAIMS>,
         witnesses: Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
         commitments_randomness: Vec<
-            commitments::RandomnessSpaceGroupElement<SCALAR_LIMBS, Self::CommitmentScheme>,
+            commitments::RandomnessSpaceGroupElement<
+                SCALAR_LIMBS,
+                Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
+            >,
         >,
         transcript: &mut Transcript,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(
         Self,
-        Vec<commitments::CommitmentSpaceGroupElement<SCALAR_LIMBS, Self::CommitmentScheme>>,
+        Vec<
+            commitments::CommitmentSpaceGroupElement<
+                SCALAR_LIMBS,
+                Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
+            >,
+        >,
     )> {
         let number_of_witnesses = witnesses.len();
 
@@ -95,7 +101,10 @@ impl<const NUM_RANGE_CLAIMS: usize>
             .take(padded_witnesses_length)
             .collect();
 
-        let bulletproofs_generators = BulletproofGens::new(<Self as super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS, witnesses.len());
+        let bulletproofs_generators = BulletproofGens::new(
+            <Self as super::RangeProof<SCALAR_LIMBS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS,
+            witnesses.len(),
+        );
         let commitment_generators = PedersenGens::default();
 
         let (proof, commitments) = bulletproofs::RangeProof::prove_multiple_with_rng(
@@ -104,7 +113,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
             transcript,
             witnesses.as_slice(),
             commitments_randomness.as_slice(),
-            <Self as super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS,
+            <Self as super::RangeProof<SCALAR_LIMBS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS,
             rng,
         )?;
 
@@ -125,17 +134,23 @@ impl<const NUM_RANGE_CLAIMS: usize>
             .map(|point| ristretto::GroupElement(point));
 
         let commitments: proofs::Result<
-            Vec<commitments::CommitmentSpaceGroupElement<SCALAR_LIMBS, Self::CommitmentScheme>>,
+            Vec<
+                commitments::CommitmentSpaceGroupElement<
+                    SCALAR_LIMBS,
+                    Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
+                >,
+            >,
         > = iter::repeat_with(|| {
-            flat_map_results(
-                array::from_fn(|_| {
-                    commitments_iter
-                        .next()
-                        .ok_or(proofs::Error::InvalidParameters)
-                })
-            ).map(
-                commitments::CommitmentSpaceGroupElement::<SCALAR_LIMBS,
-                    Self::CommitmentScheme>::from,
+            flat_map_results(array::from_fn(|_| {
+                commitments_iter
+                    .next()
+                    .ok_or(proofs::Error::InvalidParameters)
+            }))
+            .map(
+                commitments::CommitmentSpaceGroupElement::<
+                    SCALAR_LIMBS,
+                    Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
+                >::from,
             )
         })
         .take(number_of_witnesses)
@@ -144,11 +159,14 @@ impl<const NUM_RANGE_CLAIMS: usize>
         Ok((RangeProof(proof), commitments?))
     }
 
-    fn verify(
+    fn verify<const NUM_RANGE_CLAIMS: usize>(
         &self,
-        _public_parameters: &Self::PublicParameters,
+        _public_parameters: &Self::PublicParameters<NUM_RANGE_CLAIMS>,
         commitments: Vec<
-            commitments::CommitmentSpaceGroupElement<SCALAR_LIMBS, Self::CommitmentScheme>,
+            commitments::CommitmentSpaceGroupElement<
+                SCALAR_LIMBS,
+                Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
+            >,
         >,
         transcript: &mut Transcript,
         rng: &mut impl CryptoRngCore,
@@ -172,8 +190,10 @@ impl<const NUM_RANGE_CLAIMS: usize>
             .map(|commtiment| commtiment.compress())
             .collect();
 
-        let bulletproofs_generators =
-            BulletproofGens::new(<Self as super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS, compressed_commitments.len());
+        let bulletproofs_generators = BulletproofGens::new(
+            <Self as super::RangeProof<SCALAR_LIMBS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS,
+            compressed_commitments.len(),
+        );
         let commitment_generators = PedersenGens::default();
 
         // TODO: convert their verification error to our range proof error?
@@ -182,7 +202,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
             &commitment_generators,
             transcript,
             compressed_commitments.as_slice(),
-            <Self as super::RangeProof<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS,
+            <Self as super::RangeProof<SCALAR_LIMBS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS,
             rng,
         )?)
     }

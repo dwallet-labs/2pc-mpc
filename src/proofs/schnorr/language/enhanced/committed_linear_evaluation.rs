@@ -131,7 +131,6 @@ where
     >,
     RangeProof: proofs::RangeProof<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
     >,
     range::CommitmentSchemeMessageSpaceValue<
@@ -178,7 +177,7 @@ where
             RANGE_CLAIM_LIMBS,
             RangeProof,
         >,
-        RangeProof::PublicParameters,
+        RangeProof::PublicParameters<NUM_RANGE_CLAIMS>,
         ahe::RandomnessSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         ahe::CiphertextSpacePublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         ahe::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
@@ -387,7 +386,6 @@ where
     >,
     RangeProof: proofs::RangeProof<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
         RANGE_CLAIM_LIMBS,
     >,
     range::CommitmentSchemeMessageSpaceValue<
@@ -605,7 +603,7 @@ where
     >(
         scalar_group_public_parameters: Scalar::PublicParameters,
         commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
-        range_proof_public_parameters: RangeProof::PublicParameters,
+        range_proof_public_parameters: RangeProof::PublicParameters<NUM_RANGE_CLAIMS>,
         encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
         ciphertexts: [ahe::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>;
             DIMENSION],
@@ -624,9 +622,8 @@ where
         >,
         RangeProof: proofs::RangeProof<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            NUM_RANGE_CLAIMS,
             RANGE_CLAIM_LIMBS,
-            PublicParameters = RangeProofPublicParameters,
+            PublicParameters<NUM_RANGE_CLAIMS> = RangeProofPublicParameters,
         >,
         range::CommitmentSchemeRandomnessSpaceGroupElement<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,

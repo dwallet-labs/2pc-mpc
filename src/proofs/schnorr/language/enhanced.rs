@@ -148,7 +148,7 @@ pub trait EnhancedLanguage<
     type RemainingStatementSpaceGroupElement: GroupElement;
 
     /// The range proof used to prove the constrained witnesses are within the range specified in the public parameters.
-    type RangeProof: proofs::RangeProof<RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS>;
+    type RangeProof: proofs::RangeProof<RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIM_LIMBS>;
 }
 
 impl<WitnessSpacePublicParameters, StatementSpacePublicParameters>
@@ -838,7 +838,6 @@ pub(crate) mod tests {
                         >> (Uint::<WITNESS_MASK_LIMBS>::BITS
                             - <range::bulletproofs::RangeProof as RangeProof<
                                 { ristretto::SCALAR_LIMBS },
-                                RANGE_CLAIMS_PER_SCALAR,
                                 { range::bulletproofs::RANGE_CLAIM_LIMBS },
                             >>::RANGE_CLAIM_BITS);
 
@@ -1062,7 +1061,6 @@ pub(crate) mod tests {
                 >> (Uint::<WITNESS_MASK_LIMBS>::BITS
                     - <range::bulletproofs::RangeProof as RangeProof<
                         { ristretto::SCALAR_LIMBS },
-                        RANGE_CLAIMS_PER_SCALAR,
                         { range::bulletproofs::RANGE_CLAIM_LIMBS },
                     >>::RANGE_CLAIM_BITS))
                 .wrapping_add(&Uint::<WITNESS_MASK_LIMBS>::ONE),

@@ -34,11 +34,7 @@ pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    RangeProof: proofs::RangeProof<
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-    >,
+    RangeProof: proofs::RangeProof<RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIM_LIMBS>,
     ProtocolContext: Clone + Serialize,
 > where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
@@ -57,7 +53,7 @@ pub struct Party<
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub group_public_parameters: GroupElement::PublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    pub range_proof_public_parameters: RangeProof::PublicParameters,
+    pub range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
 }
 
 impl Commitment {
@@ -91,7 +87,6 @@ impl<
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         RangeProof: proofs::RangeProof<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
             RANGE_CLAIM_LIMBS,
         >,
         ProtocolContext: Clone + Serialize,
