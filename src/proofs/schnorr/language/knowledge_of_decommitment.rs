@@ -111,8 +111,10 @@ impl<Scalar: group::GroupElement> WitnessAccessors<Scalar>
 }
 
 // TODO: these types & names, implement RangeProof for them
-type ZeroKnowledgeLanguage<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> =
-    Language<1, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>;
+pub const ZERO_KNOWLEDGE_REPITITIONS: usize = 1;
+
+pub type ZeroKnowledgeLanguage<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> =
+    Language<ZERO_KNOWLEDGE_REPITITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>;
 
 type RangeProofLanguage<const SCALAR_LIMBS: usize, Scalar, GroupElement> = Language<
     // TODO: should this be const? or parameterized

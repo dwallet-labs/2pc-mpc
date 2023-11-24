@@ -3,7 +3,7 @@
 
 use std::marker::PhantomData;
 
-use crypto_bigint::{rand_core::OsRng, Encoding, Random, Uint};
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Random, Uint};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
@@ -116,7 +116,7 @@ where
 {
     pub fn sample_commit_and_prove_secret_key_share(
         self,
-        rng: &mut OsRng,
+        rng: &mut impl CryptoRngCore,
     ) -> crate::Result<(
         Commitment,
         decommitment_round::Party<

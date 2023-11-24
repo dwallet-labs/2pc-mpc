@@ -27,6 +27,8 @@ where
             return Err(group::Error::InvalidPublicParameters);
         }
 
+        // TODO: probably via public parameters is not the right way to do this
+
         let mask =
             Uint::<LIMBS>::MAX >> (Uint::<LIMBS>::BITS - public_parameters.sampling_bit_size);
 
