@@ -348,6 +348,7 @@ where
     // LIMBS for the entire computation
 
     // TODO: RANGE_CLAIM_LIMBS < SCALAR_LIMBS
+    // TODO: use RANGE_CLAIM_BITS instead?
     let delta: Uint<SCALAR_LIMBS> =
         Uint::<SCALAR_LIMBS>::from(&Uint::<RANGE_CLAIM_LIMBS>::MAX).wrapping_add(&1u64.into());
 

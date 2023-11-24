@@ -13,6 +13,7 @@ pub mod commitments;
 pub mod dkg;
 pub mod group;
 pub(crate) mod helpers;
+pub mod presign;
 pub mod proofs;
 mod traits;
 
