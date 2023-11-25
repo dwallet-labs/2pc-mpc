@@ -46,10 +46,7 @@ pub struct Party<
     pub(super) group_public_parameters: GroupElement::PublicParameters,
     pub(super) encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
     pub(super) commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
-    pub(super) first_range_proof_public_parameters:
-        RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
-    pub(super) second_range_proof_public_parameters:
-        RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
+    pub(super) range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
     pub(super) signature_nonce_shares_and_commitment_randomnesses:
         Vec<(GroupElement::Scalar, GroupElement::Scalar)>,
 }
