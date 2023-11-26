@@ -573,7 +573,7 @@ pub mod encryption_of_tuple {
     use std::ops::Mul;
 
     use crate::{
-        group::{BoundedGroupElement, KnownOrderScalar, Samplable},
+        group::{KnownOrderScalar, Samplable},
         proofs::{
             schnorr,
             schnorr::{
@@ -899,8 +899,10 @@ pub mod encryption_of_tuple {
 pub mod encryption_of_discrete_log {
     use std::ops::Mul;
 
+    // TODO: does it need to be known-order or not?
+    pub use super::encryption_of_tuple::LanguageScalar;
     use crate::{
-        group::{BoundedGroupElement, Samplable},
+        group::{KnownOrderScalar, Samplable},
         proofs::{
             schnorr,
             schnorr::{
@@ -909,28 +911,6 @@ pub mod encryption_of_discrete_log {
             },
         },
     };
-
-    pub trait LanguageScalar<const SCALAR_LIMBS: usize, GroupElement>:
-        BoundedGroupElement<SCALAR_LIMBS>
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + Mul<Self, Output = Self>
-        + for<'r> Mul<&'r Self, Output = Self>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Copy
-    {
-    }
-
-    impl<const SCALAR_LIMBS: usize, GroupElement, T> LanguageScalar<SCALAR_LIMBS, GroupElement> for T where
-        T: BoundedGroupElement<SCALAR_LIMBS>
-            + Samplable
-            + Mul<GroupElement, Output = GroupElement>
-            + Mul<Self, Output = Self>
-            + for<'r> Mul<&'r Self, Output = Self>
-            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-            + Copy
-    {
-    }
 
     /// The Witness Space Group Element of an Encryption of Discrete Log Schnorr Language.
     pub type WitnessSpaceGroupElement<
@@ -1226,6 +1206,7 @@ pub mod encryption_of_discrete_log {
 pub mod committed_linear_evaluation {
     use std::ops::Mul;
 
+    pub use super::encryption_of_tuple::LanguageScalar;
     use crate::{
         group::{KnownOrderScalar, Samplable},
         proofs::{
@@ -1236,28 +1217,6 @@ pub mod committed_linear_evaluation {
             },
         },
     };
-
-    pub trait LanguageScalar<const SCALAR_LIMBS: usize, GroupElement>:
-        KnownOrderScalar<SCALAR_LIMBS>
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + Mul<Self, Output = Self>
-        + for<'r> Mul<&'r Self, Output = Self>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Copy
-    {
-    }
-
-    impl<const SCALAR_LIMBS: usize, GroupElement, T> LanguageScalar<SCALAR_LIMBS, GroupElement> for T where
-        T: KnownOrderScalar<SCALAR_LIMBS>
-            + Samplable
-            + Mul<GroupElement, Output = GroupElement>
-            + Mul<Self, Output = Self>
-            + for<'r> Mul<&'r Self, Output = Self>
-            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-            + Copy
-    {
-    }
 
     /// The Witness Space Group Element of a Committed Linear Evaluation Schnorr Language.
     pub type WitnessSpaceGroupElement<

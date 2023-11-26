@@ -29,8 +29,9 @@ use crate::{
             aggregation,
             language::{
                 enhanced::{
-                    ConstrainedWitnessGroupElement, EnhancedLanguageWitnessAccessors as _,
-                    RemainingStatementSpaceGroupElement, UnboundedWitnessSpaceGroupElement,
+                    ConstrainedWitnessGroupElement, DecomposableWitness,
+                    EnhancedLanguageWitnessAccessors as _, RemainingStatementSpaceGroupElement,
+                    UnboundedWitnessSpaceGroupElement,
                 },
                 GroupsPublicParametersAccessors,
             },
@@ -176,40 +177,23 @@ where
                 .commitment_public_parameters(),
         )?;
 
-        let discrete_log_in_witness_mask_base: [power_of_two_moduli::GroupElement<
-            WITNESS_MASK_LIMBS,
-        >; RANGE_CLAIMS_PER_SCALAR] = (*witness.constrained_witness()).into();
+        let discrete_log_scalar =
+            <Scalar as DecomposableWitness<SCALAR_LIMBS>>::compose_from_constrained_witness(
+                *witness.constrained_witness(),
+                &language_public_parameters.scalar_group_public_parameters,
+                RangeProof::RANGE_CLAIM_BITS,
+            )?;
 
-        let discrete_log_in_witness_mask_base: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_SCALAR] =
-            discrete_log_in_witness_mask_base
-                .map(|element| Uint::<WITNESS_MASK_LIMBS>::from(element));
-
-        let discrete_log_scalar: Scalar = super::witness_mask_base_to_scalar::<
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            SCALAR_LIMBS,
-            Scalar,
-        >(
-            discrete_log_in_witness_mask_base,
-            &language_public_parameters.scalar_group_public_parameters,
-        )?;
-
-        let discrete_log_plaintext: ahe::PlaintextSpaceGroupElement<
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            EncryptionKey,
-        > = super::witness_mask_base_to_scalar::<
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            ahe::PlaintextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        >(
-            discrete_log_in_witness_mask_base,
-            &language_public_parameters
-                .encryption_scheme_public_parameters
-                .plaintext_space_public_parameters(),
-        )?;
+        let discrete_log_plaintext =
+            <EncryptionKey::PlaintextSpaceGroupElement as DecomposableWitness<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+            >>::compose_from_constrained_witness(
+                *witness.constrained_witness(),
+                &language_public_parameters
+                    .encryption_scheme_public_parameters
+                    .plaintext_space_public_parameters(),
+                RangeProof::RANGE_CLAIM_BITS,
+            )?;
 
         let discrete_log_commitment_message = range::CommitmentSchemeMessageSpaceGroupElement::<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,

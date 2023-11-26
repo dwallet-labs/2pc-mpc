@@ -25,7 +25,8 @@ use crate::{
         range::CommitmentPublicParametersAccessor as _,
         schnorr::{
             encryption_of_discrete_log, knowledge_of_decommitment,
-            knowledge_of_decommitment::LanguageCommitmentScheme, language::enhanced,
+            knowledge_of_decommitment::LanguageCommitmentScheme,
+            language::{enhanced, enhanced::DecomposableWitness},
         },
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
@@ -107,8 +108,7 @@ where
         RangeProof,
     >: From<enhanced::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
 {
-    // TODO name
-    pub fn sample_and_commit_share_of_decentralize_party_secret_key_share(
+    pub fn commit_signature_nonce_share_and_masked_encrypted_secret_key_share(
         self,
         centralized_party_nonce_shares_commitments_and_batched_proof: SignatureNonceSharesCommitmentsAndBatchedProof<
             SCALAR_LIMBS,
@@ -165,28 +165,15 @@ where
             .take(batch_size)
             .collect();
 
-        let shares_of_decentralized_party_signature_nonce_shares_witnesses: Vec<
-            _
-        > = shares_of_decentralized_party_signature_nonce_shares?
-            .clone()
-            .into_iter()
-            .map(|share_of_decentralized_party_signature_nonce_share| {
-                let share_of_decentralized_party_signature_nonce_share: Uint<SCALAR_LIMBS> =
-                    share_of_decentralized_party_signature_nonce_share.into();
-
-                let share_of_decentralized_party_signature_nonce_share_in_range_claim_base: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_SCALAR] =
-                    array::from_fn(|i| {
-                        Uint::<WITNESS_MASK_LIMBS>::from(
-                            &((share_of_decentralized_party_signature_nonce_share >> (i * RangeProof::RANGE_CLAIM_BITS))
-                                & ((Uint::<SCALAR_LIMBS>::ONE << RangeProof::RANGE_CLAIM_BITS)
-                                .wrapping_sub(&Uint::<SCALAR_LIMBS>::ONE))),
-                        )
-                            .into()
-                    });
-
-                share_of_decentralized_party_signature_nonce_share_in_range_claim_base.into()
-            })
-            .collect();
+        let shares_of_decentralized_party_signature_nonce_shares_witnesses: Vec<_> =
+            shares_of_decentralized_party_signature_nonce_shares?
+                .clone()
+                .into_iter()
+                .map(|share_of_decentralized_party_signature_nonce_share| {
+                    share_of_decentralized_party_signature_nonce_share
+                        .decompose_into_constrained_witness(RangeProof::RANGE_CLAIM_BITS)
+                })
+                .collect();
 
         let encryption_of_share_of_decentralized_party_signature_nonce_shares_randomness: group::Result<Vec<_>> =
             iter::repeat_with(||

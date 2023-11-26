@@ -28,8 +28,8 @@ use crate::{
         schnorr::{
             aggregation,
             language::enhanced::{
-                ConstrainedWitnessGroupElement, EnhancedLanguageStatementAccessors as _,
-                EnhancedLanguageWitnessAccessors as _,
+                ConstrainedWitnessGroupElement, DecomposableWitness,
+                EnhancedLanguageStatementAccessors as _, EnhancedLanguageWitnessAccessors as _,
             },
         },
     },
@@ -177,37 +177,15 @@ where
                     .ciphertext_space_public_parameters(),
             )?;
 
-        let scalar_witness_mask_base: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>;
-            RANGE_CLAIMS_PER_SCALAR] = (witness.constrained_witness().clone()).into();
-
-        let scalar_witness_mask_base: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_SCALAR] =
-            scalar_witness_mask_base.map(|element| Uint::<WITNESS_MASK_LIMBS>::from(element));
-
-        let scalar: Scalar = super::witness_mask_base_to_scalar::<
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            SCALAR_LIMBS,
-            Scalar,
-        >(
-            scalar_witness_mask_base,
-            &language_public_parameters.scalar_group_public_parameters,
-        )?;
-
-        let scalar_plaintext: ahe::PlaintextSpaceGroupElement<
+        // TODO: name
+        let scalar = <EncryptionKey::PlaintextSpaceGroupElement as DecomposableWitness<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
-            EncryptionKey,
-        > = super::witness_mask_base_to_scalar::<
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            ahe::PlaintextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        >(
-            scalar_witness_mask_base,
-            language_public_parameters
+        >>::compose_from_constrained_witness(
+            *witness.constrained_witness(),
+            &language_public_parameters
                 .encryption_scheme_public_parameters
                 .plaintext_space_public_parameters(),
+            RangeProof::RANGE_CLAIM_BITS,
         )?;
 
         let scalar_commitment_message = range::CommitmentSchemeMessageSpaceGroupElement::<
@@ -233,14 +211,14 @@ where
             ),
             [
                 encryption_key.encrypt_with_randomness(
-                    &scalar_plaintext,
+                    &scalar,
                     witness.encryption_of_coefficient_randomness(),
                 ),
                 encryption_key.evaluate_circuit_private_linear_combination_with_randomness(
-                    &[scalar_plaintext],
+                    &[scalar],
                     &[ciphertext],
                     &scalar_group_order,
-                    &scalar_plaintext.neutral(),
+                    &scalar.neutral(),
                     witness.evaluated_encryption_randomness(),
                 )?,
             ]

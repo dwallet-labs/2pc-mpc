@@ -1,6 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+use core::array;
 use std::ops::Mul;
 
 use crypto_bigint::{Encoding, Uint};
@@ -11,7 +12,7 @@ use crate::{
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
-        BoundedGroupElement, GroupElement, Samplable,
+        BoundedGroupElement, GroupElement, KnownOrderScalar, Samplable,
     },
     proofs,
     proofs::{
@@ -295,6 +296,85 @@ impl<
     }
 }
 
+pub trait DecomposableWitness<const SCALAR_LIMBS: usize>: KnownOrderScalar<SCALAR_LIMBS>
+where
+    Self::Value: From<Uint<SCALAR_LIMBS>>,
+{
+    fn decompose_into_constrained_witness<
+        const WITNESS_MASK_LIMBS: usize,
+        const RANGE_CLAIMS_PER_SCALAR: usize,
+    >(
+        self,
+        range_claim_bits: usize,
+    ) -> ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>
+    where
+        Uint<WITNESS_MASK_LIMBS>: Encoding,
+    {
+        let witness: Uint<SCALAR_LIMBS> = self.into();
+
+        let witness_in_range_claim_base: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>;
+            RANGE_CLAIMS_PER_SCALAR] = array::from_fn(|i| {
+            Uint::<WITNESS_MASK_LIMBS>::from(
+                &((witness >> (i * range_claim_bits))
+                    & ((Uint::<SCALAR_LIMBS>::ONE << range_claim_bits)
+                        .wrapping_sub(&Uint::<SCALAR_LIMBS>::ONE))),
+            )
+            .into()
+        });
+
+        witness_in_range_claim_base.into()
+    }
+
+    fn compose_from_constrained_witness<
+        const WITNESS_MASK_LIMBS: usize,
+        const RANGE_CLAIMS_PER_SCALAR: usize,
+    >(
+        constrained_witness: ConstrainedWitnessGroupElement<
+            RANGE_CLAIMS_PER_SCALAR,
+            WITNESS_MASK_LIMBS,
+        >,
+        public_parameters: &group::PublicParameters<Self>,
+        range_claim_bits: usize, // TODO:  take from RangeProof?
+    ) -> proofs::Result<Self>
+    where
+        Uint<WITNESS_MASK_LIMBS>: Encoding,
+    {
+        // TODO: perform all the checks here, checking add - also check that no modulation occurs in
+        // LIMBS for the entire computation
+
+        // TODO: RANGE_CLAIM_LIMBS < SCALAR_LIMBS
+        // TODO: use RANGE_CLAIM_BITS instead?
+        let delta: Uint<SCALAR_LIMBS> = Uint::<SCALAR_LIMBS>::ONE << range_claim_bits;
+
+        let delta = Self::new(delta.into(), public_parameters)?;
+
+        let witness_in_witness_mask_base: [_; RANGE_CLAIMS_PER_SCALAR] = constrained_witness.into();
+
+        // TODO: WITNESS_MASK_LIMBS < SCALAR_LIMBS
+        let witness_in_witness_mask_base: group::Result<Vec<Self>> = witness_in_witness_mask_base
+            .into_iter()
+            .map(|witness| {
+                Self::new(
+                    Uint::<SCALAR_LIMBS>::from(&Uint::<WITNESS_MASK_LIMBS>::from(witness)).into(),
+                    public_parameters,
+                )
+            })
+            .collect();
+
+        let polynomial = Polynomial::try_from(witness_in_witness_mask_base?)
+            .map_err(|_| proofs::Error::InvalidParameters)?;
+
+        Ok(polynomial.evaluate(&delta))
+    }
+}
+
+impl<const SCALAR_LIMBS: usize, Scalar: KnownOrderScalar<SCALAR_LIMBS>>
+    DecomposableWitness<SCALAR_LIMBS> for Scalar
+where
+    Self::Value: From<Uint<SCALAR_LIMBS>>,
+{
+}
+
 pub trait EnhancedLanguageStatementAccessors<
     RangeProofCommitmentSchemeCommitmentSpaceGroupElement: GroupElement,
     RemainingStatementSpaceGroupElement: GroupElement,
@@ -329,46 +409,6 @@ impl<
 
         remaining_statement
     }
-}
-
-fn witness_mask_base_to_scalar<
-    const RANGE_CLAIMS_PER_WITNESS: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    const WITNESS_MASK_LIMBS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar: BoundedGroupElement<SCALAR_LIMBS> + Copy + Mul<Scalar, Output = Scalar>,
->(
-    witness_in_witness_mask_base: [Uint<WITNESS_MASK_LIMBS>; RANGE_CLAIMS_PER_WITNESS],
-    scalar_group_public_parameters: &group::PublicParameters<Scalar>,
-) -> proofs::Result<Scalar>
-where
-    Scalar::Value: From<Uint<SCALAR_LIMBS>>,
-{
-    // TODO: perform all the checks here, checking add - also check that no modulation occurs in
-    // LIMBS for the entire computation
-
-    // TODO: RANGE_CLAIM_LIMBS < SCALAR_LIMBS
-    // TODO: use RANGE_CLAIM_BITS instead?
-    let delta: Uint<SCALAR_LIMBS> =
-        Uint::<SCALAR_LIMBS>::from(&Uint::<RANGE_CLAIM_LIMBS>::MAX).wrapping_add(&1u64.into());
-
-    let delta = Scalar::new(delta.into(), scalar_group_public_parameters)?;
-
-    // TODO: WITNESS_MASK_LIMBS < SCALAR_LIMBS
-    let witness_in_witness_mask_base: group::Result<Vec<Scalar>> = witness_in_witness_mask_base
-        .into_iter()
-        .map(|witness| {
-            Scalar::new(
-                Uint::<SCALAR_LIMBS>::from(&witness).into(),
-                scalar_group_public_parameters,
-            )
-        })
-        .collect();
-
-    let polynomial = Polynomial::try_from(witness_in_witness_mask_base?)
-        .map_err(|_| proofs::Error::InvalidParameters)?;
-
-    Ok(polynomial.evaluate(&delta))
 }
 
 pub type GroupsPublicParameters<
@@ -832,6 +872,8 @@ pub(crate) mod tests {
                 >,
             ) = (language_public_parameters.witness_space_public_parameters()).into();
 
+            // TODO: replace this by introducing a `ComposedWitness` type into the language, and
+            // using `DecomposeWitness` trait?
             (
                 array::from_fn(|_| {
                     let mask = Uint::<WITNESS_MASK_LIMBS>::MAX

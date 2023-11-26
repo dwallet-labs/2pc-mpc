@@ -19,7 +19,10 @@ use crate::{
     proofs::{
         range,
         range::CommitmentPublicParametersAccessor as _,
-        schnorr::{encryption_of_discrete_log, language::enhanced},
+        schnorr::{
+            encryption_of_discrete_log,
+            language::{enhanced, enhanced::DecomposableWitness},
+        },
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
 };
@@ -150,20 +153,9 @@ where
         let share_of_decentralized_party_secret_key_share =
             GroupElement::Scalar::sample(rng, &self.scalar_group_public_parameters)?;
 
-        // TODO: DRY-out
-        let share_of_decentralize_party_secret_key_share_in_range_claim_base: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>;
-            RANGE_CLAIMS_PER_SCALAR] = array::from_fn(|i| {
-            let share_of_decentralized_party_secret_key_share: Uint<SCALAR_LIMBS> = share_of_decentralized_party_secret_key_share.into();
-
-            Uint::<WITNESS_MASK_LIMBS>::from(&((share_of_decentralized_party_secret_key_share
-                >> (i * RangeProof::RANGE_CLAIM_BITS))
-                & ((Uint::<SCALAR_LIMBS>::ONE << RangeProof::RANGE_CLAIM_BITS)
-                .wrapping_sub(&Uint::<SCALAR_LIMBS>::ONE))))
-                .into()
-        });
-
         let share_of_decentralize_party_secret_key_share_witness =
-            share_of_decentralize_party_secret_key_share_in_range_claim_base.into();
+            share_of_decentralized_party_secret_key_share
+                .decompose_into_constrained_witness(RangeProof::RANGE_CLAIM_BITS);
 
         // TODO: convert this to the language witness...
         // TODO: construct this language public parameters from components
