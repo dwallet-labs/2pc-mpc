@@ -138,21 +138,21 @@ where
         >,
     )> {
         // TODO: is nonce the right name?
-        let signature_nonce_shares: group::Result<Vec<_>> = iter::repeat_with(|| {
-            GroupElement::Scalar::sample(rng, &self.scalar_group_public_parameters)
-        })
-        .take(batch_size)
-        .collect();
+        let signature_nonce_shares = GroupElement::Scalar::sample_batch(
+            rng,
+            &self.scalar_group_public_parameters,
+            batch_size,
+        )?;
 
-        let commitment_randomnesses: group::Result<Vec<_>> = iter::repeat_with(|| {
-            GroupElement::Scalar::sample(rng, &self.scalar_group_public_parameters)
-        })
-        .take(batch_size)
-        .collect();
+        let commitment_randomnesses = GroupElement::Scalar::sample_batch(
+            rng,
+            &self.scalar_group_public_parameters,
+            batch_size,
+        )?;
 
-        let signature_nonce_shares_and_commitment_randomnesses: Vec<_> = signature_nonce_shares?
+        let signature_nonce_shares_and_commitment_randomnesses: Vec<_> = signature_nonce_shares
             .into_iter()
-            .zip(commitment_randomnesses?.into_iter())
+            .zip(commitment_randomnesses.into_iter())
             .map(|(nonce_share, commitment_randomness)| [nonce_share, commitment_randomness].into())
             .collect();
 

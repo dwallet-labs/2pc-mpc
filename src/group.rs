@@ -1,5 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
+use core::iter;
 use std::{
     fmt::Debug,
     hash::Hash,
@@ -273,11 +274,22 @@ pub trait PrimeGroupElement<const SCALAR_LIMBS: usize>:
 }
 
 pub trait Samplable: GroupElement {
-    /// Uniformly sample a random value.
+    /// Uniformly sample a random element.
     fn sample(
         rng: &mut impl CryptoRngCore,
         public_parameters: &Self::PublicParameters,
     ) -> Result<Self>;
+
+    /// Uniformly sample a batch of random elements.
+    fn sample_batch(
+        rng: &mut impl CryptoRngCore,
+        public_parameters: &Self::PublicParameters,
+        batch_size: usize,
+    ) -> Result<Vec<Self>> {
+        iter::repeat_with(|| Self::sample(rng, public_parameters))
+            .take(batch_size)
+            .collect()
+    }
 }
 
 #[cfg(test)]
