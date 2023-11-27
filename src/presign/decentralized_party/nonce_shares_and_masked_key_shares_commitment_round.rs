@@ -114,7 +114,7 @@ where
         RangeProof,
     >: From<enhanced::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
 {
-    pub fn commit_signature_nonce_share_and_masked_encrypted_secret_key_share(
+    pub fn commit_signature_nonce_shares_and_masked_encrypted_secret_key_shares(
         self,
         centralized_party_nonce_shares_commitments_and_batched_proof: SignatureNonceSharesCommitmentsAndBatchedProof<
             SCALAR_LIMBS,
