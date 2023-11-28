@@ -143,7 +143,7 @@ where
         RangeProof,
     >: From<enhanced::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
 {
-    pub fn generate_signature_nonce_shares_and_masked_encrypted_secret_key_shares_proof_shares(
+    pub fn prove_nonce_sharing_and_secret_key_share_masking(
         self,
         nonce_sharing_decommitments: HashMap<
             PartyID,

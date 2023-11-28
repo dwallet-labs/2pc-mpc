@@ -99,6 +99,7 @@ where
         RangeProof,
     >: From<enhanced::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
 {
+    // TODO: consistent naming with presign
     pub fn sample_and_commit_share_of_decentralize_party_secret_key_share(
         self,
         commitment_to_centralized_party_secret_key_share: Commitment,
