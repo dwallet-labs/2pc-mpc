@@ -1,8 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use core::{array, iter};
-
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::Serialize;
 
@@ -19,7 +17,7 @@ use crate::{
     },
     presign::{
         centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
-        decentralized_party::nonce_shares_and_masked_key_shares_decommitment_round,
+        decentralized_party::nonce_sharing_and_keyshare_masking_decommitment_round,
     },
     proofs,
     proofs::{
@@ -125,7 +123,7 @@ where
         rng: &mut impl CryptoRngCore,
     ) -> crate::Result<(
         (Commitment, Commitment),
-        nonce_shares_and_masked_key_shares_decommitment_round::Party<
+        nonce_sharing_and_keyshare_masking_decommitment_round::Party<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -143,46 +141,43 @@ where
             .commitments
             .len();
 
-        let knowledge_of_decommitment_language_public_parameters =
-            knowledge_of_decommitment::PublicParameters::new::<
-                { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPITITIONS },
-                SCALAR_LIMBS,
-                GroupElement::Scalar,
-                GroupElement,
-                CommitmentScheme,
-            >(
-                self.scalar_group_public_parameters.clone(),
-                self.group_public_parameters.clone(),
-                self.commitment_scheme_public_parameters.clone(),
-            );
+        let language_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
+            { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPITITIONS },
+            SCALAR_LIMBS,
+            GroupElement::Scalar,
+            GroupElement,
+            CommitmentScheme,
+        >(
+            self.scalar_group_public_parameters.clone(),
+            self.group_public_parameters.clone(),
+            self.commitment_scheme_public_parameters.clone(),
+        );
 
         centralized_party_nonce_shares_commitments_and_batched_proof
             .proof
             .verify(
                 None,
                 &self.protocol_context,
-                &knowledge_of_decommitment_language_public_parameters,
+                &language_public_parameters,
                 centralized_party_nonce_shares_commitments_and_batched_proof.commitments,
             )?;
 
-        let shares_of_decentralized_party_signature_nonce_shares =
-            GroupElement::Scalar::sample_batch(
-                rng,
-                &self.scalar_group_public_parameters,
-                batch_size,
-            )?;
+        let shares_of_signature_nonce_shares = GroupElement::Scalar::sample_batch(
+            rng,
+            &self.scalar_group_public_parameters,
+            batch_size,
+        )?;
 
-        let shares_of_decentralized_party_signature_nonce_shares_witnesses: Vec<_> =
-            shares_of_decentralized_party_signature_nonce_shares
-                .clone()
-                .into_iter()
-                .map(|share_of_decentralized_party_signature_nonce_share| {
-                    share_of_decentralized_party_signature_nonce_share
-                        .decompose_into_constrained_witness(RangeProof::RANGE_CLAIM_BITS)
-                })
-                .collect();
+        let shares_of_signature_nonce_shares_witnesses: Vec<_> = shares_of_signature_nonce_shares
+            .clone()
+            .into_iter()
+            .map(|share_of_decentralized_party_signature_nonce_share| {
+                share_of_decentralized_party_signature_nonce_share
+                    .decompose_into_constrained_witness(RangeProof::RANGE_CLAIM_BITS)
+            })
+            .collect();
 
-        let encryption_of_share_of_decentralized_party_signature_nonce_shares_randomness =
+        let shares_of_signature_nonce_shares_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
                 rng,
                 &self
@@ -192,27 +187,33 @@ where
                 batch_size,
             )?;
 
-        let encryption_of_decentralized_party_signature_nonce_shares_commitment_randomness =
-            commitments::RandomnessSpaceGroupElement::<
-                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                RangeProof::CommitmentScheme<RANGE_CLAIMS_PER_SCALAR>,
-            >::sample_batch(
-                rng,
-                &self
-                    .range_proof_public_parameters
-                    .commitment_public_parameters()
-                    .randomness_space_public_parameters(),
-                batch_size,
-            )?;
+        let nonce_sharing_commitment_randomness = commitments::RandomnessSpaceGroupElement::<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RangeProof::CommitmentScheme<RANGE_CLAIMS_PER_SCALAR>,
+        >::sample_batch(
+            rng,
+            &self
+                .range_proof_public_parameters
+                .commitment_public_parameters()
+                .randomness_space_public_parameters(),
+            batch_size,
+        )?;
 
-        let witnesses: Vec<_> = shares_of_decentralized_party_signature_nonce_shares_witnesses
-            .clone().into_iter()
+        let witnesses: Vec<_> = shares_of_signature_nonce_shares_witnesses
+            .clone()
+            .into_iter()
             .zip(
-                encryption_of_decentralized_party_signature_nonce_shares_commitment_randomness
-                    .clone().into_iter()
-                    .zip(encryption_of_share_of_decentralized_party_signature_nonce_shares_randomness.clone().into_iter()),
+                nonce_sharing_commitment_randomness.clone().into_iter().zip(
+                    shares_of_signature_nonce_shares_encryption_randomness
+                        .clone()
+                        .into_iter(),
+                ),
             )
-            .map(|(nonce_share, (commitment_randomness, encryption_randomness))| (nonce_share, commitment_randomness, encryption_randomness).into())
+            .map(
+                |(nonce_share, (commitment_randomness, encryption_randomness))| {
+                    (nonce_share, commitment_randomness, encryption_randomness).into()
+                },
+            )
             .collect();
 
         let language_public_parameters = encryption_of_discrete_log::LanguagePublicParameters::<
@@ -242,7 +243,7 @@ where
             self.encryption_scheme_public_parameters.clone(),
         );
 
-        let encryption_of_signature_nonce_shares_commitment_round_party =
+        let nonce_sharing_commitment_round_party =
             encryption_of_discrete_log::ProofAggregationCommitmentRoundParty::<
                 SCALAR_LIMBS,
                 RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -264,19 +265,16 @@ where
                 witnesses,
             };
 
-        let (
-            encryption_of_signature_nonce_shares_commitment,
-            encryption_of_signature_nonce_shares_decommitment_round_party,
-        ) = encryption_of_signature_nonce_shares_commitment_round_party
-            .commit_statements_and_statement_mask(rng)?;
+        let (nonce_sharing_commitment, nonce_sharing_decommitment_round_party) =
+            nonce_sharing_commitment_round_party.commit_statements_and_statement_mask(rng)?;
 
-        let mask_shares = GroupElement::Scalar::sample_batch(
+        let masks_shares = GroupElement::Scalar::sample_batch(
             rng,
             &self.scalar_group_public_parameters,
             batch_size,
         )?;
 
-        let mask_shares_witnesses: Vec<_> = mask_shares
+        let mask_shares_witnesses: Vec<_> = masks_shares
             .clone()
             .into_iter()
             .map(|share_of_decentralized_party_signature_nonce_share| {
@@ -285,7 +283,7 @@ where
             })
             .collect();
 
-        let mask_encryption_randomness = EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
+        let masks_encryption_randomness = EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
             rng,
             &self
                 .encryption_scheme_public_parameters
@@ -293,7 +291,7 @@ where
             batch_size,
         )?;
 
-        let masked_decentralized_party_secret_key_share_encryption_randomness =
+        let masked_key_share_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
                 rng,
                 &self
@@ -302,33 +300,31 @@ where
                 batch_size,
             )?;
 
-        let masked_encryption_of_decentralized_party_secret_key_share_commitment_randomness =
-            commitments::RandomnessSpaceGroupElement::<
-                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                RangeProof::CommitmentScheme<RANGE_CLAIMS_PER_SCALAR>,
-            >::sample_batch(
-                rng,
-                &self
-                    .range_proof_public_parameters
-                    .commitment_public_parameters()
-                    .randomness_space_public_parameters(),
-                batch_size,
-            )?;
+        let key_share_masking_commitment_randomness = commitments::RandomnessSpaceGroupElement::<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RangeProof::CommitmentScheme<RANGE_CLAIMS_PER_SCALAR>,
+        >::sample_batch(
+            rng,
+            &self
+                .range_proof_public_parameters
+                .commitment_public_parameters()
+                .randomness_space_public_parameters(),
+            batch_size,
+        )?;
 
         // TODO: maybe make this a named function in Accessors?
         let witnesses = mask_shares_witnesses
             .clone()
             .into_iter()
             .zip(
-                masked_encryption_of_decentralized_party_secret_key_share_commitment_randomness
+                key_share_masking_commitment_randomness
                     .clone()
                     .into_iter()
                     .zip(
-                        mask_encryption_randomness.clone().into_iter().zip(
-                            masked_decentralized_party_secret_key_share_encryption_randomness
-                                .clone()
-                                .into_iter(),
-                        ),
+                        masks_encryption_randomness
+                            .clone()
+                            .into_iter()
+                            .zip(masked_key_share_encryption_randomness.clone().into_iter()),
                     ),
             )
             .map(
@@ -336,14 +332,17 @@ where
                     mask,
                     (
                         commitment_randomness,
-                        (mask_encryption_randomness, masked_secret_key_share_encryption_randomness),
+                        (
+                            masks_encryption_randomness,
+                            masked_secret_key_share_encryption_randomness,
+                        ),
                     ),
                 )| {
                     (
                         mask,
                         commitment_randomness,
                         [
-                            mask_encryption_randomness,
+                            masks_encryption_randomness,
                             masked_secret_key_share_encryption_randomness,
                         ]
                         .into(),
@@ -380,7 +379,7 @@ where
             self.encryption_of_secret_key_share.value(),
         );
 
-        let masked_encryptions_of_decentralized_party_secret_key_shares_commitment_round_party =
+        let keyshare_masking_commitment_round_party =
             encryption_of_tuple::ProofAggregationCommitmentRoundParty::<
                 SCALAR_LIMBS,
                 RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -402,13 +401,10 @@ where
                 witnesses,
             };
 
-        let (
-            masked_encryptions_of_decentralized_party_secret_key_shares_commitment,
-            masked_encryptions_of_decentralized_party_secret_key_shares_decommitment_round_party,
-        ) = masked_encryptions_of_decentralized_party_secret_key_shares_commitment_round_party
-            .commit_statements_and_statement_mask(rng)?;
+        let (keyshare_masking_commitment, keyshare_masking_decommitment_round_party) =
+            keyshare_masking_commitment_round_party.commit_statements_and_statement_mask(rng)?;
 
-        let party = nonce_shares_and_masked_key_shares_decommitment_round::Party::<
+        let party = nonce_sharing_and_keyshare_masking_decommitment_round::Party::<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -434,17 +430,14 @@ where
             public_key: self.public_key,
             encryption_of_secret_key_share: self.encryption_of_secret_key_share,
             centralized_party_public_key_share: self.centralized_party_public_key_share,
-            shares_of_decentralized_party_signature_nonce_shares,
-            encryption_of_share_of_decentralized_party_signature_nonce_shares_randomness,
-            encryption_of_signature_nonce_shares_decommitment_round_party,
-            masked_encryptions_of_decentralized_party_secret_key_shares_decommitment_round_party,
+            shares_of_signature_nonce_shares,
+            shares_of_signature_nonce_shares_encryption_randomness,
+            nonce_sharing_decommitment_round_party,
+            keyshare_masking_decommitment_round_party,
         };
 
         Ok((
-            (
-                encryption_of_signature_nonce_shares_commitment,
-                masked_encryptions_of_decentralized_party_secret_key_shares_commitment,
-            ),
+            (nonce_sharing_commitment, keyshare_masking_commitment),
             party,
         ))
     }

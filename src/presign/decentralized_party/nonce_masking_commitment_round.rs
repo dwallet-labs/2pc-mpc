@@ -16,7 +16,7 @@ use crate::{
         PrimeGroupElement, Samplable,
     },
     presign::decentralized_party::{
-        masked_nonces_decommitment_round, nonce_shares_and_masked_key_shares_decommitment_round,
+        nonce_masking_decommitment_round, nonce_sharing_and_keyshare_masking_decommitment_round,
     },
     proofs,
     proofs::{
@@ -68,10 +68,10 @@ pub struct Party<
     pub(super) public_key: GroupElement,
     pub(super) encryption_of_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
     pub(super) centralized_party_public_key_share: GroupElement,
-    pub(super) shares_of_decentralized_party_signature_nonce_shares: Vec<GroupElement::Scalar>,
-    pub(super) encryption_of_share_of_decentralized_party_signature_nonce_shares_randomness:
+    pub(super) shares_of_signature_nonce_shares: Vec<GroupElement::Scalar>,
+    pub(super) shares_of_signature_nonce_shares_encryption_randomness:
         Vec<EncryptionKey::RandomnessSpaceGroupElement>,
-    pub(super) encryption_of_signature_nonce_shares_proof_aggregation_round_party:
+    pub(super) nonce_sharing_proof_aggregation_round_party:
         encryption_of_discrete_log::ProofAggregationProofAggregationRoundParty<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -85,7 +85,7 @@ pub struct Party<
             RangeProof,
             ProtocolContext,
         >,
-    pub(super) masked_encryptions_of_decentralized_party_secret_key_shares_proof_aggregation_round_party:
+    pub(super) keyshare_masking_proof_aggregation_round_party:
         encryption_of_tuple::ProofAggregationProofAggregationRoundParty<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -143,7 +143,7 @@ where
 {
     pub fn generate_signature_nonce_shares_and_masked_encrypted_secret_key_shares_proof_shares(
         self,
-        encryption_of_signature_nonce_shares_proof_shares: HashMap<
+        nonce_sharing_proof_shares: HashMap<
             PartyID,
             encryption_of_discrete_log::ProofShare<
                 SCALAR_LIMBS,
@@ -158,7 +158,7 @@ where
                 RangeProof,
             >,
         >,
-        masked_encryptions_of_decentralized_party_secret_key_shares_proof_shares: HashMap<
+        keyshare_masking_proof_shares: HashMap<
             PartyID,
             encryption_of_tuple::ProofShare<
                 SCALAR_LIMBS,
@@ -174,7 +174,7 @@ where
             >,
         >,
     ) -> crate::Result<
-        masked_nonces_decommitment_round::Party<
+        nonce_masking_decommitment_round::Party<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -188,18 +188,15 @@ where
             ProtocolContext,
         >,
     > {
-        let (encryption_of_signature_nonce_shares_proof, encryptions_of_signature_nonce_shares) =
-            self.encryption_of_signature_nonce_shares_proof_aggregation_round_party
-                .aggregate_proof_shares(encryption_of_signature_nonce_shares_proof_shares)?;
+        let (nonce_sharing_proof, encryptions_of_signature_nonce_shares) = self
+            .nonce_sharing_proof_aggregation_round_party
+            .aggregate_proof_shares(nonce_sharing_proof_shares)?;
 
-        // TODO: naming - there should be two ciphertexts here
-        let (masked_encryptions_of_decentralized_party_secret_key_shares_proof, masked_encryptions_of_decentralized_party_secret_key_shares) = self
-            .masked_encryptions_of_decentralized_party_secret_key_shares_proof_aggregation_round_party
-            .aggregate_proof_shares(
-                masked_encryptions_of_decentralized_party_secret_key_shares_proof_shares,
-            )?;
+        let (keyshare_masking_proof, keyshare_masking) = self
+            .keyshare_masking_proof_aggregation_round_party
+            .aggregate_proof_shares(keyshare_masking_proof_shares)?;
 
-        let party = masked_nonces_decommitment_round::Party::<
+        let party = nonce_masking_decommitment_round::Party::<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -225,12 +222,11 @@ where
             public_key: self.public_key,
             encryption_of_secret_key_share: self.encryption_of_secret_key_share,
             centralized_party_public_key_share: self.centralized_party_public_key_share,
-            shares_of_decentralized_party_signature_nonce_shares: self
-                .shares_of_decentralized_party_signature_nonce_shares,
-            encryption_of_share_of_decentralized_party_signature_nonce_shares_randomness: self
-                .encryption_of_share_of_decentralized_party_signature_nonce_shares_randomness,
-            encryption_of_signature_nonce_shares_proof,
-            masked_encryptions_of_decentralized_party_secret_key_shares_proof,
+            shares_of_signature_nonce_shares: self.shares_of_signature_nonce_shares,
+            shares_of_signature_nonce_shares_encryption_randomness: self
+                .shares_of_signature_nonce_shares_encryption_randomness,
+            nonce_sharing_proof,
+            keyshare_masking_proof,
         };
 
         Ok(party)

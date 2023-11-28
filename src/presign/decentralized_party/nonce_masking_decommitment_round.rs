@@ -16,7 +16,7 @@ use crate::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, GroupElement as _,
         PrimeGroupElement, Samplable,
     },
-    presign::decentralized_party::nonce_shares_and_masked_key_shares_decommitment_round,
+    presign::decentralized_party::nonce_sharing_and_keyshare_masking_decommitment_round,
     proofs,
     proofs::{
         range,
@@ -67,10 +67,10 @@ pub struct Party<
     pub(super) public_key: GroupElement,
     pub(super) encryption_of_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
     pub(super) centralized_party_public_key_share: GroupElement,
-    pub(super) shares_of_decentralized_party_signature_nonce_shares: Vec<GroupElement::Scalar>,
-    pub(super) encryption_of_share_of_decentralized_party_signature_nonce_shares_randomness:
+    pub(super) shares_of_signature_nonce_shares: Vec<GroupElement::Scalar>,
+    pub(super) shares_of_signature_nonce_shares_encryption_randomness:
         Vec<EncryptionKey::RandomnessSpaceGroupElement>,
-    pub(super) encryption_of_signature_nonce_shares_proof: encryption_of_discrete_log::Proof<
+    pub(super) nonce_sharing_proof: encryption_of_discrete_log::Proof<
         SCALAR_LIMBS,
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
@@ -83,18 +83,17 @@ pub struct Party<
         RangeProof,
         ProtocolContext,
     >,
-    pub(super) masked_encryptions_of_decentralized_party_secret_key_shares_proof:
-        encryption_of_tuple::Proof<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            GroupElement::Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-            ProtocolContext,
-        >,
+    pub(super) keyshare_masking_proof: encryption_of_tuple::Proof<
+        SCALAR_LIMBS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        GroupElement::Scalar,
+        GroupElement,
+        EncryptionKey,
+        RangeProof,
+        ProtocolContext,
+    >,
 }
