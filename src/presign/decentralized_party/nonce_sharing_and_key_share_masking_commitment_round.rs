@@ -17,7 +17,7 @@ use crate::{
     },
     presign::{
         centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
-        decentralized_party::nonce_sharing_and_keyshare_masking_decommitment_round,
+        decentralized_party::nonce_sharing_and_key_share_masking_decommitment_round,
     },
     proofs,
     proofs::{
@@ -123,7 +123,7 @@ where
         rng: &mut impl CryptoRngCore,
     ) -> crate::Result<(
         (Commitment, Commitment),
-        nonce_sharing_and_keyshare_masking_decommitment_round::Party<
+        nonce_sharing_and_key_share_masking_decommitment_round::Party<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -379,7 +379,7 @@ where
             self.encryption_of_secret_key_share.value(),
         );
 
-        let keyshare_masking_commitment_round_party =
+        let key_share_masking_commitment_round_party =
             encryption_of_tuple::ProofAggregationCommitmentRoundParty::<
                 SCALAR_LIMBS,
                 RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -401,10 +401,10 @@ where
                 witnesses,
             };
 
-        let (keyshare_masking_commitment, keyshare_masking_decommitment_round_party) =
-            keyshare_masking_commitment_round_party.commit_statements_and_statement_mask(rng)?;
+        let (key_share_masking_commitment, key_share_masking_decommitment_round_party) =
+            key_share_masking_commitment_round_party.commit_statements_and_statement_mask(rng)?;
 
-        let party = nonce_sharing_and_keyshare_masking_decommitment_round::Party::<
+        let party = nonce_sharing_and_key_share_masking_decommitment_round::Party::<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -430,14 +430,14 @@ where
             public_key: self.public_key,
             encryption_of_secret_key_share: self.encryption_of_secret_key_share,
             centralized_party_public_key_share: self.centralized_party_public_key_share,
-            shares_of_signature_nonce_shares,
+            shares_of_signature_nonce_shares_witnesses,
             shares_of_signature_nonce_shares_encryption_randomness,
             nonce_sharing_decommitment_round_party,
-            keyshare_masking_decommitment_round_party,
+            key_share_masking_decommitment_round_party,
         };
 
         Ok((
-            (nonce_sharing_commitment, keyshare_masking_commitment),
+            (nonce_sharing_commitment, key_share_masking_commitment),
             party,
         ))
     }

@@ -7,7 +7,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ahe::GroupsPublicParametersAccessors as _,
     commitments::GroupsPublicParametersAccessors as _,
-    dkg::decentralized_party,
+    dkg::{
+        decentralized_party,
+        decentralized_party::proof_aggregation_round::SecretKeyShareEncryptionAndProof,
+    },
     group,
     group::{GroupElement as _, PrimeGroupElement},
     proofs,

@@ -7,7 +7,9 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::Serialize;
 
 use crate::{
-    ahe, commitments,
+    ahe,
+    ahe::GroupsPublicParametersAccessors,
+    commitments,
     commitments::GroupsPublicParametersAccessors as _,
     dkg::decentralized_party::decommitment_round,
     group,
@@ -16,7 +18,7 @@ use crate::{
         PrimeGroupElement, Samplable,
     },
     presign::decentralized_party::{
-        nonce_masking_decommitment_round, nonce_sharing_and_keyshare_masking_decommitment_round,
+        nonce_masking_decommitment_round, nonce_sharing_and_key_share_masking_decommitment_round,
     },
     proofs,
     proofs::{
@@ -24,7 +26,8 @@ use crate::{
         range::CommitmentPublicParametersAccessor as _,
         schnorr::{
             encryption_of_discrete_log, encryption_of_tuple,
-            knowledge_of_decommitment::LanguageCommitmentScheme, language::enhanced,
+            knowledge_of_decommitment::LanguageCommitmentScheme,
+            language::{enhanced, enhanced::ConstrainedWitnessGroupElement},
         },
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
@@ -68,7 +71,8 @@ pub struct Party<
     pub(super) public_key: GroupElement,
     pub(super) encryption_of_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
     pub(super) centralized_party_public_key_share: GroupElement,
-    pub(super) shares_of_signature_nonce_shares: Vec<GroupElement::Scalar>,
+    pub(super) shares_of_signature_nonce_shares_witnesses:
+        Vec<ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
     pub(super) shares_of_signature_nonce_shares_encryption_randomness:
         Vec<EncryptionKey::RandomnessSpaceGroupElement>,
     pub(super) nonce_sharing_proof_aggregation_round_party:
@@ -85,7 +89,7 @@ pub struct Party<
             RangeProof,
             ProtocolContext,
         >,
-    pub(super) keyshare_masking_proof_aggregation_round_party:
+    pub(super) key_share_masking_proof_aggregation_round_party:
         encryption_of_tuple::ProofAggregationProofAggregationRoundParty<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -158,7 +162,7 @@ where
                 RangeProof,
             >,
         >,
-        keyshare_masking_proof_shares: HashMap<
+        key_share_masking_proof_shares: HashMap<
             PartyID,
             encryption_of_tuple::ProofShare<
                 SCALAR_LIMBS,
@@ -173,7 +177,9 @@ where
                 RangeProof,
             >,
         >,
-    ) -> crate::Result<
+        rng: &mut impl CryptoRngCore,
+    ) -> crate::Result<(
+        Commitment,
         nonce_masking_decommitment_round::Party<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -187,14 +193,127 @@ where
             CommitmentScheme,
             ProtocolContext,
         >,
-    > {
+    )> {
+        let batch_size = nonce_sharing_proof_shares.len();
+
         let (nonce_sharing_proof, encryptions_of_signature_nonce_shares) = self
             .nonce_sharing_proof_aggregation_round_party
             .aggregate_proof_shares(nonce_sharing_proof_shares)?;
 
-        let (keyshare_masking_proof, keyshare_masking) = self
-            .keyshare_masking_proof_aggregation_round_party
-            .aggregate_proof_shares(keyshare_masking_proof_shares)?;
+        let (key_share_masking_proof, key_share_masking) = self
+            .key_share_masking_proof_aggregation_round_party
+            .aggregate_proof_shares(key_share_masking_proof_shares)?;
+
+        // TODO: we're not sampling new encryption randomness here for the encryption of the nonce
+        // share, this is intended, just making sure.
+
+        let masked_nonce_encryption_randomness =
+            EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
+                rng,
+                &self
+                    .encryption_scheme_public_parameters
+                    .randomness_space_public_parameters(),
+                batch_size,
+            )?;
+
+        let nonce_masking_commitment_randomness = commitments::RandomnessSpaceGroupElement::<
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RangeProof::CommitmentScheme<RANGE_CLAIMS_PER_SCALAR>,
+        >::sample_batch(
+            rng,
+            &self
+                .range_proof_public_parameters
+                .commitment_public_parameters()
+                .randomness_space_public_parameters(),
+            batch_size,
+        )?;
+
+        // TODO: maybe make this a named function in Accessors?
+        let witnesses = self
+            .shares_of_signature_nonce_shares_witnesses
+            .into_iter()
+            .zip(
+                nonce_masking_commitment_randomness.clone().into_iter().zip(
+                    self.shares_of_signature_nonce_shares_encryption_randomness
+                        .into_iter()
+                        .zip(masked_nonce_encryption_randomness.clone().into_iter()),
+                ),
+            )
+            .map(
+                |(
+                    nonce,
+                    (
+                        commitment_randomness,
+                        (nonces_encryption_randomness, masked_nonces_encryption_randomness),
+                    ),
+                )| {
+                    (
+                        nonce,
+                        commitment_randomness,
+                        [
+                            nonces_encryption_randomness,
+                            masked_nonces_encryption_randomness,
+                        ]
+                        .into(),
+                    )
+                        .into()
+                },
+            )
+            .collect();
+
+        let language_public_parameters = encryption_of_tuple::LanguagePublicParameters::<
+            SCALAR_LIMBS,
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement::Scalar,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+        >::new::<
+            SCALAR_LIMBS,
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIM_LIMBS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement::Scalar,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+        >(
+            self.scalar_group_public_parameters.clone(),
+            self.range_proof_public_parameters.clone(),
+            self.encryption_scheme_public_parameters.clone(),
+            // TODO: actually, this needs to be a vector of ciphtertexts, for previous rounds they
+            // are all the same, but here they are different
+            todo!(),
+        );
+
+        let nonce_masking_commitment_round_party =
+            encryption_of_tuple::ProofAggregationCommitmentRoundParty::<
+                SCALAR_LIMBS,
+                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RANGE_CLAIMS_PER_SCALAR,
+                RANGE_CLAIM_LIMBS,
+                WITNESS_MASK_LIMBS,
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                GroupElement::Scalar,
+                GroupElement,
+                EncryptionKey,
+                RangeProof,
+                ProtocolContext,
+            > {
+                party_id: self.party_id,
+                threshold: self.threshold,
+                number_of_parties: self.number_of_parties,
+                language_public_parameters,
+                protocol_context: self.protocol_context.clone(),
+                witnesses,
+            };
+
+        let (nonce_masking_commitment, nonce_masking_decommitment_round_party) =
+            nonce_masking_commitment_round_party.commit_statements_and_statement_mask(rng)?;
 
         let party = nonce_masking_decommitment_round::Party::<
             SCALAR_LIMBS,
@@ -222,13 +341,11 @@ where
             public_key: self.public_key,
             encryption_of_secret_key_share: self.encryption_of_secret_key_share,
             centralized_party_public_key_share: self.centralized_party_public_key_share,
-            shares_of_signature_nonce_shares: self.shares_of_signature_nonce_shares,
-            shares_of_signature_nonce_shares_encryption_randomness: self
-                .shares_of_signature_nonce_shares_encryption_randomness,
             nonce_sharing_proof,
-            keyshare_masking_proof,
+            key_share_masking_proof,
+            nonce_masking_decommitment_round_party,
         };
 
-        Ok(party)
+        Ok((nonce_masking_commitment, party))
     }
 }
