@@ -141,6 +141,7 @@ where
             .commitments
             .len();
 
+        // TODO: flip order of proofs to fit paper
         let language_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
             { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPITITIONS },
             SCALAR_LIMBS,

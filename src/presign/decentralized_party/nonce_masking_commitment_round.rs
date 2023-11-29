@@ -27,7 +27,10 @@ use crate::{
         schnorr::{
             encryption_of_discrete_log, encryption_of_tuple,
             knowledge_of_decommitment::LanguageCommitmentScheme,
-            language::{enhanced, enhanced::ConstrainedWitnessGroupElement},
+            language::{
+                enhanced,
+                enhanced::{ConstrainedWitnessGroupElement, EnhancedLanguageStatementAccessors},
+            },
         },
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
@@ -196,13 +199,31 @@ where
     )> {
         let batch_size = nonce_sharing_proof_shares.len();
 
-        let (nonce_sharing_proof, encryptions_of_signature_nonce_shares) = self
+        let (nonce_sharing_proof, statements) = self
             .nonce_sharing_proof_aggregation_round_party
             .aggregate_proof_shares(nonce_sharing_proof_shares)?;
 
-        let (key_share_masking_proof, key_share_masking) = self
+        // TODO: range proofs@!@!!@#! or, also, in aggregation, or seperately.
+
+        // TODO: plurals all the code
+        // TODO: in DKG also, don't use fully qualified names for locally owned variables, only for
+        // foreign ones. TODO: name of R
+        let (_, nonce_public_shares): (Vec<_>, Vec<_>) = statements
+            .into_iter()
+            .map(|statement| statement.remaining_statement().clone().into())
+            .unzip();
+
+        let (key_share_masking_proof, statements) = self
             .key_share_masking_proof_aggregation_round_party
             .aggregate_proof_shares(key_share_masking_proof_shares)?;
+
+        let (masks_encryptions, masked_key_share_encryptions): (Vec<_>, Vec<_>) = statements
+            .into_iter()
+            .map(|statement| {
+                let as_array: &[_; 2] = statement.remaining_statement().into();
+                (as_array[0].clone(), as_array[1].clone())
+            })
+            .unzip();
 
         // TODO: we're not sampling new encryption randomness here for the encryption of the nonce
         // share, this is intended, just making sure.
@@ -341,6 +362,9 @@ where
             public_key: self.public_key,
             encryption_of_secret_key_share: self.encryption_of_secret_key_share,
             centralized_party_public_key_share: self.centralized_party_public_key_share,
+            nonce_public_shares,
+            masks_encryptions,
+            masked_key_share_encryptions,
             nonce_sharing_proof,
             key_share_masking_proof,
             nonce_masking_decommitment_round_party,
