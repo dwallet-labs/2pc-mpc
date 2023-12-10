@@ -362,6 +362,8 @@ pub(crate) mod tests {
                 ProtocolContext,
             >,
         >,
+        number_of_parties: usize,
+        number_of_witnesses: usize,
     ) -> proofs::Result<(
         enhanced::Proof<
             REPETITIONS,
@@ -377,82 +379,63 @@ pub(crate) mod tests {
     where
         Uint<WITNESS_MASK_LIMBS>: Encoding,
     {
-        let commitments_and_decommitment_round_parties: HashMap<
-            PartyID,
-            (
-                Commitment,
-                decommitment_and_poly_commitment_round::Party<
-                    REPETITIONS,
-                    NUM_RANGE_CLAIMS,
-                    WITNESS_MASK_LIMBS,
-                    Language,
-                    ProtocolContext,
-                >,
-            ),
-        > = commitment_round_parties
-            .into_iter()
-            .map(|(party_id, party)| {
-                (
-                    party_id,
-                    party
-                        .commit_statements_and_statement_mask(&mut OsRng)
-                        .unwrap(),
-                )
-            })
-            .collect();
+        // TODO: should these be the same for all parties?
+        let bulletproofs_generators =
+            BulletproofGens::new(RANGE_CLAIM_BITS, number_of_witnesses * number_of_parties);
 
-        let commitments: HashMap<PartyID, Commitment> = commitments_and_decommitment_round_parties
+        let commitment_generators = PedersenGens::default();
+        // todo: proper transcript
+        let transcripts = iter::repeat_with(|| Transcript::new(Language::NAME.as_bytes()))
+            .take(number_of_parties.into());
+
+        // TODO: names of variables etc.
+        let commitments_and_decommitment_round_parties: HashMap<PartyID, (_, _)> =
+            commitment_round_parties
+                .into_iter()
+                .map(|(party_id, party)| (party_id, party.commit_statements(&mut OsRng).unwrap()))
+                .collect();
+
+        let commitments: HashMap<PartyID, _> = commitments_and_decommitment_round_parties
             .iter()
             .map(|(party_id, (commitment, _))| (*party_id, *commitment))
             .collect();
 
-        let decommitments_and_proof_share_round_parties: HashMap<
-            PartyID,
-            (
-                aggregation::decommitment_round::Decommitment<REPETITIONS, Language>,
-                proof_share_round::Party<REPETITIONS, Language, ProtocolContext>,
-            ),
-        > = commitments_and_decommitment_round_parties
-            .into_iter()
-            .map(|(party_id, (_, party))| {
-                (
-                    party_id,
-                    party
-                        .decommit_statements_and_statement_mask(commitments.clone())
-                        .unwrap(),
-                )
-            })
-            .collect();
+        let decommitments_and_proof_share_round_parties: HashMap<PartyID, (_, _)> =
+            commitments_and_decommitment_round_parties
+                .into_iter()
+                .map(|(party_id, (_, party))| {
+                    (
+                        party_id,
+                        party
+                            .decommit_statements_and_generate_poly_commitments(
+                                commitments.clone(),
+                                &mut OsRng,
+                            )
+                            .unwrap(),
+                    )
+                })
+                .collect();
 
-        let decommitments: HashMap<
-            PartyID,
-            aggregation::decommitment_round::Decommitment<REPETITIONS, Language>,
-        > = decommitments_and_proof_share_round_parties
+        let decommitments: HashMap<PartyID, _> = decommitments_and_proof_share_round_parties
             .iter()
             .map(|(party_id, (decommitment, _))| (*party_id, decommitment.clone()))
             .collect();
 
-        let proof_shares_and_proof_aggregation_round_parties: HashMap<
-            PartyID,
-            (
-                ProofShare<REPETITIONS, Language>,
-                proof_aggregation_round::Party<REPETITIONS, Language, ProtocolContext>,
-            ),
-        > = decommitments_and_proof_share_round_parties
-            .into_iter()
-            .map(|(party_id, (_, party))| {
-                (
-                    party_id,
-                    party.generate_proof_share(decommitments.clone()).unwrap(),
-                )
-            })
-            .collect();
-
-        let proof_shares: HashMap<PartyID, ProofShare<REPETITIONS, Language>> =
-            proof_shares_and_proof_aggregation_round_parties
-                .iter()
-                .map(|(party_id, (proof_share, _))| (*party_id, proof_share.clone())) // TODO: why can't copy
+        let proof_shares_and_proof_aggregation_round_parties: HashMap<PartyID, (_, _)> =
+            decommitments_and_proof_share_round_parties
+                .into_iter()
+                .map(|(party_id, (_, party))| {
+                    (
+                        party_id,
+                        party.generate_proof_shares(decommitments.clone()).unwrap(),
+                    )
+                })
                 .collect();
+
+        let proof_shares: HashMap<PartyID, _> = proof_shares_and_proof_aggregation_round_parties
+            .iter()
+            .map(|(party_id, (proof_share, _))| (*party_id, proof_share.clone())) // TODO: why can't copy
+            .collect();
 
         let (_, (_, proof_aggregation_round_party)) =
             proof_shares_and_proof_aggregation_round_parties
@@ -460,7 +443,7 @@ pub(crate) mod tests {
                 .next()
                 .unwrap();
 
-        proof_aggregation_round_party.aggregate_proof_shares(proof_shares.clone())
+        proof_aggregation_round_party.aggregate_proof_shares(proof_shares.clone(), &mut OsRng)
     }
 
     #[allow(dead_code)]
@@ -483,10 +466,17 @@ pub(crate) mod tests {
         Uint<WITNESS_MASK_LIMBS>: Encoding,
     {
         let number_of_parties = witnesses.len().try_into().unwrap();
+        let number_of_witnesses = witnesses.first().unwrap().len();
 
         let commitment_round_parties: HashMap<
             PartyID,
-            commitment_round::Party<REPETITIONS, Language, ()>,
+            commitment_round::Party<
+                REPETITIONS,
+                NUM_RANGE_CLAIMS,
+                WITNESS_MASK_LIMBS,
+                Language,
+                (),
+            >,
         > = witnesses
             .into_iter()
             .enumerate()
@@ -504,17 +494,21 @@ pub(crate) mod tests {
                 (
                     party_id,
                     commitment_round::Party {
-                        schnorr_commitment_round_party,
+                        commitment_round_party: schnorr_commitment_round_party,
                     },
                 )
             })
             .collect();
 
-        let res = aggregates_internal(commitment_round_parties);
+        let res = aggregates_internal(
+            commitment_round_parties,
+            number_of_parties.into(),
+            number_of_witnesses,
+        );
 
         assert!(
             res.is_ok(),
-            "valid proof aggregation sessions should yield verifiable aggregated proofs, instead got error: {:?}",
+            "valid bulletproofs proof aggregation sessions should yield verifiable aggregated proofs, instead got error: {:?}",
             res.err()
         );
     }

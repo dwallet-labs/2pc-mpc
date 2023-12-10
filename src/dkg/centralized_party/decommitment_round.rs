@@ -225,9 +225,9 @@ where
                 None,
                 &self.protocol_context,
                 &encryption_of_discrete_log_language_public_parameters,
-                &self.range_proof_public_parameters,
+                // &self.range_proof_public_parameters,
                 vec![statement],
-                rng,
+                // rng,
             )?;
 
         let public_key_share_decommitment_proof = PublicKeyShareDecommitmentAndProof::<

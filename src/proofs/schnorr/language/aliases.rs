@@ -704,6 +704,7 @@ pub mod encryption_of_tuple {
         >,
     >;
 
+    // TODO: this should be the enhanced version, or if we remove it then have two aliases.
     /// An Encryption of a Tuple Schnorr Proof.
     pub type Proof<
         const SCALAR_LIMBS: usize,
@@ -717,12 +718,8 @@ pub mod encryption_of_tuple {
         EncryptionKey,
         RangeProof,
         ProtocolContext,
-    > = schnorr::enhanced::Proof<
+    > = schnorr::Proof<
         REPETITIONS,
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
         Language<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -1010,6 +1007,7 @@ pub mod encryption_of_discrete_log {
         >,
     >;
 
+    // TODO: same
     /// An Encryption of Discrete Log Schnorr Proof.
     pub type Proof<
         const SCALAR_LIMBS: usize,
@@ -1023,12 +1021,8 @@ pub mod encryption_of_discrete_log {
         EncryptionKey,
         RangeProof,
         ProtocolContext,
-    > = schnorr::enhanced::Proof<
+    > = schnorr::Proof<
         REPETITIONS,
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
         Language<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -1345,6 +1339,7 @@ pub mod committed_linear_evaluation {
         >,
     >;
 
+    // todo: same
     /// A Committed Linear Evaluation Schnorr Proof.
     pub type Proof<
         const SCALAR_LIMBS: usize,
@@ -1363,12 +1358,8 @@ pub mod committed_linear_evaluation {
         CommitmentScheme,
         RangeProof,
         ProtocolContext,
-    > = schnorr::enhanced::Proof<
+    > = schnorr::Proof<
         REPETITIONS,
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
         Language<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,

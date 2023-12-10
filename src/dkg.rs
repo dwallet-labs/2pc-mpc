@@ -195,7 +195,7 @@ pub(crate) mod tests {
             centralized_party_public_key_share_decommitment_and_proof,
             centralized_party_dkg_output,
         ) = centralized_party_decommitment_round_party
-            .decommit_proof_public_key_share(secret_key_share_encryption_and_proof)
+            .decommit_proof_public_key_share(secret_key_share_encryption_and_proof, &mut OsRng)
             .unwrap();
 
         assert_eq!(

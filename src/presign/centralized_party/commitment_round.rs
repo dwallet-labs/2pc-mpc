@@ -171,6 +171,7 @@ where
 
         let (proof, commitments) = knowledge_of_decommitment::Proof::<
             { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPETITIONS },
+            1,
             SCALAR_LIMBS,
             GroupElement::Scalar,
             GroupElement,
@@ -184,7 +185,7 @@ where
                 .clone()
                 .into_iter()
                 .map(|(nonce_share, commitment_randomness)| {
-                    [nonce_share, commitment_randomness].into()
+                    ([nonce_share].into(), commitment_randomness).into()
                 })
                 .collect(),
             rng,

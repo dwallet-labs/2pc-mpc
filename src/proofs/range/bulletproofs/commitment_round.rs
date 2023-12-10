@@ -47,6 +47,9 @@ pub struct Party<
     Uint<WITNESS_MASK_LIMBS>: Encoding,
 {
     pub commitment_round_party: commitment_round::Party<REPETITIONS, Language, ProtocolContext>,
+    pub bulletproofs_generators: BulletproofGens,
+    pub commitment_generators: PedersenGens,
+    pub transcript: Transcript,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -72,21 +75,18 @@ impl<
 where
     Uint<WITNESS_MASK_LIMBS>: Encoding,
 {
+    // TODO: new function, remove pub.
+
     /// Due to a limitation in Bulletproofs, assumes both the number of parties and the number of
     /// witnesses are powers of 2. If one needs a non-power-of-two, pad to the
     /// `next_power_of_two` by creating additional parties with zero-valued witnesses and having
     /// every party emulate those locally.
-    pub fn commit_statements<'a, 'b>(
-        self,
-        bulletproofs_generators: &'b BulletproofGens,
-        commitment_generators: &'b PedersenGens,
-        transcript: &'a mut Transcript,
+    pub fn commit_statements(
+        mut self,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(
         Message,
         decommitment_and_poly_commitment_round::Party<
-            'a,
-            'b,
             REPETITIONS,
             NUM_RANGE_CLAIMS,
             WITNESS_MASK_LIMBS,
@@ -160,9 +160,9 @@ where
             .collect();
 
         let dealer_awaiting_bit_commitments = Dealer::new(
-            &bulletproofs_generators,
-            &commitment_generators,
-            transcript,
+            &self.bulletproofs_generators,
+            &self.commitment_generators,
+            &mut self.transcript,
             RANGE_CLAIM_BITS,
             number_of_parties.into(),
         )
@@ -173,8 +173,8 @@ where
             .zip(commitments_randomness.into_iter())
             .map(|(witness, commitment_randomness)| {
                 party::Party::new(
-                    &bulletproofs_generators,
-                    &commitment_generators,
+                    &self.bulletproofs_generators,
+                    &self.commitment_generators,
                     witness,
                     commitment_randomness,
                     RANGE_CLAIM_BITS,
