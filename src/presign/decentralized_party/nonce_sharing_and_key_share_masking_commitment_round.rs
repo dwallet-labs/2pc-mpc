@@ -43,7 +43,7 @@ pub struct Party<
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     RangeProof: proofs::RangeProof<RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIM_LIMBS>,
-    CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
+    CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, 1, GroupElement::Scalar, GroupElement>,
     ProtocolContext: Clone + Serialize,
 > where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
@@ -85,7 +85,7 @@ impl<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIM_LIMBS,
         >,
-        CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
+        CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, 1, GroupElement::Scalar, GroupElement>,
         ProtocolContext: Clone + Serialize,
     >
     Party<
@@ -143,7 +143,7 @@ where
 
         // TODO: flip order of proofs to fit paper
         let language_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
-            { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPITITIONS },
+            { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPETITIONS },
             SCALAR_LIMBS,
             GroupElement::Scalar,
             GroupElement,

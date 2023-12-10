@@ -1039,7 +1039,7 @@ pub(crate) mod tests {
         );
 
         let res = proof.verify(
-            0,
+            None,
             &PhantomData,
             language_public_parameters,
             range_proof_public_parameters,
@@ -1136,7 +1136,7 @@ pub(crate) mod tests {
             matches!(
                 proof
                     .verify(
-                        0,
+                        None,
                         &PhantomData,
                         language_public_parameters,
                         range_proof_public_parameters,

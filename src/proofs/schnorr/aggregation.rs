@@ -1,3 +1,6 @@
+// Author: dWallet Labs, LTD.
+// SPDX-License-Identifier: Apache-2.0
+
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::{benchmark, benchmark_enhanced};
 use serde::Serialize;
@@ -40,12 +43,105 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::{
+        proofs,
         proofs::schnorr::{
             aggregation::{decommitment_round::Decommitment, proof_share_round::ProofShare},
-            Language,
+            Language, Proof,
         },
         Commitment,
     };
+
+    #[allow(dead_code)]
+    pub(crate) fn aggregates_internal<
+        const REPETITIONS: usize,
+        Lang: Language<REPETITIONS>,
+        ProtocolContext: Clone + Serialize,
+    >(
+        commitment_round_parties: HashMap<
+            PartyID,
+            commitment_round::Party<REPETITIONS, Lang, ProtocolContext>,
+        >,
+    ) -> proofs::Result<(
+        Proof<REPETITIONS, Lang, ProtocolContext>,
+        Vec<Lang::StatementSpaceGroupElement>,
+    )> {
+        let commitments_and_decommitment_round_parties: HashMap<
+            PartyID,
+            (
+                Commitment,
+                decommitment_round::Party<REPETITIONS, Lang, ProtocolContext>,
+            ),
+        > = commitment_round_parties
+            .into_iter()
+            .map(|(party_id, party)| {
+                (
+                    party_id,
+                    party
+                        .commit_statements_and_statement_mask(&mut OsRng)
+                        .unwrap(),
+                )
+            })
+            .collect();
+
+        let commitments: HashMap<PartyID, Commitment> = commitments_and_decommitment_round_parties
+            .iter()
+            .map(|(party_id, (commitment, _))| (*party_id, *commitment))
+            .collect();
+
+        let decommitments_and_proof_share_round_parties: HashMap<
+            PartyID,
+            (
+                Decommitment<REPETITIONS, Lang>,
+                proof_share_round::Party<REPETITIONS, Lang, ProtocolContext>,
+            ),
+        > = commitments_and_decommitment_round_parties
+            .into_iter()
+            .map(|(party_id, (_, party))| {
+                (
+                    party_id,
+                    party
+                        .decommit_statements_and_statement_mask(commitments.clone())
+                        .unwrap(),
+                )
+            })
+            .collect();
+
+        let decommitments: HashMap<PartyID, Decommitment<REPETITIONS, Lang>> =
+            decommitments_and_proof_share_round_parties
+                .iter()
+                .map(|(party_id, (decommitment, _))| (*party_id, decommitment.clone()))
+                .collect();
+
+        let proof_shares_and_proof_aggregation_round_parties: HashMap<
+            PartyID,
+            (
+                ProofShare<REPETITIONS, Lang>,
+                proof_aggregation_round::Party<REPETITIONS, Lang, ProtocolContext>,
+            ),
+        > = decommitments_and_proof_share_round_parties
+            .into_iter()
+            .map(|(party_id, (_, party))| {
+                (
+                    party_id,
+                    party.generate_proof_share(decommitments.clone()).unwrap(),
+                )
+            })
+            .collect();
+
+        let proof_shares: HashMap<PartyID, ProofShare<REPETITIONS, Lang>> =
+            proof_shares_and_proof_aggregation_round_parties
+                .iter()
+                .map(|(party_id, (proof_share, _))| (*party_id, proof_share.clone())) // TODO: why can't copy
+                .collect();
+
+        let (_, (_, proof_aggregation_round_party)) =
+            proof_shares_and_proof_aggregation_round_parties
+                .into_iter()
+                .next()
+                .unwrap();
+
+        proof_aggregation_round_party.aggregate_proof_shares(proof_shares.clone())
+    }
 
     #[allow(dead_code)]
     pub(crate) fn aggregates<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
@@ -53,26 +149,15 @@ pub(crate) mod tests {
         witnesses: Vec<Vec<Lang::WitnessSpaceGroupElement>>,
     ) {
         let number_of_parties = witnesses.len().try_into().unwrap();
-        let mut witnesses = witnesses;
 
-        let party_id = (witnesses.len() - 1).try_into().unwrap();
-        let party = commitment_round::Party {
-            party_id,
-            threshold: number_of_parties,
-            number_of_parties,
-            language_public_parameters: language_public_parameters.clone(),
-            protocol_context: (),
-            witnesses: witnesses.pop().unwrap(),
-        };
-
-        let mut commitment_round_parties: HashMap<
+        let commitment_round_parties: HashMap<
             PartyID,
             commitment_round::Party<REPETITIONS, Lang, ()>,
         > = witnesses
             .into_iter()
             .enumerate()
             .map(|(party_id, witnesses)| {
-                let party_id: u16 = party_id.try_into().unwrap();
+                let party_id: u16 = (party_id + 1).try_into().unwrap();
                 (
                     party_id,
                     commitment_round::Party {
@@ -87,92 +172,8 @@ pub(crate) mod tests {
             })
             .collect();
 
-        let commitments_and_decommitment_round_parties: HashMap<
-            PartyID,
-            (Commitment, decommitment_round::Party<REPETITIONS, Lang, ()>),
-        > = commitment_round_parties
-            .into_iter()
-            .map(|(party_id, party)| {
-                (
-                    party_id,
-                    party
-                        .commit_statements_and_statement_mask(&mut OsRng)
-                        .unwrap(),
-                )
-            })
-            .collect();
+        let res = aggregates_internal(commitment_round_parties);
 
-        let (commitment, decommitment_round_party) = party
-            .commit_statements_and_statement_mask(&mut OsRng)
-            .unwrap();
-
-        let mut commitments: HashMap<PartyID, Commitment> =
-            commitments_and_decommitment_round_parties
-                .iter()
-                .map(|(party_id, (commitment, _))| (*party_id, *commitment))
-                .collect();
-
-        commitments.insert(party_id, commitment);
-
-        let decommitments_and_proof_share_round_parties: HashMap<
-            PartyID,
-            (
-                Decommitment<REPETITIONS, Lang>,
-                proof_share_round::Party<REPETITIONS, Lang, ()>,
-            ),
-        > = commitments_and_decommitment_round_parties
-            .into_iter()
-            .map(|(party_id, (_, party))| {
-                (
-                    party_id,
-                    party
-                        .decommit_statements_and_statement_mask(commitments.clone())
-                        .unwrap(),
-                )
-            })
-            .collect();
-
-        let (decommitment, proof_share_round_party) = decommitment_round_party
-            .decommit_statements_and_statement_mask(commitments)
-            .unwrap();
-
-        let mut decommitments: HashMap<PartyID, Decommitment<REPETITIONS, Lang>> =
-            decommitments_and_proof_share_round_parties
-                .iter()
-                .map(|(party_id, (decommitment, _))| (*party_id, decommitment.clone()))
-                .collect();
-
-        decommitments.insert(party_id, decommitment);
-
-        let proof_shares_and_proof_aggregation_round_parties: HashMap<
-            PartyID,
-            (
-                ProofShare<REPETITIONS, Lang>,
-                proof_aggregation_round::Party<REPETITIONS, Lang, ()>,
-            ),
-        > = decommitments_and_proof_share_round_parties
-            .into_iter()
-            .map(|(party_id, (_, party))| {
-                (
-                    party_id,
-                    party.generate_proof_share(decommitments.clone()).unwrap(),
-                )
-            })
-            .collect();
-
-        let (proof_share, proof_aggregation_round_party) = proof_share_round_party
-            .generate_proof_share(decommitments.clone())
-            .unwrap();
-
-        let mut proof_shares: HashMap<PartyID, ProofShare<REPETITIONS, Lang>> =
-            proof_shares_and_proof_aggregation_round_parties
-                .iter()
-                .map(|(party_id, (proof_share, _))| (*party_id, proof_share.clone())) // TODO: why can't copy
-                .collect();
-
-        proof_shares.insert(party_id, proof_share);
-
-        let res = proof_aggregation_round_party.aggregate_proof_shares(proof_shares.clone());
         assert!(
             res.is_ok(),
             "valid proof aggregation sessions should yield verifiable aggregated proofs, instead got error: {:?}",
@@ -201,6 +202,7 @@ mod benches {
 
     pub(crate) fn benchmark<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
         language_public_parameters: Lang::PublicParameters,
+        extra_description: Option<String>,
         c: &mut Criterion,
     ) {
         for batch_size in [1, 10, 100, 1000] {
@@ -213,6 +215,7 @@ mod benches {
                 language_public_parameters.clone(),
                 witnesses,
                 batch_size,
+                extra_description.clone(),
                 c,
             )
         }
@@ -233,6 +236,7 @@ mod benches {
         >,
     >(
         language_public_parameters: Lang::PublicParameters,
+        extra_description: Option<String>,
         c: &mut Criterion,
     ) where
         Uint<RANGE_CLAIM_LIMBS>: Encoding,
@@ -252,6 +256,7 @@ mod benches {
                 language_public_parameters.clone(),
                 witnesses,
                 batch_size,
+                extra_description.clone(),
                 c,
             )
         }
@@ -261,11 +266,14 @@ mod benches {
         language_public_parameters: Lang::PublicParameters,
         witnesses: Vec<Lang::WitnessSpaceGroupElement>,
         batch_size: usize,
+        extra_description: Option<String>,
         c: &mut Criterion,
     ) {
+        // TODO: DRY with `aggregates_internal`
         let mut g = c.benchmark_group(format!(
-            "{:?} aggregation over {batch_size} statements with {:?} repetitions",
+            "{:?} {:?} aggregation over {batch_size} statements with {:?} repetitions",
             Lang::NAME,
+            extra_description.unwrap_or("".to_string()),
             REPETITIONS
         ));
 

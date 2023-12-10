@@ -201,8 +201,8 @@ mod benches {
     pub(crate) fn benchmark(c: &mut Criterion) {
         let language_public_parameters = language_public_parameters();
 
-        language::benchmark::<REPETITIONS, Lang>(language_public_parameters.clone(), c);
+        language::benchmark::<REPETITIONS, Lang>(language_public_parameters.clone(), None, c);
 
-        aggregation::benchmark::<REPETITIONS, Lang>(language_public_parameters, c);
+        aggregation::benchmark::<REPETITIONS, Lang>(language_public_parameters, None, c);
     }
 }

@@ -796,7 +796,7 @@ mod benches {
     pub(crate) fn benchmark(c: &mut Criterion) {
         let (language_public_parameters, range_proof_public_parameters) = public_parameters();
 
-        language::benchmark::<REPETITIONS, Lang>(language_public_parameters.clone(), c);
+        language::benchmark::<REPETITIONS, Lang>(language_public_parameters.clone(), None, c);
 
         range::benchmark::<
             REPETITIONS,
@@ -818,6 +818,6 @@ mod benches {
             { range::bulletproofs::RANGE_CLAIM_LIMBS },
             WITNESS_MASK_LIMBS,
             Lang,
-        >(language_public_parameters, c);
+        >(language_public_parameters, None, c);
     }
 }

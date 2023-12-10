@@ -33,8 +33,7 @@ where
     ) -> group::Result<Self> {
         let public_parameters = &public_parameters.public_parameters;
 
-        if N < 2 {
-            // there is no use of using this struct for a "product group" of less than two groups.
+        if N == 0 {
             return Err(group::Error::InvalidPublicParameters);
         }
 

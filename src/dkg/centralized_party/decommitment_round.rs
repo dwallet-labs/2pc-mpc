@@ -1,7 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto_bigint::{Encoding, Uint};
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -144,6 +144,7 @@ where
                 ProtocolContext,
             >,
         >,
+        rng: &mut impl CryptoRngCore,
     ) -> crate::Result<(
         PublicKeyShareDecommitmentAndProof<
             GroupElement::Value,
@@ -212,7 +213,7 @@ where
             >(
                 self.scalar_group_public_parameters,
                 self.group_public_parameters,
-                self.range_proof_public_parameters,
+                self.range_proof_public_parameters.clone(),
                 self.encryption_scheme_public_parameters,
             );
 
@@ -224,7 +225,9 @@ where
                 None,
                 &self.protocol_context,
                 &encryption_of_discrete_log_language_public_parameters,
+                &self.range_proof_public_parameters,
                 vec![statement],
+                rng,
             )?;
 
         let public_key_share_decommitment_proof = PublicKeyShareDecommitmentAndProof::<

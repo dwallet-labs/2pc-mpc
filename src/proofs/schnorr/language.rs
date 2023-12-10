@@ -395,11 +395,13 @@ mod benches {
 
     pub(crate) fn benchmark<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
         language_public_parameters: Lang::PublicParameters,
+        extra_description: Option<String>,
         c: &mut Criterion,
     ) {
         let mut g = c.benchmark_group(format!(
-            "{:?} with {:?} repetitions",
+            "{:?} {:?} with {:?} repetitions",
             Lang::NAME,
+            extra_description.unwrap_or("".to_string()),
             REPETITIONS
         ));
 

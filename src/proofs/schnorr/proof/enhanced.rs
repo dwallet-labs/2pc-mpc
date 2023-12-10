@@ -8,7 +8,16 @@ use serde::{Deserialize, Serialize};
 use crate::{
     group::{additive_group_of_integers_modulu_n::power_of_two_moduli, BoundedGroupElement},
     proofs,
-    proofs::{range::RangeProof, schnorr::language, Error, TranscriptProtocol},
+    proofs::{
+        range::RangeProof,
+        schnorr::{
+            language,
+            language::enhanced::{
+                EnhancedLanguageStatementAccessors, EnhancedLanguageWitnessAccessors,
+            },
+        },
+        Error, TranscriptProtocol,
+    },
     StatisticalSecuritySizedNumber,
 };
 
@@ -43,15 +52,8 @@ pub struct Proof<
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
 {
-    schnorr_proof: super::Proof<REPETITIONS, Language, ProtocolContext>,
-    range_proof: language::enhanced::RangeProof<
-        REPETITIONS,
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
-        Language,
-    >,
+    pub(crate) schnorr_proof: super::Proof<REPETITIONS, Language, ProtocolContext>,
+    pub(crate) range_proof: Language::RangeProof,
 }
 
 impl<
@@ -117,10 +119,8 @@ where
             .clone()
             .into_iter()
             .map(|witness| {
-                let (constrained_witness, commitment_randomness, _) = witness.into();
-
                 let constrained_witness: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>;
-                    NUM_RANGE_CLAIMS] = constrained_witness.into();
+                    NUM_RANGE_CLAIMS] = (*witness.constrained_witness()).into();
 
                 let constrained_witness: [Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS] =
                     constrained_witness.map(|witness_part| {
@@ -129,7 +129,10 @@ where
                         (&witness_part_value).into()
                     });
 
-                (constrained_witness, commitment_randomness)
+                (
+                    constrained_witness,
+                    witness.range_proof_commitment_randomness().clone(),
+                )
             })
             .unzip();
 
@@ -171,8 +174,7 @@ where
     /// Verify an enhanced batched Schnorr zero-knowledge proof.
     pub fn verify(
         &self,
-        // The number of parties participating in aggregation (set to 0 for local proofs)
-        number_of_parties: usize,
+        number_of_parties: Option<usize>,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         range_proof_public_parameters: &language::enhanced::RangeProofPublicParameters<
@@ -192,23 +194,10 @@ where
         let mut transcript =
             Self::setup_range_proof(protocol_context, range_proof_public_parameters)?;
 
-        let commitments: Vec<
-            language::enhanced::RangeProofCommitmentSchemeCommitmentSpaceGroupElement<
-                REPETITIONS,
-                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                NUM_RANGE_CLAIMS,
-                RANGE_CLAIM_LIMBS,
-                WITNESS_MASK_LIMBS,
-                Language,
-            >,
-        > = statements
+        let commitments: Vec<_> = statements
             .clone()
             .into_iter()
-            .map(|statement| {
-                let (commitment, _) = statement.into();
-
-                commitment
-            })
+            .map(|statement| statement.range_proof_commitment().clone())
             .collect();
 
         // TODO: make sure I did the range test
@@ -217,7 +206,7 @@ where
 
         self.schnorr_proof
             .verify(
-                None,
+                number_of_parties,
                 protocol_context,
                 language_public_parameters,
                 statements,

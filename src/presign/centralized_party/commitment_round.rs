@@ -32,7 +32,7 @@ pub struct Party<
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     RangeProof: proofs::RangeProof<RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIM_LIMBS>,
-    CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
+    CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, 1, GroupElement::Scalar, GroupElement>,
     ProtocolContext: Clone + Serialize,
 > where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
@@ -58,12 +58,13 @@ pub struct Party<
 pub struct SignatureNonceSharesCommitmentsAndBatchedProof<
     const SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
-    CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
+    CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, 1, GroupElement::Scalar, GroupElement>,
     ProtocolContext: Clone + Serialize,
 > {
     pub(in crate::presign) commitments: Vec<CommitmentScheme::CommitmentSpaceGroupElement>,
     pub(in crate::presign) proof: knowledge_of_decommitment::Proof<
-        { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPITITIONS },
+        { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPETITIONS },
+        1,
         SCALAR_LIMBS,
         GroupElement::Scalar,
         GroupElement,
@@ -85,7 +86,7 @@ impl<
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIM_LIMBS,
         >,
-        CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
+        CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, 1, GroupElement::Scalar, GroupElement>,
         ProtocolContext: Clone + Serialize,
     >
     Party<
@@ -157,7 +158,7 @@ where
             .collect();
 
         let language_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
-            { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPITITIONS },
+            { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPETITIONS },
             SCALAR_LIMBS,
             GroupElement::Scalar,
             GroupElement,
@@ -169,7 +170,7 @@ where
         );
 
         let (proof, commitments) = knowledge_of_decommitment::Proof::<
-            { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPITITIONS },
+            { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPETITIONS },
             SCALAR_LIMBS,
             GroupElement::Scalar,
             GroupElement,

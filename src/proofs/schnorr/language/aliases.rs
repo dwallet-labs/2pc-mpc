@@ -121,22 +121,27 @@ pub mod knowledge_of_decommitment {
     {
     }
 
-    pub trait LanguageCommitmentScheme<const SCALAR_LIMBS: usize, Scalar, GroupElement>:
+    pub trait LanguageCommitmentScheme<
+        const SCALAR_LIMBS: usize,
+        const BATCH_SIZE: usize,
+        Scalar,
+        GroupElement,
+    >:
         HomomorphicCommitmentScheme<
         SCALAR_LIMBS,
-        MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+        MessageSpaceGroupElement = self_product::GroupElement<BATCH_SIZE, Scalar>,
         RandomnessSpaceGroupElement = Scalar,
         CommitmentSpaceGroupElement = GroupElement,
     >
     {
     }
 
-    impl<const SCALAR_LIMBS: usize, Scalar, GroupElement, T>
-        LanguageCommitmentScheme<SCALAR_LIMBS, Scalar, GroupElement> for T
+    impl<const SCALAR_LIMBS: usize, const BATCH_SIZE: usize, Scalar, GroupElement, T>
+        LanguageCommitmentScheme<SCALAR_LIMBS, BATCH_SIZE, Scalar, GroupElement> for T
     where
         T: HomomorphicCommitmentScheme<
             SCALAR_LIMBS,
-            MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+            MessageSpaceGroupElement = self_product::GroupElement<BATCH_SIZE, Scalar>,
             RandomnessSpaceGroupElement = Scalar,
             CommitmentSpaceGroupElement = GroupElement,
         >,
@@ -146,42 +151,46 @@ pub mod knowledge_of_decommitment {
     /// The Public Parameters of a Knowledge of Decommitment Schnorr Language.
     pub type WitnessSpaceGroupElement<
         const REPETITIONS: usize,
+        const BATCH_SIZE: usize,
         const SCALAR_LIMBS: usize,
         Scalar,
         GroupElement,
         CommitmentScheme,
     > = language::WitnessSpaceGroupElement<
         REPETITIONS,
-        Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+        Language<REPETITIONS, BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
     >;
 
     /// The Witness Space Group Element of a Knowledge of Decommitment Schnorr Language.
     pub type LanguagePublicParameters<
         const REPETITIONS: usize,
+        const BATCH_SIZE: usize,
         const SCALAR_LIMBS: usize,
         Scalar,
         GroupElement,
         CommitmentScheme,
     > = language::PublicParameters<
         REPETITIONS,
-        Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+        Language<REPETITIONS, BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
     >;
 
     /// The Statement Space Group Element of a Knowledge of Decommitment Schnorr Language.
     pub type StatementSpaceGroupElement<
         const REPETITIONS: usize,
+        const BATCH_SIZE: usize,
         const SCALAR_LIMBS: usize,
         Scalar,
         GroupElement,
         CommitmentScheme,
     > = language::StatementSpaceGroupElement<
         REPETITIONS,
-        Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+        Language<REPETITIONS, BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
     >;
 
     /// A Knowledge of Decommitment Schnorr Proof.
     pub type Proof<
         const REPETITIONS: usize,
+        const BATCH_SIZE: usize,
         const SCALAR_LIMBS: usize,
         Scalar,
         GroupElement,
@@ -189,13 +198,14 @@ pub mod knowledge_of_decommitment {
         ProtocolContext,
     > = schnorr::Proof<
         REPETITIONS,
-        Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+        Language<REPETITIONS, BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
         ProtocolContext,
     >;
 
     /// A Knowledge of Decommitment Schnorr Proof Aggregation Commitment Round Party.
     pub type ProofAggregationCommitmentRoundParty<
         const REPETITIONS: usize,
+        const BATCH_SIZE: usize,
         const SCALAR_LIMBS: usize,
         Scalar,
         GroupElement,
@@ -203,13 +213,14 @@ pub mod knowledge_of_decommitment {
         ProtocolContext,
     > = aggregation::commitment_round::Party<
         REPETITIONS,
-        Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+        Language<REPETITIONS, BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
         ProtocolContext,
     >;
 
     /// A Knowledge of Decommitment Schnorr Proof Aggregation Decommitment Round Party.
     pub type ProofAggregationDecommitmentRoundParty<
         const REPETITIONS: usize,
+        const BATCH_SIZE: usize,
         const SCALAR_LIMBS: usize,
         Scalar,
         GroupElement,
@@ -217,25 +228,27 @@ pub mod knowledge_of_decommitment {
         ProtocolContext,
     > = aggregation::decommitment_round::Party<
         REPETITIONS,
-        Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+        Language<REPETITIONS, BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
         ProtocolContext,
     >;
 
     /// A Knowledge of Decommitment Schnorr Proof Aggregation Decommitment.
     pub type Decommitment<
         const REPETITIONS: usize,
+        const BATCH_SIZE: usize,
         const SCALAR_LIMBS: usize,
         Scalar,
         GroupElement,
         CommitmentScheme,
     > = aggregation::decommitment_round::Decommitment<
         REPETITIONS,
-        Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+        Language<REPETITIONS, BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
     >;
 
     /// A Knowledge of Decommitment Schnorr Proof Aggregation Proof Share Round Party.
     pub type ProofAggregationProofShareRoundParty<
         const REPETITIONS: usize,
+        const BATCH_SIZE: usize,
         const SCALAR_LIMBS: usize,
         Scalar,
         GroupElement,
@@ -243,25 +256,27 @@ pub mod knowledge_of_decommitment {
         ProtocolContext,
     > = aggregation::proof_share_round::Party<
         REPETITIONS,
-        Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+        Language<REPETITIONS, BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
         ProtocolContext,
     >;
 
     /// A Knowledge of Decommitment Schnorr Proof Aggregation Proof Share.
     pub type ProofShare<
         const REPETITIONS: usize,
+        const BATCH_SIZE: usize,
         const SCALAR_LIMBS: usize,
         Scalar,
         GroupElement,
         CommitmentScheme,
     > = aggregation::proof_share_round::ProofShare<
         REPETITIONS,
-        Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+        Language<REPETITIONS, BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
     >;
 
     /// A Knowledge of Decommitment Schnorr Proof Aggregation Proof Aggregation Round Party.
     pub type ProofAggregationProofAggregationRoundParty<
         const REPETITIONS: usize,
+        const BATCH_SIZE: usize,
         const SCALAR_LIMBS: usize,
         Scalar,
         GroupElement,
@@ -269,7 +284,7 @@ pub mod knowledge_of_decommitment {
         ProtocolContext,
     > = aggregation::proof_aggregation_round::Party<
         REPETITIONS,
-        Language<REPETITIONS, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
+        Language<REPETITIONS, BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>,
         ProtocolContext,
     >;
 }
@@ -702,8 +717,12 @@ pub mod encryption_of_tuple {
         EncryptionKey,
         RangeProof,
         ProtocolContext,
-    > = schnorr::Proof<
+    > = schnorr::enhanced::Proof<
         REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
         Language<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -897,18 +916,13 @@ pub mod encryption_of_tuple {
 }
 
 pub mod encryption_of_discrete_log {
-    use std::ops::Mul;
-
     // TODO: does it need to be known-order or not?
     pub use super::encryption_of_tuple::LanguageScalar;
-    use crate::{
-        group::{KnownOrderScalar, Samplable},
-        proofs::{
-            schnorr,
-            schnorr::{
-                aggregation, language,
-                language::enhanced::encryption_of_discrete_log::{Language, REPETITIONS},
-            },
+    use crate::proofs::{
+        schnorr,
+        schnorr::{
+            aggregation, language,
+            language::enhanced::encryption_of_discrete_log::{Language, REPETITIONS},
         },
     };
 
@@ -1009,8 +1023,12 @@ pub mod encryption_of_discrete_log {
         EncryptionKey,
         RangeProof,
         ProtocolContext,
-    > = schnorr::Proof<
+    > = schnorr::enhanced::Proof<
         REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
         Language<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -1204,17 +1222,12 @@ pub mod encryption_of_discrete_log {
 }
 
 pub mod committed_linear_evaluation {
-    use std::ops::Mul;
-
     pub use super::encryption_of_tuple::LanguageScalar;
-    use crate::{
-        group::{KnownOrderScalar, Samplable},
-        proofs::{
-            schnorr,
-            schnorr::{
-                aggregation, language,
-                language::enhanced::committed_linear_evaluation::{Language, REPETITIONS},
-            },
+    use crate::proofs::{
+        schnorr,
+        schnorr::{
+            aggregation, language,
+            language::enhanced::committed_linear_evaluation::{Language, REPETITIONS},
         },
     };
 
@@ -1350,8 +1363,12 @@ pub mod committed_linear_evaluation {
         CommitmentScheme,
         RangeProof,
         ProtocolContext,
-    > = schnorr::Proof<
+    > = schnorr::enhanced::Proof<
         REPETITIONS,
+        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RANGE_CLAIM_LIMBS,
+        WITNESS_MASK_LIMBS,
         Language<
             SCALAR_LIMBS,
             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,

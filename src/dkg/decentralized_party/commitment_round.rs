@@ -189,6 +189,24 @@ where
                 self.encryption_scheme_public_parameters.clone(),
             );
 
+        let share_of_decentralized_party_secret_key_share_witness: encryption_of_discrete_log::WitnessSpaceGroupElement<
+            SCALAR_LIMBS,
+            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            RANGE_CLAIM_LIMBS,
+            WITNESS_MASK_LIMBS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement::Scalar,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+        > = (
+            share_of_decentralize_party_secret_key_share_witness,
+            range_proof_commitment_randomness,
+            encryption_randomness,
+        )
+            .into();
+
         let encryption_of_secret_share_commitment_round_party =
             encryption_of_discrete_log::ProofAggregationCommitmentRoundParty::<
                 SCALAR_LIMBS,
@@ -208,12 +226,7 @@ where
                 number_of_parties: self.number_of_parties,
                 language_public_parameters: encryption_of_discrete_log_language_public_parameters,
                 protocol_context: self.protocol_context.clone(),
-                witnesses: vec![(
-                    share_of_decentralize_party_secret_key_share_witness,
-                    range_proof_commitment_randomness,
-                    encryption_randomness,
-                )
-                    .into()],
+                witnesses: vec![share_of_decentralized_party_secret_key_share_witness.clone()],
             };
 
         let (
