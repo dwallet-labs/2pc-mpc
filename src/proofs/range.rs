@@ -273,6 +273,7 @@ mod benches {
             let witnesses = generate_witnesses::<
                 REPETITIONS,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                NUM_RANGE_CLAIMS,
                 RANGE_CLAIM_LIMBS,
                 WITNESS_MASK_LIMBS,
                 Lang,
@@ -284,6 +285,7 @@ mod benches {
                     language::enhanced::RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
                         REPETITIONS,
                         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                        NUM_RANGE_CLAIMS,
                         RANGE_CLAIM_LIMBS,
                         WITNESS_MASK_LIMBS,
                         Lang,
@@ -316,6 +318,7 @@ mod benches {
                         language::enhanced::RangeProof::<
                             REPETITIONS,
                             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                            NUM_RANGE_CLAIMS,
                             RANGE_CLAIM_LIMBS,
                             WITNESS_MASK_LIMBS,
                             Lang,
@@ -334,6 +337,7 @@ mod benches {
             let (range_proof, commitments) = language::enhanced::RangeProof::<
                 REPETITIONS,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                NUM_RANGE_CLAIMS,
                 RANGE_CLAIM_LIMBS,
                 WITNESS_MASK_LIMBS,
                 Lang,

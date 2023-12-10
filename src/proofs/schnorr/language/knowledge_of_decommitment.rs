@@ -349,8 +349,7 @@ mod benches {
         proofs::schnorr::{
             aggregation, language,
             language::knowledge_of_decommitment::tests::{
-                range_proof_rsa_language_public_parameters, secp256k1_language_public_parameters,
-                RSALanguage, Secp256k1Language,
+                secp256k1_language_public_parameters, Secp256k1Language,
             },
         },
     };

@@ -80,8 +80,6 @@ criterion_group!(
     proofs::schnorr::knowledge_of_discrete_log::benchmark,
     proofs::schnorr::knowledge_of_decommitment::benchmark_zero_knowledge,
     proofs::schnorr::knowledge_of_decommitment::benchmark_secp256k1_range_proof,
-    TODO: in order for this to work, we need to fix stack problem
-    proofs::schnorr::knowledge_of_decommitment::benchmark_rsa_range_proof,
     proofs::schnorr::commitment_of_discrete_log::benchmark,
     proofs::schnorr::discrete_log_ratio_of_commited_values::benchmark,
     proofs::schnorr::encryption_of_discrete_log::benchmark,

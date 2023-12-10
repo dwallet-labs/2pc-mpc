@@ -469,7 +469,7 @@ mod benches {
                 |bench| {
                     bench.iter(|| {
                         proof.verify(
-                            0,
+                            None,
                             &std::marker::PhantomData,
                             &language_public_parameters,
                             statements.clone(),
