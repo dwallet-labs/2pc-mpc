@@ -10,7 +10,7 @@ use crypto_bigint::{Encoding, Uint};
 use tiresias::secret_sharing::shamir::Polynomial;
 
 use crate::{
-    commitments::GroupsPublicParametersAccessors as _,
+    commitments::{GroupsPublicParametersAccessors as _, Pedersen},
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
@@ -26,6 +26,8 @@ use crate::{
 pub mod committed_linear_evaluation;
 pub mod encryption_of_discrete_log;
 pub mod encryption_of_tuple;
+
+pub const REPETITIONS: usize = 1;
 
 pub type ConstrainedWitnessGroupElement<const NUM_RANGE_CLAIMS: usize, const SCALAR_LIMBS: usize> =
     self_product::GroupElement<NUM_RANGE_CLAIMS, power_of_two_moduli::GroupElement<SCALAR_LIMBS>>;
@@ -44,15 +46,15 @@ pub type ConstrainedWitnessPublicParameters<
 >;
 
 pub type EnhancedLanguageWitness<
-    const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const SCALAR_LIMBS: usize,
     Scalar: BoundedGroupElement<SCALAR_LIMBS>,
     GroupElement: BoundedGroupElement<SCALAR_LIMBS>,
-    L: EnhancedLanguage<REPETITIONS, NUM_RANGE_CLAIMS, Scalar, GroupElement>,
+    L,
 > = direct_product::ThreeWayGroupElement<
     ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, SCALAR_LIMBS>,
-    L::UnboundedWitnessSpaceGroupElement,
+    Scalar,
+    <L as EnhancedLanguage<NUM_RANGE_CLAIMS, SCALAR_LIMBS, Scalar, GroupElement>>::UnboundedWitnessSpaceGroupElement,
 >;
 
 pub type EnhancedLanguageStatement<
@@ -60,8 +62,8 @@ pub type EnhancedLanguageStatement<
     const SCALAR_LIMBS: usize,
     Scalar: BoundedGroupElement<SCALAR_LIMBS>,
     GroupElement: BoundedGroupElement<SCALAR_LIMBS>,
-    L: EnhancedLanguage<NUM_RANGE_CLAIMS, Scalar, GroupElement>,
-> = direct_product::GroupElement<GroupElement, L::RemainingStatementSpaceGroupElement>;
+    L,
+> = direct_product::GroupElement<GroupElement, <L as EnhancedLanguage<NUM_RANGE_CLAIMS, SCALAR_LIMBS, Scalar, GroupElement>>::RemainingStatementSpaceGroupElement>;
 
 /// An Enhacned Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.
@@ -73,7 +75,7 @@ pub trait EnhancedLanguage<
     GroupElement: BoundedGroupElement<SCALAR_LIMBS>,
 >:
     super::Language<
-    1,
+    REPETITIONS,
     WitnessSpaceGroupElement = EnhancedLanguageWitness<
         NUM_RANGE_CLAIMS,
         SCALAR_LIMBS,
@@ -99,82 +101,67 @@ pub trait EnhancedLanguage<
     type RemainingStatementSpaceGroupElement: group::GroupElement;
 }
 
-// impl<WitnessSpacePublicParameters, StatementSpacePublicParameters>
-//     super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>
-// {
-//     pub fn new<
-//         const REPETITIONS: usize,
-//         const NUM_RANGE_CLAIMS: usize,
-//         Scalar: group::GroupElement,
-//         Lang: EnhancedLanguage<REPETITIONS, NUM_RANGE_CLAIMS, Scalar>,
-//     >(
-//         range_proof_public_parameters: RangeProofPublicParameters<
-//             REPETITIONS,
-//             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//             NUM_RANGE_CLAIMS,
-//             RANGE_CLAIM_LIMBS,
-//             SCALAR_LIMBS,
-//             Lang,
-//         >,
-//         unbounded_witness_space_public_parameters: UnboundedWitnessSpacePublicParameters<
-//             REPETITIONS,
-//             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//             NUM_RANGE_CLAIMS,
-//             RANGE_CLAIM_LIMBS,
-//             SCALAR_LIMBS,
-//             Lang,
-//         >,
-//         remaining_statement_space_public_parameters: RemainingStatementSpacePublicParameters<
-//             REPETITIONS,
-//             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//             NUM_RANGE_CLAIMS,
-//             RANGE_CLAIM_LIMBS,
-//             SCALAR_LIMBS,
-//             Lang,
-//         >,
-//         sampling_bit_size: usize,
-//     ) -> super::GroupsPublicParameters<
-//         super::WitnessSpacePublicParameters<REPETITIONS, Lang>,
-//         super::StatementSpacePublicParameters<REPETITIONS, Lang>,
-//     >
-//     where
-//         Uint<RANGE_CLAIM_LIMBS>: Encoding,
-//         Uint<SCALAR_LIMBS>: Encoding,
-//     {
-//         // TODO: what to do with `sampling_bit_size`? can it be consistent
-//         // to all claims or do we need to get it individually?
-//         let constrained_witness_public_parameters =
-//             self_product::PublicParameters::<
-//                 NUM_RANGE_CLAIMS,
-//                 power_of_two_moduli::PublicParameters<SCALAR_LIMBS>,
-//             >::new(power_of_two_moduli::PublicParameters { sampling_bit_size });
-//
-//         let range_proof_commitment_randomness_space_public_parameters =
-//             range_proof_public_parameters
-//                 .commitment_public_parameters()
-//                 .randomness_space_public_parameters()
-//                 .clone();
-//
-//         let range_proof_commitment_space_public_parameters = range_proof_public_parameters
-//             .commitment_public_parameters()
-//             .commitment_space_public_parameters()
-//             .clone();
-//
-//         super::GroupsPublicParameters {
-//             witness_space_public_parameters: (
-//                 constrained_witness_public_parameters,
-//                 range_proof_commitment_randomness_space_public_parameters,
-//                 unbounded_witness_space_public_parameters,
-//             )
-//                 .into(),
-//             statement_space_public_parameters: (
-//                 range_proof_commitment_space_public_parameters,
-//                 remaining_statement_space_public_parameters,
-//             )
-//                 .into(),
-//         }
-//     }
-// }
+impl<WitnessSpacePublicParameters, StatementSpacePublicParameters>
+    super::GroupsPublicParameters<WitnessSpacePublicParameters, StatementSpacePublicParameters>
+{
+    pub fn new<
+        const NUM_RANGE_CLAIMS: usize,
+        const SCALAR_LIMBS: usize,
+        Scalar: BoundedGroupElement<SCALAR_LIMBS>,
+        GroupElement: BoundedGroupElement<SCALAR_LIMBS>,
+        Lang: EnhancedLanguage<NUM_RANGE_CLAIMS, SCALAR_LIMBS, Scalar, GroupElement>,
+    >(
+        pedersen_public_parameters: pedersen::PublicParameters<
+            NUM_RANGE_CLAIMS,
+            GroupElement::Value,
+            Scalar::PublicParameters,
+            GroupElement::PublicParameters,
+        >,
+        unbounded_witness_space_public_parameters: group::PublicParameters<
+            Lang::UnboundedWitnessSpaceGroupElement,
+        >,
+        remaining_statement_space_public_parameters: group::PublicParameters<
+            Lang::RemainingStatementSpaceGroupElement,
+        >,
+        sampling_bit_size: usize,
+    ) -> super::GroupsPublicParameters<
+        super::WitnessSpacePublicParameters<REPETITIONS, Lang>,
+        super::StatementSpacePublicParameters<REPETITIONS, Lang>,
+    >
+    where
+        Uint<SCALAR_LIMBS>: Encoding,
+    {
+        // TODO: what to do with `sampling_bit_size`? can it be consistent
+        // to all claims or do we need to get it individually?
+        let constrained_witness_public_parameters =
+            self_product::PublicParameters::<
+                NUM_RANGE_CLAIMS,
+                power_of_two_moduli::PublicParameters<SCALAR_LIMBS>,
+            >::new(power_of_two_moduli::PublicParameters { sampling_bit_size });
+
+        let range_proof_commitment_randomness_space_public_parameters = pedersen_public_parameters
+            .randomness_space_public_parameters()
+            .clone();
+
+        let range_proof_commitment_space_public_parameters = pedersen_public_parameters
+            .commitment_space_public_parameters()
+            .clone();
+
+        super::GroupsPublicParameters {
+            witness_space_public_parameters: (
+                constrained_witness_public_parameters,
+                range_proof_commitment_randomness_space_public_parameters,
+                unbounded_witness_space_public_parameters,
+            )
+                .into(),
+            statement_space_public_parameters: (
+                range_proof_commitment_space_public_parameters,
+                remaining_statement_space_public_parameters,
+            )
+                .into(),
+        }
+    }
+}
 
 pub trait EnhancedLanguageWitnessAccessors<
     const NUM_RANGE_CLAIMS: usize,
@@ -231,82 +218,83 @@ impl<
     }
 }
 
-// pub trait DecomposableWitness<const SCALAR_LIMBS: usize>: KnownOrderScalar<SCALAR_LIMBS>
-// where
-//     Self::Value: From<Uint<SCALAR_LIMBS>>,
-// {
-//     fn decompose_into_constrained_witness<
-//         const SCALAR_LIMBS: usize,
-//         const RANGE_CLAIMS_PER_SCALAR: usize,
-//     >(
-//         self,
-//         range_claim_bits: usize,
-//     ) -> ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, SCALAR_LIMBS>
-//     where
-//         Uint<SCALAR_LIMBS>: Encoding,
-//     {
-//         let witness: Uint<SCALAR_LIMBS> = self.into();
-//
-//         let witness_in_range_claim_base: [power_of_two_moduli::GroupElement<SCALAR_LIMBS>;
-//             RANGE_CLAIMS_PER_SCALAR] = array::from_fn(|i| {
-//             Uint::<SCALAR_LIMBS>::from(
-//                 &((witness >> (i * range_claim_bits))
-//                     & ((Uint::<SCALAR_LIMBS>::ONE << range_claim_bits)
-//                         .wrapping_sub(&Uint::<SCALAR_LIMBS>::ONE))),
-//             )
-//             .into()
-//         });
-//
-//         witness_in_range_claim_base.into()
-//     }
-//
-//     fn compose_from_constrained_witness<
-//         const SCALAR_LIMBS: usize,
-//         const RANGE_CLAIMS_PER_SCALAR: usize,
-//     >(
-//         constrained_witness: ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR,
-// SCALAR_LIMBS>,         public_parameters: &group::PublicParameters<Self>,
-//         range_claim_bits: usize, // TODO:  take from RangeProof?
-//     ) -> proofs::Result<Self>
-//     where
-//         Uint<SCALAR_LIMBS>: Encoding,
-//     {
-//         // TODO: perform all the checks here, checking add - also check that no modulation occurs
-// in         // LIMBS for the entire computation
-//
-//         // TODO: RANGE_CLAIM_LIMBS < SCALAR_LIMBS
-//         // TODO: use RANGE_CLAIM_BITS instead?
-//         let delta: Uint<SCALAR_LIMBS> = Uint::<SCALAR_LIMBS>::ONE << range_claim_bits;
-//
-//         let delta = Self::new(delta.into(), public_parameters)?;
-//
-//         let witness_in_witness_mask_base: [_; RANGE_CLAIMS_PER_SCALAR] =
-// constrained_witness.into();
-//
-//         // TODO: SCALAR_LIMBS < SCALAR_LIMBS
-//         let witness_in_witness_mask_base: group::Result<Vec<Self>> = witness_in_witness_mask_base
-//             .into_iter()
-//             .map(|witness| {
-//                 Self::new(
-//                     Uint::<SCALAR_LIMBS>::from(&Uint::<SCALAR_LIMBS>::from(witness)).into(),
-//                     public_parameters,
-//                 )
-//             })
-//             .collect();
-//
-//         let polynomial = Polynomial::try_from(witness_in_witness_mask_base?)
-//             .map_err(|_| proofs::Error::InvalidParameters)?;
-//
-//         Ok(polynomial.evaluate(&delta))
-//     }
-// }
-//
-// impl<const SCALAR_LIMBS: usize, Scalar: KnownOrderScalar<SCALAR_LIMBS>>
-//     DecomposableWitness<SCALAR_LIMBS> for Scalar
-// where
-//     Self::Value: From<Uint<SCALAR_LIMBS>>,
-// {
-// }
+// TODO: do I need to make it for different types really? can't I do that for scalar, and transition
+// to plaintext?
+pub trait DecomposableWitness<const WITNESS_LIMBS: usize>: KnownOrderScalar<WITNESS_LIMBS>
+where
+    Self::Value: From<Uint<WITNESS_LIMBS>>,
+{
+    fn decompose_into_constrained_witness<
+        const SCALAR_LIMBS: usize,
+        const RANGE_CLAIMS_PER_SCALAR: usize,
+    >(
+        self,
+        range_claim_bits: usize,
+    ) -> ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, SCALAR_LIMBS>
+    where
+        Uint<SCALAR_LIMBS>: Encoding,
+    {
+        let witness: Uint<SCALAR_LIMBS> = self.into();
+
+        let witness_in_range_claim_base: [power_of_two_moduli::GroupElement<SCALAR_LIMBS>;
+            RANGE_CLAIMS_PER_SCALAR] = array::from_fn(|i| {
+            Uint::<SCALAR_LIMBS>::from(
+                &((witness >> (i * range_claim_bits))
+                    & ((Uint::<WITNESS_LIMBS>::ONE << range_claim_bits)
+                        .wrapping_sub(&Uint::<WITNESS_LIMBS>::ONE))),
+            )
+            .into()
+        });
+
+        witness_in_range_claim_base.into()
+    }
+
+    fn compose_from_constrained_witness<
+        const SCALAR_LIMBS: usize,
+        const RANGE_CLAIMS_PER_SCALAR: usize,
+    >(
+        constrained_witness: ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, SCALAR_LIMBS>,
+        public_parameters: &group::PublicParameters<Self>,
+        range_claim_bits: usize, // TODO:  take from RangeProof?
+    ) -> proofs::Result<Self>
+    where
+        Uint<SCALAR_LIMBS>: Encoding,
+    {
+        // TODO: perform all the checks here, checking add - also check that no modulation occursin
+        // // LIMBS for the entire computation
+
+        // TODO: RANGE_CLAIM_LIMBS < SCALAR_LIMBS
+        // TODO: use RANGE_CLAIM_BITS instead?
+        let delta: Uint<WITNESS_LIMBS> = Uint::<WITNESS_LIMBS>::ONE << range_claim_bits;
+
+        let delta = Self::new(delta.into(), public_parameters)?;
+
+        let witness_in_witness_mask_base: [_; RANGE_CLAIMS_PER_SCALAR] = constrained_witness.into();
+
+        // TODO: SCALAR_LIMBS < SCALAR_LIMBS
+        let witness_in_witness_mask_base: group::Result<Vec<Self>> = witness_in_witness_mask_base
+            .into_iter()
+            .map(|witness| {
+                Self::new(
+                    Uint::<WITNESS_LIMBS>::from(&Uint::<SCALAR_LIMBS>::from(witness)).into(),
+                    public_parameters,
+                )
+            })
+            .collect();
+
+        let polynomial = Polynomial::try_from(witness_in_witness_mask_base?)
+            .map_err(|_| proofs::Error::InvalidParameters)?;
+
+        Ok(polynomial.evaluate(&delta))
+    }
+}
+
+impl<const SCALAR_LIMBS: usize, Scalar: KnownOrderScalar<SCALAR_LIMBS>>
+    DecomposableWitness<SCALAR_LIMBS> for Scalar
+where
+    Self::Value: From<Uint<SCALAR_LIMBS>>,
+{
+}
 
 pub trait EnhancedLanguageStatementAccessors<
     RangeProofCommitmentSchemeCommitmentSpaceGroupElement: group::GroupElement,
