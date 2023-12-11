@@ -23,49 +23,32 @@ use crate::{
 };
 
 /// Knowledge of Decommitment Schnorr Language.
-///
-/// SECURITY NOTICE:
-/// Because correctness and zero-knowledge is guaranteed for any group in this language, we choose
-/// to provide a fully generic implementation.
-///
-/// However knowledge-soundness proofs are group dependent, and thus we can only assure security for
-/// groups for which we know how to prove it.
-///
-/// In the paper, we have prove (or cited a proof) it for any prime known-order group or for
-/// Paillier groups based on safe-primes; so it is safe to use with a `PrimeOrderGroupElement` or
-/// `PaillierGroupElement`.
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Language<
     const REPETITIONS: usize,
-    const BATCH_SIZE: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar,
-    GroupElement,
-    CommitmentScheme,
+    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    CommitmentScheme: HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>,
 > {
-    _scalar_choice: PhantomData<Scalar>,
-    _group_element_choice: PhantomData<GroupElement>,
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
 impl<
         const REPETITIONS: usize,
-        const BATCH_SIZE: usize,
-        const SCALAR_LIMBS: usize,
-        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
-        GroupElement: group::GroupElement,
-        CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, BATCH_SIZE, Scalar, GroupElement>,
+        const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        CommitmentScheme: HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>,
     > schnorr::Language<REPETITIONS>
-    for Language<REPETITIONS, BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
+    for Language<REPETITIONS, MESSAGE_SPACE_SCALAR_LIMBS, CommitmentScheme>
 {
-    type WitnessSpaceGroupElement =
-        direct_product::GroupElement<self_product::GroupElement<BATCH_SIZE, Scalar>, Scalar>;
-    type StatementSpaceGroupElement = GroupElement;
+    type WitnessSpaceGroupElement = direct_product::GroupElement<
+        CommitmentScheme::MessageSpaceGroupElement,
+        CommitmentScheme::RandomnessSpaceGroupElement,
+    >;
+    type StatementSpaceGroupElement = CommitmentScheme::CommitmentSpaceGroupElement;
 
     type PublicParameters = PublicParameters<
-        BATCH_SIZE,
-        Scalar::PublicParameters,
-        GroupElement::PublicParameters,
+        CommitmentScheme::MessageSpace::PublicParameters,
+        CommitmentScheme::RandomnessSpace::PublicParameters,
+        CommitmentScheme::CommitmentSpace::PublicParameters,
         CommitmentScheme::PublicParameters,
     >;
 
@@ -75,10 +58,12 @@ impl<
     fn challenge_bits(number_of_parties: usize, batch_size: usize) -> usize {
         // TODO ...
         if REPETITIONS == 1 {
-            128
+            128 // TODO: computational security sized number?
         } else {
             1
         }
+
+        // TODO: return error if its not 1 or 128?
     }
 
     fn group_homomorphism(
@@ -117,84 +102,66 @@ impl<const BATCH_SIZE: usize, Scalar: group::GroupElement> WitnessAccessors<BATC
     }
 }
 
-// TODO: these types & names, implement RangeProof for them
-pub const ZERO_KNOWLEDGE_REPETITIONS: usize = 1;
-
-pub type ZeroKnowledgeLanguage<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> =
-    Language<ZERO_KNOWLEDGE_REPETITIONS, 1, SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>;
-
-type RangeProofLanguage<const SCALAR_LIMBS: usize, const BATCH_SIZE: usize, Scalar, GroupElement> =
-    Language<
-        // TODO: should this be const? or parameterized
-        128,
-        BATCH_SIZE,
-        SCALAR_LIMBS,
-        Scalar,
-        GroupElement,
-        // TODO: actually we can use a different randomizer and message spaces, e.g. allowing
-        // infinite range (integer commitments)
-        Pedersen<1, SCALAR_LIMBS, Scalar, GroupElement>,
-    >;
+// TODO: export just the zero-knowledge language here?
 
 /// The Public Parameters of the Knowledge of Decommitment Schnorr Language.
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
-    const BATCH_SIZE: usize,
-    ScalarPublicParameters,
-    GroupElementPublicParameters,
+    MessageSpacePublicParameters,
+    RandomnessSpacePublicParameters,
+    CommitmentSpacePublicParameters,
     CommitmentSchemePublicParameters,
 > {
     pub groups_public_parameters: GroupsPublicParameters<
         direct_product::PublicParameters<
-            self_product::PublicParameters<BATCH_SIZE, ScalarPublicParameters>,
-            ScalarPublicParameters,
+            MessageSpacePublicParameters,
+            RandomnessSpacePublicParameters,
         >,
-        GroupElementPublicParameters,
+        CommitmentSpacePublicParameters,
     >,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
 }
 
 impl<
-        const BATCH_SIZE: usize,
-        ScalarPublicParameters: Clone,
-        GroupElementPublicParameters,
+        MessageSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CommitmentSpacePublicParameters,
         CommitmentSchemePublicParameters,
     >
     PublicParameters<
-        BATCH_SIZE,
-        ScalarPublicParameters,
-        GroupElementPublicParameters,
+        MessageSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CommitmentSpacePublicParameters,
         CommitmentSchemePublicParameters,
     >
 {
     pub fn new<
         const REPETITIONS: usize,
-        const SCALAR_LIMBS: usize,
-        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
-        GroupElement,
-        CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, BATCH_SIZE, Scalar, GroupElement>,
+        const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        CommitmentScheme,
     >(
-        scalar_group_public_parameters: Scalar::PublicParameters,
-        group_public_parameters: GroupElement::PublicParameters,
-        commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
+        commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
     ) -> Self
     where
-        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
-        GroupElement: group::GroupElement<PublicParameters = GroupElementPublicParameters>,
+        CommitmentScheme::MessageSpaceGroupElement:
+            group::GroupElement<PublicParameters = MessageSpacePublicParameters>,
+        CommitmentScheme::RandomnessSpaceGroupElement:
+            group::GroupElement<PublicParameters = RandomnessSpacePublicParameters>,
+        CommitmentScheme::CommitmentSpaceGroupElement:
+            group::GroupElement<PublicParameters = CommitmentSpacePublicParameters>,
         CommitmentScheme: HomomorphicCommitmentScheme<
-            SCALAR_LIMBS,
+            MESSAGE_SPACE_SCALAR_LIMBS,
             PublicParameters = CommitmentSchemePublicParameters,
         >,
     {
         Self {
             groups_public_parameters: GroupsPublicParameters {
                 witness_space_public_parameters: direct_product::PublicParameters(
-                    self_product::PublicParameters::<BATCH_SIZE, ScalarPublicParameters>::new(
-                        scalar_group_public_parameters.clone(),
-                    ),
-                    scalar_group_public_parameters,
+                    commitment_scheme_public_parameters.message_space_public_parameters(),
+                    commitment_scheme_public_parameters.randomness_space_public_parameters(),
                 ),
-                statement_space_public_parameters: group_public_parameters,
+                statement_space_public_parameters: commitment_scheme_public_parameters
+                    .commitment_space_public_parameters(),
             },
             commitment_scheme_public_parameters,
         }
@@ -202,24 +169,24 @@ impl<
 }
 
 impl<
-        const BATCH_SIZE: usize,
-        ScalarPublicParameters,
-        GroupElementPublicParameters,
+        MessageSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CommitmentSpacePublicParameters,
         CommitmentSchemePublicParameters,
     >
     AsRef<
         GroupsPublicParameters<
             direct_product::PublicParameters<
-                self_product::PublicParameters<BATCH_SIZE, ScalarPublicParameters>,
-                ScalarPublicParameters,
+                MessageSpacePublicParameters,
+                RandomnessSpacePublicParameters,
             >,
-            GroupElementPublicParameters,
+            CommitmentSpacePublicParameters,
         >,
     >
     for PublicParameters<
-        BATCH_SIZE,
-        ScalarPublicParameters,
-        GroupElementPublicParameters,
+        MessageSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CommitmentSpacePublicParameters,
         CommitmentSchemePublicParameters,
     >
 {
@@ -227,10 +194,10 @@ impl<
         &self,
     ) -> &GroupsPublicParameters<
         direct_product::PublicParameters<
-            self_product::PublicParameters<BATCH_SIZE, ScalarPublicParameters>,
-            ScalarPublicParameters,
+            MessageSpacePublicParameters,
+            RandomnessSpacePublicParameters,
         >,
-        GroupElementPublicParameters,
+        CommitmentSpacePublicParameters,
     > {
         &self.groups_public_parameters
     }

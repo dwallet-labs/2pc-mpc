@@ -12,6 +12,8 @@ use crate::{commitments, commitments::HomomorphicCommitmentScheme, proofs::Resul
 
 pub mod bulletproofs;
 
+// TODO: delete
+
 pub trait RangeProof<
     // The commitment scheme's message space scalar size in limbs
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
