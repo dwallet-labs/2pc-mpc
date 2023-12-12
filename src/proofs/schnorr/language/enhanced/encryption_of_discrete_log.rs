@@ -53,7 +53,7 @@ use crate::{
 /// `PrimeOrderGroupElement`.
 ///
 /// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Language<
     const SCALAR_LIMBS: usize,
     const RANGE_CLAIMS_PER_SCALAR: usize,

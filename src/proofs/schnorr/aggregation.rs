@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(feature = "benchmarking")]
-pub(crate) use benches::{benchmark, benchmark_enhanced};
+pub(crate) use benches::benchmark;
 use serde::Serialize;
 
 use crate::{proofs::schnorr::language, PartyID};
@@ -195,7 +195,7 @@ mod benches {
         commitments,
         proofs::schnorr::{
             aggregation::{decommitment_round::Decommitment, proof_share_round::ProofShare},
-            EnhancedLanguage, Language, Proof,
+            Language, Proof,
         },
         Commitment,
     };
@@ -221,46 +221,46 @@ mod benches {
         }
     }
 
-    pub(crate) fn benchmark_enhanced<
-        const REPETITIONS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const NUM_RANGE_CLAIMS: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        Lang: EnhancedLanguage<
-            REPETITIONS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            NUM_RANGE_CLAIMS,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-        >,
-    >(
-        language_public_parameters: Lang::PublicParameters,
-        extra_description: Option<String>,
-        c: &mut Criterion,
-    ) where
-        Uint<RANGE_CLAIM_LIMBS>: Encoding,
-        Uint<WITNESS_MASK_LIMBS>: Encoding,
-    {
-        for batch_size in [1, 10, 100, 1000] {
-            let mut witnesses = language::enhanced::tests::generate_witnesses::<
-                REPETITIONS,
-                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                NUM_RANGE_CLAIMS,
-                RANGE_CLAIM_LIMBS,
-                WITNESS_MASK_LIMBS,
-                Lang,
-            >(&language_public_parameters, batch_size);
-
-            benchmark_internal::<REPETITIONS, Lang>(
-                language_public_parameters.clone(),
-                witnesses,
-                batch_size,
-                extra_description.clone(),
-                c,
-            )
-        }
-    }
+    // pub(crate) fn benchmark_enhanced<
+    //     const REPETITIONS: usize,
+    //     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    //     const NUM_RANGE_CLAIMS: usize,
+    //     const RANGE_CLAIM_LIMBS: usize,
+    //     const WITNESS_MASK_LIMBS: usize,
+    //     Lang: EnhancedLanguage<
+    //         REPETITIONS,
+    //         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+    //         NUM_RANGE_CLAIMS,
+    //         RANGE_CLAIM_LIMBS,
+    //         WITNESS_MASK_LIMBS,
+    //     >,
+    // >(
+    //     language_public_parameters: Lang::PublicParameters,
+    //     extra_description: Option<String>,
+    //     c: &mut Criterion,
+    // ) where
+    //     Uint<RANGE_CLAIM_LIMBS>: Encoding,
+    //     Uint<WITNESS_MASK_LIMBS>: Encoding,
+    // {
+    //     for batch_size in [1, 10, 100, 1000] {
+    //         let mut witnesses = language::enhanced::tests::generate_witnesses::<
+    //             REPETITIONS,
+    //             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+    //             NUM_RANGE_CLAIMS,
+    //             RANGE_CLAIM_LIMBS,
+    //             WITNESS_MASK_LIMBS,
+    //             Lang,
+    //         >(&language_public_parameters, batch_size);
+    //
+    //         benchmark_internal::<REPETITIONS, Lang>(
+    //             language_public_parameters.clone(),
+    //             witnesses,
+    //             batch_size,
+    //             extra_description.clone(),
+    //             c,
+    //         )
+    //     }
+    // }
 
     fn benchmark_internal<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
         language_public_parameters: Lang::PublicParameters,

@@ -1,67 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-// TODO: move to lightning.
-
-use core::array;
-use std::ops::Mul;
-
-use crypto_bigint::{Encoding, Uint};
-use tiresias::secret_sharing::shamir::Polynomial;
-
-use crate::{
-    commitments::{GroupsPublicParametersAccessors as _, Pedersen},
-    group,
-    group::{
-        additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
-        BoundedGroupElement, KnownOrderScalar, Samplable,
-    },
-    proofs,
-    proofs::schnorr::language::GroupsPublicParametersAccessors as _,
-};
-
-pub mod committed_linear_evaluation;
-pub mod encryption_of_discrete_log;
-pub mod encryption_of_tuple;
-
-pub const REPETITIONS: usize = 1;
-
-pub type ConstrainedWitnessGroupElement<const NUM_RANGE_CLAIMS: usize, const SCALAR_LIMBS: usize> =
-    self_product::GroupElement<NUM_RANGE_CLAIMS, power_of_two_moduli::GroupElement<SCALAR_LIMBS>>;
-pub type ConstrainedWitnessValue<const NUM_RANGE_CLAIMS: usize, const SCALAR_LIMBS: usize> =
-    group::Value<
-        self_product::GroupElement<
-            NUM_RANGE_CLAIMS,
-            power_of_two_moduli::GroupElement<SCALAR_LIMBS>,
-        >,
-    >;
-pub type ConstrainedWitnessPublicParameters<
-    const NUM_RANGE_CLAIMS: usize,
-    const SCALAR_LIMBS: usize,
-> = group::PublicParameters<
-    self_product::GroupElement<NUM_RANGE_CLAIMS, power_of_two_moduli::GroupElement<SCALAR_LIMBS>>,
->;
-
-pub type EnhancedLanguageWitness<
-    const NUM_RANGE_CLAIMS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar: BoundedGroupElement<SCALAR_LIMBS>,
-    GroupElement: BoundedGroupElement<SCALAR_LIMBS>,
-    L,
-> = direct_product::ThreeWayGroupElement<
-    ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, SCALAR_LIMBS>,
-    Scalar,
-    <L as EnhancedLanguage<NUM_RANGE_CLAIMS, SCALAR_LIMBS, Scalar, GroupElement>>::UnboundedWitnessSpaceGroupElement,
->;
-
-pub type EnhancedLanguageStatement<
-    const NUM_RANGE_CLAIMS: usize,
-    const SCALAR_LIMBS: usize,
-    Scalar: BoundedGroupElement<SCALAR_LIMBS>,
-    GroupElement: BoundedGroupElement<SCALAR_LIMBS>,
-    L,
-> = direct_product::GroupElement<GroupElement, <L as EnhancedLanguage<NUM_RANGE_CLAIMS, SCALAR_LIMBS, Scalar, GroupElement>>::RemainingStatementSpaceGroupElement>;
-
 // TODO: instead of this being a trait, have it as a struct with trait impl.
 
 /// An Enhacned Schnorr Zero-Knowledge Proof Language.

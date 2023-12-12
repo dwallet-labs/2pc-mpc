@@ -249,10 +249,7 @@ mod tests {
 
     pub(crate) type Secp256k1Language<const REPETITIONS: usize, const BATCH_SIZE: usize> = Language<
         REPETITIONS,
-        BATCH_SIZE,
         { secp256k1::SCALAR_LIMBS },
-        secp256k1::Scalar,
-        secp256k1::GroupElement,
         Pedersen<
             BATCH_SIZE,
             { secp256k1::SCALAR_LIMBS },
@@ -303,19 +300,13 @@ mod tests {
         PublicParameters::new::<
             REPETITIONS,
             { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
-            secp256k1::GroupElement,
             Pedersen<
                 BATCH_SIZE,
                 { secp256k1::SCALAR_LIMBS },
                 secp256k1::Scalar,
                 secp256k1::GroupElement,
             >,
-        >(
-            secp256k1_scalar_public_parameters,
-            secp256k1_group_public_parameters,
-            pedersen_public_parameters,
-        )
+        >(pedersen_public_parameters)
     }
 
     #[rstest]
