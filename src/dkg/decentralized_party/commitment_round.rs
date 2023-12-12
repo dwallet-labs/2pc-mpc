@@ -16,13 +16,9 @@ use crate::{
         PrimeGroupElement, Samplable,
     },
     proofs,
-    proofs::{
-        range,
-        range::CommitmentPublicParametersAccessor as _,
-        schnorr::{
-            encryption_of_discrete_log,
-            language::{enhanced, enhanced::DecomposableWitness},
-        },
+    proofs::schnorr::{
+        encryption_of_discrete_log,
+        language::{enhanced, enhanced::DecomposableWitness},
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
 };

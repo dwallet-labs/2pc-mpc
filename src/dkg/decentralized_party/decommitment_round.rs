@@ -11,12 +11,9 @@ use crate::{
     group,
     group::PrimeGroupElement,
     proofs,
-    proofs::{
-        range,
-        schnorr::{
-            aggregation::decommitment_round::Decommitment, encryption_of_discrete_log,
-            language::enhanced,
-        },
+    proofs::schnorr::{
+        aggregation::decommitment_round::Decommitment, encryption_of_discrete_log,
+        language::enhanced,
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
 };

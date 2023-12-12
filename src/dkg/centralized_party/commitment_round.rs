@@ -13,7 +13,6 @@ use crate::{
     group::{secp256k1, GroupElement as _, GroupElement, PrimeGroupElement, Samplable},
     proofs,
     proofs::{
-        range,
         schnorr::{
             encryption_of_discrete_log, knowledge_of_discrete_log,
             language::{enhanced, GroupsPublicParameters},

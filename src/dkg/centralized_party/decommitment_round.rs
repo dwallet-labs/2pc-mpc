@@ -14,11 +14,7 @@ use crate::{
     group,
     group::{GroupElement as _, PrimeGroupElement},
     proofs,
-    proofs::{
-        range,
-        range::CommitmentPublicParametersAccessor as _,
-        schnorr::{encryption_of_discrete_log, knowledge_of_discrete_log, language::enhanced},
-    },
+    proofs::schnorr::{encryption_of_discrete_log, knowledge_of_discrete_log, language::enhanced},
     AdditivelyHomomorphicEncryptionKey, ComputationalSecuritySizedNumber,
 };
 

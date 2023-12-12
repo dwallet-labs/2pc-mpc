@@ -1,7 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use rand_core::CryptoRngCore;
+use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -67,5 +67,10 @@ impl<
         // right?
         // TODO: call schnorr verify and do range check
         todo!()
+    }
+
+    pub fn range_claim_bits() -> usize {
+        // TODO: formula, and maybe return `Result` and check conditions.
+        Uint::<MESSAGE_SPACE_SCALAR_LIMBS>::BITS - StatisticalSecuritySizedNumber::BITS
     }
 }

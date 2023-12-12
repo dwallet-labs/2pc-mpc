@@ -12,17 +12,14 @@ use crate::{
     group,
     group::{GroupElement as _, PrimeGroupElement},
     proofs,
-    proofs::{
-        range,
-        schnorr::{
-            aggregation::decommitment_round::Decommitment,
-            encryption_of_discrete_log, language,
-            language::{
-                enhanced,
-                enhanced::{
-                    encryption_of_discrete_log::EnhancedLanguageStatementAccessors as _,
-                    EnhancedLanguageStatementAccessors as _,
-                },
+    proofs::schnorr::{
+        aggregation::decommitment_round::Decommitment,
+        encryption_of_discrete_log, language,
+        language::{
+            enhanced,
+            enhanced::{
+                encryption_of_discrete_log::EnhancedLanguageStatementAccessors as _,
+                EnhancedLanguageStatementAccessors as _,
             },
         },
     },

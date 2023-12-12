@@ -11,12 +11,9 @@ use crate::{
     group::{GroupElement as _, GroupElement, PrimeGroupElement, Samplable},
     presign::centralized_party::proof_verification_round,
     proofs,
-    proofs::{
-        range,
-        schnorr::{
-            knowledge_of_decommitment, knowledge_of_decommitment::LanguageCommitmentScheme,
-            language::enhanced,
-        },
+    proofs::schnorr::{
+        knowledge_of_decommitment, knowledge_of_decommitment::LanguageCommitmentScheme,
+        language::enhanced,
     },
     AdditivelyHomomorphicEncryptionKey,
 };

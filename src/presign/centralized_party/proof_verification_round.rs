@@ -8,10 +8,7 @@ use crate::{
     group,
     group::{GroupElement as _, GroupElement, PrimeGroupElement},
     proofs,
-    proofs::{
-        range,
-        schnorr::{knowledge_of_decommitment::LanguageCommitmentScheme, language::enhanced},
-    },
+    proofs::schnorr::{knowledge_of_decommitment::LanguageCommitmentScheme, language::enhanced},
     AdditivelyHomomorphicEncryptionKey,
 };
 

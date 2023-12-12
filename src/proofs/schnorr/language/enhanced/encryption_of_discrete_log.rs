@@ -5,8 +5,8 @@ use std::{marker::PhantomData, ops::Mul};
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
 use crypto_bigint::{generic_array::typenum::Gr, Encoding, Uint};
-pub use language::aliases::encryption_of_discrete_log::*;
 use language::GroupsPublicParameters;
+pub use language::{aliases::encryption_of_discrete_log::*, enhanced::REPETITIONS};
 use schnorr::language;
 use serde::{Deserialize, Serialize};
 
@@ -14,24 +14,22 @@ use super::EnhancedLanguage;
 use crate::{
     ahe,
     ahe::GroupsPublicParametersAccessors as _,
-    commitments::{GroupsPublicParametersAccessors as _, HomomorphicCommitmentScheme},
+    commitments::{pedersen, GroupsPublicParametersAccessors as _, HomomorphicCommitmentScheme},
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
-        BoundedGroupElement, CyclicGroupElement, GroupElement as _, Samplable,
+        self_product::GroupElement, BoundedGroupElement, CyclicGroupElement, GroupElement as _,
+        Samplable,
     },
     proofs,
     proofs::{
-        range,
-        range::CommitmentPublicParametersAccessor as _,
         schnorr,
         schnorr::{
             aggregation,
             language::{
                 enhanced::{
                     ConstrainedWitnessGroupElement, DecomposableWitness,
-                    EnhancedLanguageWitnessAccessors as _, RemainingStatementSpaceGroupElement,
-                    UnboundedWitnessSpaceGroupElement,
+                    EnhancedLanguageWitnessAccessors as _,
                 },
                 GroupsPublicParametersAccessors,
             },
@@ -40,8 +38,6 @@ use crate::{
     AdditivelyHomomorphicEncryptionKey, ComputationalSecuritySizedNumber,
     StatisticalSecuritySizedNumber,
 };
-
-pub(crate) const REPETITIONS: usize = 1;
 
 /// Encryption of Discrete Log Schnorr Language
 ///
@@ -60,82 +56,44 @@ pub(crate) const REPETITIONS: usize = 1;
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Language<
     const SCALAR_LIMBS: usize,
-    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const RANGE_CLAIMS_PER_SCALAR: usize,
-    const RANGE_CLAIM_LIMBS: usize,
-    const WITNESS_MASK_LIMBS: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     Scalar,
     GroupElement,
-    EncryptionKey,
-    RangeProof,
 > {
     _scalar_choice: PhantomData<Scalar>,
     _group_element_choice: PhantomData<GroupElement>,
-    _encryption_key_choice: PhantomData<EncryptionKey>,
-    _range_proof_choice: PhantomData<RangeProof>,
 }
 
 impl<
         const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
         GroupElement: group::GroupElement,
-        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        RangeProof: proofs::RangeProof<
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIM_LIMBS,
-        >,
     > schnorr::Language<REPETITIONS>
-    for Language<
-        SCALAR_LIMBS,
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    >
+    for Language<SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR, Scalar, GroupElement>
 where
-    Uint<RANGE_CLAIM_LIMBS>: Encoding,
-    Uint<WITNESS_MASK_LIMBS>: Encoding,
+    Uint<SCALAR_LIMBS>: Encoding,
     // TODO: think if I can solve this repeated `where` restrictions.
     Scalar::Value: From<Uint<SCALAR_LIMBS>>,
-    range::CommitmentSchemeMessageSpaceValue<
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        RangeProof,
-    >: From<super::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
 {
     type WitnessSpaceGroupElement = super::EnhancedLanguageWitness<
-        REPETITIONS,
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
+        SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
         Self,
     >;
 
     type StatementSpaceGroupElement = super::EnhancedLanguageStatement<
-        REPETITIONS,
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
+        SCALAR_LIMBS,
+        Scalar,
+        GroupElement,
         Self,
     >;
 
     type PublicParameters = PublicParameters<
         RANGE_CLAIMS_PER_SCALAR,
-        WITNESS_MASK_LIMBS,
         GroupElement::PublicParameters,
         Scalar::PublicParameters,
         range::CommitmentSchemeRandomnessSpacePublicParameters<
@@ -168,31 +126,35 @@ where
             language_public_parameters.group_public_parameters(),
         )?;
 
-        let encryption_key =
-            EncryptionKey::new(&language_public_parameters.encryption_scheme_public_parameters)?;
-
-        let commitment_scheme = RangeProof::CommitmentScheme::new(
-            language_public_parameters
-                .range_proof_public_parameters
-                .commitment_public_parameters(),
+        let encryption_key = paillier::EncryptionKey::new(
+            &language_public_parameters.paillier_encryption_public_parameters,
         )?;
+
+        let commitment_scheme =
+            Pedersen::new(&language_public_parameters.pedersen_public_parameters);
 
         let discrete_log_scalar =
             <Scalar as DecomposableWitness<SCALAR_LIMBS>>::compose_from_constrained_witness(
                 *witness.constrained_witness(),
                 &language_public_parameters.scalar_group_public_parameters,
-                RangeProof::RANGE_CLAIM_BITS,
+                proofs::lightning::RangeProof::<
+                    SCALAR_LIMBS,
+                    Pedersen<RANGE_CLAIMS_PER_SCALAR, Scalar, GroupElement>,
+                >::range_claim_bits(),
             )?;
 
         let discrete_log_plaintext =
-            <EncryptionKey::PlaintextSpaceGroupElement as DecomposableWitness<
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
+            <group::paillier::PlaintextGroupElement as DecomposableWitness<
+                group::paillier::PLAINTEXT_SPACE_SCALAR_LIMBS,
             >>::compose_from_constrained_witness(
                 *witness.constrained_witness(),
-                &language_public_parameters
-                    .encryption_scheme_public_parameters
+                language_public_parameters
+                    .paillier_encryption_public_parameters
                     .plaintext_space_public_parameters(),
-                RangeProof::RANGE_CLAIM_BITS,
+                proofs::lightning::RangeProof::<
+                    SCALAR_LIMBS,
+                    Pedersen<RANGE_CLAIMS_PER_SCALAR, Scalar, GroupElement>,
+                >::range_claim_bits(),
             )?;
 
         let discrete_log_commitment_message = range::CommitmentSchemeMessageSpaceGroupElement::<
@@ -231,59 +193,19 @@ where
 
 impl<
         const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
         GroupElement: group::GroupElement,
-        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        RangeProof,
-    >
-    EnhancedLanguage<
-        REPETITIONS,
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
-    >
-    for Language<
-        SCALAR_LIMBS,
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    >
+    > EnhancedLanguage<RANGE_CLAIMS_PER_SCALAR, SCALAR_LIMBS, Scalar, GroupElement>
+    for Language<SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR, Scalar, GroupElement>
 where
-    Uint<RANGE_CLAIM_LIMBS>: Encoding,
-    Uint<WITNESS_MASK_LIMBS>: Encoding,
+    Uint<SCALAR_LIMBS>: Encoding,
     Scalar::Value: From<Uint<SCALAR_LIMBS>>,
-    range::CommitmentSchemeMessageSpaceValue<
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        RangeProof,
-    >: From<super::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
-    RangeProof: proofs::RangeProof<
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        RANGE_CLAIM_LIMBS,
-    >,
 {
-    type UnboundedWitnessSpaceGroupElement =
-        ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>;
+    type UnboundedWitnessSpaceGroupElement = group::paillier::RandomnessGroupElement;
 
-    type RemainingStatementSpaceGroupElement = direct_product::GroupElement<
-        ahe::CiphertextSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        GroupElement,
-    >;
-
-    type RangeProof = RangeProof;
+    type RemainingStatementSpaceGroupElement =
+        direct_product::GroupElement<group::paillier::CiphertextGroupElement, GroupElement>;
 }
 
 pub trait EnhancedLanguageWitnessAccessors<
@@ -393,8 +315,13 @@ pub struct PublicParameters<
         EncryptionRandomnessPublicParameters,
         direct_product::PublicParameters<CiphertextPublicParameters, GroupElementPublicParameters>,
     >,
-    pub range_proof_public_parameters: RangeProofPublicParameters,
-    pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
+    pub pedersen_public_parameters: pedersen::PublicParameters<
+        RANGE_CLAIMS_PER_SCALAR,
+        GroupElementValue,
+        ScalarPublicParameters,
+        GroupElementPublicParameters,
+    >,
+    pub paillier_encryption_public_parameters: paillier::PublicParameters,
     pub scalar_group_public_parameters: ScalarPublicParameters,
     // The base of the discrete log
     pub generator: GroupElementValue,

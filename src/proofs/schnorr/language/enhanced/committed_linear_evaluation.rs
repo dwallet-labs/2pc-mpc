@@ -23,8 +23,6 @@ use crate::{
     helpers::flat_map_results,
     proofs,
     proofs::{
-        range,
-        range::CommitmentPublicParametersAccessor as _,
         schnorr,
         schnorr::{
             aggregation,
@@ -392,8 +390,6 @@ where
         // The commitment on the evaluation coefficients
         GroupElement,
     >;
-
-    type RangeProof = RangeProof;
 }
 
 pub trait EnhancedLanguageWitnessAccessors<

@@ -22,13 +22,9 @@ use crate::{
         nonce_sharing_and_key_share_masking_proof_share_round,
     },
     proofs,
-    proofs::{
-        range,
-        range::CommitmentPublicParametersAccessor as _,
-        schnorr::{
-            encryption_of_discrete_log, encryption_of_tuple,
-            knowledge_of_decommitment::LanguageCommitmentScheme, language::enhanced,
-        },
+    proofs::schnorr::{
+        encryption_of_discrete_log, encryption_of_tuple,
+        knowledge_of_decommitment::LanguageCommitmentScheme, language::enhanced,
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
 };

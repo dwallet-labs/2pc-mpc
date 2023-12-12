@@ -22,8 +22,6 @@ use crate::{
     },
     proofs,
     proofs::{
-        range,
-        range::CommitmentPublicParametersAccessor as _,
         schnorr,
         schnorr::{
             aggregation,

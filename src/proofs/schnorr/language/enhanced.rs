@@ -17,10 +17,7 @@ use crate::{
         BoundedGroupElement, KnownOrderScalar, Samplable,
     },
     proofs,
-    proofs::{
-        range, range::CommitmentPublicParametersAccessor as _,
-        schnorr::language::GroupsPublicParametersAccessors as _,
-    },
+    proofs::schnorr::language::GroupsPublicParametersAccessors as _,
 };
 
 pub mod committed_linear_evaluation;
@@ -64,6 +61,8 @@ pub type EnhancedLanguageStatement<
     GroupElement: BoundedGroupElement<SCALAR_LIMBS>,
     L,
 > = direct_product::GroupElement<GroupElement, <L as EnhancedLanguage<NUM_RANGE_CLAIMS, SCALAR_LIMBS, Scalar, GroupElement>>::RemainingStatementSpaceGroupElement>;
+
+// TODO: instead of this being a trait, have it as a struct with trait impl.
 
 /// An Enhacned Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.

@@ -19,14 +19,10 @@ use crate::{
         nonce_masking_commitment_round, nonce_sharing_and_key_share_masking_decommitment_round,
     },
     proofs,
-    proofs::{
-        range,
-        range::CommitmentPublicParametersAccessor as _,
-        schnorr::{
-            encryption_of_discrete_log, encryption_of_tuple,
-            knowledge_of_decommitment::LanguageCommitmentScheme,
-            language::{enhanced, enhanced::ConstrainedWitnessGroupElement},
-        },
+    proofs::schnorr::{
+        encryption_of_discrete_log, encryption_of_tuple,
+        knowledge_of_decommitment::LanguageCommitmentScheme,
+        language::{enhanced, enhanced::ConstrainedWitnessGroupElement},
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
 };
