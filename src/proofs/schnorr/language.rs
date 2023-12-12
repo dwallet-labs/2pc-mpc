@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
-pub use enhanced::{
-    committed_linear_evaluation, encryption_of_discrete_log, encryption_of_tuple, EnhancedLanguage,
-};
+// todo
+// pub use enhanced::{
+//     committed_linear_evaluation, encryption_of_discrete_log, encryption_of_tuple,
+// EnhancedLanguage, };
 use proofs::Result;
 use serde::{Deserialize, Serialize};
 
@@ -14,10 +15,11 @@ use crate::{
     proofs,
 };
 
-mod aliases;
+// TODO: delete
+// mod aliases;
 pub mod commitment_of_discrete_log;
 pub mod discrete_log_ratio_of_commited_values;
-pub mod enhanced;
+// pub mod enhanced;
 pub mod knowledge_of_decommitment;
 pub mod knowledge_of_discrete_log;
 

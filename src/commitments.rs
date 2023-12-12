@@ -124,6 +124,8 @@ impl<
 {
 }
 
+// TODO: remove second-layer aliases.
+
 pub type PublicParameters<const MESSAGE_SPACE_SCALAR_LIMBS: usize, C> =
     <C as HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>>::PublicParameters;
 pub type MessageSpaceGroupElement<const MESSAGE_SPACE_SCALAR_LIMBS: usize, C> =

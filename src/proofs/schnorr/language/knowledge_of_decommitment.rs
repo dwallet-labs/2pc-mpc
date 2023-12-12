@@ -7,12 +7,13 @@ pub(crate) use benches::{
     benchmark_lightningproofs_dcom_eval, benchmark_lightningproofs_encdl,
     benchmark_lightningproofs_single_message, benchmark_zero_knowledge,
 };
-pub use language::aliases::knowledge_of_decommitment::*;
+// pub use language::aliases::knowledge_of_decommitment::*;
 use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
 use crate::{
-    commitments::{HomomorphicCommitmentScheme, Pedersen},
+    commitments,
+    commitments::{GroupsPublicParametersAccessors, HomomorphicCommitmentScheme},
     group,
     group::{direct_product, self_product, BoundedGroupElement, Samplable},
     proofs,
@@ -38,6 +39,9 @@ impl<
         CommitmentScheme: HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>,
     > schnorr::Language<REPETITIONS>
     for Language<REPETITIONS, MESSAGE_SPACE_SCALAR_LIMBS, CommitmentScheme>
+where
+    CommitmentScheme::MessageSpaceGroupElement: Samplable,
+    CommitmentScheme::RandomnessSpaceGroupElement: Samplable,
 {
     type WitnessSpaceGroupElement = direct_product::GroupElement<
         CommitmentScheme::MessageSpaceGroupElement,
@@ -46,9 +50,9 @@ impl<
     type StatementSpaceGroupElement = CommitmentScheme::CommitmentSpaceGroupElement;
 
     type PublicParameters = PublicParameters<
-        CommitmentScheme::MessageSpace::PublicParameters,
-        CommitmentScheme::RandomnessSpace::PublicParameters,
-        CommitmentScheme::CommitmentSpace::PublicParameters,
+        group::PublicParameters<CommitmentScheme::MessageSpaceGroupElement>,
+        group::PublicParameters<CommitmentScheme::RandomnessSpaceGroupElement>,
+        group::PublicParameters<CommitmentScheme::CommitmentSpaceGroupElement>,
         CommitmentScheme::PublicParameters,
     >;
 
@@ -74,29 +78,40 @@ impl<
             CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
         Ok(commitment_scheme.commit(
-            &witness.commitment_message(),
+            witness.commitment_message(),
             witness.commitment_randomness(),
         ))
     }
 }
 
-pub trait WitnessAccessors<const BATCH_SIZE: usize, Scalar: group::GroupElement> {
-    fn commitment_message(&self) -> &self_product::GroupElement<BATCH_SIZE, Scalar>;
+pub trait WitnessAccessors<
+    CommitmentSchemeMessageSpaceGroupElement,
+    CommitmentSchemeRandomnessSpaceGroupElement,
+>
+{
+    fn commitment_message(&self) -> &CommitmentSchemeMessageSpaceGroupElement;
 
-    fn commitment_randomness(&self) -> &Scalar;
+    fn commitment_randomness(&self) -> &CommitmentSchemeRandomnessSpaceGroupElement;
 }
 
-impl<const BATCH_SIZE: usize, Scalar: group::GroupElement> WitnessAccessors<BATCH_SIZE, Scalar>
-    for direct_product::GroupElement<self_product::GroupElement<BATCH_SIZE, Scalar>, Scalar>
+impl<CommitmentSchemeMessageSpaceGroupElement, CommitmentSchemeRandomnessSpaceGroupElement>
+    WitnessAccessors<
+        CommitmentSchemeMessageSpaceGroupElement,
+        CommitmentSchemeRandomnessSpaceGroupElement,
+    >
+    for direct_product::GroupElement<
+        CommitmentSchemeMessageSpaceGroupElement,
+        CommitmentSchemeRandomnessSpaceGroupElement,
+    >
 {
-    fn commitment_message(&self) -> &self_product::GroupElement<BATCH_SIZE, Scalar> {
-        let value: (&self_product::GroupElement<BATCH_SIZE, Scalar>, &Scalar) = self.into();
+    fn commitment_message(&self) -> &CommitmentSchemeMessageSpaceGroupElement {
+        let value: (&_, &_) = self.into();
 
         value.0
     }
 
-    fn commitment_randomness(&self) -> &Scalar {
-        let value: (&self_product::GroupElement<BATCH_SIZE, Scalar>, &Scalar) = self.into();
+    fn commitment_randomness(&self) -> &CommitmentSchemeRandomnessSpaceGroupElement {
+        let value: (&_, &_) = self.into();
 
         value.1
     }
@@ -123,9 +138,9 @@ pub struct PublicParameters<
 }
 
 impl<
-        MessageSpacePublicParameters,
-        RandomnessSpacePublicParameters,
-        CommitmentSpacePublicParameters,
+        MessageSpacePublicParameters: Clone,
+        RandomnessSpacePublicParameters: Clone,
+        CommitmentSpacePublicParameters: Clone,
         CommitmentSchemePublicParameters,
     >
     PublicParameters<
@@ -140,7 +155,7 @@ impl<
         const MESSAGE_SPACE_SCALAR_LIMBS: usize,
         CommitmentScheme,
     >(
-        commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
+        commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
     ) -> Self
     where
         CommitmentScheme::MessageSpaceGroupElement:
@@ -153,15 +168,27 @@ impl<
             MESSAGE_SPACE_SCALAR_LIMBS,
             PublicParameters = CommitmentSchemePublicParameters,
         >,
+        CommitmentSchemePublicParameters: AsRef<
+            commitments::GroupsPublicParameters<
+                MessageSpacePublicParameters,
+                RandomnessSpacePublicParameters,
+                CommitmentSpacePublicParameters,
+            >,
+        >,
     {
         Self {
             groups_public_parameters: GroupsPublicParameters {
                 witness_space_public_parameters: direct_product::PublicParameters(
-                    commitment_scheme_public_parameters.message_space_public_parameters(),
-                    commitment_scheme_public_parameters.randomness_space_public_parameters(),
+                    commitment_scheme_public_parameters
+                        .message_space_public_parameters()
+                        .clone(),
+                    commitment_scheme_public_parameters
+                        .randomness_space_public_parameters()
+                        .clone(),
                 ),
                 statement_space_public_parameters: commitment_scheme_public_parameters
-                    .commitment_space_public_parameters(),
+                    .commitment_space_public_parameters()
+                    .clone(),
             },
             commitment_scheme_public_parameters,
         }

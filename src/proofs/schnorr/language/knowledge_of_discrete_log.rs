@@ -4,7 +4,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
-pub use language::aliases::knowledge_of_discrete_log::*;
+// pub use language::aliases::knowledge_of_discrete_log::*;
 use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
@@ -37,8 +37,14 @@ pub struct Language<Scalar, GroupElement> {
     _group_element_choice: PhantomData<GroupElement>,
 }
 
-impl<Scalar: LanguageScalar<GroupElement>, GroupElement: group::GroupElement>
-    schnorr::Language<REPETITIONS> for Language<Scalar, GroupElement>
+impl<
+        Scalar: group::GroupElement
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy,
+        GroupElement: group::GroupElement,
+    > schnorr::Language<REPETITIONS> for Language<Scalar, GroupElement>
 {
     type WitnessSpaceGroupElement = Scalar;
     type StatementSpaceGroupElement = GroupElement;
@@ -78,7 +84,14 @@ pub struct PublicParameters<ScalarPublicParameters, GroupElementPublicParameters
 impl<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
     PublicParameters<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
 {
-    pub fn new<Scalar: LanguageScalar<GroupElement>, GroupElement>(
+    pub fn new<
+        Scalar: group::GroupElement
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy,
+        GroupElement,
+    >(
         scalar_group_public_parameters: Scalar::PublicParameters,
         group_public_parameters: GroupElement::PublicParameters,
     ) -> Self

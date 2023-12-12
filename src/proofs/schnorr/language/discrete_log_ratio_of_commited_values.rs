@@ -4,7 +4,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
-pub use language::aliases::discrete_log_ratio_of_commited_values::*;
+// pub use language::aliases::discrete_log_ratio_of_commited_values::*;
 use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
@@ -42,7 +42,11 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
 impl<const SCALAR_LIMBS: usize, Scalar, GroupElement> schnorr::Language<REPETITIONS>
     for Language<SCALAR_LIMBS, Scalar, GroupElement>
 where
-    Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
+    Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
+        + Samplable
+        + Mul<GroupElement, Output = GroupElement>
+        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+        + Copy,
     GroupElement: group::GroupElement,
 {
     type WitnessSpaceGroupElement = self_product::GroupElement<3, Scalar>;
@@ -169,7 +173,11 @@ impl<
 {
     pub fn new<
         const SCALAR_LIMBS: usize,
-        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
+        Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy,
         GroupElement,
     >(
         scalar_group_public_parameters: Scalar::PublicParameters,

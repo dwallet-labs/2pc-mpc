@@ -4,7 +4,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
-pub use language::aliases::commitment_of_discrete_log::*;
+// pub use language::aliases::commitment_of_discrete_log::*;
 use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
@@ -46,9 +46,18 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentS
 
 impl<
         const SCALAR_LIMBS: usize,
-        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
+        Scalar: BoundedGroupElement<SCALAR_LIMBS>
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy,
         GroupElement: CyclicGroupElement,
-        CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, Scalar, GroupElement>,
+        CommitmentScheme: HomomorphicCommitmentScheme<
+            SCALAR_LIMBS,
+            MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+            RandomnessSpaceGroupElement = Scalar,
+            CommitmentSpaceGroupElement = GroupElement,
+        >,
     > schnorr::Language<REPETITIONS>
     for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
 {
@@ -172,9 +181,18 @@ impl<
 {
     pub fn new<
         const SCALAR_LIMBS: usize,
-        Scalar: LanguageScalar<SCALAR_LIMBS, GroupElement>,
+        Scalar: BoundedGroupElement<SCALAR_LIMBS>
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy,
         GroupElement: CyclicGroupElement,
-        CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, Scalar, GroupElement>,
+        CommitmentScheme: HomomorphicCommitmentScheme<
+            SCALAR_LIMBS,
+            MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+            RandomnessSpaceGroupElement = Scalar,
+            CommitmentSpaceGroupElement = GroupElement,
+        >,
     >(
         scalar_group_public_parameters: Scalar::PublicParameters,
         group_public_parameters: GroupElement::PublicParameters,

@@ -583,1036 +583,680 @@ pub mod commitment_of_discrete_log {
         ProtocolContext,
     >;
 }
-
-pub mod encryption_of_tuple {
-    use std::ops::Mul;
-
-    use crate::{
-        group::{KnownOrderScalar, Samplable},
-        proofs::{
-            schnorr,
-            schnorr::{
-                aggregation, language,
-                language::enhanced::encryption_of_tuple::{Language, REPETITIONS},
-            },
-        },
-    };
-
-    pub trait LanguageScalar<const SCALAR_LIMBS: usize, GroupElement>:
-        KnownOrderScalar<SCALAR_LIMBS>
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + Mul<Self, Output = Self>
-        + for<'r> Mul<&'r Self, Output = Self>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Copy
-    {
-    }
-
-    impl<const SCALAR_LIMBS: usize, GroupElement, T> LanguageScalar<SCALAR_LIMBS, GroupElement> for T where
-        T: KnownOrderScalar<SCALAR_LIMBS>
-            + Samplable
-            + Mul<GroupElement, Output = GroupElement>
-            + Mul<Self, Output = Self>
-            + for<'r> Mul<&'r Self, Output = Self>
-            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-            + Copy
-    {
-    }
-
-    /// The Witness Space Group Element of an Encryption of a Tuple Schnorr Language.
-    pub type WitnessSpaceGroupElement<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    > = language::WitnessSpaceGroupElement<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-    >;
-
-    /// The Statement Space Group Element of an Encryption of a Tuple Schnorr Language.
-    pub type StatementSpaceGroupElement<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    > = language::StatementSpaceGroupElement<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-    >;
-
-    /// The Public Parameters of an Encryption of a Tuple Schnorr Language.
-    pub type LanguagePublicParameters<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    > = language::PublicParameters<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-    >;
-
-    // TODO: this should be the enhanced version, or if we remove it then have two aliases.
-    /// An Encryption of a Tuple Schnorr Proof.
-    pub type Proof<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-        ProtocolContext,
-    > = schnorr::Proof<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-
-    /// An Encryption of a Tuple Schnorr Proof Aggregation Commitment Round Party.
-    pub type ProofAggregationCommitmentRoundParty<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-        ProtocolContext,
-    > = aggregation::commitment_round::Party<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-
-    /// An Encryption of a Tuple Schnorr Proof Aggregation Decommitment Round Party.
-    pub type ProofAggregationDecommitmentRoundParty<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-        ProtocolContext,
-    > = aggregation::decommitment_round::Party<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-
-    /// An Encryption of a Tuple Schnorr Proof Aggregation Decommitment.
-    pub type Decommitment<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    > = aggregation::decommitment_round::Decommitment<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-    >;
-
-    /// An Encryption of a Tuple Schnorr Proof Aggregation Proof Share Round Party.
-    pub type ProofAggregationProofShareRoundParty<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-        ProtocolContext,
-    > = aggregation::proof_share_round::Party<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-
-    /// An Encryption of a Tuple Schnorr Proof Aggregation Proof Share.
-    pub type ProofShare<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    > = aggregation::proof_share_round::ProofShare<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-    >;
-
-    /// An Encryption of a Tuple Schnorr Proof Aggregation Proof Aggregation Round Party.
-    pub type ProofAggregationProofAggregationRoundParty<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-        ProtocolContext,
-    > = aggregation::proof_aggregation_round::Party<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-}
-
-pub mod encryption_of_discrete_log {
-    // TODO: does it need to be known-order or not?
-    pub use super::encryption_of_tuple::LanguageScalar;
-    use crate::proofs::{
-        schnorr,
-        schnorr::{
-            aggregation, language,
-            language::enhanced::encryption_of_discrete_log::{Language, REPETITIONS},
-        },
-    };
-
-    /// The Witness Space Group Element of an Encryption of Discrete Log Schnorr Language.
-    pub type WitnessSpaceGroupElement<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    > = language::WitnessSpaceGroupElement<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-    >;
-
-    /// The Statement Space Group Element of an Encryption of Discrete Log Schnorr Language.
-    pub type StatementSpaceGroupElement<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    > = language::StatementSpaceGroupElement<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-    >;
-
-    /// The Public Parameters of an Encryption of Discrete Log Schnorr Language.
-    pub type LanguagePublicParameters<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    > = language::PublicParameters<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-    >;
-
-    // TODO: same
-    /// An Encryption of Discrete Log Schnorr Proof.
-    pub type Proof<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-        ProtocolContext,
-    > = schnorr::Proof<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-
-    /// An Encryption of Discrete Log Schnorr Proof Aggregation Commitment Round Party.
-    pub type ProofAggregationCommitmentRoundParty<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-        ProtocolContext,
-    > = aggregation::commitment_round::Party<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-
-    /// An Encryption of Discrete Log Schnorr Proof Aggregation Decommitment Round Party.
-    pub type ProofAggregationDecommitmentRoundParty<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-        ProtocolContext,
-    > = aggregation::decommitment_round::Party<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-
-    /// An Encryption of Discrete Log Schnorr Proof Aggregation Decommitment.
-    pub type Decommitment<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    > = aggregation::decommitment_round::Decommitment<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-    >;
-
-    /// An Encryption of Discrete Log Schnorr Proof Aggregation Proof Share Round Party.
-    pub type ProofAggregationProofShareRoundParty<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-        ProtocolContext,
-    > = aggregation::proof_share_round::Party<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-
-    /// An Encryption of Discrete Log Schnorr Proof Aggregation Proof Share.
-    pub type ProofShare<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-    > = aggregation::proof_share_round::ProofShare<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-    >;
-
-    /// An Encryption of Discrete Log Schnorr Proof Proof Aggregation Round Party.
-    pub type ProofAggregationProofAggregationRoundParty<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        RangeProof,
-        ProtocolContext,
-    > = aggregation::proof_aggregation_round::Party<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-}
-
-pub mod committed_linear_evaluation {
-    pub use super::encryption_of_tuple::LanguageScalar;
-    use crate::proofs::{
-        schnorr,
-        schnorr::{
-            aggregation, language,
-            language::enhanced::committed_linear_evaluation::{Language, REPETITIONS},
-        },
-    };
-
-    /// The Witness Space Group Element of a Committed Linear Evaluation Schnorr Language.
-    pub type WitnessSpaceGroupElement<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const MASK_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIMS_PER_MASK: usize,
-        const NUM_RANGE_CLAIMS: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const DIMENSION: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        CommitmentScheme,
-        RangeProof,
-    > = language::WitnessSpaceGroupElement<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            MASK_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIMS_PER_MASK,
-            NUM_RANGE_CLAIMS,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            DIMENSION,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            CommitmentScheme,
-            RangeProof,
-        >,
-    >;
-
-    /// The Statement Space Group Element of a Committed Linear Evaluation Schnorr Language.
-    pub type StatementSpaceGroupElement<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const MASK_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIMS_PER_MASK: usize,
-        const NUM_RANGE_CLAIMS: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const DIMENSION: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        CommitmentScheme,
-        RangeProof,
-    > = language::StatementSpaceGroupElement<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            MASK_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIMS_PER_MASK,
-            NUM_RANGE_CLAIMS,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            DIMENSION,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            CommitmentScheme,
-            RangeProof,
-        >,
-    >;
-
-    /// The Public Parameters of a Committed Linear Evaluation Schnorr Language.
-    pub type LanguagePublicParameters<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const MASK_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIMS_PER_MASK: usize,
-        const NUM_RANGE_CLAIMS: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const DIMENSION: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        CommitmentScheme,
-        RangeProof,
-    > = language::PublicParameters<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            MASK_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIMS_PER_MASK,
-            NUM_RANGE_CLAIMS,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            DIMENSION,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            CommitmentScheme,
-            RangeProof,
-        >,
-    >;
-
-    // todo: same
-    /// A Committed Linear Evaluation Schnorr Proof.
-    pub type Proof<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const MASK_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIMS_PER_MASK: usize,
-        const NUM_RANGE_CLAIMS: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const DIMENSION: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        CommitmentScheme,
-        RangeProof,
-        ProtocolContext,
-    > = schnorr::Proof<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            MASK_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIMS_PER_MASK,
-            NUM_RANGE_CLAIMS,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            DIMENSION,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            CommitmentScheme,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-
-    /// A Committed Linear Evaluation Schnorr Proof Aggregation Commitment Round Party.
-    pub type ProofAggregationCommitmentRoundParty<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const MASK_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIMS_PER_MASK: usize,
-        const NUM_RANGE_CLAIMS: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const DIMENSION: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        CommitmentScheme,
-        RangeProof,
-        ProtocolContext,
-    > = aggregation::commitment_round::Party<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            MASK_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIMS_PER_MASK,
-            NUM_RANGE_CLAIMS,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            DIMENSION,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            CommitmentScheme,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-
-    /// A Committed Linear Evaluation Schnorr Proof Aggregation Decommitment Round Party.
-    pub type ProofAggregationDecommitmentRoundParty<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const MASK_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIMS_PER_MASK: usize,
-        const NUM_RANGE_CLAIMS: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const DIMENSION: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        CommitmentScheme,
-        RangeProof,
-        ProtocolContext,
-    > = aggregation::decommitment_round::Party<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            MASK_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIMS_PER_MASK,
-            NUM_RANGE_CLAIMS,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            DIMENSION,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            CommitmentScheme,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-
-    /// A Committed Linear Evaluation Schnorr Proof Aggregation Decommitment.
-    pub type ProDecommitmentofAggregationDecommitmentRoundParty<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const MASK_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIMS_PER_MASK: usize,
-        const NUM_RANGE_CLAIMS: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const DIMENSION: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        CommitmentScheme,
-        RangeProof,
-    > = aggregation::decommitment_round::Decommitment<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            MASK_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIMS_PER_MASK,
-            NUM_RANGE_CLAIMS,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            DIMENSION,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            CommitmentScheme,
-            RangeProof,
-        >,
-    >;
-
-    /// A Committed Linear Evaluation Schnorr Proof Aggregation Proof Share Round Party.
-    pub type ProofAggregationProofShareRoundParty<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const MASK_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIMS_PER_MASK: usize,
-        const NUM_RANGE_CLAIMS: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const DIMENSION: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        CommitmentScheme,
-        RangeProof,
-        ProtocolContext,
-    > = aggregation::proof_share_round::Party<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            MASK_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIMS_PER_MASK,
-            NUM_RANGE_CLAIMS,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            DIMENSION,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            CommitmentScheme,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-
-    /// A Committed Linear Evaluation Schnorr Proof Aggregation Proof Share.
-    pub type ProofShare<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const MASK_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIMS_PER_MASK: usize,
-        const NUM_RANGE_CLAIMS: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const DIMENSION: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        CommitmentScheme,
-        RangeProof,
-    > = aggregation::proof_share_round::ProofShare<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            MASK_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIMS_PER_MASK,
-            NUM_RANGE_CLAIMS,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            DIMENSION,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            CommitmentScheme,
-            RangeProof,
-        >,
-    >;
-
-    /// A Committed Linear Evaluation Schnorr Proof Aggregation Proof Aggregation Round Party.
-    pub type ProofAggregationProofAggregationRoundParty<
-        const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const MASK_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIMS_PER_MASK: usize,
-        const NUM_RANGE_CLAIMS: usize,
-        const RANGE_CLAIM_LIMBS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        const DIMENSION: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        Scalar,
-        GroupElement,
-        EncryptionKey,
-        CommitmentScheme,
-        RangeProof,
-        ProtocolContext,
-    > = aggregation::proof_aggregation_round::Party<
-        REPETITIONS,
-        Language<
-            SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            MASK_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIMS_PER_MASK,
-            NUM_RANGE_CLAIMS,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
-            DIMENSION,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            Scalar,
-            GroupElement,
-            EncryptionKey,
-            CommitmentScheme,
-            RangeProof,
-        >,
-        ProtocolContext,
-    >;
-}
+// pub mod encryption_of_tuple {
+//     use std::ops::Mul;
+//
+//     use crate::{
+//         group::{KnownOrderScalar, Samplable},
+//         proofs::{
+//             schnorr,
+//             schnorr::{
+//                 aggregation, language,
+//                 language::enhanced::encryption_of_tuple::{Language, REPETITIONS},
+//             },
+//         },
+//     };
+//
+//     pub trait LanguageScalar<const SCALAR_LIMBS: usize, GroupElement>:
+//         KnownOrderScalar<SCALAR_LIMBS>
+//         + Samplable
+//         + Mul<GroupElement, Output = GroupElement>
+//         + Mul<Self, Output = Self>
+//         + for<'r> Mul<&'r Self, Output = Self>
+//         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+//         + Copy
+//     {
+//     }
+//
+//     impl<const SCALAR_LIMBS: usize, GroupElement, T> LanguageScalar<SCALAR_LIMBS, GroupElement>
+// for T where         T: KnownOrderScalar<SCALAR_LIMBS>
+//             + Samplable
+//             + Mul<GroupElement, Output = GroupElement>
+//             + Mul<Self, Output = Self>
+//             + for<'r> Mul<&'r Self, Output = Self>
+//             + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+//             + Copy
+//     {
+//     }
+//
+//     /// The Witness Space Group Element of an Encryption of a Tuple Schnorr Language.
+//     pub type WitnessSpaceGroupElement<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//     > = language::WitnessSpaceGroupElement< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >,
+//     >;
+//
+//     /// The Statement Space Group Element of an Encryption of a Tuple Schnorr Language.
+//     pub type StatementSpaceGroupElement<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//     > = language::StatementSpaceGroupElement< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >,
+//     >;
+//
+//     /// The Public Parameters of an Encryption of a Tuple Schnorr Language.
+//     pub type LanguagePublicParameters<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//     > = language::PublicParameters< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >,
+//     >;
+//
+//     // TODO: this should be the enhanced version, or if we remove it then have two aliases.
+//     /// An Encryption of a Tuple Schnorr Proof.
+//     pub type Proof<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//         ProtocolContext,
+//     > = schnorr::Proof< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >, ProtocolContext,
+//     >;
+//
+//     /// An Encryption of a Tuple Schnorr Proof Aggregation Commitment Round Party.
+//     pub type ProofAggregationCommitmentRoundParty<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//         ProtocolContext,
+//     > = aggregation::commitment_round::Party< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >, ProtocolContext,
+//     >;
+//
+//     /// An Encryption of a Tuple Schnorr Proof Aggregation Decommitment Round Party.
+//     pub type ProofAggregationDecommitmentRoundParty<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//         ProtocolContext,
+//     > = aggregation::decommitment_round::Party< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >, ProtocolContext,
+//     >;
+//
+//     /// An Encryption of a Tuple Schnorr Proof Aggregation Decommitment.
+//     pub type Decommitment<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//     > = aggregation::decommitment_round::Decommitment< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >,
+//     >;
+//
+//     /// An Encryption of a Tuple Schnorr Proof Aggregation Proof Share Round Party.
+//     pub type ProofAggregationProofShareRoundParty<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//         ProtocolContext,
+//     > = aggregation::proof_share_round::Party< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >, ProtocolContext,
+//     >;
+//
+//     /// An Encryption of a Tuple Schnorr Proof Aggregation Proof Share.
+//     pub type ProofShare<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//     > = aggregation::proof_share_round::ProofShare< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >,
+//     >;
+//
+//     /// An Encryption of a Tuple Schnorr Proof Aggregation Proof Aggregation Round Party.
+//     pub type ProofAggregationProofAggregationRoundParty<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//         ProtocolContext,
+//     > = aggregation::proof_aggregation_round::Party< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >, ProtocolContext,
+//     >;
+// }
+//
+// pub mod encryption_of_discrete_log {
+//     // TODO: does it need to be known-order or not?
+//     pub use super::encryption_of_tuple::LanguageScalar;
+//     use crate::proofs::{
+//         schnorr,
+//         schnorr::{
+//             aggregation, language,
+//             language::enhanced::encryption_of_discrete_log::{Language, REPETITIONS},
+//         },
+//     };
+//
+//     /// The Witness Space Group Element of an Encryption of Discrete Log Schnorr Language.
+//     pub type WitnessSpaceGroupElement<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//     > = language::WitnessSpaceGroupElement< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >,
+//     >;
+//
+//     /// The Statement Space Group Element of an Encryption of Discrete Log Schnorr Language.
+//     pub type StatementSpaceGroupElement<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//     > = language::StatementSpaceGroupElement< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >,
+//     >;
+//
+//     /// The Public Parameters of an Encryption of Discrete Log Schnorr Language.
+//     pub type LanguagePublicParameters<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//     > = language::PublicParameters< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >,
+//     >;
+//
+//     // TODO: same
+//     /// An Encryption of Discrete Log Schnorr Proof.
+//     pub type Proof<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//         ProtocolContext,
+//     > = schnorr::Proof< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >, ProtocolContext,
+//     >;
+//
+//     /// An Encryption of Discrete Log Schnorr Proof Aggregation Commitment Round Party.
+//     pub type ProofAggregationCommitmentRoundParty<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//         ProtocolContext,
+//     > = aggregation::commitment_round::Party< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >, ProtocolContext,
+//     >;
+//
+//     /// An Encryption of Discrete Log Schnorr Proof Aggregation Decommitment Round Party.
+//     pub type ProofAggregationDecommitmentRoundParty<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//         ProtocolContext,
+//     > = aggregation::decommitment_round::Party< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >, ProtocolContext,
+//     >;
+//
+//     /// An Encryption of Discrete Log Schnorr Proof Aggregation Decommitment.
+//     pub type Decommitment<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//     > = aggregation::decommitment_round::Decommitment< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >,
+//     >;
+//
+//     /// An Encryption of Discrete Log Schnorr Proof Aggregation Proof Share Round Party.
+//     pub type ProofAggregationProofShareRoundParty<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//         ProtocolContext,
+//     > = aggregation::proof_share_round::Party< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >, ProtocolContext,
+//     >;
+//
+//     /// An Encryption of Discrete Log Schnorr Proof Aggregation Proof Share.
+//     pub type ProofShare<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//     > = aggregation::proof_share_round::ProofShare< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >,
+//     >;
+//
+//     /// An Encryption of Discrete Log Schnorr Proof Proof Aggregation Round Party.
+//     pub type ProofAggregationProofAggregationRoundParty<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         RangeProof,
+//         ProtocolContext,
+//     > = aggregation::proof_aggregation_round::Party< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIMS_PER_SCALAR,
+//     > RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, RangeProof, >, ProtocolContext,
+//     >;
+// }
+//
+// pub mod committed_linear_evaluation {
+//     pub use super::encryption_of_tuple::LanguageScalar;
+//     use crate::proofs::{
+//         schnorr,
+//         schnorr::{
+//             aggregation, language,
+//             language::enhanced::committed_linear_evaluation::{Language, REPETITIONS},
+//         },
+//     };
+//
+//     /// The Witness Space Group Element of a Committed Linear Evaluation Schnorr Language.
+//     pub type WitnessSpaceGroupElement<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const MASK_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIMS_PER_MASK: usize,
+//         const NUM_RANGE_CLAIMS: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const DIMENSION: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         CommitmentScheme,
+//         RangeProof,
+//     > = language::WitnessSpaceGroupElement< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, MASK_LIMBS,
+//     > RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIMS_PER_MASK, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
+//     > WITNESS_MASK_LIMBS, DIMENSION, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, CommitmentScheme, RangeProof, >,
+//     >;
+//
+//     /// The Statement Space Group Element of a Committed Linear Evaluation Schnorr Language.
+//     pub type StatementSpaceGroupElement<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const MASK_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIMS_PER_MASK: usize,
+//         const NUM_RANGE_CLAIMS: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const DIMENSION: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         CommitmentScheme,
+//         RangeProof,
+//     > = language::StatementSpaceGroupElement< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, MASK_LIMBS,
+//     > RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIMS_PER_MASK, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
+//     > WITNESS_MASK_LIMBS, DIMENSION, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, CommitmentScheme, RangeProof, >,
+//     >;
+//
+//     /// The Public Parameters of a Committed Linear Evaluation Schnorr Language.
+//     pub type LanguagePublicParameters<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const MASK_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIMS_PER_MASK: usize,
+//         const NUM_RANGE_CLAIMS: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const DIMENSION: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         CommitmentScheme,
+//         RangeProof,
+//     > = language::PublicParameters< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, MASK_LIMBS,
+//     > RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIMS_PER_MASK, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
+//     > WITNESS_MASK_LIMBS, DIMENSION, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, CommitmentScheme, RangeProof, >,
+//     >;
+//
+//     // todo: same
+//     /// A Committed Linear Evaluation Schnorr Proof.
+//     pub type Proof<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const MASK_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIMS_PER_MASK: usize,
+//         const NUM_RANGE_CLAIMS: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const DIMENSION: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         CommitmentScheme,
+//         RangeProof,
+//         ProtocolContext,
+//     > = schnorr::Proof< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, MASK_LIMBS,
+//     > RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIMS_PER_MASK, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
+//     > WITNESS_MASK_LIMBS, DIMENSION, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, CommitmentScheme, RangeProof, >, ProtocolContext,
+//     >;
+//
+//     /// A Committed Linear Evaluation Schnorr Proof Aggregation Commitment Round Party.
+//     pub type ProofAggregationCommitmentRoundParty<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const MASK_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIMS_PER_MASK: usize,
+//         const NUM_RANGE_CLAIMS: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const DIMENSION: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         CommitmentScheme,
+//         RangeProof,
+//         ProtocolContext,
+//     > = aggregation::commitment_round::Party< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, MASK_LIMBS,
+//     > RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIMS_PER_MASK, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
+//     > WITNESS_MASK_LIMBS, DIMENSION, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, CommitmentScheme, RangeProof, >, ProtocolContext,
+//     >;
+//
+//     /// A Committed Linear Evaluation Schnorr Proof Aggregation Decommitment Round Party.
+//     pub type ProofAggregationDecommitmentRoundParty<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const MASK_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIMS_PER_MASK: usize,
+//         const NUM_RANGE_CLAIMS: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const DIMENSION: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         CommitmentScheme,
+//         RangeProof,
+//         ProtocolContext,
+//     > = aggregation::decommitment_round::Party< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, MASK_LIMBS,
+//     > RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIMS_PER_MASK, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
+//     > WITNESS_MASK_LIMBS, DIMENSION, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, CommitmentScheme, RangeProof, >, ProtocolContext,
+//     >;
+//
+//     /// A Committed Linear Evaluation Schnorr Proof Aggregation Decommitment.
+//     pub type ProDecommitmentofAggregationDecommitmentRoundParty<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const MASK_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIMS_PER_MASK: usize,
+//         const NUM_RANGE_CLAIMS: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const DIMENSION: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         CommitmentScheme,
+//         RangeProof,
+//     > = aggregation::decommitment_round::Decommitment< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, MASK_LIMBS,
+//     > RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIMS_PER_MASK, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
+//     > WITNESS_MASK_LIMBS, DIMENSION, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, CommitmentScheme, RangeProof, >,
+//     >;
+//
+//     /// A Committed Linear Evaluation Schnorr Proof Aggregation Proof Share Round Party.
+//     pub type ProofAggregationProofShareRoundParty<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const MASK_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIMS_PER_MASK: usize,
+//         const NUM_RANGE_CLAIMS: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const DIMENSION: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         CommitmentScheme,
+//         RangeProof,
+//         ProtocolContext,
+//     > = aggregation::proof_share_round::Party< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, MASK_LIMBS,
+//     > RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIMS_PER_MASK, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
+//     > WITNESS_MASK_LIMBS, DIMENSION, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, CommitmentScheme, RangeProof, >, ProtocolContext,
+//     >;
+//
+//     /// A Committed Linear Evaluation Schnorr Proof Aggregation Proof Share.
+//     pub type ProofShare<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const MASK_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIMS_PER_MASK: usize,
+//         const NUM_RANGE_CLAIMS: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const DIMENSION: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         CommitmentScheme,
+//         RangeProof,
+//     > = aggregation::proof_share_round::ProofShare< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, MASK_LIMBS,
+//     > RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIMS_PER_MASK, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
+//     > WITNESS_MASK_LIMBS, DIMENSION, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, CommitmentScheme, RangeProof, >,
+//     >;
+//
+//     /// A Committed Linear Evaluation Schnorr Proof Aggregation Proof Aggregation Round Party.
+//     pub type ProofAggregationProofAggregationRoundParty<
+//         const SCALAR_LIMBS: usize,
+//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+//         const MASK_LIMBS: usize,
+//         const RANGE_CLAIMS_PER_SCALAR: usize,
+//         const RANGE_CLAIMS_PER_MASK: usize,
+//         const NUM_RANGE_CLAIMS: usize,
+//         const RANGE_CLAIM_LIMBS: usize,
+//         const WITNESS_MASK_LIMBS: usize,
+//         const DIMENSION: usize,
+//         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+//         Scalar,
+//         GroupElement,
+//         EncryptionKey,
+//         CommitmentScheme,
+//         RangeProof,
+//         ProtocolContext,
+//     > = aggregation::proof_aggregation_round::Party< REPETITIONS, Language< SCALAR_LIMBS,
+//     > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, MASK_LIMBS,
+//     > RANGE_CLAIMS_PER_SCALAR, RANGE_CLAIMS_PER_MASK, NUM_RANGE_CLAIMS, RANGE_CLAIM_LIMBS,
+//     > WITNESS_MASK_LIMBS, DIMENSION, PLAINTEXT_SPACE_SCALAR_LIMBS, Scalar, GroupElement,
+//     > EncryptionKey, CommitmentScheme, RangeProof, >, ProtocolContext,
+//     >;
+// }

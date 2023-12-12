@@ -6,21 +6,24 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     commitments::HomomorphicCommitmentScheme,
+    group::Samplable,
     proofs,
     proofs::{schnorr, schnorr::knowledge_of_decommitment},
+    StatisticalSecuritySizedNumber,
 };
 
 // TODO: should this be dependent on some variables?
 const REPETITIONS: usize = 128;
 
-pub type WitnessSpaceGroupElement<
-    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
-    CommitmentScheme,
-> = knowledge_of_decommitment::Language<
-    REPETITIONS,
-    MESSAGE_SPACE_SCALAR_LIMBS,
-    CommitmentScheme,
->::WitnessSpaceGroupElement;
+pub type WitnessSpaceGroupElement<const MESSAGE_SPACE_SCALAR_LIMBS: usize, CommitmentScheme> =
+    schnorr::language::WitnessSpaceGroupElement<
+        REPETITIONS,
+        knowledge_of_decommitment::Language<
+            REPETITIONS,
+            MESSAGE_SPACE_SCALAR_LIMBS,
+            CommitmentScheme,
+        >,
+    >;
 
 /// Lightningproofs Range Proof.
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
@@ -28,7 +31,10 @@ pub struct RangeProof<
     const MESSAGE_SPACE_SCALAR_LIMBS: usize,
     CommitmentScheme: HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
-> {
+> where
+    CommitmentScheme::MessageSpaceGroupElement: Samplable,
+    CommitmentScheme::RandomnessSpaceGroupElement: Samplable,
+{
     schnorr_proof: schnorr::Proof<
         REPETITIONS,
         knowledge_of_decommitment::Language<
@@ -45,6 +51,9 @@ impl<
         CommitmentScheme: HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>,
         ProtocolContext: Clone + Serialize,
     > RangeProof<MESSAGE_SPACE_SCALAR_LIMBS, CommitmentScheme, ProtocolContext>
+where
+    CommitmentScheme::MessageSpaceGroupElement: Samplable,
+    CommitmentScheme::RandomnessSpaceGroupElement: Samplable,
 {
     pub fn prove(
         witnesses: Vec<WitnessSpaceGroupElement<MESSAGE_SPACE_SCALAR_LIMBS, CommitmentScheme>>,

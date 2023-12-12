@@ -64,6 +64,7 @@ pub struct Language<
     _group_element_choice: PhantomData<GroupElement>,
 }
 
+// TODO: get only the plaintext element, from it create scalar, and do g^x.
 impl<
         const SCALAR_LIMBS: usize,
         const RANGE_CLAIMS_PER_SCALAR: usize,
@@ -547,8 +548,6 @@ where
 
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
-    use std::array;
-
     use crypto_bigint::{NonZero, Random};
     use language::enhanced::tests::{RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS};
     use paillier::tests::N;
