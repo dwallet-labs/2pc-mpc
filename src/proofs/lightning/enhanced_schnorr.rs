@@ -10,8 +10,7 @@ use crate::{
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product,
-        direct_product::ThreeWayPublicParameters, paillier, self_product, BoundedGroupElement,
-        Samplable,
+        direct_product::ThreeWayPublicParameters, self_product, BoundedGroupElement, Samplable,
     },
     proofs::{schnorr, schnorr::language::GroupsPublicParameters},
 };
@@ -127,6 +126,8 @@ pub(in crate::proofs) trait EnhancableLanguage<
 {
     // TODO: name?
     // TODO: return Result?
+    // TODO: params, maybe seperate, and have constrained and unbounded, and thats it because
+    // randomness is for the commitment of the rangeproof?
     fn convert_witness(
         enhanced_witness: EnhancedLanguageWitness<
             NUM_RANGE_CLAIMS,
@@ -135,7 +136,15 @@ pub(in crate::proofs) trait EnhancableLanguage<
             UnboundedWitnessSpaceGroupElement,
         >,
     ) -> Self::WitnessSpaceGroupElement;
+
+    // TODO: helper functions to parse and convert
+
+    // TODO: what to do with plaintext element? whose responsability?
+
+    // TODO: also get encryption randomness? should we encrypt here?
 }
+
+// TODO: accessors
 
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
