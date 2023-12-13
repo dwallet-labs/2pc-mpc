@@ -53,6 +53,20 @@ pub struct Language<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, GroupElement, Enc
     _encryption_key_choice: PhantomData<EncryptionKey>,
 }
 
+pub type EnhancedLanguage<
+    const NUM_RANGE_CLAIMS: usize,
+    const SCALAR_LIMBS: usize,
+    Scalar,
+    GroupElement,
+> = lightning::enhanced_schnorr::EnhancedLanguage<
+    NUM_RANGE_CLAIMS,
+    SCALAR_LIMBS,
+    Scalar,
+    GroupElement,
+    paillier::RandomnessSpaceGroupElement,
+    Language<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }, GroupElement, PaillierEncryptionKey>,
+>;
+
 impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: group::GroupElement,
@@ -175,8 +189,8 @@ where
     Uint<SCALAR_LIMBS>: Encoding,
 {
     fn convert_witness(
-        constrained_witness: ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, SCALAR_LIMBS>,
-        randomness: paillier::RandomnessSpaceGroupElement,
+        constrained_witness: &ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, SCALAR_LIMBS>,
+        randomness: &paillier::RandomnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<Self::WitnessSpaceGroupElement> {
         let discrete_log = <Scalar as DecomposableWitness<
@@ -190,7 +204,7 @@ where
             range_claim_bits::<SCALAR_LIMBS>(),
         )?;
 
-        Ok((discrete_log, randomness).into())
+        Ok((discrete_log, randomness.clone()).into())
     }
 }
 

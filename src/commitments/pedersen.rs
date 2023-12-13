@@ -116,6 +116,9 @@ type CommitmentSpaceGroupElement<GroupElement> = GroupElement;
 type CommitmentSpacePublicParameters<GroupElement> =
     group::PublicParameters<CommitmentSpaceGroupElement<GroupElement>>;
 
+// TODO: generate pedersen parameters from hash or what Avichay approves of, and don't allow any
+// other instantiation.
+
 /// The Public Parameters of a Pedersen Commitment
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct PublicParameters<
