@@ -3,8 +3,8 @@
 
 use crypto_bigint::{NonZero, Uint};
 pub use group::paillier::{
-    CiphertextGroupElement, CiphertextPublicParameters, PlaintextGroupElement,
-    RandomnessGroupElement, RandomnessPublicParameters,
+    CiphertextSpaceGroupElement, CiphertextSpacePublicParameters, PlaintextSpaceGroupElement,
+    RandomnessSpaceGroupElement, RandomnessSpacePublicParameters,
 };
 use serde::{Deserialize, Serialize};
 use tiresias::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
@@ -14,7 +14,7 @@ use crate::{
     ahe::GroupsPublicParametersAccessors as _,
     group,
     group::{
-        additive_group_of_integers_modulu_n::odd_moduli, paillier::PlaintextPublicParameters,
+        additive_group_of_integers_modulu_n::odd_moduli, paillier::PlaintextSpacePublicParameters,
         GroupElement,
     },
     AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
@@ -33,11 +33,11 @@ pub const RANDOMNESS_SPACE_SCALAR_LIMBS: usize = LargeBiPrimeSizedNumber::LIMBS;
 pub const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize = PaillierModulusSizedNumber::LIMBS;
 
 /// Emulate a circuit-privacy conserving additively homomorphic encryption with
-/// `PlaintextGroupElement` as the plaintext group using the Paillier encryption scheme.
+/// `PlaintextSpaceGroupElement` as the plaintext group using the Paillier encryption scheme.
 impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for EncryptionKey {
-    type PlaintextSpaceGroupElement = PlaintextGroupElement;
-    type RandomnessSpaceGroupElement = RandomnessGroupElement;
-    type CiphertextSpaceGroupElement = CiphertextGroupElement;
+    type PlaintextSpaceGroupElement = PlaintextSpaceGroupElement;
+    type RandomnessSpaceGroupElement = RandomnessSpaceGroupElement;
+    type CiphertextSpaceGroupElement = CiphertextSpaceGroupElement;
     type PublicParameters = PublicParameters;
 
     fn new(encryption_scheme_public_parameters: &Self::PublicParameters) -> super::Result<Self> {
@@ -87,24 +87,24 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
 
     fn encrypt_with_randomness(
         &self,
-        plaintext: &PlaintextGroupElement,
-        randomness: &RandomnessGroupElement,
-    ) -> CiphertextGroupElement {
+        plaintext: &PlaintextSpaceGroupElement,
+        randomness: &RandomnessSpaceGroupElement,
+    ) -> CiphertextSpaceGroupElement {
         // safe to `unwrap()` here, as encryption always returns a valid element in the
         // ciphertext group
 
         // TODO: maybe have encrypt_with_randomness
 
         let ciphertext = self.0.encrypt_with_randomness_inner(
-            &(&<&PlaintextGroupElement as Into<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>>::into(
+            &(&<&PlaintextSpaceGroupElement as Into<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>>::into(
                 plaintext,
             ))
                 .into(),
             &randomness.into(),
         );
-        CiphertextGroupElement::new(
+        CiphertextSpaceGroupElement::new(
             ciphertext.into(),
-            &CiphertextPublicParameters {
+            &CiphertextSpacePublicParameters {
                 params: *ciphertext.params(),
             },
         )
@@ -115,9 +115,9 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct PublicParameters(
     ahe::GroupsPublicParameters<
-        PlaintextPublicParameters,
-        RandomnessPublicParameters,
-        CiphertextPublicParameters,
+        PlaintextSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CiphertextSpacePublicParameters,
     >,
 );
 
@@ -126,13 +126,13 @@ impl PublicParameters {
         paillier_associate_bi_prime: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     ) -> group::Result<Self> {
         Ok(Self(ahe::GroupsPublicParameters {
-            plaintext_space_public_parameters: PlaintextPublicParameters {
+            plaintext_space_public_parameters: PlaintextSpacePublicParameters {
                 modulus: NonZero::new(paillier_associate_bi_prime).unwrap(),
             },
-            randomness_space_public_parameters: RandomnessPublicParameters::new(
+            randomness_space_public_parameters: RandomnessSpacePublicParameters::new(
                 paillier_associate_bi_prime,
             )?,
-            ciphertext_space_public_parameters: CiphertextPublicParameters::new(
+            ciphertext_space_public_parameters: CiphertextSpacePublicParameters::new(
                 paillier_associate_bi_prime.square(),
             )?,
         }))
@@ -142,18 +142,18 @@ impl PublicParameters {
 impl
     AsRef<
         ahe::GroupsPublicParameters<
-            PlaintextPublicParameters,
-            RandomnessPublicParameters,
-            CiphertextPublicParameters,
+            PlaintextSpacePublicParameters,
+            RandomnessSpacePublicParameters,
+            CiphertextSpacePublicParameters,
         >,
     > for PublicParameters
 {
     fn as_ref(
         &self,
     ) -> &ahe::GroupsPublicParameters<
-        PlaintextPublicParameters,
-        RandomnessPublicParameters,
-        CiphertextPublicParameters,
+        PlaintextSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CiphertextSpacePublicParameters,
     > {
         &self.0
     }
@@ -186,8 +186,8 @@ impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, Encryption
     }
 
     // todo: new()
-    fn decrypt(&self, ciphertext: &CiphertextGroupElement) -> PlaintextGroupElement {
-        PlaintextGroupElement::new(
+    fn decrypt(&self, ciphertext: &CiphertextSpaceGroupElement) -> PlaintextSpaceGroupElement {
+        PlaintextSpaceGroupElement::new(
             self.0.decrypt_inner(ciphertext.into()),
             &odd_moduli::PublicParameters {
                 modulus: NonZero::new(self.0.encryption_key.n).unwrap(),

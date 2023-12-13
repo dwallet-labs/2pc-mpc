@@ -11,12 +11,25 @@ use serde::Serialize;
 pub use crate::proofs::lightning::enhanced_schnorr::REPETITIONS;
 use crate::{
     ahe,
-    ahe::GroupsPublicParametersAccessors,
-    commitments::HomomorphicCommitmentScheme,
+    ahe::{paillier::EncryptionKey as PaillierEncryptionKey, GroupsPublicParametersAccessors},
+    commitments::{HomomorphicCommitmentScheme, Pedersen},
     group,
-    group::{direct_product, GroupElement as _, GroupElement, KnownOrderScalar, Samplable},
+    group::{
+        direct_product, paillier, BoundedGroupElement, GroupElement as _, GroupElement,
+        KnownOrderScalar, Samplable,
+    },
     proofs,
-    proofs::{schnorr, schnorr::language::GroupsPublicParameters},
+    proofs::{
+        lightning,
+        lightning::{
+            enhanced_schnorr::{
+                ConstrainedWitnessGroupElement, DecomposableWitness, EnhanceableLanguage,
+            },
+            range_claim_bits,
+        },
+        schnorr,
+        schnorr::language::GroupsPublicParameters,
+    },
     AdditivelyHomomorphicEncryptionKey,
 };
 
@@ -143,6 +156,41 @@ impl<
         //         .into(),
         // )
         //     .into())
+    }
+}
+
+impl<
+        const RANGE_CLAIMS_PER_SCALAR: usize,
+        const SCALAR_LIMBS: usize,
+        Scalar: KnownOrderScalar<SCALAR_LIMBS> + Samplable,
+        GroupElement: group::GroupElement,
+    >
+    EnhanceableLanguage<
+        RANGE_CLAIMS_PER_SCALAR,
+        SCALAR_LIMBS,
+        Scalar,
+        paillier::RandomnessSpaceGroupElement,
+    > for Language<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }, GroupElement, PaillierEncryptionKey>
+where
+    Uint<SCALAR_LIMBS>: Encoding,
+{
+    fn convert_witness(
+        constrained_witness: ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, SCALAR_LIMBS>,
+        randomness: paillier::RandomnessSpaceGroupElement,
+        language_public_parameters: &Self::PublicParameters,
+    ) -> proofs::Result<Self::WitnessSpaceGroupElement> {
+        let discrete_log = <Scalar as DecomposableWitness<
+            RANGE_CLAIMS_PER_SCALAR,
+            SCALAR_LIMBS,
+        >>::compose_from_constrained_witness(
+            constrained_witness,
+            language_public_parameters
+                .encryption_scheme_public_parameters
+                .plaintext_space_public_parameters(),
+            range_claim_bits::<SCALAR_LIMBS>(),
+        )?;
+
+        Ok((discrete_log, randomness).into())
     }
 }
 

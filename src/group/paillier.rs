@@ -12,17 +12,18 @@ pub const RANDOMNESS_SPACE_SCALAR_LIMBS: usize = LargeBiPrimeSizedNumber::LIMBS;
 
 pub const CIPHERTEXT_SPACE_SCALAR_LIMBS: usize = PaillierModulusSizedNumber::LIMBS;
 
-pub type PlaintextGroupElement = odd_moduli::GroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS>;
-pub type RandomnessGroupElement =
+pub type PlaintextSpaceGroupElement = odd_moduli::GroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS>;
+pub type RandomnessSpaceGroupElement =
     multiplicative_group_of_integers_modulu_n::GroupElement<RANDOMNESS_SPACE_SCALAR_LIMBS>;
 
-pub type CiphertextGroupElement =
+pub type CiphertextSpaceGroupElement =
     multiplicative_group_of_integers_modulu_n::GroupElement<CIPHERTEXT_SPACE_SCALAR_LIMBS>;
 
-pub type PlaintextPublicParameters = odd_moduli::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS>;
+pub type PlaintextSpacePublicParameters =
+    odd_moduli::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS>;
 
-pub type RandomnessPublicParameters =
+pub type RandomnessSpacePublicParameters =
     multiplicative_group_of_integers_modulu_n::PublicParameters<RANDOMNESS_SPACE_SCALAR_LIMBS>;
 
-pub type CiphertextPublicParameters =
+pub type CiphertextSpacePublicParameters =
     multiplicative_group_of_integers_modulu_n::PublicParameters<CIPHERTEXT_SPACE_SCALAR_LIMBS>;

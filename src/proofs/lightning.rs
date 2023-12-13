@@ -79,9 +79,10 @@ where
         // TODO: call schnorr verify and do range check
         todo!()
     }
+}
 
-    pub fn range_claim_bits() -> usize {
-        // TODO: formula, and maybe return `Result` and check conditions.
-        Uint::<MESSAGE_SPACE_SCALAR_LIMBS>::BITS - StatisticalSecuritySizedNumber::BITS
-    }
+// TODO: do we even want this???
+pub fn range_claim_bits<const MESSAGE_SPACE_SCALAR_LIMBS: usize>() -> usize {
+    // TODO: formula, and maybe return `Result` and check conditions.
+    Uint::<MESSAGE_SPACE_SCALAR_LIMBS>::BITS - StatisticalSecuritySizedNumber::BITS
 }
