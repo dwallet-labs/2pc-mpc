@@ -463,3 +463,8 @@ impl<
         language_statement
     }
 }
+
+#[cfg(any(test, feature = "benchmarking"))]
+pub(crate) mod tests {
+    pub const RANGE_CLAIMS_PER_SCALAR: usize = 2;
+}
