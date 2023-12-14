@@ -24,6 +24,8 @@ use crate::{
 
 pub const REPETITIONS: usize = 1;
 
+// TODO: do this generically for encryption key and range proof.
+
 #[derive(Clone, PartialEq)]
 pub struct EnhancedLanguage<
     const NUM_RANGE_CLAIMS: usize,
@@ -179,7 +181,10 @@ pub(in crate::proofs) trait EnhanceableLanguage<
     ) -> proofs::Result<Self::WitnessSpaceGroupElement>;
 }
 
-// does this have to be known order scalar?
+// TODO: perhaps this could just be in `enhanced` and use any encryption key.
+// TODO: in rlwe, message space is Scalar and the randomness is Rq
+// so the range check needs to happen on the randomness element not the plaintext.
+// TODO: does this have to be known order scalar?
 pub trait DecomposableWitness<const RANGE_CLAIMS_PER_SCALAR: usize, const SCALAR_LIMBS: usize>:
     KnownOrderScalar<SCALAR_LIMBS>
 where
