@@ -6,15 +6,15 @@ use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
     rand_core::CryptoRngCore,
-    Encoding, NonZero, Random, Uint,
+    Encoding, NonZero, Random, RandomMod, Uint,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
     group::{
-        BoundedGroupElement, CyclicGroupElement, GroupElement as _, KnownOrderGroupElement,
-        KnownOrderScalar, MulByGenerator, Samplable,
+        sample_uint_within, BoundedGroupElement, CyclicGroupElement, GroupElement as _,
+        KnownOrderGroupElement, KnownOrderScalar, MulByGenerator, Samplable, SamplableWithin,
     },
     traits::Reduce,
 };
@@ -31,10 +31,41 @@ where
     Uint<LIMBS>: Encoding,
 {
     fn sample(
-        rng: &mut impl CryptoRngCore,
         public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
         GroupElement::<LIMBS>::new(Uint::<LIMBS>::random(rng), public_parameters)
+    }
+}
+
+impl<const LIMBS: usize> SamplableWithin for GroupElement<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn sample_within(
+        subrange: (&Self, &Self),
+        public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
+    ) -> group::Result<Self> {
+        let (lower_bound, upper_bound) = subrange;
+        let lower_bound = Uint::<LIMBS>::from(lower_bound);
+        let upper_bound = Uint::<LIMBS>::from(upper_bound);
+
+        Self::new(
+            sample_uint_within(lower_bound, upper_bound, rng)?,
+            public_parameters,
+        )
+    }
+
+    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        Self::new(Uint::<LIMBS>::ZERO, public_parameters)
+    }
+
+    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        Self::new(
+            (*public_parameters.modulus).wrapping_sub(&Uint::<LIMBS>::ONE),
+            public_parameters,
+        )
     }
 }
 

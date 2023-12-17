@@ -3,11 +3,12 @@
 
 use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
-use crypto_bigint::{rand_core::CryptoRngCore, Encoding, NonZero, Uint, U256};
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, NonZero, Random, Uint, U256};
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use super::{GroupElement, SCALAR_LIMBS};
+use crate::group::SamplableWithin;
 // TODO: use original dalek repos.
 // TODO: ct_eq
 use crate::{
@@ -41,10 +42,45 @@ impl ConditionallySelectable for Scalar {
 
 impl Samplable for Scalar {
     fn sample(
-        rng: &mut impl CryptoRngCore,
         _public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
         Ok(Self(curve25519_dalek::scalar::Scalar::random(rng)))
+    }
+}
+
+impl SamplableWithin for Scalar {
+    fn sample_within(
+        subrange: (&Self, &Self),
+        public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
+    ) -> group::Result<Self> {
+        let (lower_bound, upper_bound) = subrange;
+        let lower_bound = U256::from(lower_bound);
+        let upper_bound = U256::from(upper_bound);
+
+        // TODO: use the func
+
+        // TODO: can I just sample once, and deterministically place the value within the subrange?
+        // why did crypto-bigint made such weird design choices: https://github.com/RustCrypto/crypto-bigint/blob/8f46be05162eb6e8827f142311bfc60aa1cbb5d2/src/uint/rand.rs#L42
+        // Perform rejection-sampling until sampling a value within the subrange.
+        loop {
+            let candidate = U256::random(rng);
+
+            if lower_bound <= candidate && candidate <= upper_bound {
+                return Ok(candidate.into());
+            } else {
+                continue;
+            }
+        }
+    }
+
+    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        Ok(U256::ZERO.into())
+    }
+
+    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        Ok(super::ORDER.wrapping_sub(&U256::ONE).into())
     }
 }
 

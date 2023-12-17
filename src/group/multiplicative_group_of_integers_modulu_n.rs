@@ -13,11 +13,12 @@ use group::GroupElement as _;
 use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
+// TODO: make this specific for Paillier, document.
+use crate::group::sample_uint_within;
 use crate::{
     group,
-    group::{BoundedGroupElement, Samplable},
+    group::{BoundedGroupElement, Samplable, SamplableWithin},
 };
-// TODO: make this specific for Paillier, document.
 
 /// An element of the multiplicative group of integers modulo `n` $\mathbb{Z}_n^*$
 /// [Multiplicative group of integers modulo n](https://en.wikipedia.org/wiki/Multiplicative_group_of_integers_modulo_n)
@@ -29,28 +30,85 @@ where
     Uint<LIMBS>: Encoding,
 {
     fn sample(
-        rng: &mut impl CryptoRngCore,
         public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
         // Classic rejection-sampling technique.
         loop {
             let value = Value::new(Uint::<LIMBS>::random(rng), public_parameters)?;
 
             match Self::new(value, public_parameters) {
-                Err(group::Error::UnsupportedPublicParameters) => {
-                    return Err(group::Error::UnsupportedPublicParameters);
-                }
-                Err(group::Error::InvalidPublicParameters) => {
-                    return Err(group::Error::InvalidPublicParameters);
-                }
                 Err(group::Error::InvalidGroupElement) => {
                     continue;
                 }
                 Ok(sampled_element) => {
                     return Ok(sampled_element);
                 }
+                Err(e) => return Err(e),
             }
         }
+    }
+}
+
+impl<const LIMBS: usize> SamplableWithin for GroupElement<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn sample_within(
+        subrange: (&Self, &Self),
+        public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
+    ) -> group::Result<Self> {
+        let (lower_bound, upper_bound) = subrange;
+        let lower_bound = Uint::<LIMBS>::from(lower_bound);
+        let upper_bound = Uint::<LIMBS>::from(upper_bound);
+
+        // TODO: can I just sample once, and deterministically place the value within the subrange?
+        // why did crypto-bigint made such weird design choices: https://github.com/RustCrypto/crypto-bigint/blob/8f46be05162eb6e8827f142311bfc60aa1cbb5d2/src/uint/rand.rs#L42
+        // Perform rejection-sampling until sampling a value within the subrange.
+        loop {
+            let candidate = Uint::<LIMBS>::random(rng);
+
+            if lower_bound <= candidate && candidate <= upper_bound {
+                let value = Value::new(
+                    sample_uint_within(lower_bound, upper_bound, rng)?,
+                    public_parameters,
+                )?;
+
+                match Self::new(value, public_parameters) {
+                    Err(group::Error::InvalidGroupElement) => {
+                        continue;
+                    }
+                    Ok(sampled_element) => {
+                        return Ok(sampled_element);
+                    }
+                    Err(e) => {
+                        return Err(e);
+                    }
+                }
+            } else {
+                continue;
+            }
+        }
+    }
+
+    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        let value = Value::new(Uint::<LIMBS>::ZERO, public_parameters)?;
+
+        Self::new(value, public_parameters)
+    }
+
+    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        Self::new(
+            Value::new(
+                public_parameters
+                    .params
+                    .modulus()
+                    .wrapping_sub(&Uint::<LIMBS>::ONE),
+                public_parameters,
+            )?,
+            public_parameters,
+        )
     }
 }
 

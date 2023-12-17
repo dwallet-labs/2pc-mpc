@@ -16,7 +16,8 @@ use crate::{
     group,
     group::{
         direct_product, paillier, BoundedGroupElement, CyclicGroupElement, GroupElement as _,
-        GroupElement, KnownOrderScalar, Samplable,
+        GroupElement, KnownOrderGroupElement, KnownOrderScalar, Samplable, SamplableWithin,
+        ScalarPublicParameters,
     },
     proofs,
     proofs::{
@@ -48,7 +49,12 @@ use crate::{
 ///
 /// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
 #[derive(Clone, PartialEq)]
-pub struct Language<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, GroupElement, EncryptionKey> {
+pub struct Language<
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    GroupElement,
+    EncryptionKey,
+> {
     _group_element_choice: PhantomData<GroupElement>,
     _encryption_key_choice: PhantomData<EncryptionKey>,
 }
@@ -64,15 +70,23 @@ pub type EnhancedLanguage<
     Scalar,
     GroupElement,
     paillier::RandomnessSpaceGroupElement,
-    Language<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }, GroupElement, PaillierEncryptionKey>,
+    Language<
+        { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+        SCALAR_LIMBS,
+        GroupElement,
+        PaillierEncryptionKey,
+    >,
 >;
 
 impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        GroupElement: group::GroupElement,
+        const SCALAR_LIMBS: usize,
+        GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     > schnorr::Language<REPETITIONS>
-    for Language<PLAINTEXT_SPACE_SCALAR_LIMBS, GroupElement, EncryptionKey>
+    for Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>
+where
+    group::Value<GroupElement::Scalar>: From<Uint<SCALAR_LIMBS>>,
 {
     type WitnessSpaceGroupElement = direct_product::GroupElement<
         EncryptionKey::PlaintextSpaceGroupElement,
@@ -83,6 +97,7 @@ impl<
         direct_product::GroupElement<EncryptionKey::CiphertextSpaceGroupElement, GroupElement>;
 
     type PublicParameters = PublicParameters<
+        group::PublicParameters<GroupElement::Scalar>,
         GroupElement::PublicParameters,
         GroupElement::Value,
         group::PublicParameters<EncryptionKey::PlaintextSpaceGroupElement>,
@@ -117,41 +132,66 @@ impl<
 impl<
         const RANGE_CLAIMS_PER_SCALAR: usize,
         const SCALAR_LIMBS: usize,
-        Scalar: KnownOrderScalar<SCALAR_LIMBS> + Samplable,
-        GroupElement: group::GroupElement,
+        GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
     >
     EnhanceableLanguage<
         RANGE_CLAIMS_PER_SCALAR,
         SCALAR_LIMBS,
-        Scalar,
+        GroupElement::Scalar,
         paillier::RandomnessSpaceGroupElement,
-    > for Language<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }, GroupElement, PaillierEncryptionKey>
+    >
+    for Language<
+        { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+        SCALAR_LIMBS,
+        GroupElement,
+        PaillierEncryptionKey,
+    >
 where
     Uint<SCALAR_LIMBS>: Encoding,
+    group::Value<GroupElement::Scalar>: From<Uint<SCALAR_LIMBS>>,
 {
-    fn convert_witness(
+    fn compose_witness(
         constrained_witness: &ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, SCALAR_LIMBS>,
         randomness: &paillier::RandomnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<Self::WitnessSpaceGroupElement> {
-        let discrete_log = <Scalar as DecomposableWitness<
+        let discrete_log = <GroupElement::Scalar as DecomposableWitness<
             RANGE_CLAIMS_PER_SCALAR,
             SCALAR_LIMBS,
-        >>::compose_from_constrained_witness(
+        >>::compose(
             constrained_witness,
             language_public_parameters
                 .encryption_scheme_public_parameters
                 .plaintext_space_public_parameters(),
-            range_claim_bits::<SCALAR_LIMBS>(),
+            crypto_bigint::U128::BITS,
+            // TODO: why not working for U192
+            // range_claim_bits::<SCALAR_LIMBS>(), // TODO: range proof's
         )?;
 
         Ok((discrete_log, *randomness).into())
+    }
+
+    fn decompose_witness(
+        witness: &Self::WitnessSpaceGroupElement,
+        language_public_parameters: &Self::PublicParameters,
+    ) -> proofs::Result<ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, SCALAR_LIMBS>> {
+        let discrete_log_value: Uint<SCALAR_LIMBS> = (&witness.discrete_log().value()).into();
+        let discrete_log = GroupElement::Scalar::new(
+            discrete_log_value.into(),
+            &language_public_parameters.scalar_group_public_parameters,
+        )?;
+
+        // Ok(discrete_log.decompose(range_claim_bits::<SCALAR_LIMBS>()))
+        // TODO
+        // Ok(discrete_log.decompose(crypto_bigint::U192::BITS))
+        Ok(discrete_log.decompose(crypto_bigint::U128::BITS))
     }
 }
 
 /// The Public Parameters of the Encryption of Discrete Log Schnorr Language.
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
+    ScalarPublicParameters,
     GroupPublicParameters,
     GroupElementValue,
     PlaintextSpacePublicParameters,
@@ -166,12 +206,14 @@ pub struct PublicParameters<
         >,
         direct_product::PublicParameters<CiphertextSpacePublicParameters, GroupPublicParameters>,
     >,
+    pub scalar_group_public_parameters: ScalarPublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
     // The base of the discrete log
     pub generator: GroupElementValue,
 }
 
 impl<
+        ScalarPublicParameters,
         GroupPublicParameters,
         GroupElementValue,
         PlaintextSpacePublicParameters,
@@ -192,6 +234,7 @@ impl<
         >,
     >
     for PublicParameters<
+        ScalarPublicParameters,
         GroupPublicParameters,
         GroupElementValue,
         PlaintextSpacePublicParameters,
@@ -214,6 +257,7 @@ impl<
 }
 
 impl<
+        ScalarPublicParameters,
         GroupPublicParameters,
         GroupElementValue,
         PlaintextSpacePublicParameters: Clone,
@@ -228,6 +272,7 @@ impl<
         >,
     >
     PublicParameters<
+        ScalarPublicParameters,
         GroupPublicParameters,
         GroupElementValue,
         PlaintextSpacePublicParameters,
@@ -236,13 +281,21 @@ impl<
         EncryptionKeyPublicParameters,
     >
 {
-    pub fn new<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize, GroupElement, EncryptionKey>(
-        group_public_parameters: GroupElement::PublicParameters,
-        encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
+    pub fn new<
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        const SCALAR_LIMBS: usize,
+        GroupElement,
+        EncryptionKey,
+    >(
+        scalar_group_public_parameters: ScalarPublicParameters,
+        group_public_parameters: GroupPublicParameters,
+        encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
     ) -> Self
     where
         GroupElement: group::GroupElement<Value = GroupElementValue, PublicParameters = GroupPublicParameters>
-            + CyclicGroupElement,
+            + CyclicGroupElement
+            + KnownOrderGroupElement<SCALAR_LIMBS>,
+        GroupElement::Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             PublicParameters = EncryptionKeyPublicParameters,
@@ -275,9 +328,28 @@ impl<
                 )
                     .into(),
             },
+            scalar_group_public_parameters,
             encryption_scheme_public_parameters,
             generator,
         }
+    }
+
+    pub fn plaintext_space_public_parameters(&self) -> &PlaintextSpacePublicParameters {
+        let (plaintext_space_public_parameters, _) = (&self
+            .groups_public_parameters
+            .witness_space_public_parameters)
+            .into();
+
+        plaintext_space_public_parameters
+    }
+
+    pub fn randomness_space_public_parameters(&self) -> &RandomnessSpacePublicParameters {
+        let (_, randomness_space_public_parameters) = (&self
+            .groups_public_parameters
+            .witness_space_public_parameters)
+            .into();
+
+        randomness_space_public_parameters
     }
 
     pub fn group_public_parameters(&self) -> &GroupPublicParameters {
@@ -349,7 +421,9 @@ impl<CiphertextSpaceGroupElement: group::GroupElement, GroupElement: group::Grou
 
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
-    use crypto_bigint::{NonZero, Random};
+    use core::{array, iter};
+
+    use crypto_bigint::{NonZero, Random, U128, U256};
     use paillier::tests::N;
     use rand_core::OsRng;
     use rstest::rstest;
@@ -364,9 +438,19 @@ pub(crate) mod tests {
 
     pub type Lang = Language<
         { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+        { U256::LIMBS },
         secp256k1::GroupElement,
         paillier::EncryptionKey,
     >;
+
+    pub type EnhancedLang = EnhancedLanguage<
+        { U256::LIMBS / U128::LIMBS },
+        { U256::LIMBS },
+        secp256k1::Scalar,
+        secp256k1::GroupElement,
+    >;
+
+    use crate::commitments::pedersen;
 
     pub(crate) fn public_parameters() -> language::PublicParameters<REPETITIONS, Lang> {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
@@ -378,14 +462,109 @@ pub(crate) mod tests {
 
         let language_public_parameters = PublicParameters::new::<
             { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+            { U256::LIMBS },
             secp256k1::GroupElement,
             paillier::EncryptionKey,
         >(
+            secp256k1_scalar_public_parameters,
             secp256k1_group_public_parameters,
             paillier_public_parameters,
         );
 
         language_public_parameters
+    }
+
+    pub(crate) fn enhanced_language_public_parameters(
+    ) -> language::PublicParameters<REPETITIONS, EnhancedLang> {
+        let language_public_parameters = public_parameters();
+
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
+
+        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+
+        // TODO: move this shared logic somewhere e.g. DRY
+        let generator = secp256k1::GroupElement::new(
+            secp256k1_group_public_parameters.generator,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
+
+        let message_generators = array::from_fn(|_| {
+            let generator =
+                secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
+                    * generator;
+
+            generator.value()
+        });
+
+        let randomness_generator =
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
+                * generator;
+
+        // TODO: this is not safe; we need a proper way to derive generators
+        let pedersen_public_parameters = pedersen::PublicParameters::new::<
+            { secp256k1::SCALAR_LIMBS },
+            secp256k1::Scalar,
+            secp256k1::GroupElement,
+        >(
+            secp256k1_scalar_public_parameters.clone(),
+            secp256k1_group_public_parameters.clone(),
+            message_generators,
+            randomness_generator.value(),
+        );
+
+        lightning::enhanced_schnorr::PublicParameters::new::<
+            secp256k1::Scalar,
+            secp256k1::GroupElement,
+            paillier::RandomnessSpaceGroupElement,
+            Lang,
+        >(
+            secp256k1_scalar_public_parameters,
+            secp256k1_group_public_parameters,
+            paillier_public_parameters
+                .randomness_space_public_parameters()
+                .clone(),
+            pedersen_public_parameters,
+            language_public_parameters,
+        )
+    }
+
+    fn generate_witnesses(
+        language_public_parameters: &language::PublicParameters<REPETITIONS, Lang>,
+        batch_size: usize,
+    ) -> Vec<language::WitnessSpaceGroupElement<REPETITIONS, Lang>> {
+        iter::repeat_with(|| {
+            let scalar = secp256k1::Scalar::sample(
+                &language_public_parameters.scalar_group_public_parameters,
+                &mut OsRng,
+            )
+            .unwrap();
+
+            let discrete_log = paillier::PlaintextSpaceGroupElement::new(
+                Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from(&U256::from(
+                    scalar.value(),
+                )),
+                language_public_parameters
+                    .encryption_scheme_public_parameters
+                    .plaintext_space_public_parameters(),
+            )
+            .unwrap();
+
+            let randomness = paillier::RandomnessSpaceGroupElement::sample(
+                language_public_parameters
+                    .encryption_scheme_public_parameters
+                    .randomness_space_public_parameters(),
+                &mut OsRng,
+            )
+            .unwrap();
+
+            (discrete_log, randomness).into()
+        })
+        .take(batch_size)
+        .collect()
     }
 
     #[rstest]
@@ -394,11 +573,34 @@ pub(crate) mod tests {
     #[case(3)]
     fn valid_proof_verifies(#[case] batch_size: usize) {
         let language_public_parameters = public_parameters();
+        let enhanced_language_public_parameters = enhanced_language_public_parameters();
 
-        language::tests::valid_proof_verifies::<REPETITIONS, Lang>(
+        let witnesses = generate_witnesses(&language_public_parameters, batch_size);
+
+        language::tests::valid_proof_verifies_internal::<REPETITIONS, Lang>(
+            witnesses.clone(),
             language_public_parameters,
             batch_size,
-        )
+        );
+
+        // TODO: this still just sometimes works
+        language::tests::valid_proof_verifies_internal::<REPETITIONS, EnhancedLang>(
+            lightning::enhanced_schnorr::tests::generate_witnesses::<
+                { U256::LIMBS / U128::LIMBS },
+                { U256::LIMBS },
+                secp256k1::Scalar,
+                secp256k1::GroupElement,
+                paillier::RandomnessSpaceGroupElement,
+                Language<
+                    { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                    { U256::LIMBS },
+                    secp256k1::GroupElement,
+                    PaillierEncryptionKey,
+                >,
+            >(witnesses, &enhanced_language_public_parameters),
+            enhanced_language_public_parameters,
+            batch_size,
+        );
     }
 
     #[rstest]
@@ -409,6 +611,7 @@ pub(crate) mod tests {
     #[case(5, 2)]
     fn aggregates(#[case] number_of_parties: usize, #[case] batch_size: usize) {
         let language_public_parameters = public_parameters();
+        // TODO: generate witnesses, also do enhanced
         let witnesses = language::tests::generate_witnesses_for_aggregation::<REPETITIONS, Lang>(
             &language_public_parameters,
             number_of_parties,
@@ -418,7 +621,7 @@ pub(crate) mod tests {
         aggregation::tests::aggregates::<REPETITIONS, Lang>(&language_public_parameters, witnesses)
     }
 
-    // // TODO
+    // TODO
     // #[rstest]
     // #[case(1)]
     // #[case(2)]

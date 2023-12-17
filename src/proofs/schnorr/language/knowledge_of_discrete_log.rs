@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use super::GroupsPublicParameters;
 use crate::{
     group,
-    group::{CyclicGroupElement, Samplable},
+    group::{CyclicGroupElement, Samplable, SamplableWithin},
     proofs,
     proofs::{
         schnorr,
@@ -39,7 +39,7 @@ pub struct Language<Scalar, GroupElement> {
 
 impl<
         Scalar: group::GroupElement
-            + Samplable
+            + SamplableWithin
             + Mul<GroupElement, Output = GroupElement>
             + for<'r> Mul<&'r GroupElement, Output = GroupElement>
             + Copy,

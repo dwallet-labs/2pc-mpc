@@ -11,6 +11,7 @@ use crate::{
     group,
     group::{
         BoundedGroupElement, GroupElement, KnownOrderGroupElement, KnownOrderScalar, Samplable,
+        SamplableWithin,
     },
 };
 
@@ -227,9 +228,32 @@ impl<const SCALAR_LIMBS: usize, S: KnownOrderScalar<SCALAR_LIMBS>>
 
 impl<const SCALAR_LIMBS: usize, S: Samplable> Samplable for Scalar<SCALAR_LIMBS, S> {
     fn sample(
-        rng: &mut impl CryptoRngCore,
         public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
-        Ok(Self(S::sample(rng, &public_parameters.0)?))
+        Ok(Self(S::sample(&public_parameters.0, rng)?))
+    }
+}
+
+impl<const SCALAR_LIMBS: usize, S: SamplableWithin> SamplableWithin for Scalar<SCALAR_LIMBS, S> {
+    fn sample_within(
+        subrange: (&Self, &Self),
+        public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
+    ) -> group::Result<Self> {
+        let (lower_bound, upper_bound) = subrange.into();
+        Ok(Self(S::sample_within(
+            (&lower_bound.0, &upper_bound.0),
+            &public_parameters.0,
+            rng,
+        )?))
+    }
+
+    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        Ok(Self(S::lower_bound(&public_parameters.0)?))
+    }
+
+    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        Ok(Self(S::upper_bound(&public_parameters.0)?))
     }
 }

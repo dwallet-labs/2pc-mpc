@@ -13,15 +13,48 @@ use crate::{
     group,
     group::{
         secp256k1::ORDER, BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement,
-        KnownOrderScalar, MulByGenerator, PrimeGroupElement, Samplable,
+        KnownOrderScalar, MulByGenerator, PrimeGroupElement, Samplable, SamplableWithin,
     },
     traits::Reduce,
 };
 
 /// A Scalar of the prime field $\mathbb{Z}_p$ over which the secp256k1 prime group is
 /// defined.
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, PartialOrd, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Scalar(pub(super) k256::Scalar);
+
+impl SamplableWithin for Scalar {
+    fn sample_within(
+        subrange: (&Self, &Self),
+        public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
+    ) -> group::Result<Self> {
+        let (lower_bound, upper_bound) = subrange;
+
+        // TODO: use the func
+
+        // TODO: can I just sample once, and deterministically place the value within the subrange?
+        // why did crypto-bigint made such weird design choices: https://github.com/RustCrypto/crypto-bigint/blob/8f46be05162eb6e8827f142311bfc60aa1cbb5d2/src/uint/rand.rs#L42
+        // Perform rejection-sampling until sampling a value within the subrange.
+        loop {
+            let candidate = Self::sample(public_parameters, rng)?;
+
+            if lower_bound <= &candidate && &candidate <= upper_bound {
+                return Ok(candidate);
+            } else {
+                continue;
+            }
+        }
+    }
+
+    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        Ok(Self(k256::Scalar::ZERO))
+    }
+
+    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        Ok(super::ORDER.wrapping_sub(&U256::ONE).into())
+    }
+}
 
 impl ConstantTimeEq for Scalar {
     fn ct_eq(&self, other: &Self) -> Choice {
@@ -37,8 +70,8 @@ impl ConditionallySelectable for Scalar {
 
 impl Samplable for Scalar {
     fn sample(
-        rng: &mut impl CryptoRngCore,
         _public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
         Ok(Self(k256::Scalar::random(rng)))
     }

@@ -14,7 +14,7 @@ use crate::{
     group,
     group::{
         scalar::Scalar, BoundedGroupElement, GroupElement as _, KnownOrderGroupElement,
-        KnownOrderScalar, Samplable,
+        KnownOrderScalar, Samplable, SamplableWithin,
     },
     helpers::flat_map_results,
 };
@@ -28,8 +28,8 @@ where
     G: Samplable,
 {
     fn sample(
-        rng: &mut impl CryptoRngCore,
         public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
         let public_parameters = &public_parameters.public_parameters;
 
@@ -38,8 +38,45 @@ where
         }
 
         Ok(Self(flat_map_results(array::from_fn(|_| {
-            G::sample(rng, public_parameters)
+            G::sample(public_parameters, rng)
         }))?))
+    }
+}
+
+impl<const N: usize, G: group::GroupElement> SamplableWithin for GroupElement<N, G>
+where
+    G: SamplableWithin,
+{
+    fn sample_within(
+        subrange: (&Self, &Self),
+        public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
+    ) -> group::Result<Self> {
+        let (lower_bounds, upper_bounds) = subrange;
+        let lower_bounds: &[_; N] = lower_bounds.into();
+        let upper_bounds: &[_; N] = upper_bounds.into();
+
+        let public_parameters = &public_parameters.public_parameters;
+
+        if N == 0 {
+            return Err(group::Error::InvalidPublicParameters);
+        }
+
+        Ok(Self(flat_map_results(array::from_fn(|i| {
+            G::sample_within((&lower_bounds[i], &upper_bounds[i]), public_parameters, rng)
+        }))?))
+    }
+
+    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        let lower_bound = G::lower_bound(&public_parameters.public_parameters)?;
+
+        Ok(Self(array::from_fn(|_| lower_bound.clone())))
+    }
+
+    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        let upper_bound = G::upper_bound(&public_parameters.public_parameters)?;
+
+        Ok(Self(array::from_fn(|_| upper_bound.clone())))
     }
 }
 

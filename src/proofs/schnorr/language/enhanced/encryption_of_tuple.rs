@@ -178,7 +178,7 @@ where
         // TODO: name
         let scalar = <EncryptionKey::PlaintextSpaceGroupElement as DecomposableWitness<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
-        >>::compose_from_constrained_witness(
+        >>::compose(
             *witness.constrained_witness(),
             &language_public_parameters
                 .encryption_scheme_public_parameters
@@ -603,8 +603,6 @@ where
 
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
-    use std::array;
-
     use crypto_bigint::{NonZero, Random};
     use language::enhanced::tests::{RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS};
     use paillier::tests::N;

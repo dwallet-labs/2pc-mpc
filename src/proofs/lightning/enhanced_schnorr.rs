@@ -4,7 +4,7 @@
 use core::array;
 use std::{marker::PhantomData, ops::Mul};
 
-use crypto_bigint::{Encoding, Uint};
+use crypto_bigint::{Encoding, Uint, U128};
 use serde::Serialize;
 use tiresias::secret_sharing::shamir::Polynomial;
 
@@ -15,16 +15,24 @@ use crate::{
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product,
         direct_product::ThreeWayPublicParameters, paillier, self_product, BoundedGroupElement,
-        GroupElement as _, KnownOrderScalar, Samplable,
+        GroupElement as _, KnownOrderScalar, Samplable, SamplableWithin,
     },
     helpers::flat_map_results,
     proofs,
-    proofs::{schnorr, schnorr::language::GroupsPublicParameters},
+    proofs::{
+        schnorr,
+        schnorr::{
+            language,
+            language::{GroupsPublicParameters, GroupsPublicParametersAccessors},
+        },
+    },
+    ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
 };
 
+// TODO:should this be a const ?
 pub const REPETITIONS: usize = 1;
 
-// TODO: do this generically for encryption key and range proof.
+// TODO: do this generically for encryption key and range proof. move back to enhanced.
 
 #[derive(Clone, PartialEq)]
 pub struct EnhancedLanguage<
@@ -75,17 +83,17 @@ pub type EnhancedLanguageStatement<
     Language: schnorr::Language<REPETITIONS>,
 > = direct_product::GroupElement<GroupElement, Language::StatementSpaceGroupElement>;
 
-// TODO: proper bounds security wise.
+// TODO: proper trait bounds security wise.
 impl<
         const NUM_RANGE_CLAIMS: usize,
         const SCALAR_LIMBS: usize,
         Scalar: BoundedGroupElement<SCALAR_LIMBS>
             + Mul<GroupElement, Output = GroupElement>
             + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-            + Samplable
+            + SamplableWithin
             + Copy,
         GroupElement: BoundedGroupElement<SCALAR_LIMBS>,
-        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + SamplableWithin,
         Language: EnhanceableLanguage<
             NUM_RANGE_CLAIMS,
             SCALAR_LIMBS,
@@ -125,11 +133,57 @@ where
     >;
     const NAME: &'static str = Language::NAME;
 
+    fn randomizer_subrange(
+        enhanced_language_public_parameters: &Self::PublicParameters,
+    ) -> proofs::Result<(
+        Self::WitnessSpaceGroupElement,
+        Self::WitnessSpaceGroupElement,
+    )> {
+        // let sampling_bit_size: usize = RangeProof::RANGE_CLAIM_BITS
+        // + ComputationalSecuritySizedNumber::BITS
+        // + StatisticalSecuritySizedNumber::BITS;
+
+        // TODO: check that this is < SCALAR_LIMBS?
+
+        // TODO: formula + challenge : in lightning its 1, in bp 128
+        let sampling_bit_size: usize = U128::BITS + StatisticalSecuritySizedNumber::BITS;
+
+        let lower_bound = ([Uint::<SCALAR_LIMBS>::ZERO.into(); NUM_RANGE_CLAIMS]).into();
+        let upper_bound = ([(Uint::<SCALAR_LIMBS>::ONE << sampling_bit_size)
+            .wrapping_sub(&Uint::<SCALAR_LIMBS>::ONE)
+            .into(); NUM_RANGE_CLAIMS])
+            .into();
+
+        let lower_bound = (
+            lower_bound,
+            Scalar::lower_bound(
+                enhanced_language_public_parameters.scalar_group_public_parameters(),
+            )?,
+            UnboundedWitnessSpaceGroupElement::lower_bound(
+                enhanced_language_public_parameters.unbounded_witness_public_parameters(),
+            )?,
+        )
+            .into();
+
+        let upper_bound = (
+            upper_bound,
+            Scalar::upper_bound(
+                enhanced_language_public_parameters.scalar_group_public_parameters(),
+            )?,
+            UnboundedWitnessSpaceGroupElement::upper_bound(
+                enhanced_language_public_parameters.unbounded_witness_public_parameters(),
+            )?,
+        )
+            .into();
+
+        Ok((lower_bound, upper_bound))
+    }
+
     fn group_homomorphism(
         witness: &Self::WitnessSpaceGroupElement,
         enhanced_language_public_parameters: &Self::PublicParameters,
     ) -> crate::proofs::Result<Self::StatementSpaceGroupElement> {
-        let language_witness = Language::convert_witness(
+        let language_witness = Language::compose_witness(
             witness.constrained_witness(),
             witness.unbounded_witness(),
             &enhanced_language_public_parameters.language_public_parameters,
@@ -148,7 +202,7 @@ where
 
                     Scalar::new(
                         constrained_witness_part.into(),
-                        enhanced_language_public_parameters.scalar_public_parameters(),
+                        enhanced_language_public_parameters.scalar_group_public_parameters(),
                     )
                 },
             ),
@@ -166,19 +220,24 @@ where
     }
 }
 
-pub(in crate::proofs) trait EnhanceableLanguage<
+// TODO: use this code in protocols.
+pub(crate) trait EnhanceableLanguage<
     const NUM_RANGE_CLAIMS: usize,
     const SCALAR_LIMBS: usize,
     Scalar: BoundedGroupElement<SCALAR_LIMBS> + Samplable,
     UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
 >: schnorr::Language<REPETITIONS>
 {
-    // TODO: name?
-    fn convert_witness(
+    fn compose_witness(
         constrained_witness: &ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, SCALAR_LIMBS>,
         unbounded_witness: &UnboundedWitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<Self::WitnessSpaceGroupElement>;
+
+    fn decompose_witness(
+        witness: &Self::WitnessSpaceGroupElement,
+        language_public_parameters: &Self::PublicParameters,
+    ) -> proofs::Result<ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, SCALAR_LIMBS>>;
 }
 
 // TODO: perhaps this could just be in `enhanced` and use any encryption key.
@@ -190,7 +249,7 @@ pub trait DecomposableWitness<const RANGE_CLAIMS_PER_SCALAR: usize, const SCALAR
 where
     Uint<SCALAR_LIMBS>: Encoding,
 {
-    fn decompose_into_constrained_witness(
+    fn decompose(
         self,
         range_claim_bits: usize,
     ) -> ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, SCALAR_LIMBS> {
@@ -209,7 +268,7 @@ where
         witness_in_range_claim_base.into()
     }
 
-    fn compose_from_constrained_witness(
+    fn compose(
         constrained_witness: &ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, SCALAR_LIMBS>,
         plaintext_space_public_parameters: &paillier::PlaintextSpacePublicParameters,
         range_claim_bits: usize, // TODO:  ???
@@ -222,10 +281,8 @@ where
         let delta: Uint<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }> =
             Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::ONE << range_claim_bits;
 
-        let delta = paillier::PlaintextSpaceGroupElement::new(
-            delta.into(),
-            plaintext_space_public_parameters,
-        )?;
+        let delta =
+            paillier::PlaintextSpaceGroupElement::new(delta, plaintext_space_public_parameters)?;
 
         let witness_in_witness_mask_base: &[_; RANGE_CLAIMS_PER_SCALAR] =
             constrained_witness.into();
@@ -237,8 +294,7 @@ where
                 paillier::PlaintextSpaceGroupElement::new(
                     Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from(
                         &Uint::<SCALAR_LIMBS>::from(witness),
-                    )
-                    .into(),
+                    ),
                     plaintext_space_public_parameters,
                 )
             })
@@ -303,7 +359,7 @@ impl<
         GroupPublicParameters,
         GroupElementValue,
         UnboundedWitnessSpacePublicParameters,
-        LanguageStatementSpacePublicParameters,
+        LanguageStatementSpacePublicParameters: Clone,
         LanguagePublicParameters,
     >
     PublicParameters<
@@ -319,16 +375,75 @@ impl<
 where
     Uint<SCALAR_LIMBS>: Encoding,
 {
-    // todo
-    // pub fn new();
+    pub fn new<Scalar, GroupElement, UnboundedWitnessSpaceGroupElement, Language>(
+        scalar_group_public_parameters: ScalarPublicParameters,
+        group_public_parameters: GroupPublicParameters,
+        unbounded_witness_public_parameters: UnboundedWitnessSpacePublicParameters,
+        pedersen_public_parameters: pedersen::PublicParameters<
+            NUM_RANGE_CLAIMS,
+            GroupElementValue,
+            ScalarPublicParameters,
+            GroupPublicParameters,
+        >,
+        language_public_parameters: LanguagePublicParameters,
+    ) -> Self
+    where
+        Uint<SCALAR_LIMBS>: Encoding,
+        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
+        GroupElement: group::GroupElement<
+            Value = GroupElementValue,
+            PublicParameters = GroupPublicParameters,
+        >,
+        UnboundedWitnessSpaceGroupElement:
+            group::GroupElement<PublicParameters = UnboundedWitnessSpacePublicParameters>,
+        Language: language::Language<REPETITIONS, PublicParameters = LanguagePublicParameters>,
+        LanguagePublicParameters: AsRef<
+            GroupsPublicParameters<
+                group::PublicParameters<Language::WitnessSpaceGroupElement>,
+                LanguageStatementSpacePublicParameters,
+            >,
+        >,
+    {
+        let constrained_witness_public_parameters =
+            self_product::PublicParameters::<NUM_RANGE_CLAIMS, _>::new(());
 
-    pub fn scalar_public_parameters(&self) -> &ScalarPublicParameters {
-        let (_, scalar_public_parameters, _) = (&self
+        Self {
+            groups_public_parameters: language::GroupsPublicParameters {
+                witness_space_public_parameters: (
+                    constrained_witness_public_parameters,
+                    scalar_group_public_parameters,
+                    unbounded_witness_public_parameters,
+                )
+                    .into(),
+                statement_space_public_parameters: (
+                    group_public_parameters,
+                    language_public_parameters
+                        .statement_space_public_parameters()
+                        .clone(),
+                )
+                    .into(),
+            },
+            pedersen_public_parameters,
+            language_public_parameters,
+        }
+    }
+
+    pub fn scalar_group_public_parameters(&self) -> &ScalarPublicParameters {
+        let (_, scalar_group_public_parameters, _) = (&self
             .groups_public_parameters
             .witness_space_public_parameters)
             .into();
 
-        scalar_public_parameters
+        scalar_group_public_parameters
+    }
+
+    pub fn unbounded_witness_public_parameters(&self) -> &UnboundedWitnessSpacePublicParameters {
+        let (_, _, unbounded_witness_public_parameters) = (&self
+            .groups_public_parameters
+            .witness_space_public_parameters)
+            .into();
+
+        unbounded_witness_public_parameters
     }
 }
 
@@ -471,5 +586,86 @@ impl<
 
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
+    use rand_core::OsRng;
+
+    use super::*;
+
     pub const RANGE_CLAIMS_PER_SCALAR: usize = 2;
+
+    pub(crate) fn generate_witnesses<
+        const NUM_RANGE_CLAIMS: usize,
+        const SCALAR_LIMBS: usize,
+        Scalar: BoundedGroupElement<SCALAR_LIMBS>
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + SamplableWithin
+            + Copy,
+        GroupElement: BoundedGroupElement<SCALAR_LIMBS>,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + SamplableWithin,
+        Language: EnhanceableLanguage<
+            NUM_RANGE_CLAIMS,
+            SCALAR_LIMBS,
+            Scalar,
+            UnboundedWitnessSpaceGroupElement,
+        >,
+    >(
+        witnesses: Vec<Language::WitnessSpaceGroupElement>,
+        enhanced_language_public_parameters: &language::PublicParameters<
+            REPETITIONS,
+            EnhancedLanguage<
+                NUM_RANGE_CLAIMS,
+                SCALAR_LIMBS,
+                Scalar,
+                GroupElement,
+                UnboundedWitnessSpaceGroupElement,
+                Language,
+            >,
+        >,
+    ) -> Vec<
+        language::WitnessSpaceGroupElement<
+            REPETITIONS,
+            EnhancedLanguage<
+                NUM_RANGE_CLAIMS,
+                SCALAR_LIMBS,
+                Scalar,
+                GroupElement,
+                UnboundedWitnessSpaceGroupElement,
+                Language,
+            >,
+        >,
+    >
+    where
+        Uint<SCALAR_LIMBS>: Encoding,
+        Scalar::Value: From<Uint<SCALAR_LIMBS>>,
+    {
+        witnesses
+            .into_iter()
+            .map(|witness| {
+                let constrained_witness = Language::decompose_witness(
+                    &witness,
+                    &enhanced_language_public_parameters.language_public_parameters,
+                )
+                .unwrap();
+
+                let commitment_randomness = Scalar::sample(
+                    enhanced_language_public_parameters.scalar_group_public_parameters(),
+                    &mut OsRng,
+                )
+                .unwrap();
+
+                let unbounded_element = UnboundedWitnessSpaceGroupElement::sample(
+                    enhanced_language_public_parameters.unbounded_witness_public_parameters(),
+                    &mut OsRng,
+                )
+                .unwrap();
+
+                (
+                    constrained_witness,
+                    commitment_randomness,
+                    unbounded_element,
+                )
+                    .into()
+            })
+            .collect()
+    }
 }

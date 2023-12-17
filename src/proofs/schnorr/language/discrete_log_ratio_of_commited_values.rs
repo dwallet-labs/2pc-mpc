@@ -12,7 +12,10 @@ use crate::{
     commitments,
     commitments::{pedersen, HomomorphicCommitmentScheme, Pedersen},
     group,
-    group::{self_product, CyclicGroupElement, GroupElement, KnownOrderGroupElement, Samplable},
+    group::{
+        self_product, CyclicGroupElement, GroupElement, KnownOrderGroupElement, Samplable,
+        SamplableWithin,
+    },
     proofs,
     proofs::{
         schnorr,
@@ -43,7 +46,7 @@ impl<const SCALAR_LIMBS: usize, Scalar, GroupElement> schnorr::Language<REPETITI
     for Language<SCALAR_LIMBS, Scalar, GroupElement>
 where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
-        + Samplable
+        + SamplableWithin
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Copy,
@@ -267,16 +270,16 @@ mod tests {
         .unwrap();
 
         let discrete_log =
-            secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap();
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
 
         let base_by_discrete_log = discrete_log * generator;
 
         let message_generator =
-            secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap()
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
                 * generator;
 
         let randomness_generator =
-            secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap()
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
                 * generator;
 
         // TODO: this is not safe; we need a proper way to derive generators

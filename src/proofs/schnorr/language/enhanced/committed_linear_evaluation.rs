@@ -241,7 +241,7 @@ where
 
         let coefficients = flat_map_results(coefficients_in_witness_mask_base.map(
             |coefficient_in_witness_base| {
-                <Scalar as DecomposableWitness<SCALAR_LIMBS>>::compose_from_constrained_witness(
+                <Scalar as DecomposableWitness<SCALAR_LIMBS>>::compose(
                     coefficient_in_witness_base.into(),
                     &scalar_group_public_parameters,
                     RangeProof::RANGE_CLAIM_BITS,
@@ -253,7 +253,7 @@ where
             coefficients_in_witness_mask_base.map(|coefficient_in_witness_base| {
                 <EncryptionKey::PlaintextSpaceGroupElement as DecomposableWitness<
                     PLAINTEXT_SPACE_SCALAR_LIMBS,
-                >>::compose_from_constrained_witness(
+                >>::compose(
                     coefficient_in_witness_base.into(),
                     &language_public_parameters
                         .encryption_scheme_public_parameters
@@ -272,7 +272,7 @@ where
 
         let mask = <EncryptionKey::PlaintextSpaceGroupElement as DecomposableWitness<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
-        >>::compose_from_constrained_witness(
+        >>::compose(
             mask_in_witness_mask_base.into(),
             &language_public_parameters
                 .encryption_scheme_public_parameters

@@ -12,7 +12,8 @@ use crate::{
     commitments::HomomorphicCommitmentScheme,
     group,
     group::{
-        self_product, BoundedGroupElement, CyclicGroupElement, GroupElement, Samplable, Value,
+        self_product, BoundedGroupElement, CyclicGroupElement, GroupElement, Samplable,
+        SamplableWithin, Value,
     },
     proofs,
     proofs::{
@@ -47,7 +48,7 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentS
 impl<
         const SCALAR_LIMBS: usize,
         Scalar: BoundedGroupElement<SCALAR_LIMBS>
-            + Samplable
+            + SamplableWithin
             + Mul<GroupElement, Output = GroupElement>
             + for<'r> Mul<&'r GroupElement, Output = GroupElement>
             + Copy,
@@ -261,11 +262,11 @@ mod tests {
         .unwrap();
 
         let message_generator =
-            secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap()
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
                 * generator;
 
         let randomness_generator =
-            secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap()
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
                 * generator;
 
         // TODO: have some Default function for this

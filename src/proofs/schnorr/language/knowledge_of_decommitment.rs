@@ -275,14 +275,14 @@ mod tests {
 
         let message_generators = array::from_fn(|_| {
             let generator =
-                secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap()
+                secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
                     * generator;
 
             generator.value()
         });
 
         let randomness_generator =
-            secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap()
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
                 * generator;
 
         // TODO: this is not safe; we need a proper way to derive generators

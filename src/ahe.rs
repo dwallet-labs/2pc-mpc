@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
-    group::{GroupElement, KnownOrderGroupElement, KnownOrderScalar, Samplable},
+    group::{GroupElement, KnownOrderGroupElement, KnownOrderScalar, Samplable, SamplableWithin},
 };
 
 /// An error in encryption key instantiation [`AdditivelyHomomorphicEncryptionKey::new()`]
@@ -32,8 +32,9 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
     Into<Self::PublicParameters> + PartialEq + Clone + Debug
 {
     type PlaintextSpaceGroupElement: GroupElement<Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>
-        + KnownOrderScalar<PLAINTEXT_SPACE_SCALAR_LIMBS>;
-    type RandomnessSpaceGroupElement: GroupElement + Samplable;
+        + KnownOrderScalar<PLAINTEXT_SPACE_SCALAR_LIMBS>
+        + SamplableWithin;
+    type RandomnessSpaceGroupElement: GroupElement + SamplableWithin;
     type CiphertextSpaceGroupElement: GroupElement;
 
     /// The public parameters of the encryption scheme.
@@ -87,8 +88,8 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
         Self::CiphertextSpaceGroupElement,
     )> {
         let randomness = Self::RandomnessSpaceGroupElement::sample(
-            rng,
             &public_parameters.randomness_space_public_parameters(),
+            rng,
         )?;
 
         let ciphertext = self.encrypt_with_randomness(plaintext, &randomness);
@@ -229,8 +230,8 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
         let mask = Uint::<MASK_LIMBS>::random(rng);
 
         let randomness = Self::RandomnessSpaceGroupElement::sample(
-            rng,
             &public_parameters.randomness_space_public_parameters(),
+            rng,
         )?;
 
         let evaluated_ciphertext = self

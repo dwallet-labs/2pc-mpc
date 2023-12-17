@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
-    group::{GroupElement, Samplable},
+    group::{GroupElement, Samplable, SamplableWithin},
     proofs,
 };
 
@@ -36,7 +36,9 @@ pub trait Language<
     const REPETITIONS: usize,
 >: Clone + PartialEq {
     /// An element of the witness space $(\HH_\pp, +)$
-    type WitnessSpaceGroupElement: GroupElement + Samplable;
+    // TODO: Theoretically I don't need `SamplableWithin` for the witness of every language, just for the enhanced ones, and even there not necessairily generically. 
+    // But can we forsee use-cases for languages that have witneses that doesn't satisfy SamplableWithin?
+    type WitnessSpaceGroupElement: GroupElement + SamplableWithin;
 
     /// An element in the associated statement space $(\GG_\pp, \cdot)$,
     type StatementSpaceGroupElement: GroupElement;
@@ -67,6 +69,15 @@ pub trait Language<
         128
     }
 
+    /// The subrange of valid values from which the randomizers for the proof should be sampled.
+    fn randomizer_subrange(language_public_parameters: &Self::PublicParameters) -> Result<(Self::WitnessSpaceGroupElement, Self::WitnessSpaceGroupElement)> {
+        let lower_bound = Self::WitnessSpaceGroupElement::lower_bound(language_public_parameters.witness_space_public_parameters())?;
+        let upper_bound = Self::WitnessSpaceGroupElement::upper_bound(language_public_parameters.witness_space_public_parameters())?;
+
+        Ok((lower_bound, upper_bound))
+    }
+
+    // TODO: rename to `homomorphose`
     /// A group homomorphism $\phi:\HH\to\GG$  from $(\HH_\pp, +)$, the witness space,
     /// to $(\GG_\pp,\cdot)$, the statement space space.
     fn group_homomorphism(
@@ -144,8 +155,8 @@ pub(crate) mod tests {
     ) -> Vec<Lang::WitnessSpaceGroupElement> {
         iter::repeat_with(|| {
             Lang::WitnessSpaceGroupElement::sample(
+                language_public_parameters.witness_space_public_parameters(),
                 &mut OsRng,
-                &language_public_parameters.witness_space_public_parameters(),
             )
             .unwrap()
         })
@@ -193,8 +204,6 @@ pub(crate) mod tests {
         .unwrap()
     }
 
-    // TODO: why is this considered as dead code, if its being called from a test in other modules?
-
     #[allow(dead_code)]
     pub(crate) fn valid_proof_verifies<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
         language_public_parameters: Lang::PublicParameters,
@@ -203,6 +212,24 @@ pub(crate) mod tests {
         let witnesses =
             generate_witnesses::<REPETITIONS, Lang>(&language_public_parameters, batch_size);
 
+        valid_proof_verifies_internal::<REPETITIONS, Lang>(
+            witnesses,
+            language_public_parameters,
+            batch_size,
+        )
+    }
+
+    // TODO: why is this considered as dead code, if its being called from a test in other modules?
+
+    #[allow(dead_code)]
+    pub(crate) fn valid_proof_verifies_internal<
+        const REPETITIONS: usize,
+        Lang: Language<REPETITIONS>,
+    >(
+        witnesses: Vec<Lang::WitnessSpaceGroupElement>,
+        language_public_parameters: Lang::PublicParameters,
+        batch_size: usize,
+    ) {
         let (proof, statements) = generate_valid_proof::<REPETITIONS, Lang>(
             &language_public_parameters,
             witnesses.clone(),

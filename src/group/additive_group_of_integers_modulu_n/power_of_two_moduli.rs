@@ -6,13 +6,14 @@ use serde::{Deserialize, Serialize};
 use crate::{
     group,
     group::{
-        BoundedGroupElement, CyclicGroupElement, GroupElement as _, MulByGenerator, Samplable,
+        sample_uint_within, BoundedGroupElement, CyclicGroupElement, GroupElement as _,
+        MulByGenerator, Samplable, SamplableWithin,
     },
 };
 
 /// An element of the additive group of integers for a power-of-two modulo `n = modulus`
 /// $\mathbb{Z}_n^+$
-#[derive(PartialEq, Eq, Clone, Debug, Copy)]
+#[derive(PartialEq, PartialOrd, Eq, Clone, Debug, Copy)]
 pub struct GroupElement<const LIMBS: usize>(Wrapping<Uint<LIMBS>>);
 
 impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
@@ -20,29 +21,39 @@ where
     Uint<LIMBS>: Encoding,
 {
     fn sample(
-        rng: &mut impl CryptoRngCore,
         public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
-        if public_parameters.sampling_bit_size > Uint::<LIMBS>::BITS {
-            return Err(group::Error::InvalidPublicParameters);
-        }
-
-        // TODO: probably via public parameters is not the right way to do this
-
-        let mask =
-            Uint::<LIMBS>::MAX >> (Uint::<LIMBS>::BITS - public_parameters.sampling_bit_size);
-
-        let value = Wrapping(Uint::<LIMBS>::random(rng) & mask);
-
-        Self::new(value.0, public_parameters)
+        Self::new(Uint::<LIMBS>::random(rng), public_parameters)
     }
 }
 
-/// The public parameters of the additive group of integers modulo `n = 2^k` where k is the number
-/// of bits `Self::bits_size` $\mathbb{Z}_n^+$
-#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
-pub struct PublicParameters<const LIMBS: usize> {
-    pub sampling_bit_size: usize,
+impl<const LIMBS: usize> SamplableWithin for GroupElement<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn sample_within(
+        subrange: (&Self, &Self),
+        public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
+    ) -> group::Result<Self> {
+        let (lower_bound, upper_bound) = subrange;
+        let lower_bound = Uint::<LIMBS>::from(lower_bound);
+        let upper_bound = Uint::<LIMBS>::from(upper_bound);
+
+        Self::new(
+            sample_uint_within(lower_bound, upper_bound, rng)?,
+            public_parameters,
+        )
+    }
+
+    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        Ok(Uint::<LIMBS>::ZERO.into())
+    }
+
+    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        Ok(Uint::<LIMBS>::MAX.into())
+    }
 }
 
 impl<const LIMBS: usize> group::GroupElement for GroupElement<LIMBS>
@@ -50,11 +61,9 @@ where
     Uint<LIMBS>: Encoding,
 {
     type Value = Uint<LIMBS>;
-    type PublicParameters = PublicParameters<LIMBS>;
+    type PublicParameters = ();
     fn public_parameters(&self) -> Self::PublicParameters {
-        PublicParameters {
-            sampling_bit_size: Uint::<LIMBS>::BITS,
-        }
+        ()
     }
     fn new(
         value: Self::Value,
