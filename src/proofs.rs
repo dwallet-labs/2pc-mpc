@@ -1,6 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 mod lightning;
+pub mod range;
 pub mod schnorr;
 pub(crate) mod transcript_protocol;
 
