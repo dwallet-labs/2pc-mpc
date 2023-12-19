@@ -195,11 +195,14 @@ impl<const N: usize, GroupElementValue: Serialize + for<'a> Deserialize<'a>>
     }
 }
 
-impl<const N: usize, GroupElementValue: Serialize + for<'a> Deserialize<'a>>
-    From<[GroupElementValue; N]> for Value<N, GroupElementValue>
+impl<
+        const N: usize,
+        GroupElementValue: Serialize + for<'a> Deserialize<'a> + From<OtherElementValue>,
+        OtherElementValue: Serialize + for<'a> Deserialize<'a>,
+    > From<[OtherElementValue; N]> for Value<N, GroupElementValue>
 {
-    fn from(value: [GroupElementValue; N]) -> Self {
-        Value(value)
+    fn from(value: [OtherElementValue; N]) -> Self {
+        Value(value.map(GroupElementValue::from))
     }
 }
 

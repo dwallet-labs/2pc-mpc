@@ -34,11 +34,9 @@ impl PartialEq for RangeProof {
         self.0.to_bytes() == other.0.to_bytes()
     }
 }
-
-pub const RANGE_CLAIM_LIMBS: usize = U64::LIMBS;
 pub const RANGE_CLAIM_BITS: usize = 32;
 
-impl super::RangeProof<SCALAR_LIMBS, RANGE_CLAIM_LIMBS> for RangeProof {
+impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
     const NAME: &'static str = "Bulletproofs over the Ristretto group";
 
     type CommitmentScheme<const NUM_RANGE_CLAIMS: usize> = MultiCommitment<
@@ -296,12 +294,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
 
 impl<const NUM_RANGE_CLAIMS: usize, const WITNESS_MASK_LIMBS: usize>
     From<self_product::Value<NUM_RANGE_CLAIMS, Uint<WITNESS_MASK_LIMBS>>>
-    for range::CommitmentSchemeMessageSpaceValue<
-        SCALAR_LIMBS,
-        NUM_RANGE_CLAIMS,
-        RANGE_CLAIM_LIMBS,
-        RangeProof,
-    >
+    for commitments::MessageSpaceValue<SCALAR_LIMBS, RangeProof::CommitmentScheme>
 where
     Uint<WITNESS_MASK_LIMBS>: Encoding,
 {

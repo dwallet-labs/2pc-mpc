@@ -450,7 +450,7 @@ mod benches {
             secp256k1::group_element::PublicParameters::default();
 
         let scalar =
-            secp256k1::Scalar::sample(&mut OsRng, &secp256k1_scalar_public_parameters).unwrap();
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
 
         let generator = secp256k1::GroupElement::new(
             secp256k1_group_public_parameters.generator,
