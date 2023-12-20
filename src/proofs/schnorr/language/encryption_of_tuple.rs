@@ -98,7 +98,6 @@ where
         self_product::GroupElement<2, EncryptionKey::CiphertextSpaceGroupElement>;
 
     type PublicParameters = PublicParameters<
-        SCALAR_LIMBS,
         group::PublicParameters<GroupElement::Scalar>,
         group::PublicParameters<EncryptionKey::PlaintextSpaceGroupElement>,
         group::PublicParameters<EncryptionKey::RandomnessSpaceGroupElement>,
@@ -237,16 +236,13 @@ where
 /// The Public Parameters of the Encryption of a Tuple Schnorr Language
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
-    const SCALAR_LIMBS: usize,
     ScalarPublicParameters,
     PlaintextSpacePublicParameters,
     RandomnessSpacePublicParameters,
     CiphertextSpacePublicParameters,
     EncryptionKeyPublicParameters,
     CiphertextSpaceValue,
-> where
-    Uint<SCALAR_LIMBS>: Encoding,
-{
+> {
     pub groups_public_parameters: GroupsPublicParameters<
         direct_product::ThreeWayPublicParameters<
             PlaintextSpacePublicParameters,
@@ -262,7 +258,6 @@ pub struct PublicParameters<
 }
 
 impl<
-        const SCALAR_LIMBS: usize,
         ScalarPublicParameters,
         PlaintextSpacePublicParameters,
         RandomnessSpacePublicParameters,
@@ -281,7 +276,6 @@ impl<
         >,
     >
     for PublicParameters<
-        SCALAR_LIMBS,
         ScalarPublicParameters,
         PlaintextSpacePublicParameters,
         RandomnessSpacePublicParameters,
@@ -289,8 +283,6 @@ impl<
         EncryptionKeyPublicParameters,
         CiphertextSpaceValue,
     >
-where
-    Uint<SCALAR_LIMBS>: Encoding,
 {
     fn as_ref(
         &self,
@@ -307,7 +299,6 @@ where
 }
 
 impl<
-        const SCALAR_LIMBS: usize,
         ScalarPublicParameters,
         PlaintextSpacePublicParameters: Clone,
         RandomnessSpacePublicParameters: Clone,
@@ -322,7 +313,6 @@ impl<
         CiphertextSpaceValue,
     >
     PublicParameters<
-        SCALAR_LIMBS,
         ScalarPublicParameters,
         PlaintextSpacePublicParameters,
         RandomnessSpacePublicParameters,
@@ -330,11 +320,10 @@ impl<
         EncryptionKeyPublicParameters,
         CiphertextSpaceValue,
     >
-where
-    Uint<SCALAR_LIMBS>: Encoding,
 {
     pub fn new<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        const SCALAR_LIMBS: usize,
         GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
         EncryptionKey,
     >(
@@ -447,6 +436,149 @@ impl<CiphertextSpaceGroupElement: group::GroupElement>
         let value: &[_; 2] = self.into();
 
         &value[1]
+    }
+}
+
+#[cfg(any(test, feature = "benchmarking"))]
+pub(crate) mod tests {
+    use core::{array, iter};
+
+    use crypto_bigint::{NonZero, Random, U128, U256};
+    use paillier::tests::N;
+    use rand_core::OsRng;
+    use rstest::rstest;
+
+    use super::*;
+    use crate::{
+        ahe::paillier,
+        commitments::Pedersen,
+        group::{ristretto, secp256k1, self_product},
+        proofs::schnorr::{
+            aggregation, language,
+            language::enhanced::tests::{scalar_lower_bound, scalar_upper_bound},
+        },
+        ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
+    };
+
+    pub type Lang = Language<
+        { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+        { U256::LIMBS },
+        secp256k1::GroupElement,
+        paillier::EncryptionKey,
+    >;
+
+    pub type EnhancedLang = EnhancedLanguage<
+        { RANGE_CLAIMS_PER_SCALAR },
+        { secp256k1::SCALAR_LIMBS },
+        { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+        { secp256k1::SCALAR_LIMBS },
+        Pedersen<
+            { RANGE_CLAIMS_PER_SCALAR },
+            { secp256k1::SCALAR_LIMBS },
+            secp256k1::Scalar,
+            secp256k1::GroupElement,
+        >,
+        secp256k1::GroupElement,
+        paillier::EncryptionKey,
+    >;
+
+    use crate::{
+        commitments::pedersen,
+        group::SamplableWithin,
+        proofs::schnorr::language::enhanced::tests::{
+            enhanced_language_public_parameters, RANGE_CLAIMS_PER_SCALAR,
+        },
+    };
+
+    fn lower_bound() -> direct_product::ThreeWayGroupElement<
+        paillier::PlaintextSpaceGroupElement,
+        paillier::RandomnessSpaceGroupElement,
+        paillier::RandomnessSpaceGroupElement,
+    > {
+        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+
+        let randomness_lower_bound = paillier::RandomnessSpaceGroupElement::lower_bound(
+            paillier_public_parameters.randomness_space_public_parameters(),
+        )
+        .unwrap();
+
+        (
+            scalar_lower_bound(),
+            randomness_lower_bound,
+            randomness_lower_bound,
+        )
+            .into()
+    }
+
+    fn upper_bound() -> direct_product::ThreeWayGroupElement<
+        paillier::PlaintextSpaceGroupElement,
+        paillier::RandomnessSpaceGroupElement,
+        paillier::RandomnessSpaceGroupElement,
+    > {
+        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+
+        let randomness_upper_bound = paillier::RandomnessSpaceGroupElement::upper_bound(
+            paillier_public_parameters.randomness_space_public_parameters(),
+        )
+        .unwrap();
+
+        (
+            scalar_upper_bound(),
+            randomness_upper_bound,
+            randomness_upper_bound,
+        )
+            .into()
+    }
+
+    pub(crate) fn public_parameters() -> language::PublicParameters<REPETITIONS, Lang> {
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
+
+        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+
+        let paillier_encryption_key =
+            paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();
+
+        let plaintext = paillier::PlaintextSpaceGroupElement::new(
+            Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from_u64(42u64),
+            paillier_public_parameters.plaintext_space_public_parameters(),
+        )
+        .unwrap();
+
+        let ciphertext = paillier_encryption_key
+            .encrypt(&plaintext, &paillier_public_parameters, &mut OsRng)
+            .unwrap()
+            .1
+            .value();
+
+        let language_public_parameters = PublicParameters::new::<
+            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+            { secp256k1::SCALAR_LIMBS },
+            secp256k1::GroupElement,
+            paillier::EncryptionKey,
+        >(
+            secp256k1_scalar_public_parameters,
+            paillier_public_parameters,
+            ciphertext,
+        );
+
+        language_public_parameters
+    }
+
+    #[rstest]
+    #[case(1)]
+    #[case(2)]
+    #[case(11)]
+    fn valid_proof_verifies(#[case] batch_size: usize) {
+        let language_public_parameters = public_parameters();
+
+        language::tests::valid_proof_verifies::<REPETITIONS, Lang>(
+            Some((lower_bound(), upper_bound())),
+            language_public_parameters,
+            batch_size,
+        );
     }
 }
 
