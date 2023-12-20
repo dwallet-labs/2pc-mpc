@@ -12,8 +12,9 @@ use super::{GroupElement, SCALAR_LIMBS};
 use crate::{
     group,
     group::{
-        secp256k1::ORDER, BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement,
-        KnownOrderScalar, MulByGenerator, PrimeGroupElement, Samplable, SamplableWithin,
+        sample_uint_within, secp256k1::ORDER, BoundedGroupElement, CyclicGroupElement,
+        KnownOrderGroupElement, KnownOrderScalar, MulByGenerator, PrimeGroupElement, Samplable,
+        SamplableWithin,
     },
     traits::Reduce,
 };
@@ -22,39 +23,6 @@ use crate::{
 /// defined.
 #[derive(PartialEq, PartialOrd, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Scalar(pub(super) k256::Scalar);
-
-impl SamplableWithin for Scalar {
-    fn sample_within(
-        subrange: (&Self, &Self),
-        public_parameters: &Self::PublicParameters,
-        rng: &mut impl CryptoRngCore,
-    ) -> group::Result<Self> {
-        let (lower_bound, upper_bound) = subrange;
-
-        // TODO: use the func
-
-        // TODO: can I just sample once, and deterministically place the value within the subrange?
-        // why did crypto-bigint made such weird design choices: https://github.com/RustCrypto/crypto-bigint/blob/8f46be05162eb6e8827f142311bfc60aa1cbb5d2/src/uint/rand.rs#L42
-        // Perform rejection-sampling until sampling a value within the subrange.
-        loop {
-            let candidate = Self::sample(public_parameters, rng)?;
-
-            if lower_bound <= &candidate && &candidate <= upper_bound {
-                return Ok(candidate);
-            } else {
-                continue;
-            }
-        }
-    }
-
-    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        Ok(Self(k256::Scalar::ZERO))
-    }
-
-    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        Ok(super::ORDER.wrapping_sub(&U256::ONE).into())
-    }
-}
 
 impl ConstantTimeEq for Scalar {
     fn ct_eq(&self, other: &Self) -> Choice {
@@ -74,6 +42,34 @@ impl Samplable for Scalar {
         rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
         Ok(Self(k256::Scalar::random(rng)))
+    }
+}
+
+impl SamplableWithin for Scalar {
+    fn sample_within(
+        subrange: (&Self, &Self),
+        public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
+    ) -> group::Result<Self> {
+        let (&lower_bound, &upper_bound) = subrange;
+        if lower_bound == Self::lower_bound(public_parameters)?
+            && upper_bound == Self::upper_bound(public_parameters)?
+        {
+            return Self::sample(public_parameters, rng);
+        }
+
+        let lower_bound: U256 = lower_bound.into();
+        let upper_bound: U256 = upper_bound.into();
+
+        sample_uint_within(lower_bound, upper_bound, rng).map(Self::from)
+    }
+
+    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        Ok(Self(k256::Scalar::ZERO))
+    }
+
+    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
+        Ok(super::ORDER.wrapping_sub(&U256::ONE).into())
     }
 }
 

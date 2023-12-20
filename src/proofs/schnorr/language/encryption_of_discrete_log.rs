@@ -68,13 +68,13 @@ pub type EnhancedLanguage<
     const SCALAR_LIMBS: usize,
     CommitmentScheme,
     GroupElement,
-    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    EncryptionKey,
 > = language::enhanced::EnhancedLanguage<
     REPETITIONS,
     NUM_RANGE_CLAIMS,
     SCALAR_LIMBS,
     CommitmentScheme,
-    EncryptionKey::RandomnessSpaceGroupElement,
+    ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
     Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>,
 >;
 
@@ -464,7 +464,10 @@ pub(crate) mod tests {
     >;
 
     use crate::{
-        commitments::pedersen, proofs::schnorr::language::enhanced::tests::RANGE_CLAIMS_PER_SCALAR,
+        commitments::pedersen,
+        proofs::schnorr::language::enhanced::tests::{
+            enhanced_language_public_parameters, RANGE_CLAIMS_PER_SCALAR,
+        },
     };
 
     pub(crate) fn public_parameters() -> language::PublicParameters<REPETITIONS, Lang> {
@@ -487,66 +490,6 @@ pub(crate) mod tests {
         );
 
         language_public_parameters
-    }
-
-    pub(crate) fn enhanced_language_public_parameters(
-    ) -> language::PublicParameters<REPETITIONS, EnhancedLang> {
-        let language_public_parameters = public_parameters();
-
-        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
-
-        let secp256k1_group_public_parameters =
-            secp256k1::group_element::PublicParameters::default();
-
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
-
-        // TODO: move this shared logic somewhere e.g. DRY
-        let generator = secp256k1::GroupElement::new(
-            secp256k1_group_public_parameters.generator,
-            &secp256k1_group_public_parameters,
-        )
-        .unwrap();
-
-        let message_generators = array::from_fn(|_| {
-            let generator =
-                secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                    * generator;
-
-            generator.value()
-        });
-
-        let randomness_generator =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                * generator;
-
-        // TODO: this is not safe; we need a proper way to derive generators
-        let pedersen_public_parameters = pedersen::PublicParameters::new::<
-            { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
-            secp256k1::GroupElement,
-        >(
-            secp256k1_scalar_public_parameters.clone(),
-            secp256k1_group_public_parameters.clone(),
-            message_generators,
-            randomness_generator.value(),
-        );
-
-        language::enhanced::PublicParameters::new::<
-            Pedersen<
-                { RANGE_CLAIMS_PER_SCALAR },
-                { secp256k1::SCALAR_LIMBS },
-                secp256k1::Scalar,
-                secp256k1::GroupElement,
-            >,
-            paillier::RandomnessSpaceGroupElement,
-            Lang,
-        >(
-            paillier_public_parameters
-                .randomness_space_public_parameters()
-                .clone(),
-            pedersen_public_parameters,
-            language_public_parameters,
-        )
     }
 
     fn generate_witnesses(
@@ -590,7 +533,17 @@ pub(crate) mod tests {
     #[case(11)]
     fn valid_proof_verifies(#[case] batch_size: usize) {
         let language_public_parameters = public_parameters();
-        let enhanced_language_public_parameters = enhanced_language_public_parameters();
+        let enhanced_language_public_parameters = enhanced_language_public_parameters::<
+            REPETITIONS,
+            { RANGE_CLAIMS_PER_SCALAR },
+            paillier::RandomnessSpaceGroupElement,
+            Lang,
+        >(
+            language_public_parameters
+                .randomness_space_public_parameters()
+                .clone(),
+            language_public_parameters.clone(),
+        );
 
         let witnesses = generate_witnesses(&language_public_parameters, batch_size);
 
@@ -636,7 +589,17 @@ pub(crate) mod tests {
     #[case(5, 2)]
     fn aggregates(#[case] number_of_parties: usize, #[case] batch_size: usize) {
         let language_public_parameters = public_parameters();
-        let enhanced_language_public_parameters = enhanced_language_public_parameters();
+        let enhanced_language_public_parameters = enhanced_language_public_parameters::<
+            REPETITIONS,
+            { RANGE_CLAIMS_PER_SCALAR },
+            paillier::RandomnessSpaceGroupElement,
+            Lang,
+        >(
+            language_public_parameters
+                .randomness_space_public_parameters()
+                .clone(),
+            language_public_parameters.clone(),
+        );
 
         let witnesses: Vec<_> =
             iter::repeat_with(|| generate_witnesses(&language_public_parameters, batch_size))

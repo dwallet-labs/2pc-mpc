@@ -63,8 +63,6 @@ where
         let lower_bound = Uint::<LIMBS>::from(lower_bound);
         let upper_bound = Uint::<LIMBS>::from(upper_bound);
 
-        // TODO: can I just sample once, and deterministically place the value within the subrange?
-        // why did crypto-bigint made such weird design choices: https://github.com/RustCrypto/crypto-bigint/blob/8f46be05162eb6e8827f142311bfc60aa1cbb5d2/src/uint/rand.rs#L42
         // Perform rejection-sampling until sampling a value within the subrange.
         loop {
             let candidate = Uint::<LIMBS>::random(rng);

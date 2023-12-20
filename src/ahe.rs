@@ -211,6 +211,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
     ///
     /// This is the probabilistic linear combination algorithm which samples `mask` and `randomness`
     /// from `rng` and calls [`Self::linear_combination_with_randomness()`].
+    // TODO: remove MODULUS_LIMBS, MASK_LIMBS, and just use PLAINTEXT_LIMBS?
     fn evaluate_circuit_private_linear_combination<
         const DIMENSION: usize,
         const MODULUS_LIMBS: usize,
