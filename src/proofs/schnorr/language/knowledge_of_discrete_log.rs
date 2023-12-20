@@ -157,6 +157,7 @@ mod tests {
         let language_public_parameters = language_public_parameters();
 
         language::tests::valid_proof_verifies::<REPETITIONS, Lang>(
+            None,
             language_public_parameters,
             batch_size,
         )
@@ -171,6 +172,7 @@ mod tests {
     fn aggregates(#[case] number_of_parties: usize, #[case] batch_size: usize) {
         let language_public_parameters = language_public_parameters();
         let witnesses = language::tests::generate_witnesses_for_aggregation::<REPETITIONS, Lang>(
+            None,
             &language_public_parameters,
             number_of_parties,
             batch_size,
@@ -190,6 +192,7 @@ mod tests {
         // `k256::AffinePoint` assures deserialized values are on curve,
         // and `Value` can only be instantiated through deserialization
         language::tests::invalid_proof_fails_verification::<REPETITIONS, Lang>(
+            None,
             None,
             None,
             language_public_parameters,

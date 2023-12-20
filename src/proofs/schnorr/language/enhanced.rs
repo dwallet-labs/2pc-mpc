@@ -591,10 +591,12 @@ impl<
 
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
+    use ahe::paillier::tests::N;
+    use crypto_bigint::U256;
     use rand_core::OsRng;
 
     use super::*;
-    use crate::group::secp256k1;
+    use crate::{ahe::GroupsPublicParametersAccessors, group::secp256k1};
 
     pub const RANGE_CLAIMS_PER_SCALAR: usize = { secp256k1::SCALAR_LIMBS / U128::LIMBS }; // TODO: proper range claims bits
 
@@ -616,6 +618,26 @@ pub(crate) mod tests {
         UnboundedWitnessSpaceGroupElement,
         Lang,
     >;
+
+    pub fn scalar_lower_bound() -> paillier::PlaintextSpaceGroupElement {
+        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+
+        paillier::PlaintextSpaceGroupElement::new(
+            Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::ZERO,
+            paillier_public_parameters.plaintext_space_public_parameters(),
+        )
+        .unwrap()
+    }
+
+    pub fn scalar_upper_bound() -> paillier::PlaintextSpaceGroupElement {
+        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+
+        paillier::PlaintextSpaceGroupElement::new(
+            (&secp256k1::ORDER.wrapping_sub(&U256::ONE)).into(),
+            paillier_public_parameters.plaintext_space_public_parameters(),
+        )
+        .unwrap()
+    }
 
     pub(crate) fn enhanced_language_public_parameters<
         const REPETITIONS: usize,
@@ -758,6 +780,8 @@ pub(crate) mod tests {
 }
 
 // TODO: work out enhanced proofs, then fix tests
+
+// TODO: DRY these tests code, perhaps using a trait for a Proof.
 
 // #[cfg(any(test, feature = "benchmarking"))]
 // pub(crate) mod tests {

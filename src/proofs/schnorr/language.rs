@@ -152,15 +152,28 @@ pub(crate) mod tests {
     };
 
     pub(crate) fn generate_witnesses<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
+        subrange: Option<(
+            Lang::WitnessSpaceGroupElement,
+            Lang::WitnessSpaceGroupElement,
+        )>,
         language_public_parameters: &Lang::PublicParameters,
         batch_size: usize,
     ) -> Vec<Lang::WitnessSpaceGroupElement> {
         iter::repeat_with(|| {
-            Lang::WitnessSpaceGroupElement::sample(
-                language_public_parameters.witness_space_public_parameters(),
-                &mut OsRng,
-            )
-            .unwrap()
+            if let Some((lower_bound, upper_bound)) = &subrange {
+                Lang::WitnessSpaceGroupElement::sample_within(
+                    (lower_bound, upper_bound),
+                    language_public_parameters.witness_space_public_parameters(),
+                    &mut OsRng,
+                )
+                .unwrap()
+            } else {
+                Lang::WitnessSpaceGroupElement::sample(
+                    language_public_parameters.witness_space_public_parameters(),
+                    &mut OsRng,
+                )
+                .unwrap()
+            }
         })
         .take(batch_size)
         .collect()
@@ -170,21 +183,34 @@ pub(crate) mod tests {
         const REPETITIONS: usize,
         Lang: Language<REPETITIONS>,
     >(
+        subrange: Option<(
+            Lang::WitnessSpaceGroupElement,
+            Lang::WitnessSpaceGroupElement,
+        )>,
         language_public_parameters: &Lang::PublicParameters,
         number_of_parties: usize,
         batch_size: usize,
     ) -> Vec<Vec<Lang::WitnessSpaceGroupElement>> {
         iter::repeat_with(|| {
-            generate_witnesses::<REPETITIONS, Lang>(language_public_parameters, batch_size)
+            generate_witnesses::<REPETITIONS, Lang>(
+                subrange.clone(),
+                language_public_parameters,
+                batch_size,
+            )
         })
         .take(number_of_parties)
         .collect()
     }
 
     pub(crate) fn generate_witness<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
+        subrange: Option<(
+            Lang::WitnessSpaceGroupElement,
+            Lang::WitnessSpaceGroupElement,
+        )>,
         language_public_parameters: &Lang::PublicParameters,
     ) -> Lang::WitnessSpaceGroupElement {
-        let witnesses = generate_witnesses::<REPETITIONS, Lang>(language_public_parameters, 1);
+        let witnesses =
+            generate_witnesses::<REPETITIONS, Lang>(subrange, language_public_parameters, 1);
 
         witnesses.first().unwrap().clone()
     }
@@ -208,30 +234,19 @@ pub(crate) mod tests {
 
     #[allow(dead_code)]
     pub(crate) fn valid_proof_verifies<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
+        subrange: Option<(
+            Lang::WitnessSpaceGroupElement,
+            Lang::WitnessSpaceGroupElement,
+        )>,
         language_public_parameters: Lang::PublicParameters,
         batch_size: usize,
     ) {
-        let witnesses =
-            generate_witnesses::<REPETITIONS, Lang>(&language_public_parameters, batch_size);
-
-        valid_proof_verifies_internal::<REPETITIONS, Lang>(
-            witnesses,
-            language_public_parameters,
+        let witnesses = generate_witnesses::<REPETITIONS, Lang>(
+            subrange,
+            &language_public_parameters,
             batch_size,
-        )
-    }
+        );
 
-    // TODO: why is this considered as dead code, if its being called from a test in other modules?
-
-    #[allow(dead_code)]
-    pub(crate) fn valid_proof_verifies_internal<
-        const REPETITIONS: usize,
-        Lang: Language<REPETITIONS>,
-    >(
-        witnesses: Vec<Lang::WitnessSpaceGroupElement>,
-        language_public_parameters: Lang::PublicParameters,
-        batch_size: usize,
-    ) {
         let (proof, statements) = generate_valid_proof::<REPETITIONS, Lang>(
             &language_public_parameters,
             witnesses.clone(),
@@ -245,25 +260,35 @@ pub(crate) mod tests {
         );
     }
 
+    // TODO: why is this considered as dead code, if its being called from a test in other modules?
+
     #[allow(dead_code)]
     pub(crate) fn invalid_proof_fails_verification<
         const REPETITIONS: usize,
         Lang: Language<REPETITIONS>,
     >(
+        subrange: Option<(
+            Lang::WitnessSpaceGroupElement,
+            Lang::WitnessSpaceGroupElement,
+        )>,
         invalid_witness_space_value: Option<WitnessSpaceValue<REPETITIONS, Lang>>,
         invalid_statement_space_value: Option<StatementSpaceValue<REPETITIONS, Lang>>,
         language_public_parameters: Lang::PublicParameters,
         batch_size: usize,
     ) {
-        let witnesses =
-            generate_witnesses::<REPETITIONS, Lang>(&language_public_parameters, batch_size);
+        let witnesses = generate_witnesses::<REPETITIONS, Lang>(
+            subrange,
+            &language_public_parameters,
+            batch_size,
+        );
 
         let (valid_proof, statements) = generate_valid_proof::<REPETITIONS, Lang>(
             &language_public_parameters,
             witnesses.clone(),
         );
 
-        let wrong_witness = generate_witness::<REPETITIONS, Lang>(&language_public_parameters);
+        let wrong_witness =
+            generate_witness::<REPETITIONS, Lang>(None, &language_public_parameters);
 
         let wrong_statement =
             Lang::group_homomorphism(&wrong_witness, &language_public_parameters).unwrap();

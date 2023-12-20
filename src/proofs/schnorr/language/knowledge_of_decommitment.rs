@@ -318,6 +318,7 @@ mod tests {
         let language_public_parameters = secp256k1_language_public_parameters::<1, 1>();
 
         language::tests::valid_proof_verifies::<1, Secp256k1Language<1, 1>>(
+            None,
             language_public_parameters,
             batch_size,
         )
@@ -332,6 +333,7 @@ mod tests {
         let language_public_parameters = secp256k1_language_public_parameters::<128, 1>();
 
         language::tests::valid_proof_verifies::<128, Secp256k1Language<128, 1>>(
+            None,
             language_public_parameters,
             batch_size,
         )
@@ -345,10 +347,13 @@ mod tests {
     #[case(5, 2)]
     fn aggregates(#[case] number_of_parties: usize, #[case] batch_size: usize) {
         let language_public_parameters = secp256k1_language_public_parameters::<1, 1>();
-        let witnesses = language::tests::generate_witnesses_for_aggregation::<
-            1,
-            Secp256k1Language<1, 1>,
-        >(&language_public_parameters, number_of_parties, batch_size);
+        let witnesses =
+            language::tests::generate_witnesses_for_aggregation::<1, Secp256k1Language<1, 1>>(
+                None,
+                &language_public_parameters,
+                number_of_parties,
+                batch_size,
+            );
 
         aggregation::tests::aggregates::<1, Secp256k1Language<1, 1>>(
             &language_public_parameters,
@@ -367,6 +372,7 @@ mod tests {
         // `k256::AffinePoint` assures deserialized values are on curve,
         // and `Value` can only be instantiated through deserialization
         language::tests::invalid_proof_fails_verification::<1, Secp256k1Language<1, 1>>(
+            None,
             None,
             None,
             language_public_parameters,
