@@ -7,8 +7,8 @@
 
 use std::{array, iter};
 
-use bulletproofs::{self, BulletproofGens, PedersenGens};
-use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U64};
+use bulletproofs::{BulletproofGens, PedersenGens};
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U256, U64};
 use curve25519_dalek::traits::Identity;
 use merlin::Transcript;
 use ristretto::SCALAR_LIMBS;
@@ -34,6 +34,7 @@ impl PartialEq for RangeProof {
         self.0.to_bytes() == other.0.to_bytes()
     }
 }
+
 pub const RANGE_CLAIM_BITS: usize = 32;
 
 impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
@@ -51,7 +52,12 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
 
     fn prove<const NUM_RANGE_CLAIMS: usize>(
         _public_parameters: &Self::PublicParameters<NUM_RANGE_CLAIMS>,
-        witnesses: Vec<[Uint<RANGE_CLAIM_LIMBS>; NUM_RANGE_CLAIMS]>,
+        witnesses: Vec<
+            commitments::MessageSpaceGroupElement<
+                SCALAR_LIMBS,
+                Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
+            >,
+        >,
         commitments_randomness: Vec<
             commitments::RandomnessSpaceGroupElement<
                 SCALAR_LIMBS,
@@ -71,10 +77,17 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
     )> {
         let number_of_witnesses = witnesses.len();
 
+        // TODO: do I want to check that witnesses are in range and return error here, or just let
+        // the proof fail?
         let witnesses: Vec<u64> = witnesses
             .into_iter()
+            .map(|witness| {
+                <[_; NUM_RANGE_CLAIMS]>::from(witness)
+                    .map(<[_; 1]>::from)
+                    .map(|x| x[0]) // TODO: prettier way to write this?
+            })
             .flatten()
-            .map(|witness| witness.into())
+            .map(|witness: ristretto::Scalar| U64::from(&U256::from(witness)).into())
             .collect();
 
         let commitments_randomness: Vec<curve25519_dalek::scalar::Scalar> = commitments_randomness
@@ -103,7 +116,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
             .collect();
 
         let bulletproofs_generators = BulletproofGens::new(
-            <Self as super::RangeProof<SCALAR_LIMBS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS,
+            <Self as super::RangeProof<SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
             witnesses.len(),
         );
         let commitment_generators = PedersenGens::default();
@@ -114,7 +127,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
             transcript,
             witnesses.as_slice(),
             commitments_randomness.as_slice(),
-            <Self as super::RangeProof<SCALAR_LIMBS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS,
+            <Self as super::RangeProof<SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
             rng,
         )?;
 
@@ -192,7 +205,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
             .collect();
 
         let bulletproofs_generators = BulletproofGens::new(
-            <Self as super::RangeProof<SCALAR_LIMBS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS,
+            <Self as super::RangeProof<SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
             compressed_commitments.len(),
         );
         let commitment_generators = PedersenGens::default();
@@ -203,7 +216,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
             &commitment_generators,
             transcript,
             compressed_commitments.as_slice(),
-            <Self as super::RangeProof<SCALAR_LIMBS, RANGE_CLAIM_LIMBS>>::RANGE_CLAIM_BITS,
+            <Self as super::RangeProof<SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
             rng,
         )?)
     }
@@ -292,24 +305,28 @@ impl<const NUM_RANGE_CLAIMS: usize>
     }
 }
 
-impl<const NUM_RANGE_CLAIMS: usize, const WITNESS_MASK_LIMBS: usize>
-    From<self_product::Value<NUM_RANGE_CLAIMS, Uint<WITNESS_MASK_LIMBS>>>
-    for commitments::MessageSpaceValue<SCALAR_LIMBS, RangeProof::CommitmentScheme>
-where
-    Uint<WITNESS_MASK_LIMBS>: Encoding,
-{
-    fn from(value: Value<NUM_RANGE_CLAIMS, Uint<WITNESS_MASK_LIMBS>>) -> Self {
-        let value: [Uint<WITNESS_MASK_LIMBS>; NUM_RANGE_CLAIMS] = value.into();
-
-        // TODO: need to specify when this is safe? for WITNESS_MASK_LIMBS < SCALAR_LIMBS
-        // perhaps return result
-
-        value
-            .map(|v| ristretto::Scalar::from(Uint::<SCALAR_LIMBS>::from(&v)))
-            .map(|scalar| [scalar].into())
-            .into()
-    }
-}
+// TODO: is this still needed
+// impl<const NUM_RANGE_CLAIMS: usize, const WITNESS_MASK_LIMBS: usize>
+//     From<self_product::Value<NUM_RANGE_CLAIMS, Uint<WITNESS_MASK_LIMBS>>>
+//     for commitments::MessageSpaceValue<
+//         SCALAR_LIMBS,
+//         range::CommitmentScheme<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RangeProof>,
+//     >
+// where
+//     Uint<WITNESS_MASK_LIMBS>: Encoding,
+// {
+//     fn from(value: Value<NUM_RANGE_CLAIMS, Uint<WITNESS_MASK_LIMBS>>) -> Self {
+//         let value: [Uint<WITNESS_MASK_LIMBS>; NUM_RANGE_CLAIMS] = value.into();
+//
+//         // TODO: need to specify when this is safe? for WITNESS_MASK_LIMBS < SCALAR_LIMBS
+//         // perhaps return result
+//
+//         value
+//             .map(|v| ristretto::Scalar::from(Uint::<SCALAR_LIMBS>::from(&v)))
+//             .map(|scalar| [scalar].into())
+//             .into()
+//     }
+// }
 
 // TODO: do I want the aggregation code?
 //

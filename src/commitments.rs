@@ -57,6 +57,7 @@ pub trait HomomorphicCommitmentScheme<const MESSAGE_SPACE_SCALAR_LIMBS: usize>:
     /// public parameters.
     fn new(public_parameters: &Self::PublicParameters) -> group::Result<Self>;
 
+    // TODO: doc
     fn commit(
         &self,
         message: &Self::MessageSpaceGroupElement,

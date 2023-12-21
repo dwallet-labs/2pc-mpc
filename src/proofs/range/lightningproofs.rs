@@ -46,6 +46,7 @@ pub struct RangeProof<
     >,
 }
 
+// TODO: impl RangeProof
 impl<
         const MESSAGE_SPACE_SCALAR_LIMBS: usize,
         CommitmentScheme: HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>,

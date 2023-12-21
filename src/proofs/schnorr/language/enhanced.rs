@@ -1,14 +1,13 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-// Author: dWallet Labs, LTD.
-// SPDX-License-Identifier: Apache-2.0
-
 use core::array;
 use std::{marker::PhantomData, ops::Mul};
 
 use crypto_bigint::{Encoding, Uint, U128};
-use serde::Serialize;
+use merlin::Transcript;
+use rand_core::CryptoRngCore;
+use serde::{Deserialize, Serialize};
 use tiresias::secret_sharing::shamir::Polynomial;
 
 use crate::{
@@ -34,6 +33,7 @@ use crate::{
     ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
 };
 
+// TODO: don't even expose this, just the proof.
 /// An Enhanced Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.
 /// As defined in Appendix B. Schnorr Protocols in the paper.
@@ -51,6 +51,7 @@ pub struct EnhancedLanguage<
     _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
+// TODO: instead of this, simply use the commitment space's message space element
 pub type ConstrainedWitnessGroupElement<
     const NUM_RANGE_CLAIMS: usize,
     const MESSAGE_SPACE_SCALAR_LIMBS: usize,
@@ -58,6 +59,33 @@ pub type ConstrainedWitnessGroupElement<
     NUM_RANGE_CLAIMS,
     power_of_two_moduli::GroupElement<MESSAGE_SPACE_SCALAR_LIMBS>,
 >;
+
+// TODO: use this code in protocols. Or maybe the other compose/decompose.
+pub trait EnhanceableLanguage<
+    const REPETITIONS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
+>: schnorr::Language<REPETITIONS>
+{
+    // TODO: solve all these refs & clones, here and in accessors. Perhaps partial move is ok.
+    fn compose_witness(
+        constrained_witness: &ConstrainedWitnessGroupElement<
+            NUM_RANGE_CLAIMS,
+            MESSAGE_SPACE_SCALAR_LIMBS,
+        >,
+        unbounded_witness: &UnboundedWitnessSpaceGroupElement,
+        language_public_parameters: &Self::PublicParameters,
+    ) -> proofs::Result<Self::WitnessSpaceGroupElement>;
+
+    fn decompose_witness(
+        witness: &Self::WitnessSpaceGroupElement,
+        language_public_parameters: &Self::PublicParameters,
+    ) -> proofs::Result<(
+        ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, MESSAGE_SPACE_SCALAR_LIMBS>,
+        UnboundedWitnessSpaceGroupElement,
+    )>;
+}
 
 impl<
         const REPETITIONS: usize,
@@ -198,33 +226,6 @@ where
 
         Ok((range_proof_commitment, language_statement).into())
     }
-}
-
-// TODO: use this code in protocols.
-pub(crate) trait EnhanceableLanguage<
-    const REPETITIONS: usize,
-    const NUM_RANGE_CLAIMS: usize,
-    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
-    UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
->: schnorr::Language<REPETITIONS>
-{
-    // TODO: solve all these refs & clones, here and in accessors. Perhaps partial move is ok.
-    fn compose_witness(
-        constrained_witness: &ConstrainedWitnessGroupElement<
-            NUM_RANGE_CLAIMS,
-            MESSAGE_SPACE_SCALAR_LIMBS,
-        >,
-        unbounded_witness: &UnboundedWitnessSpaceGroupElement,
-        language_public_parameters: &Self::PublicParameters,
-    ) -> proofs::Result<Self::WitnessSpaceGroupElement>;
-
-    fn decompose_witness(
-        witness: &Self::WitnessSpaceGroupElement,
-        language_public_parameters: &Self::PublicParameters,
-    ) -> proofs::Result<(
-        ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, MESSAGE_SPACE_SCALAR_LIMBS>,
-        UnboundedWitnessSpaceGroupElement,
-    )>;
 }
 
 pub trait DecomposableWitness<
@@ -779,231 +780,3 @@ pub(crate) mod tests {
             .collect()
     }
 }
-
-// TODO: work out enhanced proofs, then fix tests
-
-// TODO: DRY these tests code, perhaps using a trait for a Proof.
-
-// #[cfg(any(test, feature = "benchmarking"))]
-// pub(crate) mod tests {
-//     use std::{array, iter, marker::PhantomData};
-//
-//     use crypto_bigint::{Random, Wrapping, U128, U256};
-//     use rand_core::OsRng;
-//
-//     use super::*;
-//     use crate::{
-//         group::{ristretto, secp256k1},
-//         proofs::{
-//             range,
-//             range::RangeProof,
-//             schnorr::{enhanced, language},
-//         },
-//         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
-//     };
-//
-//     pub(crate) fn generate_valid_proof<
-//         const NUM_RANGE_CLAIMS: usize,
-//         Scalar: BoundedGroupElement<SCALAR_LIMBS>,
-//         GroupElement: BoundedGroupElement<SCALAR_LIMBS>,
-//         Lang: EnhancedLanguage<NUM_RANGE_CLAIMS, SCALAR_LIMBS, Scalar, GroupElement>,
-//     >(
-//         language_public_parameters: &Lang::PublicParameters,
-//         range_proof_public_parameters: &language::enhanced::RangeProofPublicParameters<
-//             REPETITIONS,
-//             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//             NUM_RANGE_CLAIMS,
-//             RANGE_CLAIM_LIMBS,
-//             SCALAR_LIMBS,
-//             Lang,
-//         >,
-//         witnesses: Vec<Lang::WitnessSpaceGroupElement>,
-//     ) -> (
-//         enhanced::Proof<
-//             REPETITIONS,
-//             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//             NUM_RANGE_CLAIMS,
-//             RANGE_CLAIM_LIMBS,
-//             SCALAR_LIMBS,
-//             Lang,
-//             PhantomData<()>,
-//         >,
-//         Vec<Lang::StatementSpaceGroupElement>,
-//     )
-//     where
-//         Uint<RANGE_CLAIM_LIMBS>: Encoding,
-//         Uint<SCALAR_LIMBS>: Encoding,
-//     {
-//         enhanced::Proof::prove(
-//             &PhantomData,
-//             language_public_parameters,
-//             range_proof_public_parameters,
-//             witnesses,
-//             &mut OsRng,
-//         )
-//         .unwrap()
-//     }
-//
-//     #[allow(dead_code)]
-//     pub(crate) fn valid_proof_verifies<
-//         const REPETITIONS: usize,
-//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-//         const NUM_RANGE_CLAIMS: usize,
-//         const RANGE_CLAIM_LIMBS: usize,
-//         const SCALAR_LIMBS: usize,
-//         Lang: EnhancedLanguage<
-//             REPETITIONS,
-//             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//             NUM_RANGE_CLAIMS,
-//             RANGE_CLAIM_LIMBS,
-//             SCALAR_LIMBS,
-//         >,
-//     >(
-//         language_public_parameters: &Lang::PublicParameters,
-//         range_proof_public_parameters: &RangeProofPublicParameters<
-//             REPETITIONS,
-//             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//             NUM_RANGE_CLAIMS,
-//             RANGE_CLAIM_LIMBS,
-//             SCALAR_LIMBS,
-//             Lang,
-//         >,
-//         batch_size: usize,
-//     ) where
-//         Uint<RANGE_CLAIM_LIMBS>: Encoding,
-//         Uint<SCALAR_LIMBS>: Encoding,
-//     {
-//         let witnesses = generate_witnesses::<
-//             REPETITIONS,
-//             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//             NUM_RANGE_CLAIMS,
-//             RANGE_CLAIM_LIMBS,
-//             SCALAR_LIMBS,
-//             Lang,
-//         >(language_public_parameters, batch_size);
-//
-//         let (proof, statements) = generate_valid_proof::<
-//             REPETITIONS,
-//             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//             NUM_RANGE_CLAIMS,
-//             RANGE_CLAIM_LIMBS,
-//             SCALAR_LIMBS,
-//             Lang,
-//         >(
-//             language_public_parameters,
-//             range_proof_public_parameters,
-//             witnesses.clone(),
-//         );
-//
-//         let res = proof.verify(
-//             None,
-//             &PhantomData,
-//             language_public_parameters,
-//             range_proof_public_parameters,
-//             statements,
-//             &mut OsRng,
-//         );
-//
-//         assert!(
-//             res.is_ok(),
-//             "valid enhanced proofs should verify, got error: {:?}",
-//             res.err().unwrap()
-//         );
-//     }
-//
-//     #[allow(dead_code)]
-//     pub(crate) fn proof_with_out_of_range_witness_fails<
-//         const REPETITIONS: usize,
-//         const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-//         const NUM_RANGE_CLAIMS: usize,
-//         const RANGE_CLAIM_LIMBS: usize,
-//         const SCALAR_LIMBS: usize,
-//         Lang: EnhancedLanguage<
-//             REPETITIONS,
-//             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//             NUM_RANGE_CLAIMS,
-//             RANGE_CLAIM_LIMBS,
-//             SCALAR_LIMBS,
-//         >,
-//     >(
-//         language_public_parameters: &Lang::PublicParameters,
-//         range_proof_public_parameters: &RangeProofPublicParameters<
-//             REPETITIONS,
-//             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//             NUM_RANGE_CLAIMS,
-//             RANGE_CLAIM_LIMBS,
-//             SCALAR_LIMBS,
-//             Lang,
-//         >,
-//         batch_size: usize,
-//     ) where
-//         Uint<RANGE_CLAIM_LIMBS>: Encoding,
-//         Uint<SCALAR_LIMBS>: Encoding,
-//     {
-//         let mut witnesses = generate_witnesses::<
-//             REPETITIONS,
-//             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//             NUM_RANGE_CLAIMS,
-//             RANGE_CLAIM_LIMBS,
-//             SCALAR_LIMBS,
-//             Lang,
-//         >(language_public_parameters, batch_size);
-//
-//         let (constrained_witnesses, commitment_randomness, unbounded_witness) =
-//             witnesses.first().unwrap().clone().into();
-//         let mut constrained_witnesses: [power_of_two_moduli::GroupElement<SCALAR_LIMBS>;
-//             NUM_RANGE_CLAIMS] = constrained_witnesses.into();
-//
-//         // just out of range by 1
-//         constrained_witnesses[0] = power_of_two_moduli::GroupElement::new(
-//             (Uint::<SCALAR_LIMBS>::MAX
-//                 >> (Uint::<SCALAR_LIMBS>::BITS
-//                     - <range::bulletproofs::RangeProof as RangeProof< { ristretto::SCALAR_LIMBS
-//                       }, { range::bulletproofs::RANGE_CLAIM_LIMBS },
-//                     >>::RANGE_CLAIM_BITS))
-//                 .wrapping_add(&Uint::<SCALAR_LIMBS>::ONE),
-//             &constrained_witnesses[0].public_parameters(),
-//         )
-//         .unwrap();
-//
-//         let out_of_range_witness = (
-//             constrained_witnesses.into(),
-//             commitment_randomness,
-//             unbounded_witness,
-//         )
-//             .into();
-//
-//         witnesses[0] = out_of_range_witness;
-//
-//         let (proof, statements) = generate_valid_proof::<
-//             REPETITIONS,
-//             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//             NUM_RANGE_CLAIMS,
-//             RANGE_CLAIM_LIMBS,
-//             SCALAR_LIMBS,
-//             Lang,
-//         >(
-//             language_public_parameters,
-//             range_proof_public_parameters,
-//             witnesses.clone(),
-//         );
-//
-//         assert!(
-//             matches!(
-//                 proof
-//                     .verify(
-//                         None,
-//                         &PhantomData,
-//                         language_public_parameters,
-//                         range_proof_public_parameters,
-//                         statements,
-//                         &mut OsRng,
-//                     )
-//                     .err()
-//                     .unwrap(),
-//                 proofs::Error::Bulletproofs(bulletproofs::ProofError::VerificationError)
-//             ),
-//             "out of range error should fail on range verification"
-//         );
-//     }
-// }

@@ -10,10 +10,11 @@ pub use language::{
     commitment_of_discrete_log, discrete_log_ratio_of_commited_values, knowledge_of_decommitment,
     knowledge_of_discrete_log, Language,
 };
-// todo
-// pub use proof::{enhanced, Proof};
 pub use proof::Proof;
-pub mod enhanced;
+
+pub mod enhanced {
+    pub use super::{language::enhanced::*, proof::enhanced::*};
+}
 
 pub mod aggregation;
 pub mod language;

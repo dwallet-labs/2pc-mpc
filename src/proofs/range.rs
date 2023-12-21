@@ -11,9 +11,9 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
-use crate::{commitments, commitments::HomomorphicCommitmentScheme, proofs::Result};
+use crate::{commitments, commitments::HomomorphicCommitmentScheme, group, proofs::Result};
 
-// pub mod bulletproofs;
+pub mod bulletproofs;
 
 pub trait RangeProof<
     // The commitment scheme's message space scalar size in limbs
@@ -43,11 +43,13 @@ pub trait RangeProof<
     + Clone
     + PartialEq;
 
+    // TODO: change this to be like the commitments.
+
     /// Proves in zero-knowledge that all witnesses committed in `commitment` are bounded by their corresponding
     /// range upper bound in range_claims.
     fn prove<const NUM_RANGE_CLAIMS: usize>(
         public_parameters: &Self::PublicParameters<NUM_RANGE_CLAIMS>,
-        witnesses: Vec<[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS]>,
+        witnesses: Vec<commitments::MessageSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme<NUM_RANGE_CLAIMS>>>,
         commitments_randomness: Vec<commitments::RandomnessSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme<NUM_RANGE_CLAIMS>>>,
         transcript: &mut Transcript,
         rng: &mut impl CryptoRngCore,
