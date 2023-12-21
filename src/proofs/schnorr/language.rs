@@ -23,7 +23,6 @@ pub mod discrete_log_ratio_of_commited_values;
 mod committed_linear_evaluation;
 pub mod encryption_of_discrete_log;
 pub mod encryption_of_tuple;
-pub mod enhanced;
 pub mod knowledge_of_decommitment;
 pub mod knowledge_of_discrete_log;
 

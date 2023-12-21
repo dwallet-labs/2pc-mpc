@@ -24,13 +24,9 @@ use crate::{
     proofs::{
         schnorr,
         schnorr::{
+            enhanced::{ConstrainedWitnessGroupElement, DecomposableWitness, EnhanceableLanguage},
             language,
-            language::{
-                enhanced::{
-                    ConstrainedWitnessGroupElement, DecomposableWitness, EnhanceableLanguage,
-                },
-                GroupsPublicParameters,
-            },
+            language::GroupsPublicParameters,
         },
     },
     AdditivelyHomomorphicEncryptionKey,
@@ -69,7 +65,7 @@ pub type EnhancedLanguage<
     CommitmentScheme,
     GroupElement,
     EncryptionKey,
-> = language::enhanced::EnhancedLanguage<
+> = schnorr::enhanced::EnhancedLanguage<
     REPETITIONS,
     NUM_RANGE_CLAIMS,
     SCALAR_LIMBS,
@@ -439,8 +435,9 @@ pub(crate) mod tests {
         ahe::paillier,
         group::{ristretto, secp256k1, self_product},
         proofs::schnorr::{
-            aggregation, language,
-            language::enhanced::tests::{scalar_lower_bound, scalar_upper_bound},
+            aggregation,
+            enhanced::tests::{scalar_lower_bound, scalar_upper_bound},
+            language,
         },
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
@@ -469,7 +466,7 @@ pub(crate) mod tests {
 
     use crate::{
         commitments::pedersen,
-        proofs::schnorr::language::enhanced::tests::{
+        proofs::schnorr::enhanced::tests::{
             enhanced_language_public_parameters, RANGE_CLAIMS_PER_SCALAR,
         },
     };

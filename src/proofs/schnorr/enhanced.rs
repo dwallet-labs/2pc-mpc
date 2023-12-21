@@ -693,7 +693,7 @@ pub(crate) mod tests {
             randomness_generator.value(),
         );
 
-        language::enhanced::PublicParameters::new::<
+        schnorr::enhanced::PublicParameters::new::<
             Pedersen<
                 NUM_RANGE_CLAIMS,
                 { secp256k1::SCALAR_LIMBS },
