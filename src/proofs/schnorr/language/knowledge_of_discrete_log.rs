@@ -74,15 +74,14 @@ impl<
 
 /// The Public Parameters of the Knowledge of Discrete Log Schnorr Language.
 #[derive(Debug, PartialEq, Serialize, Clone)]
-pub struct PublicParameters<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
-{
+pub struct PublicParameters<ScalarPublicParameters, GroupPublicParameters, GroupElementValue> {
     pub groups_public_parameters:
-        GroupsPublicParameters<ScalarPublicParameters, GroupElementPublicParameters>,
+        GroupsPublicParameters<ScalarPublicParameters, GroupPublicParameters>,
     pub generator: GroupElementValue,
 }
 
-impl<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
-    PublicParameters<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
+impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
+    PublicParameters<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
 {
     pub fn new<
         Scalar: group::GroupElement
@@ -97,10 +96,8 @@ impl<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
     ) -> Self
     where
         Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
-        GroupElement: group::GroupElement<
-                Value = GroupElementValue,
-                PublicParameters = GroupElementPublicParameters,
-            > + CyclicGroupElement,
+        GroupElement: group::GroupElement<Value = GroupElementValue, PublicParameters = GroupPublicParameters>
+            + CyclicGroupElement,
     {
         // TODO: maybe we don't want the generator all the time?
         let generator = GroupElement::generator_from_public_parameters(&group_public_parameters);
@@ -114,13 +111,11 @@ impl<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
     }
 }
 
-impl<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
-    AsRef<GroupsPublicParameters<ScalarPublicParameters, GroupElementPublicParameters>>
-    for PublicParameters<ScalarPublicParameters, GroupElementPublicParameters, GroupElementValue>
+impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
+    AsRef<GroupsPublicParameters<ScalarPublicParameters, GroupPublicParameters>>
+    for PublicParameters<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
 {
-    fn as_ref(
-        &self,
-    ) -> &GroupsPublicParameters<ScalarPublicParameters, GroupElementPublicParameters> {
+    fn as_ref(&self) -> &GroupsPublicParameters<ScalarPublicParameters, GroupPublicParameters> {
         &self.groups_public_parameters
     }
 }

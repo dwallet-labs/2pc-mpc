@@ -58,10 +58,6 @@ where
     type PublicParameters = PublicParameters<
         Scalar::PublicParameters,
         GroupElement::PublicParameters,
-        commitments::PublicParameters<
-            SCALAR_LIMBS,
-            Pedersen<1, SCALAR_LIMBS, Scalar, GroupElement>,
-        >,
         GroupElement::Value,
     >;
     const NAME: &'static str = "Ratio Between Committed Values is the Discrete Log";
@@ -146,38 +142,28 @@ impl<Scalar: group::GroupElement> WitnessAccessors<Scalar>
 /// The Public Parameters of the Ratio Between Committed Values is the Discrete Log Schnorr
 /// Language.
 #[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct PublicParameters<
-    ScalarPublicParameters,
-    GroupElementPublicParameters,
-    PedersenPublicParameters,
-    GroupElementValue,
-> {
+pub struct PublicParameters<ScalarPublicParameters, GroupPublicParameters, GroupElementValue> {
     pub groups_public_parameters: GroupsPublicParameters<
         self_product::PublicParameters<3, ScalarPublicParameters>,
-        self_product::PublicParameters<2, GroupElementPublicParameters>,
+        self_product::PublicParameters<2, GroupPublicParameters>,
     >,
-    commitment_scheme_public_parameters: PedersenPublicParameters,
+    pub commitment_scheme_public_parameters: pedersen::PublicParameters<
+        1,
+        GroupElementValue,
+        ScalarPublicParameters,
+        GroupPublicParameters,
+    >,
     // The base $g$ by the discrete log (witness $x$) $g^x$ used as the public key in the paper.
-    base_by_discrete_log: GroupElementValue,
+    pub base_by_discrete_log: GroupElementValue,
 }
 
-impl<
-        ScalarPublicParameters,
-        GroupElementPublicParameters,
-        PedersenPublicParameters,
-        GroupElementValue,
-    >
-    PublicParameters<
-        ScalarPublicParameters,
-        GroupElementPublicParameters,
-        PedersenPublicParameters,
-        GroupElementValue,
-    >
+impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
+    PublicParameters<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
 {
     pub fn new<
         const SCALAR_LIMBS: usize,
         Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
-            + Samplable
+            + SamplableWithin
             + Mul<GroupElement, Output = GroupElement>
             + for<'r> Mul<&'r GroupElement, Output = GroupElement>
             + Copy,
@@ -185,14 +171,17 @@ impl<
     >(
         scalar_group_public_parameters: Scalar::PublicParameters,
         group_public_parameters: GroupElement::PublicParameters,
-        commitment_scheme_public_parameters: PedersenPublicParameters,
+        commitment_scheme_public_parameters: commitments::PublicParameters<
+            SCALAR_LIMBS,
+            Pedersen<1, SCALAR_LIMBS, Scalar, GroupElement>,
+        >,
         base_by_discrete_log: GroupElement,
     ) -> Self
     where
         Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
         GroupElement: group::GroupElement<
             Value = GroupElementValue,
-            PublicParameters = GroupElementPublicParameters,
+            PublicParameters = GroupPublicParameters,
         >,
     {
         Self {
@@ -212,30 +201,19 @@ impl<
     }
 }
 
-impl<
-        ScalarPublicParameters,
-        GroupElementPublicParameters,
-        PedersenPublicParameters,
-        GroupElementValue,
-    >
+impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
     AsRef<
         GroupsPublicParameters<
             self_product::PublicParameters<3, ScalarPublicParameters>,
-            self_product::PublicParameters<2, GroupElementPublicParameters>,
+            self_product::PublicParameters<2, GroupPublicParameters>,
         >,
-    >
-    for PublicParameters<
-        ScalarPublicParameters,
-        GroupElementPublicParameters,
-        PedersenPublicParameters,
-        GroupElementValue,
-    >
+    > for PublicParameters<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
 {
     fn as_ref(
         &self,
     ) -> &GroupsPublicParameters<
         self_product::PublicParameters<3, ScalarPublicParameters>,
-        self_product::PublicParameters<2, GroupElementPublicParameters>,
+        self_product::PublicParameters<2, GroupPublicParameters>,
     > {
         &self.groups_public_parameters
     }

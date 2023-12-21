@@ -208,6 +208,7 @@ pub(crate) trait EnhanceableLanguage<
     UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
 >: schnorr::Language<REPETITIONS>
 {
+    // TODO: solve all these refs & clones, here and in accessors. Perhaps partial move is ok.
     fn compose_witness(
         constrained_witness: &ConstrainedWitnessGroupElement<
             NUM_RANGE_CLAIMS,

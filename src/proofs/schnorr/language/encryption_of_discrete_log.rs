@@ -129,6 +129,7 @@ where
     }
 }
 
+// TODO: don't assume that the commitment message space is SCALAR_LIMBS
 impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         const RANGE_CLAIMS_PER_SCALAR: usize,

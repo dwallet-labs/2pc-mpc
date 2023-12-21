@@ -126,13 +126,13 @@ impl<Scalar: group::GroupElement> WitnessAccessors<Scalar>
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
     ScalarPublicParameters,
-    GroupElementPublicParameters,
+    GroupPublicParameters,
     CommitmentSchemePublicParameters,
     GroupElementValue,
 > {
     pub groups_public_parameters: GroupsPublicParameters<
         self_product::PublicParameters<2, ScalarPublicParameters>,
-        self_product::PublicParameters<2, GroupElementPublicParameters>,
+        self_product::PublicParameters<2, GroupPublicParameters>,
     >,
     pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
     pub generator: GroupElementValue, // The base of discrete log
@@ -140,19 +140,19 @@ pub struct PublicParameters<
 
 impl<
         ScalarPublicParameters,
-        GroupElementPublicParameters,
+        GroupPublicParameters,
         CommitmentSchemePublicParameters,
         GroupElementValue,
     >
     AsRef<
         GroupsPublicParameters<
             self_product::PublicParameters<2, ScalarPublicParameters>,
-            self_product::PublicParameters<2, GroupElementPublicParameters>,
+            self_product::PublicParameters<2, GroupPublicParameters>,
         >,
     >
     for PublicParameters<
         ScalarPublicParameters,
-        GroupElementPublicParameters,
+        GroupPublicParameters,
         CommitmentSchemePublicParameters,
         GroupElementValue,
     >
@@ -161,7 +161,7 @@ impl<
         &self,
     ) -> &GroupsPublicParameters<
         self_product::PublicParameters<2, ScalarPublicParameters>,
-        self_product::PublicParameters<2, GroupElementPublicParameters>,
+        self_product::PublicParameters<2, GroupPublicParameters>,
     > {
         &self.groups_public_parameters
     }
@@ -169,13 +169,13 @@ impl<
 
 impl<
         ScalarPublicParameters,
-        GroupElementPublicParameters,
+        GroupPublicParameters,
         CommitmentSchemePublicParameters,
         GroupElementValue,
     >
     PublicParameters<
         ScalarPublicParameters,
-        GroupElementPublicParameters,
+        GroupPublicParameters,
         CommitmentSchemePublicParameters,
         GroupElementValue,
     >
@@ -203,7 +203,7 @@ impl<
         Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
         GroupElement: group::GroupElement<
             Value = GroupElementValue,
-            PublicParameters = GroupElementPublicParameters,
+            PublicParameters = GroupPublicParameters,
         >,
         CommitmentScheme: HomomorphicCommitmentScheme<
             SCALAR_LIMBS,
