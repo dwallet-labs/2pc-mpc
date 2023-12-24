@@ -16,6 +16,8 @@ use crate::{
     helpers::const_generic_array_serialization,
 };
 
+// TODO: can we DRY this & pedersen to the same code?
+
 // TODO: the message generator should be a random power of the randomness generator, which can be
 // the generator of the group. we actually have a use-case here for a cyclic group without a
 // generator. Maybe I can just drop the cyclic group requirement. actually we need also the
@@ -23,18 +25,19 @@ use crate::{
 
 // TODO: scalar_mul_bounded
 
+// TODO: doc, name
 /// A Batched Pedersen Commitment
 /// The public parameters ['PublicParameters'] for this commitment should be carefully constructed.
 /// TODO: Safe for cyclic groups, but doesn't need generator(s). Known order?
 #[derive(PartialEq, Clone)]
-pub struct Pedersen<
+pub struct MultiPedersen<
     const BATCH_SIZE: usize,
     const SCALAR_LIMBS: usize,
     Scalar: group::GroupElement,
     GroupElement: group::GroupElement,
 > {
-    /// The generators used for the messages
-    message_generators: [GroupElement; BATCH_SIZE],
+    /// The generator used for the messages
+    message_generator: GroupElement,
     /// The generator used for the randomness
     randomness_generator: GroupElement,
 
@@ -43,7 +46,7 @@ pub struct Pedersen<
 
 impl<const BATCH_SIZE: usize, const SCALAR_LIMBS: usize, Scalar, GroupElement>
     HomomorphicCommitmentScheme<SCALAR_LIMBS>
-    for Pedersen<BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement>
+    for MultiPedersen<BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement>
 where
     Scalar: BoundedGroupElement<SCALAR_LIMBS>
         + Mul<GroupElement, Output = GroupElement>
@@ -55,8 +58,8 @@ where
     // TODO: actually we can use a different randomizer and message spaces, e.g. allowing infinite
     // range (integer commitments)
     type MessageSpaceGroupElement = self_product::GroupElement<BATCH_SIZE, Scalar>;
-    type RandomnessSpaceGroupElement = Scalar;
-    type CommitmentSpaceGroupElement = GroupElement;
+    type RandomnessSpaceGroupElement = self_product::GroupElement<BATCH_SIZE, Scalar>;
+    type CommitmentSpaceGroupElement = self_product::GroupElement<BATCH_SIZE, GroupElement>;
     type PublicParameters = PublicParameters<
         BATCH_SIZE,
         GroupElement::Value,
@@ -66,32 +69,25 @@ where
 
     fn new(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
         if BATCH_SIZE == 0 {
-            // TODO: this is not a group instantiation error, perhaps create different error or
-            // change the group doc
             return Err(group::Error::InvalidPublicParameters);
         }
 
-        let message_generators = public_parameters.message_generators.clone().map(|value| {
-            GroupElement::new(
-                value,
-                public_parameters.commitment_space_public_parameters(),
-            )
-        });
-
-        // Return the first error you encounter, or instantiate `Self`
-        if let Some(Err(err)) = message_generators.iter().find(|res| res.is_err()) {
-            return Err(err.clone());
-        }
-
-        let message_generators = message_generators.map(|res| res.unwrap());
+        let message_generator = GroupElement::new(
+            public_parameters.message_generator.clone(),
+            &public_parameters
+                .commitment_space_public_parameters()
+                .public_parameters,
+        )?;
 
         let randomness_generator = GroupElement::new(
             public_parameters.randomness_generator.clone(),
-            &public_parameters.commitment_space_public_parameters(),
+            &public_parameters
+                .commitment_space_public_parameters()
+                .public_parameters,
         )?;
 
         Ok(Self {
-            message_generators,
+            message_generator,
             randomness_generator,
             _scalar_choice: PhantomData,
         })
@@ -99,17 +95,24 @@ where
 
     fn commit(
         &self,
-        message: &self_product::GroupElement<BATCH_SIZE, Scalar>,
-        randomness: &Scalar,
-    ) -> GroupElement {
-        self.message_generators
-            .iter()
-            .zip::<&[Scalar; BATCH_SIZE]>(message.into())
-            .fold(
-                self.randomness_generator.neutral(),
-                |acc, (generator, value)| acc + (*value * generator),
-            )
-            + (*randomness * &self.randomness_generator)
+        message: &Self::MessageSpaceGroupElement,
+        randomness: &Self::RandomnessSpaceGroupElement,
+    ) -> Self::CommitmentSpaceGroupElement {
+        let messages: [_; BATCH_SIZE] = (*message).into();
+        let randomnesses: [_; BATCH_SIZE] = (*randomness).into();
+
+        let commitments: [_; BATCH_SIZE] = messages
+            .into_iter()
+            .zip(randomnesses.into_iter())
+            .map(|(message, randomness)| {
+                message * &self.message_generator + randomness * &self.randomness_generator
+            })
+            .collect::<Vec<_>>()
+            .try_into()
+            .ok()
+            .unwrap();
+
+        commitments.into()
     }
 }
 
@@ -137,11 +140,10 @@ pub struct PublicParameters<
 > {
     pub groups_public_parameters: GroupsPublicParameters<
         self_product::PublicParameters<BATCH_SIZE, ScalarPublicParameters>,
-        ScalarPublicParameters,
-        GroupPublicParameters,
+        self_product::PublicParameters<BATCH_SIZE, ScalarPublicParameters>,
+        self_product::PublicParameters<BATCH_SIZE, GroupPublicParameters>,
     >,
-    #[serde(with = "const_generic_array_serialization")]
-    pub message_generators: [GroupElementValue; BATCH_SIZE],
+    pub message_generator: GroupElementValue,
     pub randomness_generator: GroupElementValue,
 }
 
@@ -159,10 +161,10 @@ impl<
         Scalar: group::GroupElement,
         GroupElement: group::GroupElement,
     >(
-        scalar_public_parameters: group::PublicParameters<Scalar>,
-        group_public_parameters: group::PublicParameters<GroupElement>,
-        message_generators: [group::Value<GroupElement>; BATCH_SIZE],
-        randomness_generator: group::Value<GroupElement>,
+        scalar_public_parameters: Scalar::PublicParameters,
+        group_public_parameters: GroupElement::PublicParameters,
+        message_generator: GroupElement::Value,
+        randomness_generator: GroupElement::Value,
     ) -> Self
     where
         Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>
@@ -181,10 +183,14 @@ impl<
                 message_space_public_parameters: self_product::PublicParameters::new(
                     scalar_public_parameters.clone(),
                 ),
-                randomness_space_public_parameters: scalar_public_parameters,
-                commitment_space_public_parameters: group_public_parameters,
+                randomness_space_public_parameters: self_product::PublicParameters::new(
+                    scalar_public_parameters,
+                ),
+                commitment_space_public_parameters: self_product::PublicParameters::new(
+                    group_public_parameters,
+                ),
             },
-            message_generators,
+            message_generator,
             randomness_generator,
         }
     }
@@ -194,8 +200,8 @@ impl<const BATCH_SIZE: usize, GroupElementValue, ScalarPublicParameters, GroupPu
     AsRef<
         GroupsPublicParameters<
             self_product::PublicParameters<BATCH_SIZE, ScalarPublicParameters>,
-            ScalarPublicParameters,
-            GroupPublicParameters,
+            self_product::PublicParameters<BATCH_SIZE, ScalarPublicParameters>,
+            self_product::PublicParameters<BATCH_SIZE, GroupPublicParameters>,
         >,
     >
     for PublicParameters<
@@ -209,8 +215,8 @@ impl<const BATCH_SIZE: usize, GroupElementValue, ScalarPublicParameters, GroupPu
         &self,
     ) -> &GroupsPublicParameters<
         self_product::PublicParameters<BATCH_SIZE, ScalarPublicParameters>,
-        ScalarPublicParameters,
-        GroupPublicParameters,
+        self_product::PublicParameters<BATCH_SIZE, ScalarPublicParameters>,
+        self_product::PublicParameters<BATCH_SIZE, GroupPublicParameters>,
     > {
         &self.groups_public_parameters
     }

@@ -24,17 +24,18 @@ pub type Proof<
     // The number of witnesses with range claims
     const NUM_RANGE_CLAIMS: usize,
     // The range proof commitment scheme's message space scalar size in limbs
-    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    // The corresponding range proof
+    RangeProof: range::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     // The unbounded witness group element
     UnboundedWitnessSpaceGroupElement: SamplableWithin,
     // The enhanceable language we are proving
     Language: EnhanceableLanguage<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
-        MESSAGE_SPACE_SCALAR_LIMBS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         UnboundedWitnessSpaceGroupElement,
     >,
-    RangeProof: range::RangeProof<MESSAGE_SPACE_SCALAR_LIMBS>,
     // A struct used by the protocol using this proof,
     // used to provide extra necessary context that will parameterize the proof (and thus verifier
     // code) and be inserted to the Fiat-Shamir transcript
@@ -45,8 +46,8 @@ pub type Proof<
         EnhancedLanguage<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
-            MESSAGE_SPACE_SCALAR_LIMBS,
-            range::CommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS, RangeProof>,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RangeProof,
             UnboundedWitnessSpaceGroupElement,
             Language,
         >,
@@ -68,32 +69,26 @@ mod private {
 impl<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
-        const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        RangeProof: range::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         UnboundedWitnessSpaceGroupElement: group::GroupElement + SamplableWithin,
         Language: EnhanceableLanguage<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
-            MESSAGE_SPACE_SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedWitnessSpaceGroupElement,
         >,
-        RangeProof: range::RangeProof<MESSAGE_SPACE_SCALAR_LIMBS>,
         ProtocolContext: Clone + Serialize,
     >
     Proof<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
-        MESSAGE_SPACE_SCALAR_LIMBS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RangeProof,
         UnboundedWitnessSpaceGroupElement,
         Language,
-        RangeProof,
         ProtocolContext,
     >
-where
-    Uint<MESSAGE_SPACE_SCALAR_LIMBS>: Encoding,
-    commitments::MessageSpaceValue<
-        MESSAGE_SPACE_SCALAR_LIMBS,
-        range::CommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS, RangeProof>,
-    >: From<[Uint<MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS]>,
 {
     /// Prove an enhanced batched Schnorr zero-knowledge claim.
     /// Returns the zero-knowledge proof.
@@ -101,7 +96,7 @@ where
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         range_proof_public_parameters: &range::PublicParameters<
-            MESSAGE_SPACE_SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RangeProof,
         >,
@@ -121,8 +116,9 @@ where
         //
         //             let constrained_witness: [_; NUM_RANGE_CLAIMS] =
         //                 constrained_witness.map(|witness_part| {
-        //                     let witness_part_value: Uint<MESSAGE_SPACE_SCALAR_LIMBS> =
-        //                         witness_part.into();
+        //                     let witness_part_value:
+        // Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> =
+        // witness_part.into();
         //
         //                     (&witness_part_value).into()
         //                 });
@@ -173,7 +169,7 @@ where
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         range_proof_public_parameters: &range::PublicParameters<
-            MESSAGE_SPACE_SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RangeProof,
         >,
@@ -215,7 +211,7 @@ where
     fn setup_range_proof(
         protocol_context: &ProtocolContext,
         range_proof_public_parameters: &range::PublicParameters<
-            MESSAGE_SPACE_SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RangeProof,
         >,

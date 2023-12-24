@@ -21,12 +21,14 @@ use crate::{
     },
     proofs,
     proofs::{
+        range,
+        range::CommitmentSchemeMessageSpaceGroupElement,
         schnorr,
         schnorr::{
             aggregation,
             enhanced::{
-                ConstrainedWitnessGroupElement, DecomposableWitness, EnhanceableLanguage,
-                EnhancedLanguageStatementAccessors as _, EnhancedLanguageWitnessAccessors as _,
+                DecomposableWitness, EnhanceableLanguage, EnhancedLanguageStatementAccessors as _,
+                EnhancedLanguageWitnessAccessors as _,
             },
         },
     },
@@ -85,8 +87,6 @@ impl<
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     > schnorr::Language<REPETITIONS>
     for Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>
-where
-    Uint<SCALAR_LIMBS>: Encoding,
 {
     type WitnessSpaceGroupElement = direct_product::ThreeWayGroupElement<
         EncryptionKey::PlaintextSpaceGroupElement,
@@ -149,8 +149,9 @@ where
 }
 
 impl<
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         const RANGE_CLAIMS_PER_SCALAR: usize,
+        const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         const SCALAR_LIMBS: usize,
         GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
@@ -158,19 +159,18 @@ impl<
     EnhanceableLanguage<
         REPETITIONS,
         RANGE_CLAIMS_PER_SCALAR,
-        SCALAR_LIMBS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         self_product::GroupElement<
             2,
             ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         >,
     > for Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>
 where
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
-    Uint<SCALAR_LIMBS>: Encoding,
     group::Value<GroupElement::Scalar>: From<Uint<SCALAR_LIMBS>>,
 {
     fn compose_witness(
-        constrained_witness: &ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, SCALAR_LIMBS>,
+        decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>;
+             RANGE_CLAIMS_PER_SCALAR],
         unbounded_witness: &self_product::GroupElement<
             2,
             ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
@@ -183,7 +183,9 @@ where
             SCALAR_LIMBS,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
         >>::compose(
-            constrained_witness,
+            // TODO: make sure this is safe, e.g. SCALAR_LIMBS >=
+            // COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS
+            &decomposed_witness.map(|range_claim| (&range_claim).into()),
             language_public_parameters
                 .encryption_scheme_public_parameters
                 .plaintext_space_public_parameters(),
@@ -207,7 +209,7 @@ where
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<(
-        ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, SCALAR_LIMBS>,
+        [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; RANGE_CLAIMS_PER_SCALAR],
         self_product::GroupElement<
             2,
             ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,

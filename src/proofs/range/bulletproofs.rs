@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     commitments,
-    commitments::{multicommitment::MultiCommitment, pedersen, GroupsPublicParameters, Pedersen},
+    commitments::{multipedersen::MultiPedersen, pedersen, GroupsPublicParameters, Pedersen},
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, ristretto, self_product,
         self_product::Value,
@@ -40,11 +40,11 @@ pub const RANGE_CLAIM_BITS: usize = 32;
 impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
     const NAME: &'static str = "Bulletproofs over the Ristretto group";
 
-    type CommitmentScheme<const NUM_RANGE_CLAIMS: usize> = MultiCommitment<
-        NUM_RANGE_CLAIMS,
-        SCALAR_LIMBS,
-        Pedersen<1, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>,
-    >;
+    type RangeClaimGroupElement = ristretto::Scalar;
+
+    // TODO: change to multipedersen.
+    type CommitmentScheme<const NUM_RANGE_CLAIMS: usize> =
+        MultiPedersen<NUM_RANGE_CLAIMS, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>;
 
     const RANGE_CLAIM_BITS: usize = RANGE_CLAIM_BITS;
 
@@ -81,11 +81,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
         // the proof fail?
         let witnesses: Vec<u64> = witnesses
             .into_iter()
-            .map(|witness| {
-                <[_; NUM_RANGE_CLAIMS]>::from(witness)
-                    .map(<[_; 1]>::from)
-                    .map(|x| x[0]) // TODO: prettier way to write this?
-            })
+            .map(|witness| <[_; NUM_RANGE_CLAIMS]>::from(witness))
             .flatten()
             .map(|witness: ristretto::Scalar| U64::from(&U256::from(witness)).into())
             .collect();
@@ -228,11 +224,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
 pub struct PublicParameters<const NUM_RANGE_CLAIMS: usize> {
     pub commitment_scheme_public_parameters: commitments::PublicParameters<
         SCALAR_LIMBS,
-        MultiCommitment<
-            NUM_RANGE_CLAIMS,
-            SCALAR_LIMBS,
-            Pedersen<1, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>,
-        >,
+        MultiPedersen<NUM_RANGE_CLAIMS, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>,
     >,
     pub number_of_range_claims: usize,
     // TODO: number of parties?
@@ -242,35 +234,30 @@ pub struct PublicParameters<const NUM_RANGE_CLAIMS: usize> {
 impl<const NUM_RANGE_CLAIMS: usize> Default for PublicParameters<NUM_RANGE_CLAIMS> {
     fn default() -> Self {
         let scalar_public_parameters = ristretto::scalar::PublicParameters::default();
-        let group_element_public_parameters = ristretto::group_element::PublicParameters::default();
+        let group_public_parameters = ristretto::group_element::PublicParameters::default();
 
         let pedersen_message_space_public_parameters =
             self_product::PublicParameters::<1, ristretto::scalar::PublicParameters>::new(
                 scalar_public_parameters.clone(),
             );
 
-        let pedersen_groups_public_parameters = GroupsPublicParameters {
-            message_space_public_parameters: pedersen_message_space_public_parameters,
-            randomness_space_public_parameters: scalar_public_parameters,
-            commitment_space_public_parameters: group_element_public_parameters,
-        };
-
         let commitment_generators = PedersenGens::default();
 
-        let pedersen_public_parameters = pedersen::PublicParameters {
-            groups_public_parameters: pedersen_groups_public_parameters,
-            message_generators: [ristretto::GroupElement(commitment_generators.B)],
-            randomness_generator: ristretto::GroupElement(commitment_generators.B_blinding),
-        };
-
-        let commitment_scheme_public_parameters = commitments::PublicParameters::<
-            SCALAR_LIMBS,
-            MultiCommitment<
-                NUM_RANGE_CLAIMS,
+        let commitment_scheme_public_parameters =
+            commitments::PublicParameters::<
                 SCALAR_LIMBS,
-                Pedersen<1, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>,
-            >,
-        >::new(pedersen_public_parameters);
+                MultiPedersen<
+                    NUM_RANGE_CLAIMS,
+                    SCALAR_LIMBS,
+                    ristretto::Scalar,
+                    ristretto::GroupElement,
+                >,
+            >::new::<SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>(
+                scalar_public_parameters,
+                group_public_parameters,
+                ristretto::GroupElement(commitment_generators.B),
+                ristretto::GroupElement(commitment_generators.B_blinding),
+            );
 
         Self {
             commitment_scheme_public_parameters,
@@ -283,10 +270,11 @@ impl<const NUM_RANGE_CLAIMS: usize>
     AsRef<
         commitments::PublicParameters<
             SCALAR_LIMBS,
-            MultiCommitment<
+            MultiPedersen<
                 NUM_RANGE_CLAIMS,
                 SCALAR_LIMBS,
-                Pedersen<1, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>,
+                ristretto::Scalar,
+                ristretto::GroupElement,
             >,
         >,
     > for PublicParameters<NUM_RANGE_CLAIMS>
@@ -295,11 +283,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
         &self,
     ) -> &commitments::PublicParameters<
         SCALAR_LIMBS,
-        MultiCommitment<
-            NUM_RANGE_CLAIMS,
-            SCALAR_LIMBS,
-            Pedersen<1, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>,
-        >,
+        MultiPedersen<NUM_RANGE_CLAIMS, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>,
     > {
         &self.commitment_scheme_public_parameters
     }

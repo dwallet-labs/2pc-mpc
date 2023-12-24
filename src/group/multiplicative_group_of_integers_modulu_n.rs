@@ -34,6 +34,7 @@ where
         rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
         // Classic rejection-sampling technique.
+        // TODO: why not use random_mod()?
         loop {
             let value = Value::new(Uint::<LIMBS>::random(rng), public_parameters)?;
 
@@ -50,6 +51,7 @@ where
     }
 }
 
+// TODO: maybe that's not ok to even define this.
 impl<const LIMBS: usize> SamplableWithin for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,

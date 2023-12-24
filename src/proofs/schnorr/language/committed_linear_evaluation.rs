@@ -4,7 +4,6 @@
 // TODO
 // #[cfg(feature = "benchmarking")]
 // pub(crate) use benches::benchmark;
-
 use core::array;
 use std::marker::PhantomData;
 
@@ -26,9 +25,11 @@ use crate::{
     helpers::flat_map_results,
     proofs,
     proofs::{
+        range,
+        range::CommitmentSchemeMessageSpaceGroupElement,
         schnorr,
         schnorr::{
-            enhanced::{ConstrainedWitnessGroupElement, DecomposableWitness, EnhanceableLanguage},
+            enhanced::{DecomposableWitness, EnhanceableLanguage},
             language,
             language::GroupsPublicParameters,
         },
@@ -200,6 +201,7 @@ impl<
         const NUM_RANGE_CLAIMS: usize,
         const RANGE_CLAIMS_PER_SCALAR: usize,
         const RANGE_CLAIMS_PER_MASK: usize,
+        const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         const SCALAR_LIMBS: usize,
         const DIMENSION: usize,
@@ -209,7 +211,7 @@ impl<
     EnhanceableLanguage<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
-        SCALAR_LIMBS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         direct_product::GroupElement<
             GroupElement::Scalar,
             ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
@@ -225,12 +227,10 @@ impl<
         EncryptionKey,
     >
 where
-    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
-    Uint<SCALAR_LIMBS>: Encoding,
     group::Value<GroupElement::Scalar>: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
 {
     fn compose_witness(
-        constrained_witness: &ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, SCALAR_LIMBS>,
+        decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
         unbounded_witness: &direct_product::GroupElement<
             GroupElement::Scalar,
             RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
@@ -241,13 +241,12 @@ where
             return Err(proofs::Error::InvalidParameters);
         }
 
-        let constrained_witness: [_; NUM_RANGE_CLAIMS] = constrained_witness.clone().into();
-        let mut constrained_witness = constrained_witness.into_iter();
+        let mut decomposed_witness = decomposed_witness.clone().into_iter();
 
         let coefficients: [[_; RANGE_CLAIMS_PER_SCALAR]; DIMENSION] =
             flat_map_results(array::from_fn(|_| {
                 flat_map_results(array::from_fn(|_| {
-                    constrained_witness
+                    decomposed_witness
                         .next()
                         .ok_or(proofs::Error::InvalidParameters)
                 }))
@@ -259,7 +258,9 @@ where
                 SCALAR_LIMBS,
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
             >>::compose(
-                &coefficient.into(),
+                // TODO: make sure this is safe, e.g. SCALAR_LIMBS >=
+                // COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS
+                &coefficient.map(|range_claim| (&range_claim).into()),
                 language_public_parameters
                     .encryption_scheme_public_parameters
                     .plaintext_space_public_parameters(),
@@ -269,7 +270,7 @@ where
         .into();
 
         let mask: [_; RANGE_CLAIMS_PER_MASK] = flat_map_results(array::from_fn(|_| {
-            constrained_witness
+            decomposed_witness
                 .next()
                 .ok_or(proofs::Error::InvalidParameters)
         }))?;
@@ -279,7 +280,9 @@ where
             SCALAR_LIMBS,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
         >>::compose(
-            &mask.into(),
+            // TODO: make sure this is safe, e.g. SCALAR_LIMBS >=
+            // COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS
+            &mask.map(|range_claim| (&range_claim).into()),
             language_public_parameters
                 .encryption_scheme_public_parameters
                 .plaintext_space_public_parameters(),
@@ -301,7 +304,7 @@ where
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<(
-        ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, SCALAR_LIMBS>,
+        [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
         direct_product::GroupElement<
             GroupElement::Scalar,
             RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
@@ -316,22 +319,22 @@ where
 
         let coefficients: [_; DIMENSION] = coefficients.into();
 
-        let constrained_witness = coefficients.into_iter().flat_map(|coefficient| {
+        let range_proof_commitment_message = coefficients.into_iter().flat_map(|coefficient| {
             <[_; RANGE_CLAIMS_PER_SCALAR]>::from(coefficient.decompose(crypto_bigint::U128::BITS))
         });
 
         let decomposed_mask: [_; RANGE_CLAIMS_PER_MASK] =
             mask.decompose(crypto_bigint::U128::BITS).into();
 
-        let constrained_witness: Vec<_> = constrained_witness
+        let range_proof_commitment_message: Vec<_> = range_proof_commitment_message
             .chain(decomposed_mask.into_iter())
             .collect();
 
-        let constrained_witness: [_; NUM_RANGE_CLAIMS] =
-            constrained_witness.try_into().ok().unwrap();
+        let range_proof_commitment_message: [_; NUM_RANGE_CLAIMS] =
+            range_proof_commitment_message.try_into().ok().unwrap();
 
         Ok((
-            constrained_witness.into(),
+            range_proof_commitment_message.into(),
             (commitment_randomness, encryption_randomness).into(),
         ))
     }

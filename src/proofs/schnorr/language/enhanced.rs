@@ -4,9 +4,8 @@
 use core::array;
 use std::{marker::PhantomData, ops::Mul};
 
-use crypto_bigint::{Encoding, Uint, U128};
+use crypto_bigint::{rand_core::CryptoRngCore, Uint, U128};
 use merlin::Transcript;
-use rand_core::CryptoRngCore;
 use serde::{Deserialize, Serialize};
 use tiresias::secret_sharing::shamir::Polynomial;
 
@@ -24,7 +23,16 @@ use crate::{
     helpers::flat_map_results,
     proofs,
     proofs::{
-        range, schnorr,
+        range,
+        range::{
+            CommitmentPublicParametersAccessor, CommitmentScheme,
+            CommitmentSchemeCommitmentSpaceGroupElement,
+            CommitmentSchemeCommitmentSpacePublicParameters,
+            CommitmentSchemeMessageSpaceGroupElement, CommitmentSchemeMessageSpacePublicParameters,
+            CommitmentSchemePublicParameters, CommitmentSchemeRandomnessSpaceGroupElement,
+            CommitmentSchemeRandomnessSpacePublicParameters,
+        },
+        schnorr,
         schnorr::{
             language,
             language::{GroupsPublicParameters, GroupsPublicParametersAccessors as _},
@@ -41,39 +49,27 @@ use crate::{
 pub struct EnhancedLanguage<
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
-    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
-    CommitmentScheme,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    RangeProof,
     UnboundedWitnessSpaceGroupElement,
     Language,
 > {
     _unbounded_witness_choice: PhantomData<UnboundedWitnessSpaceGroupElement>,
     _language_choice: PhantomData<Language>,
-    _commitment_choice: PhantomData<CommitmentScheme>,
+    _range_proof_choice: PhantomData<RangeProof>,
 }
-
-// TODO: instead of this, simply use the commitment space's message space element
-pub type ConstrainedWitnessGroupElement<
-    const NUM_RANGE_CLAIMS: usize,
-    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
-> = self_product::GroupElement<
-    NUM_RANGE_CLAIMS,
-    power_of_two_moduli::GroupElement<MESSAGE_SPACE_SCALAR_LIMBS>,
->;
 
 // TODO: use this code in protocols. Or maybe the other compose/decompose.
 pub trait EnhanceableLanguage<
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
-    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
 >: schnorr::Language<REPETITIONS>
 {
     // TODO: solve all these refs & clones, here and in accessors. Perhaps partial move is ok.
     fn compose_witness(
-        constrained_witness: &ConstrainedWitnessGroupElement<
-            NUM_RANGE_CLAIMS,
-            MESSAGE_SPACE_SCALAR_LIMBS,
-        >,
+        decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
         unbounded_witness: &UnboundedWitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<Self::WitnessSpaceGroupElement>;
@@ -82,7 +78,7 @@ pub trait EnhanceableLanguage<
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<(
-        ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, MESSAGE_SPACE_SCALAR_LIMBS>,
+        [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
         UnboundedWitnessSpaceGroupElement,
     )>;
 }
@@ -90,51 +86,73 @@ pub trait EnhanceableLanguage<
 impl<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
-        const MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        CommitmentScheme: HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>,
+        const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        RangeProof: range::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         UnboundedWitnessSpaceGroupElement: group::GroupElement + SamplableWithin,
         Language: EnhanceableLanguage<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
-            MESSAGE_SPACE_SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedWitnessSpaceGroupElement,
         >,
     > schnorr::Language<REPETITIONS>
     for EnhancedLanguage<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
-        MESSAGE_SPACE_SCALAR_LIMBS,
-        CommitmentScheme,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RangeProof,
         UnboundedWitnessSpaceGroupElement,
         Language,
     >
-where
-    Uint<MESSAGE_SPACE_SCALAR_LIMBS>: Encoding,
-    group::Value<CommitmentScheme::MessageSpaceGroupElement>:
-        From<[Uint<MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS]>,
 {
     type WitnessSpaceGroupElement = direct_product::ThreeWayGroupElement<
-        ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, MESSAGE_SPACE_SCALAR_LIMBS>,
-        CommitmentScheme::RandomnessSpaceGroupElement,
+        CommitmentSchemeMessageSpaceGroupElement<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >,
+        CommitmentSchemeRandomnessSpaceGroupElement<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >,
         UnboundedWitnessSpaceGroupElement,
     >;
 
     type StatementSpaceGroupElement = direct_product::GroupElement<
-        CommitmentScheme::CommitmentSpaceGroupElement,
+        CommitmentSchemeCommitmentSpaceGroupElement<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >,
         Language::StatementSpaceGroupElement,
     >;
 
     type PublicParameters = PublicParameters<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
-        MESSAGE_SPACE_SCALAR_LIMBS,
-        commitments::RandomnessSpacePublicParameters<MESSAGE_SPACE_SCALAR_LIMBS, CommitmentScheme>,
-        commitments::CommitmentSpacePublicParameters<MESSAGE_SPACE_SCALAR_LIMBS, CommitmentScheme>,
-        CommitmentScheme::PublicParameters,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        CommitmentSchemeMessageSpacePublicParameters<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >,
+        CommitmentSchemeRandomnessSpacePublicParameters<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >,
+        CommitmentSchemeCommitmentSpacePublicParameters<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >,
+        RangeProof::PublicParameters<NUM_RANGE_CLAIMS>,
         UnboundedWitnessSpaceGroupElement::PublicParameters,
         group::PublicParameters<Language::StatementSpaceGroupElement>,
         Language::PublicParameters,
     >;
+
     const NAME: &'static str = Language::NAME;
 
     fn randomizer_subrange(
@@ -143,59 +161,70 @@ where
         Self::WitnessSpaceGroupElement,
         Self::WitnessSpaceGroupElement,
     )> {
-        // TODO
-        // let sampling_bit_size: usize = RangeProof::RANGE_CLAIM_BITS
-        // + ComputationalSecuritySizedNumber::BITS
-        // + StatisticalSecuritySizedNumber::BITS;
-
-        // TODO: check that this is < SCALAR_LIMBS?
-
-        // TODO: formula + challenge : in lightning its 1, in bp 128
-        let sampling_bit_size: usize = U128::BITS + StatisticalSecuritySizedNumber::BITS;
-
-        let lower_bound =
-            ([Uint::<MESSAGE_SPACE_SCALAR_LIMBS>::ZERO.into(); NUM_RANGE_CLAIMS]).into();
-
-        let upper_bound = ([(Uint::<MESSAGE_SPACE_SCALAR_LIMBS>::ONE << sampling_bit_size)
-            .wrapping_sub(&Uint::<MESSAGE_SPACE_SCALAR_LIMBS>::ONE)
-            .into(); NUM_RANGE_CLAIMS])
-            .into();
-
-        let lower_bound = (
-            lower_bound,
-            CommitmentScheme::RandomnessSpaceGroupElement::lower_bound(
-                enhanced_language_public_parameters
-                    .commitment_scheme_public_parameters
-                    .randomness_space_public_parameters(),
-            )?,
-            UnboundedWitnessSpaceGroupElement::lower_bound(
-                enhanced_language_public_parameters.unbounded_witness_public_parameters(),
-            )?,
-        )
-            .into();
-
-        let upper_bound = (
-            upper_bound,
-            CommitmentScheme::RandomnessSpaceGroupElement::upper_bound(
-                enhanced_language_public_parameters
-                    .commitment_scheme_public_parameters
-                    .randomness_space_public_parameters(),
-            )?,
-            UnboundedWitnessSpaceGroupElement::upper_bound(
-                enhanced_language_public_parameters.unbounded_witness_public_parameters(),
-            )?,
-        )
-            .into();
-
-        Ok((lower_bound, upper_bound))
+        todo!()
+        // // TODO
+        // // let sampling_bit_size: usize = RangeProof::RANGE_CLAIM_BITS
+        // // + ComputationalSecuritySizedNumber::BITS
+        // // + StatisticalSecuritySizedNumber::BITS;
+        //
+        // // TODO: check that this is < SCALAR_LIMBS?
+        //
+        // // TODO: formula + challenge : in lightning its 1, in bp 128
+        // let sampling_bit_size: usize = U128::BITS + StatisticalSecuritySizedNumber::BITS;
+        //
+        // // TODO: this becomes a problem, as now I don't know how to construct the subrange.
+        // // One option is to have the sample get a bit size, not sure how much we wish for that,
+        // but // it could help also with the random mod issue.
+        // let lower_bound =
+        //     ([Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::ZERO.into();
+        // NUM_RANGE_CLAIMS]).into();
+        //
+        // let upper_bound = ([(Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::ONE <<
+        // sampling_bit_size)     .wrapping_sub(&
+        // Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::ONE)     .into();
+        // NUM_RANGE_CLAIMS])     .into();
+        //
+        // let lower_bound = (
+        //     lower_bound,
+        //     CommitmentScheme::RandomnessSpaceGroupElement::lower_bound(
+        //         enhanced_language_public_parameters
+        //             .commitment_scheme_public_parameters
+        //             .randomness_space_public_parameters(),
+        //     )?,
+        //     UnboundedWitnessSpaceGroupElement::lower_bound(
+        //         enhanced_language_public_parameters.unbounded_witness_public_parameters(),
+        //     )?,
+        // )
+        //     .into();
+        //
+        // let upper_bound = (
+        //     upper_bound,
+        //     CommitmentScheme::RandomnessSpaceGroupElement::upper_bound(
+        //         enhanced_language_public_parameters
+        //             .commitment_scheme_public_parameters
+        //             .randomness_space_public_parameters(),
+        //     )?,
+        //     UnboundedWitnessSpaceGroupElement::upper_bound(
+        //         enhanced_language_public_parameters.unbounded_witness_public_parameters(),
+        //     )?,
+        // )
+        //     .into();
+        //
+        // Ok((lower_bound, upper_bound))
     }
 
     fn group_homomorphism(
         witness: &Self::WitnessSpaceGroupElement,
         enhanced_language_public_parameters: &Self::PublicParameters,
     ) -> crate::proofs::Result<Self::StatementSpaceGroupElement> {
+        let decomposed_witness: [_; NUM_RANGE_CLAIMS] =
+            witness.range_proof_commitment_message().clone().into();
+
+        let decomposed_witness = decomposed_witness
+            .map(Into::<Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>::into);
+
         let language_witness = Language::compose_witness(
-            witness.constrained_witness(),
+            &decomposed_witness,
             witness.unbounded_witness(),
             &enhanced_language_public_parameters.language_public_parameters,
         )?;
@@ -205,17 +234,24 @@ where
             &enhanced_language_public_parameters.language_public_parameters,
         )?;
 
-        let commitment_scheme = CommitmentScheme::new(
-            &enhanced_language_public_parameters.commitment_scheme_public_parameters,
+        let commitment_scheme = RangeProof::CommitmentScheme::new(
+            enhanced_language_public_parameters
+                .range_proof_public_parameters
+                .commitment_scheme_public_parameters(),
         )?;
 
         let commitment_message_value =
-            <[_; NUM_RANGE_CLAIMS]>::from(witness.constrained_witness().value()).into();
+            <[_; NUM_RANGE_CLAIMS]>::from(witness.range_proof_commitment_message().value()).into();
 
-        let commitment_message = CommitmentScheme::MessageSpaceGroupElement::new(
+        let commitment_message = CommitmentSchemeMessageSpaceGroupElement::<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >::new(
             commitment_message_value,
             enhanced_language_public_parameters
-                .commitment_scheme_public_parameters
+                .range_proof_public_parameters
+                .commitment_scheme_public_parameters()
                 .message_space_public_parameters(),
         )?;
 
@@ -230,66 +266,56 @@ where
 
 pub trait DecomposableWitness<
     const RANGE_CLAIMS_PER_SCALAR: usize,
-    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const WITNESS_LIMBS: usize,
 >: KnownOrderScalar<WITNESS_LIMBS> where
-    Uint<MESSAGE_SPACE_SCALAR_LIMBS>: Encoding,
-    Uint<WITNESS_LIMBS>: Encoding,
     Self::Value: From<Uint<WITNESS_LIMBS>>,
 {
     fn decompose(
         self,
         range_claim_bits: usize,
-    ) -> ConstrainedWitnessGroupElement<RANGE_CLAIMS_PER_SCALAR, MESSAGE_SPACE_SCALAR_LIMBS> {
+    ) -> [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; RANGE_CLAIMS_PER_SCALAR] {
         // TODO: sanity checks, return result?
         let witness: Uint<WITNESS_LIMBS> = self.into();
 
-        let witness_in_range_claim_base: [power_of_two_moduli::GroupElement<
-            MESSAGE_SPACE_SCALAR_LIMBS,
-        >; RANGE_CLAIMS_PER_SCALAR] = array::from_fn(|i| {
-            Uint::<MESSAGE_SPACE_SCALAR_LIMBS>::from(
+        array::from_fn(|i| {
+            Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::from(
                 &((witness >> (i * range_claim_bits))
                     & ((Uint::<WITNESS_LIMBS>::ONE << range_claim_bits)
                         .wrapping_sub(&Uint::<WITNESS_LIMBS>::ONE))),
             )
-            .into()
-        });
-
-        witness_in_range_claim_base.into()
+        })
     }
 
     fn compose(
-        constrained_witness: &ConstrainedWitnessGroupElement<
-            RANGE_CLAIMS_PER_SCALAR,
-            MESSAGE_SPACE_SCALAR_LIMBS,
-        >,
+        decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>;
+             RANGE_CLAIMS_PER_SCALAR],
         public_parameters: &Self::PublicParameters,
         range_claim_bits: usize, // TODO:  ???
     ) -> proofs::Result<Self> {
         // TODO: perform all the checks here, checking add - also check that no modulation occursin
         // // LIMBS for the entire computation
 
-        // TODO: MESSAGE_SPACE_SCALAR_LIMBS < WITNESS_LIMBS
+        // TODO: COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS < WITNESS_LIMBS
         let delta: Uint<WITNESS_LIMBS> = Uint::<WITNESS_LIMBS>::ONE << range_claim_bits;
 
         let delta = Self::new(delta.into(), public_parameters)?;
 
-        let witness_in_witness_mask_base: &[_; RANGE_CLAIMS_PER_SCALAR] =
-            constrained_witness.into();
-
         // TODO: WITNESS_LIMBS < PLAINTEXT_SPACE_SCALAR_LIMBS ?
-        let witness_in_witness_mask_base = witness_in_witness_mask_base
+        let decomposed_witness = decomposed_witness
             .into_iter()
             .map(|witness| {
                 Self::new(
-                    Uint::<WITNESS_LIMBS>::from(&Uint::<MESSAGE_SPACE_SCALAR_LIMBS>::from(witness))
-                        .into(),
+                    Uint::<WITNESS_LIMBS>::from(&Uint::<
+                        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                    >::from(witness))
+                    .into(),
                     public_parameters,
                 )
             })
             .collect::<group::Result<Vec<_>>>()?;
 
-        let polynomial = Polynomial::try_from(witness_in_witness_mask_base)
+        let polynomial = Polynomial::try_from(decomposed_witness)
             .map_err(|_| proofs::Error::InvalidParameters)?;
 
         Ok(polynomial.evaluate(&delta))
@@ -298,14 +324,16 @@ pub trait DecomposableWitness<
 
 impl<
         const RANGE_CLAIMS_PER_SCALAR: usize,
-        const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const WITNESS_LIMBS: usize,
         Witness: KnownOrderScalar<WITNESS_LIMBS>,
-    > DecomposableWitness<RANGE_CLAIMS_PER_SCALAR, MESSAGE_SPACE_SCALAR_LIMBS, WITNESS_LIMBS>
-    for Witness
+    >
+    DecomposableWitness<
+        RANGE_CLAIMS_PER_SCALAR,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        WITNESS_LIMBS,
+    > for Witness
 where
-    Uint<MESSAGE_SPACE_SCALAR_LIMBS>: Encoding,
-    Uint<WITNESS_LIMBS>: Encoding,
     Self::Value: From<Uint<WITNESS_LIMBS>>,
 {
 }
@@ -316,21 +344,18 @@ where
 pub struct PublicParameters<
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
-    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    MessageSpacePublicParameters,
     RandomnessSpacePublicParameters,
     CommitmentSpacePublicParameters,
-    CommitmentSchemePublicParameters,
+    RangeProofPublicParameters,
     UnboundedWitnessSpacePublicParameters,
     LanguageStatementSpacePublicParameters,
     LanguagePublicParameters,
-> where
-    Uint<MESSAGE_SPACE_SCALAR_LIMBS>: Encoding,
-{
+> {
     pub groups_public_parameters: GroupsPublicParameters<
         direct_product::ThreeWayPublicParameters<
-            group::PublicParameters<
-                ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, MESSAGE_SPACE_SCALAR_LIMBS>,
-            >,
+            MessageSpacePublicParameters,
             RandomnessSpacePublicParameters,
             UnboundedWitnessSpacePublicParameters,
         >,
@@ -339,17 +364,18 @@ pub struct PublicParameters<
             LanguageStatementSpacePublicParameters,
         >,
     >,
-    pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
+    pub range_proof_public_parameters: RangeProofPublicParameters,
     pub language_public_parameters: LanguagePublicParameters,
 }
 
 impl<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
-        const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        MessageSpacePublicParameters: Clone,
         RandomnessSpacePublicParameters: Clone,
         CommitmentSpacePublicParameters: Clone,
-        CommitmentSchemePublicParameters,
+        RangeProofPublicParameters,
         UnboundedWitnessSpacePublicParameters,
         LanguageStatementSpacePublicParameters: Clone,
         LanguagePublicParameters,
@@ -357,37 +383,57 @@ impl<
     PublicParameters<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
-        MESSAGE_SPACE_SCALAR_LIMBS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        MessageSpacePublicParameters,
         RandomnessSpacePublicParameters,
         CommitmentSpacePublicParameters,
-        CommitmentSchemePublicParameters,
+        RangeProofPublicParameters,
         UnboundedWitnessSpacePublicParameters,
         LanguageStatementSpacePublicParameters,
         LanguagePublicParameters,
     >
-where
-    Uint<MESSAGE_SPACE_SCALAR_LIMBS>: Encoding,
 {
-    pub fn new<CommitmentScheme, UnboundedWitnessSpaceGroupElement, Language>(
+    pub fn new<RangeProof, UnboundedWitnessSpaceGroupElement, Language>(
         unbounded_witness_public_parameters: UnboundedWitnessSpacePublicParameters,
-        commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
+        range_proof_public_parameters: RangeProofPublicParameters,
         language_public_parameters: LanguagePublicParameters,
     ) -> Self
     where
-        Uint<MESSAGE_SPACE_SCALAR_LIMBS>: Encoding,
-        CommitmentScheme: HomomorphicCommitmentScheme<
-            MESSAGE_SPACE_SCALAR_LIMBS,
-            PublicParameters = CommitmentSchemePublicParameters,
+        RangeProof: range::RangeProof<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            PublicParameters<NUM_RANGE_CLAIMS> = RangeProofPublicParameters,
         >,
-        CommitmentScheme::RandomnessSpaceGroupElement:
-            group::GroupElement<PublicParameters = RandomnessSpacePublicParameters>,
-        CommitmentScheme::CommitmentSpaceGroupElement:
-            group::GroupElement<PublicParameters = CommitmentSpacePublicParameters>,
-        CommitmentSchemePublicParameters: AsRef<
+        CommitmentSchemeMessageSpaceGroupElement<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >: group::GroupElement<PublicParameters = MessageSpacePublicParameters>,
+        CommitmentSchemeRandomnessSpaceGroupElement<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >: group::GroupElement<PublicParameters = RandomnessSpacePublicParameters>,
+        CommitmentSchemeCommitmentSpaceGroupElement<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >: group::GroupElement<PublicParameters = CommitmentSpacePublicParameters>,
+        CommitmentSchemePublicParameters<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >: AsRef<
             commitments::GroupsPublicParameters<
-                group::PublicParameters<CommitmentScheme::MessageSpaceGroupElement>,
+                MessageSpacePublicParameters,
                 RandomnessSpacePublicParameters,
                 CommitmentSpacePublicParameters,
+            >,
+        >,
+        RangeProofPublicParameters: AsRef<
+            CommitmentSchemePublicParameters<
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                NUM_RANGE_CLAIMS,
+                RangeProof,
             >,
         >,
         UnboundedWitnessSpaceGroupElement:
@@ -400,21 +446,23 @@ where
             >,
         >,
     {
-        let constrained_witness_public_parameters =
-            self_product::PublicParameters::<NUM_RANGE_CLAIMS, _>::new(());
-
         Self {
             groups_public_parameters: language::GroupsPublicParameters {
                 witness_space_public_parameters: (
-                    constrained_witness_public_parameters,
-                    commitment_scheme_public_parameters
+                    range_proof_public_parameters
+                        .commitment_scheme_public_parameters()
+                        .message_space_public_parameters()
+                        .clone(),
+                    range_proof_public_parameters
+                        .commitment_scheme_public_parameters()
                         .randomness_space_public_parameters()
                         .clone(),
                     unbounded_witness_public_parameters,
                 )
                     .into(),
                 statement_space_public_parameters: (
-                    commitment_scheme_public_parameters
+                    range_proof_public_parameters
+                        .commitment_scheme_public_parameters()
                         .commitment_space_public_parameters()
                         .clone(),
                     language_public_parameters
@@ -423,7 +471,7 @@ where
                 )
                     .into(),
             },
-            commitment_scheme_public_parameters,
+            range_proof_public_parameters,
             language_public_parameters,
         }
     }
@@ -441,7 +489,8 @@ where
 impl<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
-        const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        MessageSpacePublicParameters,
         RandomnessSpacePublicParameters,
         CommitmentSpacePublicParameters,
         CommitmentSchemePublicParameters,
@@ -452,9 +501,7 @@ impl<
     AsRef<
         GroupsPublicParameters<
             direct_product::ThreeWayPublicParameters<
-                group::PublicParameters<
-                    ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, MESSAGE_SPACE_SCALAR_LIMBS>,
-                >,
+                MessageSpacePublicParameters,
                 RandomnessSpacePublicParameters,
                 UnboundedWitnessSpacePublicParameters,
             >,
@@ -467,7 +514,8 @@ impl<
     for PublicParameters<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
-        MESSAGE_SPACE_SCALAR_LIMBS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        MessageSpacePublicParameters,
         RandomnessSpacePublicParameters,
         CommitmentSpacePublicParameters,
         CommitmentSchemePublicParameters,
@@ -475,16 +523,12 @@ impl<
         LanguageStatementSpacePublicParameters,
         LanguagePublicParameters,
     >
-where
-    Uint<MESSAGE_SPACE_SCALAR_LIMBS>: Encoding,
 {
     fn as_ref(
         &self,
     ) -> &GroupsPublicParameters<
         direct_product::ThreeWayPublicParameters<
-            group::PublicParameters<
-                ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, MESSAGE_SPACE_SCALAR_LIMBS>,
-            >,
+            MessageSpacePublicParameters,
             RandomnessSpacePublicParameters,
             UnboundedWitnessSpacePublicParameters,
         >,
@@ -498,15 +542,12 @@ where
 }
 
 pub trait EnhancedLanguageWitnessAccessors<
-    const NUM_RANGE_CLAIMS: usize,
-    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    MessageSpaceGroupElement: group::GroupElement,
     RandomnessSpaceGroupElement: group::GroupElement,
     UnboundedWitnessSpaceGroupElement: group::GroupElement,
 >
 {
-    fn constrained_witness(
-        &self,
-    ) -> &ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, MESSAGE_SPACE_SCALAR_LIMBS>;
+    fn range_proof_commitment_message(&self) -> &MessageSpaceGroupElement;
 
     fn range_proof_commitment_randomness(&self) -> &RandomnessSpaceGroupElement;
 
@@ -514,29 +555,25 @@ pub trait EnhancedLanguageWitnessAccessors<
 }
 
 impl<
-        const NUM_RANGE_CLAIMS: usize,
-        const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        MessageSpaceGroupElement: group::GroupElement,
         RandomnessSpaceGroupElement: group::GroupElement,
         UnboundedWitnessSpaceGroupElement: group::GroupElement,
     >
     EnhancedLanguageWitnessAccessors<
-        NUM_RANGE_CLAIMS,
-        MESSAGE_SPACE_SCALAR_LIMBS,
+        MessageSpaceGroupElement,
         RandomnessSpaceGroupElement,
         UnboundedWitnessSpaceGroupElement,
     >
     for direct_product::ThreeWayGroupElement<
-        ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, MESSAGE_SPACE_SCALAR_LIMBS>,
+        MessageSpaceGroupElement,
         RandomnessSpaceGroupElement,
         UnboundedWitnessSpaceGroupElement,
     >
 {
-    fn constrained_witness(
-        &self,
-    ) -> &ConstrainedWitnessGroupElement<NUM_RANGE_CLAIMS, MESSAGE_SPACE_SCALAR_LIMBS> {
-        let (constrained_witness, ..): (_, _, _) = self.into();
+    fn range_proof_commitment_message(&self) -> &MessageSpaceGroupElement {
+        let (range_proof_commitment_message, ..): (_, _, _) = self.into();
 
-        constrained_witness
+        range_proof_commitment_message
     }
 
     fn range_proof_commitment_randomness(&self) -> &RandomnessSpaceGroupElement {
@@ -553,32 +590,29 @@ impl<
 }
 
 pub trait EnhancedLanguageStatementAccessors<
-    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
-    CommitmentScheme: HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>,
+    CommitmentSpaceGroupElement: group::GroupElement,
     LanguageStatementSpaceGroupElement: group::GroupElement,
 >
 {
-    fn range_proof_commitment(&self) -> &CommitmentScheme::CommitmentSpaceGroupElement;
+    fn range_proof_commitment(&self) -> &CommitmentSpaceGroupElement;
 
     fn language_statement(&self) -> &LanguageStatementSpaceGroupElement;
 }
 
 impl<
-        const MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        CommitmentScheme: HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>,
+        CommitmentSpaceGroupElement: group::GroupElement,
         LanguageStatementSpaceGroupElement: group::GroupElement,
     >
     EnhancedLanguageStatementAccessors<
-        MESSAGE_SPACE_SCALAR_LIMBS,
-        CommitmentScheme,
+        CommitmentSpaceGroupElement,
         LanguageStatementSpaceGroupElement,
     >
     for direct_product::GroupElement<
-        CommitmentScheme::CommitmentSpaceGroupElement,
+        CommitmentSpaceGroupElement,
         LanguageStatementSpaceGroupElement,
     >
 {
-    fn range_proof_commitment(&self) -> &CommitmentScheme::CommitmentSpaceGroupElement {
+    fn range_proof_commitment(&self) -> &CommitmentSpaceGroupElement {
         let (range_proof_commitment, _) = self.into();
 
         range_proof_commitment
@@ -601,6 +635,8 @@ pub(crate) mod tests {
     use crate::{ahe::GroupsPublicParametersAccessors, group::secp256k1};
 
     pub const RANGE_CLAIMS_PER_SCALAR: usize = { secp256k1::SCALAR_LIMBS / U128::LIMBS }; // TODO: proper range claims bits
+
+    pub const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize = { U256::LIMBS };
 
     type EnhancedLang<
         const REPETITIONS: usize,
@@ -644,11 +680,13 @@ pub(crate) mod tests {
     pub(crate) fn enhanced_language_public_parameters<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
+        RangeProof: range::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         UnboundedWitnessSpaceGroupElement: group::GroupElement + SamplableWithin,
         Lang: EnhanceableLanguage<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
-            { secp256k1::SCALAR_LIMBS },
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RangeProof,
             UnboundedWitnessSpaceGroupElement,
         >,
     >(
@@ -713,26 +751,28 @@ pub(crate) mod tests {
     pub(crate) fn generate_witnesses<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
-        const MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        CommitmentScheme: HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>,
-        UnboundedWitnessSpaceGroupElement: group::GroupElement + group::SamplableWithin,
-        Language: EnhanceableLanguage<
+        const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        CommitmentScheme: HomomorphicCommitmentScheme<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+        RangeProof: range::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + SamplableWithin,
+        Lang: EnhanceableLanguage<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
-            MESSAGE_SPACE_SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RangeProof,
             UnboundedWitnessSpaceGroupElement,
         >,
     >(
-        witnesses: Vec<Language::WitnessSpaceGroupElement>,
+        witnesses: Vec<Lang::WitnessSpaceGroupElement>,
         enhanced_language_public_parameters: &language::PublicParameters<
             REPETITIONS,
             EnhancedLanguage<
                 REPETITIONS,
                 NUM_RANGE_CLAIMS,
-                MESSAGE_SPACE_SCALAR_LIMBS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 CommitmentScheme,
                 UnboundedWitnessSpaceGroupElement,
-                Language,
+                Lang,
             >,
         >,
     ) -> Vec<
@@ -741,22 +781,17 @@ pub(crate) mod tests {
             EnhancedLanguage<
                 REPETITIONS,
                 NUM_RANGE_CLAIMS,
-                MESSAGE_SPACE_SCALAR_LIMBS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 CommitmentScheme,
                 UnboundedWitnessSpaceGroupElement,
-                Language,
+                Lang,
             >,
         >,
-    >
-    where
-        Uint<MESSAGE_SPACE_SCALAR_LIMBS>: Encoding,
-        group::Value<CommitmentScheme::MessageSpaceGroupElement>:
-            From<[Uint<MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS]>,
-    {
+    > {
         witnesses
             .into_iter()
             .map(|witness| {
-                let (constrained_witness, unbounded_element) = Language::decompose_witness(
+                let (range_proof_commitment_message, unbounded_element) = Lang::decompose_witness(
                     &witness,
                     &enhanced_language_public_parameters.language_public_parameters,
                 )
@@ -771,7 +806,7 @@ pub(crate) mod tests {
                 .unwrap();
 
                 (
-                    constrained_witness,
+                    range_proof_commitment_message,
                     commitment_randomness,
                     unbounded_element,
                 )
