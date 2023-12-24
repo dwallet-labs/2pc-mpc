@@ -567,6 +567,63 @@ impl<
     }
 }
 
+pub type EnhancedPublicParameters<
+    const REPETITIONS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    RangeProof,
+    UnboundedWitnessSpaceGroupElement,
+    Language,
+> = language::PublicParameters<
+    REPETITIONS,
+    EnhancedLanguage<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RangeProof,
+        UnboundedWitnessSpaceGroupElement,
+        Language,
+    >,
+>;
+
+pub type WitnessSpaceGroupElement<
+    const REPETITIONS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    RangeProof,
+    UnboundedWitnessSpaceGroupElement,
+    Language,
+> = language::WitnessSpaceGroupElement<
+    REPETITIONS,
+    EnhancedLanguage<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RangeProof,
+        UnboundedWitnessSpaceGroupElement,
+        Language,
+    >,
+>;
+
+pub type StatementSpaceGroupElement<
+    const REPETITIONS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    RangeProof,
+    UnboundedWitnessSpaceGroupElement,
+    Language,
+> = language::StatementSpaceGroupElement<
+    REPETITIONS,
+    EnhancedLanguage<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RangeProof,
+        UnboundedWitnessSpaceGroupElement,
+        Language,
+    >,
+>;
+
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
     use ahe::paillier::tests::N;
@@ -585,7 +642,7 @@ pub(crate) mod tests {
     pub const RANGE_CLAIMS_PER_SCALAR: usize = { secp256k1::SCALAR_LIMBS / U128::LIMBS }; // TODO: proper range claims bits
 
     // TODO: support both bp & lightning
-    type EnhancedLang<
+    pub(super) type EnhancedLang<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
         UnboundedWitnessSpaceGroupElement,
@@ -599,30 +656,9 @@ pub(crate) mod tests {
         Lang,
     >;
 
-    pub fn scalar_lower_bound() -> paillier::PlaintextSpaceGroupElement {
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
-
-        paillier::PlaintextSpaceGroupElement::new(
-            Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::ZERO,
-            paillier_public_parameters.plaintext_space_public_parameters(),
-        )
-        .unwrap()
-    }
-
-    pub fn scalar_upper_bound() -> paillier::PlaintextSpaceGroupElement {
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
-
-        paillier::PlaintextSpaceGroupElement::new(
-            (&secp256k1::ORDER.wrapping_sub(&U256::ONE)).into(),
-            paillier_public_parameters.plaintext_space_public_parameters(),
-        )
-        .unwrap()
-    }
-
     pub(crate) fn enhanced_language_public_parameters<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
-        RangeProof: range::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
         Lang: EnhanceableLanguage<
             REPETITIONS,

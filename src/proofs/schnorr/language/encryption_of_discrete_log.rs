@@ -435,11 +435,7 @@ pub(crate) mod tests {
     use crate::{
         ahe::paillier,
         group::{ristretto, secp256k1, self_product},
-        proofs::schnorr::{
-            aggregation,
-            enhanced::tests::{scalar_lower_bound, scalar_upper_bound},
-            language,
-        },
+        proofs::schnorr::{aggregation, language},
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
 
@@ -450,24 +446,9 @@ pub(crate) mod tests {
         paillier::EncryptionKey,
     >;
 
-    pub type EnhancedLang = EnhancedLanguage<
-        { RANGE_CLAIMS_PER_SCALAR },
-        { secp256k1::SCALAR_LIMBS },
-        { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-        { secp256k1::SCALAR_LIMBS },
-        Pedersen<
-            { RANGE_CLAIMS_PER_SCALAR },
-            { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
-            secp256k1::GroupElement,
-        >,
-        secp256k1::GroupElement,
-        paillier::EncryptionKey,
-    >;
-
     use crate::{
         commitments::pedersen,
-        proofs::schnorr::enhanced::tests::{
+        proofs::schnorr::language::enhanced::tests::{
             enhanced_language_public_parameters, RANGE_CLAIMS_PER_SCALAR,
         },
     };
@@ -501,49 +482,22 @@ pub(crate) mod tests {
     fn valid_proof_verifies(#[case] batch_size: usize) {
         let language_public_parameters = public_parameters();
 
+        // TODO: now this is incorrect, need to go back and take the code that generates scalar ->
+        // plaintext
+
         language::tests::valid_proof_verifies::<REPETITIONS, Lang>(
             language_public_parameters,
             batch_size,
         );
 
-        // let enhanced_language_public_parameters = enhanced_language_public_parameters::<
-        //     REPETITIONS,
-        //     { RANGE_CLAIMS_PER_SCALAR },
-        //     paillier::RandomnessSpaceGroupElement,
-        //     Lang,
-        // >(
-        //     language_public_parameters
-        //         .randomness_space_public_parameters()
-        //         .clone(),
-        //     language_public_parameters.clone(),
-        // );
-        //
-        // let witnesses = language::enhanced::tests::generate_witnesses::<
-        //     REPETITIONS,
-        //     RANGE_CLAIMS_PER_SCALAR,
-        //     { secp256k1::SCALAR_LIMBS },
-        //     Pedersen<
-        //         { RANGE_CLAIMS_PER_SCALAR },
-        //         { secp256k1::SCALAR_LIMBS },
-        //         secp256k1::Scalar,
-        //         secp256k1::GroupElement,
-        //     >,
-        //     paillier::RandomnessSpaceGroupElement,
-        //     Language<
-        //         { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-        //         { secp256k1::SCALAR_LIMBS },
-        //         secp256k1::GroupElement,
-        //         PaillierEncryptionKey,
-        //     >,
-        // >(witnesses, &enhanced_language_public_parameters);
-        //
         // // TODO: this still just works for case 1, 2
         // // TODO: use enhanced's function
-        // language::tests::valid_proof_verifies_internal::<REPETITIONS, EnhancedLang>(
-        //     witnesses,
-        //     enhanced_language_public_parameters,
-        //     batch_size,
-        // );
+        // schnorr::proof::enhanced::tests::valid_proof_verifies::<
+        //     REPETITIONS,
+        //     RANGE_CLAIMS_PER_SCALAR,
+        //     paillier::RandomnessSpaceGroupElement,
+        //     Lang,
+        // >(witnesses, enhanced_language_public_parameters, batch_size);
     }
 
     #[rstest]

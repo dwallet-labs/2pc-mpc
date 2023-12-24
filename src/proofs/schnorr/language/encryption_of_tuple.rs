@@ -455,11 +455,7 @@ pub(crate) mod tests {
         ahe::paillier,
         commitments::Pedersen,
         group::{ristretto, secp256k1, self_product},
-        proofs::schnorr::{
-            aggregation,
-            enhanced::tests::{scalar_lower_bound, scalar_upper_bound},
-            language,
-        },
+        proofs::schnorr::{aggregation, language},
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
 
@@ -487,7 +483,7 @@ pub(crate) mod tests {
 
     use crate::{
         commitments::pedersen,
-        proofs::schnorr::enhanced::tests::{
+        proofs::schnorr::language::enhanced::tests::{
             enhanced_language_public_parameters, RANGE_CLAIMS_PER_SCALAR,
         },
     };

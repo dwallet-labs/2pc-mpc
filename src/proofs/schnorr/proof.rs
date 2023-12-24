@@ -121,6 +121,34 @@ impl<
         .map(|proof| (proof, statements))
     }
 
+    pub(super) fn prove_with_randomizers(
+        number_of_parties: Option<usize>,
+        protocol_context: &ProtocolContext,
+        language_public_parameters: &Language::PublicParameters,
+        witnesses: Vec<Language::WitnessSpaceGroupElement>,
+        randomizers: [Language::WitnessSpaceGroupElement; REPETITIONS],
+        statement_masks: [Language::StatementSpaceGroupElement; REPETITIONS],
+    ) -> proofs::Result<(Self, Vec<Language::StatementSpaceGroupElement>)> {
+        let number_of_parties = number_of_parties.unwrap_or(0);
+
+        let statements: proofs::Result<Vec<Language::StatementSpaceGroupElement>> = witnesses
+            .iter()
+            .map(|witness| Language::group_homomorphism(witness, language_public_parameters))
+            .collect();
+        let statements = statements?;
+
+        Self::prove_inner(
+            number_of_parties,
+            protocol_context,
+            language_public_parameters,
+            witnesses,
+            statements.clone(),
+            randomizers,
+            statement_masks,
+        )
+        .map(|proof| (proof, statements))
+    }
+
     pub(super) fn prove_with_statements(
         // The number of parties participating in aggregation (set to 0 for local proofs)
         number_of_parties: usize,
@@ -138,7 +166,7 @@ impl<
             protocol_context,
             language_public_parameters,
             witnesses,
-            statements.clone(),
+            statements,
             randomizers,
             statement_masks,
         )
@@ -322,7 +350,6 @@ impl<
         [Language::WitnessSpaceGroupElement; REPETITIONS],
         [Language::StatementSpaceGroupElement; REPETITIONS],
     )> {
-        // TODO: have a language dependent sample func?
         let randomizers = flat_map_results(array::from_fn(|_| {
             Language::WitnessSpaceGroupElement::sample(
                 language_public_parameters.witness_space_public_parameters(),
