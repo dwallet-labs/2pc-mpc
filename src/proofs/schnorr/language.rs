@@ -208,6 +208,22 @@ pub(crate) mod tests {
         let witnesses =
             generate_witnesses::<REPETITIONS, Lang>(&language_public_parameters, batch_size);
 
+        valid_proof_verifies_internal::<REPETITIONS, Lang>(
+            language_public_parameters,
+            batch_size,
+            witnesses,
+        )
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn valid_proof_verifies_internal<
+        const REPETITIONS: usize,
+        Lang: Language<REPETITIONS>,
+    >(
+        language_public_parameters: Lang::PublicParameters,
+        batch_size: usize,
+        witnesses: Vec<Lang::WitnessSpaceGroupElement>,
+    ) {
         let (proof, statements) = generate_valid_proof::<REPETITIONS, Lang>(
             &language_public_parameters,
             witnesses.clone(),

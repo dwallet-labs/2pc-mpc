@@ -475,6 +475,42 @@ pub(crate) mod tests {
         language_public_parameters
     }
 
+    // TODO: can we generalize this?
+    fn generate_witnesses(
+        language_public_parameters: &language::PublicParameters<REPETITIONS, Lang>,
+        batch_size: usize,
+    ) -> Vec<language::WitnessSpaceGroupElement<REPETITIONS, Lang>> {
+        iter::repeat_with(|| {
+            let scalar = secp256k1::Scalar::sample(
+                &language_public_parameters.scalar_group_public_parameters,
+                &mut OsRng,
+            )
+            .unwrap();
+
+            let discrete_log = paillier::PlaintextSpaceGroupElement::new(
+                Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from(&U256::from(
+                    scalar.value(),
+                )),
+                language_public_parameters
+                    .encryption_scheme_public_parameters
+                    .plaintext_space_public_parameters(),
+            )
+            .unwrap();
+
+            let randomness = paillier::RandomnessSpaceGroupElement::sample(
+                language_public_parameters
+                    .encryption_scheme_public_parameters
+                    .randomness_space_public_parameters(),
+                &mut OsRng,
+            )
+            .unwrap();
+
+            (discrete_log, randomness).into()
+        })
+        .take(batch_size)
+        .collect()
+    }
+
     #[rstest]
     #[case(1)]
     #[case(2)]
@@ -485,19 +521,26 @@ pub(crate) mod tests {
         // TODO: now this is incorrect, need to go back and take the code that generates scalar ->
         // plaintext
 
-        language::tests::valid_proof_verifies::<REPETITIONS, Lang>(
-            language_public_parameters,
+        let witnesses = generate_witnesses(&language_public_parameters, batch_size);
+        language::tests::valid_proof_verifies_internal::<REPETITIONS, Lang>(
+            language_public_parameters.clone(),
             batch_size,
+            witnesses.clone(),
         );
 
-        // // TODO: this still just works for case 1, 2
-        // // TODO: use enhanced's function
-        // schnorr::proof::enhanced::tests::valid_proof_verifies::<
-        //     REPETITIONS,
-        //     RANGE_CLAIMS_PER_SCALAR,
-        //     paillier::RandomnessSpaceGroupElement,
-        //     Lang,
-        // >(witnesses, enhanced_language_public_parameters, batch_size);
+        // TODO: this fails
+        schnorr::proof::enhanced::tests::valid_proof_verifies::<
+            REPETITIONS,
+            RANGE_CLAIMS_PER_SCALAR,
+            paillier::RandomnessSpaceGroupElement,
+            Lang,
+        >(
+            language_public_parameters
+                .randomness_space_public_parameters()
+                .clone(),
+            language_public_parameters,
+            witnesses,
+        );
     }
 
     #[rstest]
