@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     group,
     group::{
-        sample_uint_within, BoundedGroupElement, CyclicGroupElement, GroupElement as _,
-        KnownOrderGroupElement, KnownOrderScalar, MulByGenerator, Samplable, SamplableWithin,
+        BoundedGroupElement, CyclicGroupElement, GroupElement as _, KnownOrderGroupElement,
+        KnownOrderScalar, MulByGenerator, Samplable,
     },
     traits::Reduce,
 };
@@ -35,37 +35,6 @@ where
         rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
         GroupElement::<LIMBS>::new(Uint::<LIMBS>::random(rng), public_parameters)
-    }
-}
-
-impl<const LIMBS: usize> SamplableWithin for GroupElement<LIMBS>
-where
-    Uint<LIMBS>: Encoding,
-{
-    fn sample_within(
-        subrange: (&Self, &Self),
-        public_parameters: &Self::PublicParameters,
-        rng: &mut impl CryptoRngCore,
-    ) -> group::Result<Self> {
-        let (lower_bound, upper_bound) = subrange;
-        let lower_bound = Uint::<LIMBS>::from(lower_bound);
-        let upper_bound = Uint::<LIMBS>::from(upper_bound);
-
-        Self::new(
-            sample_uint_within(lower_bound, upper_bound, rng)?,
-            public_parameters,
-        )
-    }
-
-    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        Self::new(Uint::<LIMBS>::ZERO, public_parameters)
-    }
-
-    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        Self::new(
-            (*public_parameters.modulus).wrapping_sub(&Uint::<LIMBS>::ONE),
-            public_parameters,
-        )
     }
 }
 

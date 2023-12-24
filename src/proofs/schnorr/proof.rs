@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
-    group::{GroupElement, Samplable, SamplableWithin},
+    group::{GroupElement, Samplable},
     helpers::flat_map_results,
     proofs,
     proofs::{
@@ -322,11 +322,9 @@ impl<
         [Language::WitnessSpaceGroupElement; REPETITIONS],
         [Language::StatementSpaceGroupElement; REPETITIONS],
     )> {
-        let (lower_bound, upper_bound) = Language::randomizer_subrange(language_public_parameters)?;
-        // TODO: perhaps different subranges for witness and witness mask.
+        // TODO: have a language dependent sample func?
         let randomizers = flat_map_results(array::from_fn(|_| {
-            Language::WitnessSpaceGroupElement::sample_within(
-                (&lower_bound, &upper_bound),
+            Language::WitnessSpaceGroupElement::sample(
                 language_public_parameters.witness_space_public_parameters(),
                 rng,
             )

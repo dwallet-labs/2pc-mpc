@@ -18,7 +18,7 @@ use crate::{
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product,
         direct_product::ThreeWayPublicParameters, paillier, self_product, BoundedGroupElement,
-        GroupElement as _, GroupElement, KnownOrderScalar, Samplable, SamplableWithin,
+        GroupElement as _, GroupElement, KnownOrderScalar, Samplable,
     },
     helpers::flat_map_results,
     proofs,
@@ -88,7 +88,7 @@ impl<
         const NUM_RANGE_CLAIMS: usize,
         const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         RangeProof: range::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
-        UnboundedWitnessSpaceGroupElement: group::GroupElement + SamplableWithin,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
         Language: EnhanceableLanguage<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
@@ -154,64 +154,6 @@ impl<
     >;
 
     const NAME: &'static str = Language::NAME;
-
-    fn randomizer_subrange(
-        enhanced_language_public_parameters: &Self::PublicParameters,
-    ) -> proofs::Result<(
-        Self::WitnessSpaceGroupElement,
-        Self::WitnessSpaceGroupElement,
-    )> {
-        todo!()
-        // // TODO
-        // // let sampling_bit_size: usize = RangeProof::RANGE_CLAIM_BITS
-        // // + ComputationalSecuritySizedNumber::BITS
-        // // + StatisticalSecuritySizedNumber::BITS;
-        //
-        // // TODO: check that this is < SCALAR_LIMBS?
-        //
-        // // TODO: formula + challenge : in lightning its 1, in bp 128
-        // let sampling_bit_size: usize = U128::BITS + StatisticalSecuritySizedNumber::BITS;
-        //
-        // // TODO: this becomes a problem, as now I don't know how to construct the subrange.
-        // // One option is to have the sample get a bit size, not sure how much we wish for that,
-        // but // it could help also with the random mod issue.
-        // let lower_bound =
-        //     ([Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::ZERO.into();
-        // NUM_RANGE_CLAIMS]).into();
-        //
-        // let upper_bound = ([(Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::ONE <<
-        // sampling_bit_size)     .wrapping_sub(&
-        // Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::ONE)     .into();
-        // NUM_RANGE_CLAIMS])     .into();
-        //
-        // let lower_bound = (
-        //     lower_bound,
-        //     CommitmentScheme::RandomnessSpaceGroupElement::lower_bound(
-        //         enhanced_language_public_parameters
-        //             .commitment_scheme_public_parameters
-        //             .randomness_space_public_parameters(),
-        //     )?,
-        //     UnboundedWitnessSpaceGroupElement::lower_bound(
-        //         enhanced_language_public_parameters.unbounded_witness_public_parameters(),
-        //     )?,
-        // )
-        //     .into();
-        //
-        // let upper_bound = (
-        //     upper_bound,
-        //     CommitmentScheme::RandomnessSpaceGroupElement::upper_bound(
-        //         enhanced_language_public_parameters
-        //             .commitment_scheme_public_parameters
-        //             .randomness_space_public_parameters(),
-        //     )?,
-        //     UnboundedWitnessSpaceGroupElement::upper_bound(
-        //         enhanced_language_public_parameters.unbounded_witness_public_parameters(),
-        //     )?,
-        // )
-        //     .into();
-        //
-        // Ok((lower_bound, upper_bound))
-    }
 
     fn group_homomorphism(
         witness: &Self::WitnessSpaceGroupElement,
@@ -632,12 +574,17 @@ pub(crate) mod tests {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::{ahe::GroupsPublicParametersAccessors, group::secp256k1};
+    use crate::{
+        ahe::GroupsPublicParametersAccessors,
+        group::secp256k1,
+        proofs::range::{
+            bulletproofs::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RangeClaimGroupElement,
+        },
+    };
 
     pub const RANGE_CLAIMS_PER_SCALAR: usize = { secp256k1::SCALAR_LIMBS / U128::LIMBS }; // TODO: proper range claims bits
 
-    pub const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize = { U256::LIMBS };
-
+    // TODO: support both bp & lightning
     type EnhancedLang<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
@@ -646,13 +593,8 @@ pub(crate) mod tests {
     > = EnhancedLanguage<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
-        { secp256k1::SCALAR_LIMBS },
-        Pedersen<
-            NUM_RANGE_CLAIMS,
-            { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
-            secp256k1::GroupElement,
-        >,
+        { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+        range::bulletproofs::RangeProof,
         UnboundedWitnessSpaceGroupElement,
         Lang,
     >;
@@ -681,12 +623,11 @@ pub(crate) mod tests {
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
         RangeProof: range::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
-        UnboundedWitnessSpaceGroupElement: group::GroupElement + SamplableWithin,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
         Lang: EnhanceableLanguage<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RangeProof,
             UnboundedWitnessSpaceGroupElement,
         >,
     >(
@@ -696,54 +637,13 @@ pub(crate) mod tests {
         REPETITIONS,
         EnhancedLang<REPETITIONS, NUM_RANGE_CLAIMS, UnboundedWitnessSpaceGroupElement, Lang>,
     > {
-        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
-
-        let secp256k1_group_public_parameters =
-            secp256k1::group_element::PublicParameters::default();
-
-        // TODO: move this shared logic somewhere e.g. DRY
-        let generator = secp256k1::GroupElement::new(
-            secp256k1_group_public_parameters.generator,
-            &secp256k1_group_public_parameters,
-        )
-        .unwrap();
-
-        let message_generators = array::from_fn(|_| {
-            let generator =
-                secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                    * generator;
-
-            generator.value()
-        });
-
-        let randomness_generator =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                * generator;
-
-        // TODO: this is not safe; we need a proper way to derive generators
-        let pedersen_public_parameters = pedersen::PublicParameters::new::<
-            { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
-            secp256k1::GroupElement,
-        >(
-            secp256k1_scalar_public_parameters.clone(),
-            secp256k1_group_public_parameters.clone(),
-            message_generators,
-            randomness_generator.value(),
-        );
-
         schnorr::enhanced::PublicParameters::new::<
-            Pedersen<
-                NUM_RANGE_CLAIMS,
-                { secp256k1::SCALAR_LIMBS },
-                secp256k1::Scalar,
-                secp256k1::GroupElement,
-            >,
+            range::bulletproofs::RangeProof,
             UnboundedWitnessSpaceGroupElement,
             Lang,
         >(
             unbounded_witness_public_parameters,
-            pedersen_public_parameters,
+            range::bulletproofs::PublicParameters::default(),
             language_public_parameters,
         )
     }
@@ -751,55 +651,51 @@ pub(crate) mod tests {
     pub(crate) fn generate_witnesses<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
-        const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        CommitmentScheme: HomomorphicCommitmentScheme<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
-        RangeProof: range::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
-        UnboundedWitnessSpaceGroupElement: group::GroupElement + SamplableWithin,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
         Lang: EnhanceableLanguage<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
-            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RangeProof,
+            { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
             UnboundedWitnessSpaceGroupElement,
         >,
     >(
         witnesses: Vec<Lang::WitnessSpaceGroupElement>,
         enhanced_language_public_parameters: &language::PublicParameters<
             REPETITIONS,
-            EnhancedLanguage<
-                REPETITIONS,
-                NUM_RANGE_CLAIMS,
-                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                CommitmentScheme,
-                UnboundedWitnessSpaceGroupElement,
-                Lang,
-            >,
+            EnhancedLang<REPETITIONS, NUM_RANGE_CLAIMS, UnboundedWitnessSpaceGroupElement, Lang>,
         >,
     ) -> Vec<
         language::WitnessSpaceGroupElement<
             REPETITIONS,
-            EnhancedLanguage<
-                REPETITIONS,
-                NUM_RANGE_CLAIMS,
-                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                CommitmentScheme,
-                UnboundedWitnessSpaceGroupElement,
-                Lang,
-            >,
+            EnhancedLang<REPETITIONS, NUM_RANGE_CLAIMS, UnboundedWitnessSpaceGroupElement, Lang>,
         >,
     > {
         witnesses
             .into_iter()
             .map(|witness| {
-                let (range_proof_commitment_message, unbounded_element) = Lang::decompose_witness(
+                let (decomposed_witness, unbounded_element) = Lang::decompose_witness(
                     &witness,
                     &enhanced_language_public_parameters.language_public_parameters,
                 )
                 .unwrap();
 
-                let commitment_randomness = CommitmentScheme::RandomnessSpaceGroupElement::sample(
+                let range_proof_commitment_message = decomposed_witness
+                    .map(
+                        RangeClaimGroupElement::<
+                            { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+                            range::bulletproofs::RangeProof,
+                        >::from,
+                    )
+                    .into();
+
+                let commitment_randomness = CommitmentSchemeRandomnessSpaceGroupElement::<
+                    { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+                    NUM_RANGE_CLAIMS,
+                    range::bulletproofs::RangeProof,
+                >::sample(
                     enhanced_language_public_parameters
-                        .commitment_scheme_public_parameters
+                        .range_proof_public_parameters
+                        .commitment_scheme_public_parameters()
                         .randomness_space_public_parameters(),
                     &mut OsRng,
                 )

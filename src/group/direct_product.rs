@@ -9,7 +9,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use crate::{
     group,
-    group::{GroupElement as _, Samplable, SamplableWithin},
+    group::{GroupElement as _, Samplable},
 };
 
 /// An element of the Direct Product of the two Groups `FirstGroupElement` and `SecondGroupElement`.
@@ -45,50 +45,6 @@ impl<
             FirstGroupElement::sample(&public_parameters.0, rng)?,
             SecondGroupElement::sample(&public_parameters.1, rng)?,
         ))
-    }
-}
-
-impl<
-        FirstGroupElement: group::GroupElement + SamplableWithin,
-        SecondGroupElement: group::GroupElement + SamplableWithin,
-    > SamplableWithin for GroupElement<FirstGroupElement, SecondGroupElement>
-{
-    fn sample_within(
-        subrange: (&Self, &Self),
-        public_parameters: &Self::PublicParameters,
-        rng: &mut impl CryptoRngCore,
-    ) -> group::Result<Self> {
-        let (first_lower_bound, second_lower_bound) = subrange.0.into();
-        let (first_upper_bound, second_upper_bound) = subrange.1.into();
-
-        Ok(Self(
-            FirstGroupElement::sample_within(
-                (first_lower_bound, first_upper_bound).into(),
-                &public_parameters.0,
-                rng,
-            )?,
-            SecondGroupElement::sample_within(
-                (second_lower_bound, second_upper_bound),
-                &public_parameters.1,
-                rng,
-            )?,
-        ))
-    }
-
-    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        Ok((
-            FirstGroupElement::lower_bound(&public_parameters.0)?,
-            SecondGroupElement::lower_bound(&public_parameters.1)?,
-        )
-            .into())
-    }
-
-    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        Ok((
-            FirstGroupElement::upper_bound(&public_parameters.0)?,
-            SecondGroupElement::upper_bound(&public_parameters.1)?,
-        )
-            .into())
     }
 }
 

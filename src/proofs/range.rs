@@ -1,8 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-pub mod lightningproofs;
-
 use std::fmt::Debug;
 
 // #[cfg(feature = "benchmarking")]
@@ -15,9 +13,11 @@ use crate::{
     commitments,
     commitments::HomomorphicCommitmentScheme,
     group,
-    group::{self_product, Samplable, SamplableWithin},
+    group::{self_product, Samplable},
     proofs::Result,
 };
+
+pub mod lightningproofs;
 
 pub mod bulletproofs;
 
@@ -35,10 +35,10 @@ pub trait RangeProof<
 
     /// An element of the group from which the range proof's commitment scheme message space is composed,
     /// used to prove a single range claim.
-    type RangeClaimGroupElement: group::GroupElement + SamplableWithin + From<Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>> + Into<Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>;
+    type RangeClaimGroupElement: group::GroupElement + Samplable + From<Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>> + Into<Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>;
 
     /// The commitment scheme used for the range proof
-    type CommitmentScheme<const NUM_RANGE_CLAIMS: usize>: HomomorphicCommitmentScheme<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, MessageSpaceGroupElement = self_product::GroupElement<NUM_RANGE_CLAIMS, Self::RangeClaimGroupElement>>;
+    type CommitmentScheme<const NUM_RANGE_CLAIMS: usize>: HomomorphicCommitmentScheme<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, MessageSpaceGroupElement=self_product::GroupElement<NUM_RANGE_CLAIMS, Self::RangeClaimGroupElement>>;
 
     /// The public parameters of the range proof.
     ///
@@ -103,6 +103,9 @@ pub type CommitmentScheme<
 > = <Proof as RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>::CommitmentScheme<
     NUM_RANGE_CLAIMS,
 >;
+
+pub type RangeClaimGroupElement<const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize, Proof> =
+    <Proof as RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>::RangeClaimGroupElement;
 
 pub type CommitmentSchemePublicParameters<
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
-    group::{GroupElement, KnownOrderGroupElement, KnownOrderScalar, Samplable, SamplableWithin},
+    group::{GroupElement, KnownOrderGroupElement, KnownOrderScalar, Samplable},
 };
 
 /// An error in encryption key instantiation [`AdditivelyHomomorphicEncryptionKey::new()`]
@@ -33,8 +33,8 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
 {
     type PlaintextSpaceGroupElement: GroupElement<Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>
         + KnownOrderScalar<PLAINTEXT_SPACE_SCALAR_LIMBS>
-        + SamplableWithin;
-    type RandomnessSpaceGroupElement: GroupElement + SamplableWithin;
+        + Samplable;
+    type RandomnessSpaceGroupElement: GroupElement + Samplable;
     type CiphertextSpaceGroupElement: GroupElement;
 
     /// The public parameters of the encryption scheme.

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     group,
-    group::{BoundedGroupElement, GroupElement, Samplable, SamplableWithin},
+    group::{BoundedGroupElement, GroupElement, Samplable},
 };
 
 pub mod multipedersen;
@@ -29,9 +29,9 @@ pub trait HomomorphicCommitmentScheme<const MESSAGE_SPACE_SCALAR_LIMBS: usize>:
     PartialEq + Clone
 {
     /// The Message space group element of the commitment scheme
-    type MessageSpaceGroupElement: BoundedGroupElement<MESSAGE_SPACE_SCALAR_LIMBS> + SamplableWithin;
+    type MessageSpaceGroupElement: BoundedGroupElement<MESSAGE_SPACE_SCALAR_LIMBS> + Samplable;
     /// The Randomness space group element of the commitment scheme
-    type RandomnessSpaceGroupElement: GroupElement + SamplableWithin;
+    type RandomnessSpaceGroupElement: GroupElement + Samplable;
     /// The Commitment space group element of the commitment scheme
     type CommitmentSpaceGroupElement: GroupElement;
 

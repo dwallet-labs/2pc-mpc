@@ -17,8 +17,7 @@ use crate::{
     group,
     group::{
         direct_product, paillier, BoundedGroupElement, CyclicGroupElement, GroupElement as _,
-        GroupElement, KnownOrderGroupElement, KnownOrderScalar, Samplable, SamplableWithin,
-        ScalarPublicParameters,
+        GroupElement, KnownOrderGroupElement, KnownOrderScalar, Samplable, ScalarPublicParameters,
     },
     proofs,
     proofs::{
@@ -473,38 +472,6 @@ pub(crate) mod tests {
         },
     };
 
-    fn lower_bound() -> direct_product::GroupElement<
-        paillier::PlaintextSpaceGroupElement,
-        paillier::RandomnessSpaceGroupElement,
-    > {
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
-
-        (
-            scalar_lower_bound(),
-            paillier::RandomnessSpaceGroupElement::lower_bound(
-                paillier_public_parameters.randomness_space_public_parameters(),
-            )
-            .unwrap(),
-        )
-            .into()
-    }
-
-    fn upper_bound() -> direct_product::GroupElement<
-        paillier::PlaintextSpaceGroupElement,
-        paillier::RandomnessSpaceGroupElement,
-    > {
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
-
-        (
-            scalar_upper_bound(),
-            paillier::RandomnessSpaceGroupElement::upper_bound(
-                paillier_public_parameters.randomness_space_public_parameters(),
-            )
-            .unwrap(),
-        )
-            .into()
-    }
-
     pub(crate) fn public_parameters() -> language::PublicParameters<REPETITIONS, Lang> {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
@@ -535,7 +502,6 @@ pub(crate) mod tests {
         let language_public_parameters = public_parameters();
 
         language::tests::valid_proof_verifies::<REPETITIONS, Lang>(
-            Some((lower_bound(), upper_bound())),
             language_public_parameters,
             batch_size,
         );
@@ -591,7 +557,6 @@ pub(crate) mod tests {
 
         // todo: 5, 2 is failing even without the enhanced.
         let witnesses = language::tests::generate_witnesses_for_aggregation::<REPETITIONS, Lang>(
-            Some((lower_bound(), upper_bound())),
             &language_public_parameters,
             number_of_parties,
             batch_size,
@@ -675,7 +640,6 @@ pub(crate) mod tests {
         // `k256::AffinePoint` assures deserialized values are on curve,
         // and `Value` can only be instantiated through deserialization
         language::tests::invalid_proof_fails_verification::<REPETITIONS, Lang>(
-            Some((lower_bound(), upper_bound())),
             None,
             None,
             language_public_parameters,

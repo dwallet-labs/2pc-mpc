@@ -38,9 +38,6 @@ pub enum Error {
 
     #[error("invalid group element: the value does not belong to the group identified by the public parameters.")]
     InvalidGroupElement,
-
-    #[error("invalid subrange: cannot sample a group element within the supplied subrange as it is invalid.")]
-    InvalidSubrange,
 }
 
 /// The Result of the `new()` operation of types implementing the `GroupElement` trait
@@ -234,7 +231,7 @@ pub trait KnownOrderScalar<const SCALAR_LIMBS: usize>:
     KnownOrderGroupElement<SCALAR_LIMBS, Scalar = Self>
     + Mul<Self, Output = Self>
     + for<'r> Mul<&'r Self, Output = Self>
-    + SamplableWithin
+    + Samplable
     + Copy
     + Into<Uint<SCALAR_LIMBS>>
 {
@@ -293,53 +290,6 @@ pub trait Samplable: GroupElement {
             .take(batch_size)
             .collect()
     }
-}
-
-pub trait SamplableWithin: Samplable {
-    /// Uniformly sample a random element within `subrange`.
-    /// This is an inclusive check, i.e. that the value is >= the lower bound, and <= upper bound.
-    /// Internally, rejection sampling may be used, which is safe so long as `rng` is a true CSRNG.
-    /// Read: https://github.com/RustCrypto/crypto-bigint/blob/395bb171178990a93ef571664271dabc50749043/src/uint/rand.rs#L33
-    /// The time parttern may leak the `subrange`.
-    fn sample_within(
-        subrange: (&Self, &Self),
-        public_parameters: &Self::PublicParameters,
-        rng: &mut impl CryptoRngCore,
-    ) -> Result<Self>;
-
-    /// The absolute lower bound (e.g. `0`).
-    fn lower_bound(public_parameters: &Self::PublicParameters) -> Result<Self>;
-
-    /// The absolute upper bound (e.g. `p` for $Z_p$).
-    fn upper_bound(public_parameters: &Self::PublicParameters) -> Result<Self>;
-}
-
-fn sample_uint_within<const LIMBS: usize>(
-    lower_bound: Uint<LIMBS>,
-    upper_bound: Uint<LIMBS>,
-    rng: &mut impl CryptoRngCore,
-) -> Result<Uint<LIMBS>> {
-    if lower_bound == Uint::<LIMBS>::ZERO && upper_bound == Uint::<LIMBS>::MAX {
-        return Ok(Uint::<LIMBS>::random(rng));
-    }
-
-    if lower_bound >= upper_bound {
-        return Err(Error::InvalidSubrange);
-    }
-
-    let modulus = upper_bound
-        .wrapping_sub(&lower_bound)
-        .wrapping_add(&Uint::<LIMBS>::ONE);
-
-    if modulus.is_zero().into() {
-        return Err(Error::InvalidSubrange);
-    }
-
-    let modulus = &NonZero::new(modulus).unwrap();
-
-    let value = Uint::<LIMBS>::random_mod(rng, modulus);
-
-    Ok(value.wrapping_add(&lower_bound))
 }
 
 #[cfg(test)]

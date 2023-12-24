@@ -12,9 +12,8 @@ use super::{GroupElement, SCALAR_LIMBS};
 use crate::{
     group,
     group::{
-        sample_uint_within, secp256k1::ORDER, BoundedGroupElement, CyclicGroupElement,
-        KnownOrderGroupElement, KnownOrderScalar, MulByGenerator, PrimeGroupElement, Samplable,
-        SamplableWithin,
+        secp256k1::ORDER, BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement,
+        KnownOrderScalar, MulByGenerator, PrimeGroupElement, Samplable,
     },
     traits::Reduce,
 };
@@ -42,34 +41,6 @@ impl Samplable for Scalar {
         rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
         Ok(Self(k256::Scalar::random(rng)))
-    }
-}
-
-impl SamplableWithin for Scalar {
-    fn sample_within(
-        subrange: (&Self, &Self),
-        public_parameters: &Self::PublicParameters,
-        rng: &mut impl CryptoRngCore,
-    ) -> group::Result<Self> {
-        let (&lower_bound, &upper_bound) = subrange;
-        if lower_bound == Self::lower_bound(public_parameters)?
-            && upper_bound == Self::upper_bound(public_parameters)?
-        {
-            return Self::sample(public_parameters, rng);
-        }
-
-        let lower_bound: U256 = lower_bound.into();
-        let upper_bound: U256 = upper_bound.into();
-
-        sample_uint_within(lower_bound, upper_bound, rng).map(Self::from)
-    }
-
-    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        Ok(Self(k256::Scalar::ZERO))
-    }
-
-    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        Ok(super::ORDER.wrapping_sub(&U256::ONE).into())
     }
 }
 

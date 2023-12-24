@@ -11,7 +11,6 @@ use bulletproofs::{BulletproofGens, PedersenGens};
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U256, U64};
 use curve25519_dalek::traits::Identity;
 use merlin::Transcript;
-use ristretto::SCALAR_LIMBS;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -37,14 +36,20 @@ impl PartialEq for RangeProof {
 
 pub const RANGE_CLAIM_BITS: usize = 32;
 
-impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
+pub const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize = { ristretto::SCALAR_LIMBS };
+
+impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangeProof {
     const NAME: &'static str = "Bulletproofs over the Ristretto group";
 
     type RangeClaimGroupElement = ristretto::Scalar;
 
     // TODO: change to multipedersen.
-    type CommitmentScheme<const NUM_RANGE_CLAIMS: usize> =
-        MultiPedersen<NUM_RANGE_CLAIMS, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>;
+    type CommitmentScheme<const NUM_RANGE_CLAIMS: usize> = MultiPedersen<
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        ristretto::Scalar,
+        ristretto::GroupElement,
+    >;
 
     const RANGE_CLAIM_BITS: usize = RANGE_CLAIM_BITS;
 
@@ -54,13 +59,13 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
         _public_parameters: &Self::PublicParameters<NUM_RANGE_CLAIMS>,
         witnesses: Vec<
             commitments::MessageSpaceGroupElement<
-                SCALAR_LIMBS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
             >,
         >,
         commitments_randomness: Vec<
             commitments::RandomnessSpaceGroupElement<
-                SCALAR_LIMBS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
             >,
         >,
@@ -70,7 +75,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
         Self,
         Vec<
             commitments::CommitmentSpaceGroupElement<
-                SCALAR_LIMBS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
             >,
         >,
@@ -112,7 +117,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
             .collect();
 
         let bulletproofs_generators = BulletproofGens::new(
-            <Self as super::RangeProof<SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
+            <Self as super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
             witnesses.len(),
         );
         let commitment_generators = PedersenGens::default();
@@ -123,7 +128,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
             transcript,
             witnesses.as_slice(),
             commitments_randomness.as_slice(),
-            <Self as super::RangeProof<SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
+            <Self as super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
             rng,
         )?;
 
@@ -146,7 +151,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
         let commitments: proofs::Result<
             Vec<
                 commitments::CommitmentSpaceGroupElement<
-                    SCALAR_LIMBS,
+                    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
                 >,
             >,
@@ -158,7 +163,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
             }))
             .map(
                 commitments::CommitmentSpaceGroupElement::<
-                    SCALAR_LIMBS,
+                    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
                 >::from,
             )
@@ -174,7 +179,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
         _public_parameters: &Self::PublicParameters<NUM_RANGE_CLAIMS>,
         commitments: Vec<
             commitments::CommitmentSpaceGroupElement<
-                SCALAR_LIMBS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
             >,
         >,
@@ -201,7 +206,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
             .collect();
 
         let bulletproofs_generators = BulletproofGens::new(
-            <Self as super::RangeProof<SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
+            <Self as super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
             compressed_commitments.len(),
         );
         let commitment_generators = PedersenGens::default();
@@ -212,7 +217,7 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
             &commitment_generators,
             transcript,
             compressed_commitments.as_slice(),
-            <Self as super::RangeProof<SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
+            <Self as super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
             rng,
         )?)
     }
@@ -223,8 +228,13 @@ impl super::RangeProof<SCALAR_LIMBS> for RangeProof {
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct PublicParameters<const NUM_RANGE_CLAIMS: usize> {
     pub commitment_scheme_public_parameters: commitments::PublicParameters<
-        SCALAR_LIMBS,
-        MultiPedersen<NUM_RANGE_CLAIMS, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        MultiPedersen<
+            NUM_RANGE_CLAIMS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            ristretto::Scalar,
+            ristretto::GroupElement,
+        >,
     >,
     pub number_of_range_claims: usize,
     // TODO: number of parties?
@@ -243,21 +253,24 @@ impl<const NUM_RANGE_CLAIMS: usize> Default for PublicParameters<NUM_RANGE_CLAIM
 
         let commitment_generators = PedersenGens::default();
 
-        let commitment_scheme_public_parameters =
-            commitments::PublicParameters::<
-                SCALAR_LIMBS,
-                MultiPedersen<
-                    NUM_RANGE_CLAIMS,
-                    SCALAR_LIMBS,
-                    ristretto::Scalar,
-                    ristretto::GroupElement,
-                >,
-            >::new::<SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>(
-                scalar_public_parameters,
-                group_public_parameters,
-                ristretto::GroupElement(commitment_generators.B),
-                ristretto::GroupElement(commitment_generators.B_blinding),
-            );
+        let commitment_scheme_public_parameters = commitments::PublicParameters::<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            MultiPedersen<
+                NUM_RANGE_CLAIMS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                ristretto::Scalar,
+                ristretto::GroupElement,
+            >,
+        >::new::<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            ristretto::Scalar,
+            ristretto::GroupElement,
+        >(
+            scalar_public_parameters,
+            group_public_parameters,
+            ristretto::GroupElement(commitment_generators.B),
+            ristretto::GroupElement(commitment_generators.B_blinding),
+        );
 
         Self {
             commitment_scheme_public_parameters,
@@ -269,10 +282,10 @@ impl<const NUM_RANGE_CLAIMS: usize> Default for PublicParameters<NUM_RANGE_CLAIM
 impl<const NUM_RANGE_CLAIMS: usize>
     AsRef<
         commitments::PublicParameters<
-            SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             MultiPedersen<
                 NUM_RANGE_CLAIMS,
-                SCALAR_LIMBS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 ristretto::Scalar,
                 ristretto::GroupElement,
             >,
@@ -282,8 +295,13 @@ impl<const NUM_RANGE_CLAIMS: usize>
     fn as_ref(
         &self,
     ) -> &commitments::PublicParameters<
-        SCALAR_LIMBS,
-        MultiPedersen<NUM_RANGE_CLAIMS, SCALAR_LIMBS, ristretto::Scalar, ristretto::GroupElement>,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        MultiPedersen<
+            NUM_RANGE_CLAIMS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            ristretto::Scalar,
+            ristretto::GroupElement,
+        >,
     > {
         &self.commitment_scheme_public_parameters
     }
@@ -293,20 +311,21 @@ impl<const NUM_RANGE_CLAIMS: usize>
 // impl<const NUM_RANGE_CLAIMS: usize, const WITNESS_MASK_LIMBS: usize>
 //     From<self_product::Value<NUM_RANGE_CLAIMS, Uint<WITNESS_MASK_LIMBS>>>
 //     for commitments::MessageSpaceValue<
-//         SCALAR_LIMBS,
-//         range::CommitmentScheme<SCALAR_LIMBS, NUM_RANGE_CLAIMS, RangeProof>,
-//     >
+//         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+//         range::CommitmentScheme<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS,
+// RangeProof>,     >
 // where
 //     Uint<WITNESS_MASK_LIMBS>: Encoding,
 // {
 //     fn from(value: Value<NUM_RANGE_CLAIMS, Uint<WITNESS_MASK_LIMBS>>) -> Self {
 //         let value: [Uint<WITNESS_MASK_LIMBS>; NUM_RANGE_CLAIMS] = value.into();
 //
-//         // TODO: need to specify when this is safe? for WITNESS_MASK_LIMBS < SCALAR_LIMBS
-//         // perhaps return result
+//         // TODO: need to specify when this is safe? for WITNESS_MASK_LIMBS <
+// COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS         // perhaps return result
 //
 //         value
-//             .map(|v| ristretto::Scalar::from(Uint::<SCALAR_LIMBS>::from(&v)))
+//             .map(|v|
+// ristretto::Scalar::from(Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::from(&v)))
 //             .map(|scalar| [scalar].into())
 //             .into()
 //     }
@@ -334,7 +353,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
 //         const WITNESS_MASK_LIMBS: usize,
 //         Language: EnhancedLanguage<
 //             REPETITIONS,
-//             { SCALAR_LIMBS },
+//             { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
 //             NUM_RANGE_CLAIMS,
 //             { RANGE_CLAIM_LIMBS },
 //             WITNESS_MASK_LIMBS,
@@ -355,7 +374,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
 //     ) -> proofs::Result<(
 //         enhanced::Proof<
 //             REPETITIONS,
-//             { SCALAR_LIMBS },
+//             { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
 //             NUM_RANGE_CLAIMS,
 //             { RANGE_CLAIM_LIMBS },
 //             WITNESS_MASK_LIMBS,
@@ -426,7 +445,7 @@ impl<const NUM_RANGE_CLAIMS: usize>
 //         const WITNESS_MASK_LIMBS: usize,
 //         Language: EnhancedLanguage<
 //             REPETITIONS,
-//             { SCALAR_LIMBS },
+//             { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
 //             NUM_RANGE_CLAIMS,
 //             { RANGE_CLAIM_LIMBS },
 //             WITNESS_MASK_LIMBS,

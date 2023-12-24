@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     commitments, group,
-    group::SamplableWithin,
+    group::Samplable,
     proofs,
     proofs::{
         range,
@@ -28,7 +28,7 @@ pub type Proof<
     // The corresponding range proof
     RangeProof: range::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     // The unbounded witness group element
-    UnboundedWitnessSpaceGroupElement: SamplableWithin,
+    UnboundedWitnessSpaceGroupElement: Samplable,
     // The enhanceable language we are proving
     Language: EnhanceableLanguage<
         REPETITIONS,
@@ -71,7 +71,7 @@ impl<
         const NUM_RANGE_CLAIMS: usize,
         const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         RangeProof: range::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
-        UnboundedWitnessSpaceGroupElement: group::GroupElement + SamplableWithin,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
         Language: EnhanceableLanguage<
             REPETITIONS,
             NUM_RANGE_CLAIMS,

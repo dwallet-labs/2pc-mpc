@@ -14,10 +14,9 @@ use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 // TODO: make this specific for Paillier, document.
-use crate::group::sample_uint_within;
 use crate::{
     group,
-    group::{BoundedGroupElement, Samplable, SamplableWithin},
+    group::{BoundedGroupElement, Samplable},
 };
 
 /// An element of the multiplicative group of integers modulo `n` $\mathbb{Z}_n^*$
@@ -48,67 +47,6 @@ where
                 Err(e) => return Err(e),
             }
         }
-    }
-}
-
-// TODO: maybe that's not ok to even define this.
-impl<const LIMBS: usize> SamplableWithin for GroupElement<LIMBS>
-where
-    Uint<LIMBS>: Encoding,
-{
-    fn sample_within(
-        subrange: (&Self, &Self),
-        public_parameters: &Self::PublicParameters,
-        rng: &mut impl CryptoRngCore,
-    ) -> group::Result<Self> {
-        let (lower_bound, upper_bound) = subrange;
-        let lower_bound = Uint::<LIMBS>::from(lower_bound);
-        let upper_bound = Uint::<LIMBS>::from(upper_bound);
-
-        // Perform rejection-sampling until sampling a value within the subrange.
-        loop {
-            let candidate = Uint::<LIMBS>::random(rng);
-
-            if lower_bound <= candidate && candidate <= upper_bound {
-                let value = Value::new(
-                    sample_uint_within(lower_bound, upper_bound, rng)?,
-                    public_parameters,
-                )?;
-
-                match Self::new(value, public_parameters) {
-                    Err(group::Error::InvalidGroupElement) => {
-                        continue;
-                    }
-                    Ok(sampled_element) => {
-                        return Ok(sampled_element);
-                    }
-                    Err(e) => {
-                        return Err(e);
-                    }
-                }
-            } else {
-                continue;
-            }
-        }
-    }
-
-    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        let value = Value::new(Uint::<LIMBS>::ZERO, public_parameters)?;
-
-        Self::new(value, public_parameters)
-    }
-
-    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        Self::new(
-            Value::new(
-                public_parameters
-                    .params
-                    .modulus()
-                    .wrapping_sub(&Uint::<LIMBS>::ONE),
-                public_parameters,
-            )?,
-            public_parameters,
-        )
     }
 }
 

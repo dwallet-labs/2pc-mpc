@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use super::{GroupElement, SCALAR_LIMBS};
-use crate::group::{sample_uint_within, SamplableWithin};
 // TODO: use original dalek repos.
 // TODO: ct_eq
 use crate::{
@@ -46,34 +45,6 @@ impl Samplable for Scalar {
         rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
         Ok(Self(curve25519_dalek::scalar::Scalar::random(rng)))
-    }
-}
-
-impl SamplableWithin for Scalar {
-    fn sample_within(
-        subrange: (&Self, &Self),
-        public_parameters: &Self::PublicParameters,
-        rng: &mut impl CryptoRngCore,
-    ) -> group::Result<Self> {
-        let (&lower_bound, &upper_bound) = subrange;
-        if lower_bound == Self::lower_bound(public_parameters)?
-            && upper_bound == Self::upper_bound(public_parameters)?
-        {
-            return Self::sample(public_parameters, rng);
-        }
-
-        let lower_bound: U256 = lower_bound.into();
-        let upper_bound: U256 = upper_bound.into();
-
-        sample_uint_within(lower_bound, upper_bound, rng).map(Self::from)
-    }
-
-    fn lower_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        Ok(U256::ZERO.into())
-    }
-
-    fn upper_bound(public_parameters: &Self::PublicParameters) -> group::Result<Self> {
-        Ok(super::ORDER.wrapping_sub(&U256::ONE).into())
     }
 }
 

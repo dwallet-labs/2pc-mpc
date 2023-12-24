@@ -487,51 +487,10 @@ pub(crate) mod tests {
 
     use crate::{
         commitments::pedersen,
-        group::SamplableWithin,
         proofs::schnorr::enhanced::tests::{
             enhanced_language_public_parameters, RANGE_CLAIMS_PER_SCALAR,
         },
     };
-
-    fn lower_bound() -> direct_product::ThreeWayGroupElement<
-        paillier::PlaintextSpaceGroupElement,
-        paillier::RandomnessSpaceGroupElement,
-        paillier::RandomnessSpaceGroupElement,
-    > {
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
-
-        let randomness_lower_bound = paillier::RandomnessSpaceGroupElement::lower_bound(
-            paillier_public_parameters.randomness_space_public_parameters(),
-        )
-        .unwrap();
-
-        (
-            scalar_lower_bound(),
-            randomness_lower_bound,
-            randomness_lower_bound,
-        )
-            .into()
-    }
-
-    fn upper_bound() -> direct_product::ThreeWayGroupElement<
-        paillier::PlaintextSpaceGroupElement,
-        paillier::RandomnessSpaceGroupElement,
-        paillier::RandomnessSpaceGroupElement,
-    > {
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
-
-        let randomness_upper_bound = paillier::RandomnessSpaceGroupElement::upper_bound(
-            paillier_public_parameters.randomness_space_public_parameters(),
-        )
-        .unwrap();
-
-        (
-            scalar_upper_bound(),
-            randomness_upper_bound,
-            randomness_upper_bound,
-        )
-            .into()
-    }
 
     pub(crate) fn public_parameters() -> language::PublicParameters<REPETITIONS, Lang> {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
@@ -578,7 +537,6 @@ pub(crate) mod tests {
         let language_public_parameters = public_parameters();
 
         language::tests::valid_proof_verifies::<REPETITIONS, Lang>(
-            Some((lower_bound(), upper_bound())),
             language_public_parameters,
             batch_size,
         );

@@ -10,9 +10,7 @@ use crate::{
         GroupsPublicParameters, GroupsPublicParametersAccessors, HomomorphicCommitmentScheme,
     },
     group,
-    group::{
-        self_product, BoundedGroupElement, KnownOrderGroupElement, Samplable, SamplableWithin,
-    },
+    group::{self_product, BoundedGroupElement, KnownOrderGroupElement, Samplable},
     helpers::const_generic_array_serialization,
 };
 
@@ -48,7 +46,7 @@ where
     Scalar: BoundedGroupElement<SCALAR_LIMBS>
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + SamplableWithin
+        + Samplable
         + Copy,
     GroupElement: group::GroupElement,
 {
