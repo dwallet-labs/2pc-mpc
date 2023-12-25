@@ -213,3 +213,51 @@ impl<const BATCH_SIZE: usize, GroupElementValue, ScalarPublicParameters, GroupPu
         &self.groups_public_parameters
     }
 }
+
+mod tests {
+    use bulletproofs::PedersenGens;
+    use rand_core::OsRng;
+
+    use super::*;
+    use crate::{commitments, group::ristretto};
+
+    #[test]
+    fn commits() {
+        let scalar_public_parameters = ristretto::scalar::PublicParameters::default();
+        let group_public_parameters = ristretto::group_element::PublicParameters::default();
+
+        let value = ristretto::Scalar::sample(&scalar_public_parameters, &mut OsRng).unwrap();
+        let randomness = ristretto::Scalar::sample(&scalar_public_parameters, &mut OsRng).unwrap();
+
+        let commitment_generators = PedersenGens::default();
+
+        let commitment_scheme_public_parameters = commitments::PublicParameters::<
+            { ristretto::SCALAR_LIMBS },
+            Pedersen<1, { ristretto::SCALAR_LIMBS }, ristretto::Scalar, ristretto::GroupElement>,
+        >::new::<
+            { ristretto::SCALAR_LIMBS },
+            ristretto::Scalar,
+            ristretto::GroupElement,
+        >(
+            scalar_public_parameters,
+            group_public_parameters,
+            [ristretto::GroupElement(commitment_generators.B)],
+            ristretto::GroupElement(commitment_generators.B_blinding),
+        );
+
+        let commitment_scheme = Pedersen::<
+            1,
+            { ristretto::SCALAR_LIMBS },
+            ristretto::Scalar,
+            ristretto::GroupElement,
+        >::new(&commitment_scheme_public_parameters)
+        .unwrap();
+
+        let expected_commitment =
+            ristretto::GroupElement(commitment_generators.commit(value.0, randomness.0));
+
+        let commitment = commitment_scheme.commit(&([value].into()), &randomness);
+
+        assert_eq!(expected_commitment, commitment)
+    }
+}

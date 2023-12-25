@@ -71,14 +71,14 @@ where
         }
 
         let message_generator = GroupElement::new(
-            public_parameters.message_generator.clone(),
+            public_parameters.message_generator,
             &public_parameters
                 .commitment_space_public_parameters()
                 .public_parameters,
         )?;
 
         let randomness_generator = GroupElement::new(
-            public_parameters.randomness_generator.clone(),
+            public_parameters.randomness_generator,
             &public_parameters
                 .commitment_space_public_parameters()
                 .public_parameters,
@@ -101,7 +101,7 @@ where
 
         let commitments: [_; BATCH_SIZE] = messages
             .into_iter()
-            .zip(randomnesses.into_iter())
+            .zip(randomnesses)
             .map(|(message, randomness)| {
                 message * &self.message_generator + randomness * &self.randomness_generator
             })
@@ -217,5 +217,57 @@ impl<const BATCH_SIZE: usize, GroupElementValue, ScalarPublicParameters, GroupPu
         self_product::PublicParameters<BATCH_SIZE, GroupPublicParameters>,
     > {
         &self.groups_public_parameters
+    }
+}
+
+mod tests {
+    use bulletproofs::PedersenGens;
+    use rand_core::OsRng;
+
+    use super::*;
+    use crate::{commitments, group::ristretto};
+
+    #[test]
+    fn commits() {
+        let scalar_public_parameters = ristretto::scalar::PublicParameters::default();
+        let group_public_parameters = ristretto::group_element::PublicParameters::default();
+
+        let value = ristretto::Scalar::sample(&scalar_public_parameters, &mut OsRng).unwrap();
+        let randomness = ristretto::Scalar::sample(&scalar_public_parameters, &mut OsRng).unwrap();
+
+        let commitment_generators = PedersenGens::default();
+
+        let commitment_scheme_public_parameters =
+            commitments::PublicParameters::<
+                { ristretto::SCALAR_LIMBS },
+                MultiPedersen<
+                    1,
+                    { ristretto::SCALAR_LIMBS },
+                    ristretto::Scalar,
+                    ristretto::GroupElement,
+                >,
+            >::new::<{ ristretto::SCALAR_LIMBS }, ristretto::Scalar, ristretto::GroupElement>(
+                scalar_public_parameters,
+                group_public_parameters,
+                ristretto::GroupElement(commitment_generators.B),
+                ristretto::GroupElement(commitment_generators.B_blinding),
+            );
+
+        let commitment_scheme = MultiPedersen::<
+            1,
+            { ristretto::SCALAR_LIMBS },
+            ristretto::Scalar,
+            ristretto::GroupElement,
+        >::new(&commitment_scheme_public_parameters)
+        .unwrap();
+
+        let expected_commitment =
+            ristretto::GroupElement(commitment_generators.commit(value.0, randomness.0));
+
+        let commitment: [_; 1] = commitment_scheme
+            .commit(&([value].into()), &([randomness].into()))
+            .into();
+
+        assert_eq!([expected_commitment], commitment)
     }
 }
