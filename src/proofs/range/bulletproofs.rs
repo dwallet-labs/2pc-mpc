@@ -246,11 +246,6 @@ impl<const NUM_RANGE_CLAIMS: usize> Default for PublicParameters<NUM_RANGE_CLAIM
         let scalar_public_parameters = ristretto::scalar::PublicParameters::default();
         let group_public_parameters = ristretto::group_element::PublicParameters::default();
 
-        let pedersen_message_space_public_parameters =
-            self_product::PublicParameters::<1, ristretto::scalar::PublicParameters>::new(
-                scalar_public_parameters.clone(),
-            );
-
         let commitment_generators = PedersenGens::default();
 
         let commitment_scheme_public_parameters = commitments::PublicParameters::<

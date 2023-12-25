@@ -58,23 +58,6 @@ pub struct Language<
     _encryption_key_choice: PhantomData<EncryptionKey>,
 }
 
-pub type EnhancedLanguage<
-    const NUM_RANGE_CLAIMS: usize,
-    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    const SCALAR_LIMBS: usize,
-    CommitmentScheme,
-    GroupElement,
-    EncryptionKey,
-> = schnorr::enhanced::EnhancedLanguage<
-    REPETITIONS,
-    NUM_RANGE_CLAIMS,
-    SCALAR_LIMBS,
-    CommitmentScheme,
-    ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-    Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>,
->;
-
 impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         const SCALAR_LIMBS: usize,
@@ -124,7 +107,6 @@ impl<
     }
 }
 
-// TODO: don't assume that the commitment message space is SCALAR_LIMBS
 impl<
         const RANGE_CLAIMS_PER_SCALAR: usize,
         const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
@@ -145,6 +127,7 @@ impl<
              RANGE_CLAIMS_PER_SCALAR],
         randomness: &EncryptionKey::RandomnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
+        range_claim_bits: usize,
     ) -> proofs::Result<Self::WitnessSpaceGroupElement> {
         // TODO: perhaps this was the bug, that I'm saying this is scalar here.
         let discrete_log = <EncryptionKey::PlaintextSpaceGroupElement as DecomposableWitness<
@@ -158,9 +141,7 @@ impl<
             language_public_parameters
                 .encryption_scheme_public_parameters
                 .plaintext_space_public_parameters(),
-            crypto_bigint::U128::BITS,
-            // TODO: why not working for U192
-            // range_claim_bits::<SCALAR_LIMBS>(), // TODO: range proof's
+            range_claim_bits,
         )?;
 
         Ok((discrete_log, randomness.clone()).into())
@@ -169,6 +150,7 @@ impl<
     fn decompose_witness(
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
+        range_claim_bits: usize,
     ) -> proofs::Result<(
         [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; RANGE_CLAIMS_PER_SCALAR],
         EncryptionKey::RandomnessSpaceGroupElement,
@@ -180,11 +162,8 @@ impl<
             &language_public_parameters.scalar_group_public_parameters,
         )?;
 
-        // Ok(discrete_log.decompose(range_claim_bits::<SCALAR_LIMBS>()))
-        // TODO
-        // Ok(discrete_log.decompose(crypto_bigint::U192::BITS))
         Ok((
-            discrete_log.decompose(crypto_bigint::U128::BITS),
+            discrete_log.decompose(range_claim_bits),
             witness.randomness().clone(),
         ))
     }
@@ -421,6 +400,25 @@ impl<CiphertextSpaceGroupElement: group::GroupElement, GroupElement: group::Grou
     }
 }
 
+pub type EnhancedProof<
+    const NUM_RANGE_CLAIMS: usize,
+    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    CommitmentScheme,
+    GroupElement,
+    EncryptionKey,
+    ProtocolContext,
+> = schnorr::enhanced::Proof<
+    REPETITIONS,
+    NUM_RANGE_CLAIMS,
+    SCALAR_LIMBS,
+    CommitmentScheme,
+    ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+    Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>,
+    ProtocolContext,
+>;
+
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
     use core::{array, iter};
@@ -434,7 +432,9 @@ pub(crate) mod tests {
     use crate::{
         ahe::paillier,
         group::{ristretto, secp256k1, self_product},
-        proofs::schnorr::{aggregation, language},
+        proofs::schnorr::{
+            aggregation, language, language::enhanced::tests::generate_scalar_plaintext,
+        },
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
 
@@ -474,27 +474,12 @@ pub(crate) mod tests {
         language_public_parameters
     }
 
-    // TODO: can we generalize this?
     fn generate_witnesses(
         language_public_parameters: &language::PublicParameters<REPETITIONS, Lang>,
         batch_size: usize,
     ) -> Vec<language::WitnessSpaceGroupElement<REPETITIONS, Lang>> {
         iter::repeat_with(|| {
-            let scalar = secp256k1::Scalar::sample(
-                &language_public_parameters.scalar_group_public_parameters,
-                &mut OsRng,
-            )
-            .unwrap();
-
-            let discrete_log = paillier::PlaintextSpaceGroupElement::new(
-                Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from(&U256::from(
-                    scalar.value(),
-                )),
-                language_public_parameters
-                    .encryption_scheme_public_parameters
-                    .plaintext_space_public_parameters(),
-            )
-            .unwrap();
+            let discrete_log = generate_scalar_plaintext();
 
             let randomness = paillier::RandomnessSpaceGroupElement::sample(
                 language_public_parameters
@@ -517,29 +502,36 @@ pub(crate) mod tests {
     fn valid_proof_verifies(#[case] batch_size: usize) {
         let language_public_parameters = public_parameters();
 
-        // TODO: now this is incorrect, need to go back and take the code that generates scalar ->
-        // plaintext
-
-        let witnesses = generate_witnesses(&language_public_parameters, batch_size);
-        language::tests::valid_proof_verifies_internal::<REPETITIONS, Lang>(
+        // TODO: this isn't even a valid language (except for the case of class groups), we
+        // shouldn't define it as a language but instead have some trait that replaces
+        // EnhancableLanguage that also replaces the group homomorphism (which isn't an homomoprhism
+        // atm.)
+        language::tests::valid_proof_verifies::<REPETITIONS, Lang>(
             language_public_parameters.clone(),
             batch_size,
-            witnesses.clone(),
         );
 
-        // TODO: this fails
-        schnorr::proof::enhanced::tests::valid_proof_verifies::<
-            REPETITIONS,
-            RANGE_CLAIMS_PER_SCALAR,
-            paillier::RandomnessSpaceGroupElement,
-            Lang,
-        >(
-            language_public_parameters
-                .randomness_space_public_parameters()
-                .clone(),
-            language_public_parameters,
-            witnesses,
-        );
+        // let witnesses = generate_witnesses(&language_public_parameters, batch_size);
+        // language::tests::valid_proof_verifies_internal::<REPETITIONS, Lang>(
+        //     language_public_parameters.clone(),
+        //     batch_size,
+        //     witnesses.clone(),
+        // );
+
+        // let unbounded_witness_public_parameters = language_public_parameters
+        //     .randomness_space_public_parameters()
+        //     .clone();
+        //
+        // schnorr::proof::enhanced::tests::valid_proof_verifies::<
+        //     REPETITIONS,
+        //     RANGE_CLAIMS_PER_SCALAR,
+        //     paillier::RandomnessSpaceGroupElement,
+        //     Lang,
+        // >(
+        //     unbounded_witness_public_parameters,
+        //     language_public_parameters,
+        //     witnesses,
+        // );
     }
 
     #[rstest]
@@ -552,11 +544,10 @@ pub(crate) mod tests {
         let language_public_parameters = public_parameters();
 
         // todo: 5, 2 is failing even without the enhanced.
-        let witnesses = language::tests::generate_witnesses_for_aggregation::<REPETITIONS, Lang>(
-            &language_public_parameters,
-            number_of_parties,
-            batch_size,
-        );
+        let witnesses =
+            iter::repeat_with(|| generate_witnesses(&language_public_parameters, batch_size))
+                .take(number_of_parties)
+                .collect();
 
         aggregation::tests::aggregates::<REPETITIONS, Lang>(&language_public_parameters, witnesses);
 

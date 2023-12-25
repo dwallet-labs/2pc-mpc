@@ -72,11 +72,13 @@ pub trait EnhanceableLanguage<
         decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
         unbounded_witness: &UnboundedWitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
+        range_claim_bits: usize,
     ) -> proofs::Result<Self::WitnessSpaceGroupElement>;
 
     fn decompose_witness(
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
+        range_claim_bits: usize,
     ) -> proofs::Result<(
         [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
         UnboundedWitnessSpaceGroupElement,
@@ -169,6 +171,7 @@ impl<
             &decomposed_witness,
             witness.unbounded_witness(),
             &enhanced_language_public_parameters.language_public_parameters,
+            RangeProof::RANGE_CLAIM_BITS,
         )?;
 
         let language_statement = Language::group_homomorphism(
@@ -636,7 +639,8 @@ pub(crate) mod tests {
         },
     };
 
-    pub const RANGE_CLAIMS_PER_SCALAR: usize = { secp256k1::SCALAR_LIMBS / U128::LIMBS }; // TODO: proper range claims bits
+    pub const RANGE_CLAIMS_PER_SCALAR: usize =
+        { Uint::<{ secp256k1::SCALAR_LIMBS }>::BITS / range::bulletproofs::RANGE_CLAIM_BITS };
 
     // TODO: support both bp & lightning
     pub(super) type EnhancedLang<
@@ -652,6 +656,21 @@ pub(crate) mod tests {
         UnboundedWitnessSpaceGroupElement,
         Lang,
     >;
+
+    pub(crate) fn generate_scalar_plaintext() -> paillier::PlaintextSpaceGroupElement {
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+
+        let scalar =
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
+
+        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+
+        paillier::PlaintextSpaceGroupElement::new(
+            Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from(&U256::from(scalar.value())),
+            paillier_public_parameters.plaintext_space_public_parameters(),
+        )
+        .unwrap()
+    }
 
     pub(crate) fn enhanced_language_public_parameters<
         const REPETITIONS: usize,
@@ -709,6 +728,7 @@ pub(crate) mod tests {
                 let (decomposed_witness, unbounded_element) = Lang::decompose_witness(
                     &witness,
                     &enhanced_language_public_parameters.language_public_parameters,
+                    range::bulletproofs::RANGE_CLAIM_BITS,
                 )
                 .unwrap();
 

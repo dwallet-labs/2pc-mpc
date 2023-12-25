@@ -166,7 +166,7 @@ impl<
         // TODO: commitments are being computed twice. In order to avoid this, I would need to
         // somehow partially compute the group homomorphism, which is problematic..
         // TODO: perhaps introduce a "prove_inner()" function
-        let (range_proof, _) = RangeProof::prove(
+        let (range_proof, c7) = RangeProof::prove(
             &enhanced_language_public_parameters.range_proof_public_parameters,
             commitment_messages,
             commitment_randomnesses,
@@ -202,6 +202,15 @@ impl<
             randomizers,
             statement_masks,
         )?;
+
+        let c3: Vec<_> = statements
+            .clone()
+            .into_iter()
+            .map(|statement| statement.range_proof_commitment().clone())
+            .collect();
+
+        // TODO: keep this in code?
+        assert_eq!(c3, c7);
 
         Ok((
             Proof {

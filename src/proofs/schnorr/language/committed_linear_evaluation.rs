@@ -7,7 +7,7 @@
 use core::array;
 use std::marker::PhantomData;
 
-use crypto_bigint::{Encoding, Uint};
+use crypto_bigint::{Encoding, NonZero, Uint};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -34,6 +34,7 @@ use crate::{
             language::GroupsPublicParameters,
         },
     },
+    traits::Reduce,
     AdditivelyHomomorphicEncryptionKey,
 };
 
@@ -73,34 +74,6 @@ pub type Language<
     DIMENSION,
     GroupElement,
     EncryptionKey,
->;
-
-pub type EnhancedLanguage<
-    const NUM_RANGE_CLAIMS: usize,
-    const RANGE_CLAIMS_PER_SCALAR: usize,
-    const RANGE_CLAIMS_PER_MASK: usize,
-    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    const SCALAR_LIMBS: usize,
-    const DIMENSION: usize,
-    CommitmentScheme,
-    GroupElement,
-    EncryptionKey,
-> = schnorr::enhanced::EnhancedLanguage<
-    REPETITIONS,
-    NUM_RANGE_CLAIMS,
-    SCALAR_LIMBS,
-    CommitmentScheme,
-    ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-    private::Language<
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIMS_PER_MASK,
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        SCALAR_LIMBS,
-        DIMENSION,
-        GroupElement,
-        EncryptionKey,
-    >,
 >;
 
 impl<
@@ -160,14 +133,14 @@ impl<
         let commitment_scheme =
             Pedersen::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
-        let ciphertexts =
-            flat_map_results(
-                language_public_parameters.ciphertexts.clone().map(|value| {
-                    ahe::CiphertextSpaceGroupElement::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>::new(
-                        value,
-                        language_public_parameters.encryption_scheme_public_parameters.ciphertext_space_public_parameters())
-                }),
-            )?;
+        let ciphertexts = flat_map_results(language_public_parameters.ciphertexts.map(|value| {
+            ahe::CiphertextSpaceGroupElement::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>::new(
+                value,
+                language_public_parameters
+                    .encryption_scheme_public_parameters
+                    .ciphertext_space_public_parameters(),
+            )
+        }))?;
 
         let evaluated_ciphertext = encryption_key
             .evaluate_circuit_private_linear_combination_with_randomness(
@@ -180,11 +153,15 @@ impl<
 
         let coefficients: [_; DIMENSION] = (*witness.coefficients()).into();
 
+        let group_order =
+            Option::<_>::from(NonZero::new(group_order)).ok_or(proofs::Error::Conversion)?;
+
         let coefficients = flat_map_results(coefficients.map(|coefficient| {
+            let coefficient = coefficient.value().into().reduce(&group_order).into();
+
             GroupElement::Scalar::new(
-                // TODO: here it's ok to go through modulation right? (is this even modulation -  i
-                // think just trancutaion)
-                Uint::<SCALAR_LIMBS>::from(&coefficient.value().into()).into(),
+                // TODO: here it's ok to go through modulation right?
+                coefficient,
                 language_public_parameters.scalar_group_public_parameters(),
             )
         }))?;
@@ -233,6 +210,7 @@ impl<
             RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         >,
         language_public_parameters: &Self::PublicParameters,
+        range_claim_bits: usize,
     ) -> proofs::Result<Self::WitnessSpaceGroupElement> {
         if NUM_RANGE_CLAIMS != RANGE_CLAIMS_PER_SCALAR * DIMENSION + RANGE_CLAIMS_PER_MASK {
             return Err(proofs::Error::InvalidParameters);
@@ -261,7 +239,7 @@ impl<
                 language_public_parameters
                     .encryption_scheme_public_parameters
                     .plaintext_space_public_parameters(),
-                crypto_bigint::U128::BITS, // TODO
+                range_claim_bits,
             )
         }))?
         .into();
@@ -283,7 +261,7 @@ impl<
             language_public_parameters
                 .encryption_scheme_public_parameters
                 .plaintext_space_public_parameters(),
-            crypto_bigint::U128::BITS, // TODO
+            range_claim_bits,
         )?;
 
         let (commitment_randomness, encryption_randomness) = unbounded_witness.clone().into();
@@ -300,6 +278,7 @@ impl<
     fn decompose_witness(
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
+        range_claim_bits: usize,
     ) -> proofs::Result<(
         [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
         direct_product::GroupElement<
@@ -307,7 +286,7 @@ impl<
             RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         >,
     )> {
-        if NUM_RANGE_CLAIMS != RANGE_CLAIMS_PER_SCALAR * DIMENSION + RANGE_CLAIMS_PER_MASK {
+        if NUM_RANGE_CLAIMS != (RANGE_CLAIMS_PER_SCALAR * DIMENSION + RANGE_CLAIMS_PER_MASK) {
             return Err(proofs::Error::InvalidParameters);
         }
 
@@ -317,11 +296,10 @@ impl<
         let coefficients: [_; DIMENSION] = coefficients.into();
 
         let range_proof_commitment_message = coefficients.into_iter().flat_map(|coefficient| {
-            <[_; RANGE_CLAIMS_PER_SCALAR]>::from(coefficient.decompose(crypto_bigint::U128::BITS))
+            <[_; RANGE_CLAIMS_PER_SCALAR]>::from(coefficient.decompose(range_claim_bits))
         });
 
-        let decomposed_mask: [_; RANGE_CLAIMS_PER_MASK] =
-            mask.decompose(crypto_bigint::U128::BITS).into();
+        let decomposed_mask: [_; RANGE_CLAIMS_PER_MASK] = mask.decompose(range_claim_bits).into();
 
         let range_proof_commitment_message: Vec<_> = range_proof_commitment_message
             .chain(decomposed_mask.into_iter())
@@ -657,6 +635,36 @@ pub(super) mod private {
     }
 }
 
+pub type EnhancedProof<
+    const NUM_RANGE_CLAIMS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIMS_PER_MASK: usize,
+    const MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    const DIMENSION: usize,
+    CommitmentScheme,
+    GroupElement,
+    EncryptionKey,
+    ProtocolContext,
+> = schnorr::enhanced::Proof<
+    REPETITIONS,
+    NUM_RANGE_CLAIMS,
+    SCALAR_LIMBS,
+    CommitmentScheme,
+    ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+    private::Language<
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIMS_PER_MASK,
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        DIMENSION,
+        GroupElement,
+        EncryptionKey,
+    >,
+    ProtocolContext,
+>;
+
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
     use core::{array, iter};
@@ -681,7 +689,8 @@ pub(crate) mod tests {
 
     pub(crate) const DIMENSION: usize = 2;
 
-    pub(crate) const RANGE_CLAIMS_PER_MASK: usize = 3; // TODO
+    pub(crate) const RANGE_CLAIMS_PER_MASK: usize =
+        { Uint::<MASK_LIMBS>::BITS / range::bulletproofs::RANGE_CLAIM_BITS };
 
     pub(crate) const NUM_RANGE_CLAIMS: usize =
         { DIMENSION * RANGE_CLAIMS_PER_SCALAR + RANGE_CLAIMS_PER_MASK };
@@ -694,20 +703,12 @@ pub(crate) mod tests {
         paillier::EncryptionKey,
     >;
 
-    pub type EnhancedLang = EnhancedLanguage<
-        { NUM_RANGE_CLAIMS },
+    pub type EnhancedLang = private::Language<
         { RANGE_CLAIMS_PER_SCALAR },
         { RANGE_CLAIMS_PER_MASK },
-        { secp256k1::SCALAR_LIMBS },
         { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
         { secp256k1::SCALAR_LIMBS },
         { DIMENSION },
-        Pedersen<
-            { NUM_RANGE_CLAIMS },
-            { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
-            secp256k1::GroupElement,
-        >,
         secp256k1::GroupElement,
         paillier::EncryptionKey,
     >;
@@ -715,7 +716,7 @@ pub(crate) mod tests {
     use crate::{
         commitments::pedersen,
         proofs::schnorr::language::enhanced::tests::{
-            enhanced_language_public_parameters, RANGE_CLAIMS_PER_SCALAR,
+            enhanced_language_public_parameters, generate_scalar_plaintext, RANGE_CLAIMS_PER_SCALAR,
         },
     };
 
@@ -800,6 +801,48 @@ pub(crate) mod tests {
         language_public_parameters
     }
 
+    fn generate_witnesses(
+        language_public_parameters: &language::PublicParameters<REPETITIONS, Lang>,
+        batch_size: usize,
+    ) -> Vec<language::WitnessSpaceGroupElement<REPETITIONS, Lang>> {
+        iter::repeat_with(|| {
+            let coefficients = array::from_fn(|_| generate_scalar_plaintext()).into();
+
+            let commitment_randomness = secp256k1::Scalar::sample(
+                &language_public_parameters.scalar_group_public_parameters(),
+                &mut OsRng,
+            )
+            .unwrap();
+
+            let mask = Uint::<MASK_LIMBS>::random(&mut OsRng);
+            let mask = paillier::PlaintextSpaceGroupElement::new(
+                (&mask).into(),
+                language_public_parameters
+                    .encryption_scheme_public_parameters
+                    .plaintext_space_public_parameters(),
+            )
+            .unwrap();
+
+            let encryption_randomness = paillier::RandomnessSpaceGroupElement::sample(
+                language_public_parameters
+                    .encryption_scheme_public_parameters
+                    .randomness_space_public_parameters(),
+                &mut OsRng,
+            )
+            .unwrap();
+
+            (
+                coefficients,
+                commitment_randomness,
+                mask,
+                encryption_randomness,
+            )
+                .into()
+        })
+        .take(batch_size)
+        .collect()
+    }
+
     #[rstest]
     #[case(1)]
     #[case(2)]
@@ -807,9 +850,33 @@ pub(crate) mod tests {
     fn valid_proof_verifies(#[case] batch_size: usize) {
         let language_public_parameters = public_parameters();
 
-        language::tests::valid_proof_verifies::<REPETITIONS, Lang>(
-            language_public_parameters,
+        let witnesses = generate_witnesses(&language_public_parameters, batch_size);
+
+        language::tests::valid_proof_verifies_internal::<REPETITIONS, Lang>(
+            language_public_parameters.clone(),
             batch_size,
+            witnesses.clone(),
+        );
+
+        let unbounded_witness_public_parameters = direct_product::PublicParameters(
+            language_public_parameters
+                .scalar_group_public_parameters()
+                .clone(),
+            language_public_parameters
+                .encryption_scheme_public_parameters
+                .randomness_space_public_parameters()
+                .clone(),
+        );
+
+        schnorr::proof::enhanced::tests::valid_proof_verifies::<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            direct_product::GroupElement<secp256k1::Scalar, paillier::RandomnessSpaceGroupElement>,
+            EnhancedLang,
+        >(
+            unbounded_witness_public_parameters,
+            language_public_parameters,
+            witnesses,
         );
     }
 
