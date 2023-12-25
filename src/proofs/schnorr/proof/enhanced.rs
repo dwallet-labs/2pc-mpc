@@ -11,7 +11,7 @@ use crate::{
     commitments,
     commitments::GroupsPublicParametersAccessors as _,
     group,
-    group::Samplable,
+    group::{GroupElement as _, Samplable},
     proofs,
     proofs::{
         range,
@@ -347,7 +347,7 @@ impl<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RangeProof,
-        >; REPETITIONS] = array::from_fn(|_| {
+        >; REPETITIONS] = flat_map_results(array::from_fn(|_| {
             // TODO
             // let sampling_bit_size: usize = RangeProof::RANGE_CLAIM_BITS
             // + ComputationalSecuritySizedNumber::BITS
@@ -371,12 +371,22 @@ impl<
             let mask = Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::MAX
                 >> (Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::BITS - sampling_bit_size);
 
-            array::from_fn(|_| {
-                (Uint::<{ COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS }>::random(rng) & mask)
-                    .into()
-            })
-            .into()
-        });
+            flat_map_results(array::from_fn(|_| {
+                let value = (Uint::<{ COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS }>::random(rng)
+                    & mask)
+                    .into();
+
+                RangeProof::RangeClaimGroupElement::new(
+                    value,
+                    &enhanced_language_public_parameters
+                        .range_proof_public_parameters
+                        .commitment_scheme_public_parameters()
+                        .message_space_public_parameters()
+                        .public_parameters,
+                )
+            }))
+            .map(|decomposed_witness| decomposed_witness.into())
+        }))?;
 
         let unbounded_witnesses: [_; REPETITIONS] = flat_map_results(array::from_fn(|_| {
             UnboundedWitnessSpaceGroupElement::sample(

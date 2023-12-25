@@ -71,6 +71,18 @@ impl<V: ConditionallySelectable> ConditionallySelectable for Value<V> {
     }
 }
 
+impl<const SCALAR_LIMBS: usize, V: From<Uint<SCALAR_LIMBS>>> From<Uint<SCALAR_LIMBS>> for Value<V> {
+    fn from(value: Uint<SCALAR_LIMBS>) -> Self {
+        Value(V::from(value))
+    }
+}
+
+impl<const SCALAR_LIMBS: usize, V: Into<Uint<SCALAR_LIMBS>>> Into<Uint<SCALAR_LIMBS>> for Value<V> {
+    fn into(self) -> Uint<SCALAR_LIMBS> {
+        self.0.into()
+    }
+}
+
 impl<const SCALAR_LIMBS: usize, S: GroupElement> Neg for Scalar<SCALAR_LIMBS, S> {
     type Output = Self;
 
@@ -210,6 +222,8 @@ impl<const SCALAR_LIMBS: usize, S: Into<Uint<SCALAR_LIMBS>>> From<Scalar<SCALAR_
 
 impl<const SCALAR_LIMBS: usize, S: KnownOrderScalar<SCALAR_LIMBS>> KnownOrderScalar<SCALAR_LIMBS>
     for Scalar<SCALAR_LIMBS, S>
+where
+    S::Value: From<Uint<SCALAR_LIMBS>> + Into<Uint<SCALAR_LIMBS>>,
 {
 }
 

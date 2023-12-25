@@ -206,6 +206,47 @@ pub trait BoundedGroupElement<const SCALAR_LIMBS: usize>: GroupElement {
     ) -> Uint<SCALAR_LIMBS>;
 }
 
+/// An element of a natural numbers group (TODO: doc).
+/// This trait encapsulates both known and unknown order number groups, by allowing the group value
+/// to be transitional to and from a bounded natural number.
+///
+/// This way allows us to capture both
+/// elliptic curve scalars (which has their own serialization format captured by their types &
+/// standards, and thus cannot have a `Uint<>` as their `Value`) and hidden-order groups like
+/// Paillier's, where we cannot have `T: From<Uint<>>` as we cannot construct a group element
+/// without the modulus which is specified in the public parameters.
+///
+/// Using `Self::Value` we can convert in and out of numbers, and instantiate group elements in a
+/// unified way using `Self::new()` which receives the public parameters and can fail upon invalid
+/// inputs.
+pub trait NumbersGroupElement<const SCALAR_LIMBS: usize>:
+    GroupElement<Value = Self::ValueExt>
+    + BoundedGroupElement<SCALAR_LIMBS>
+    + Into<Uint<SCALAR_LIMBS>>
+    + Samplable
+{
+    type ValueExt: From<Uint<SCALAR_LIMBS>>
+        + Into<Uint<SCALAR_LIMBS>>
+        + Serialize
+        + for<'r> Deserialize<'r>
+        + Clone
+        + Debug
+        + PartialEq
+        + ConstantTimeEq
+        + ConditionallySelectable
+        + Copy;
+}
+
+impl<
+        const SCALAR_LIMBS: usize,
+        T: GroupElement + BoundedGroupElement<SCALAR_LIMBS> + Into<Uint<SCALAR_LIMBS>> + Samplable,
+    > NumbersGroupElement<SCALAR_LIMBS> for T
+where
+    T::Value: From<Uint<SCALAR_LIMBS>> + Into<Uint<SCALAR_LIMBS>>,
+{
+    type ValueExt = Self::Value;
+}
+
 /// Constant-time multiplication by the generator.
 ///
 /// May use optimizations (e.g. precomputed tables) when available.
@@ -229,6 +270,7 @@ pub trait CyclicGroupElement: GroupElement {
 
 pub trait KnownOrderScalar<const SCALAR_LIMBS: usize>:
     KnownOrderGroupElement<SCALAR_LIMBS, Scalar = Self>
+    + NumbersGroupElement<SCALAR_LIMBS>
     + Mul<Self, Output = Self>
     + for<'r> Mul<&'r Self, Output = Self>
     + Samplable

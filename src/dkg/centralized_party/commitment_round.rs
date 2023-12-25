@@ -38,6 +38,7 @@ pub struct Party<
 > where
     Uint<RANGE_CLAIM_LIMBS>: Encoding,
     Uint<WITNESS_MASK_LIMBS>: Encoding,
+    // TODO: no longer need this constraint
     group::ScalarValue<SCALAR_LIMBS, GroupElement>: From<Uint<SCALAR_LIMBS>>,
     range::CommitmentSchemeMessageSpaceValue<
         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,

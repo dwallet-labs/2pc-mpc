@@ -13,7 +13,7 @@ use crate::{
     commitments,
     commitments::HomomorphicCommitmentScheme,
     group,
-    group::{self_product, Samplable},
+    group::{self_product, NumbersGroupElement, Samplable},
     proofs::Result,
 };
 
@@ -35,7 +35,7 @@ pub trait RangeProof<
 
     /// An element of the group from which the range proof's commitment scheme message space is composed,
     /// used to prove a single range claim.
-    type RangeClaimGroupElement: group::GroupElement + Samplable + From<Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>> + Into<Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>;
+    type RangeClaimGroupElement: NumbersGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>;
 
     /// The commitment scheme used for the range proof
     type CommitmentScheme<const NUM_RANGE_CLAIMS: usize>: HomomorphicCommitmentScheme<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, MessageSpaceGroupElement=self_product::GroupElement<NUM_RANGE_CLAIMS, Self::RangeClaimGroupElement>>;

@@ -31,9 +31,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize>:
     Into<Self::PublicParameters> + PartialEq + Clone + Debug
 {
-    type PlaintextSpaceGroupElement: GroupElement<Value = Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>
-        + KnownOrderScalar<PLAINTEXT_SPACE_SCALAR_LIMBS>
-        + Samplable;
+    type PlaintextSpaceGroupElement: KnownOrderScalar<PLAINTEXT_SPACE_SCALAR_LIMBS> + Samplable;
     type RandomnessSpaceGroupElement: GroupElement + Samplable;
     type CiphertextSpaceGroupElement: GroupElement;
 
@@ -196,7 +194,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
                 coefficients[0].neutral()
             } else {
                 Self::PlaintextSpaceGroupElement::new(
-                    Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(modulus),
+                    Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(modulus).into(),
                     &coefficients[0].public_parameters(),
                 )? * mask
             };
@@ -241,7 +239,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
                 ciphertexts,
                 modulus,
                 &Self::PlaintextSpaceGroupElement::new(
-                    Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(&mask),
+                    Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(&mask).into(),
                     &coefficients[0].public_parameters(),
                 )?,
                 &randomness,
@@ -535,8 +533,8 @@ mod tests {
         );
 
         assert_eq!(
-            EvaluationGroupElement::from(decryption_key.decrypt(&evaluted_ciphertext).value().into()),
-            EvaluationGroupElement::from(decryption_key.decrypt(&privately_evaluted_ciphertext).value().into()),
+            EvaluationGroupElement::from(decryption_key.decrypt(&evaluted_ciphertext).value()),
+            EvaluationGroupElement::from(decryption_key.decrypt(&privately_evaluted_ciphertext).value()),
             "decryptions of privately evaluated linear combinations should match straightforward ones modulu the evaluation group order"
         );
     }

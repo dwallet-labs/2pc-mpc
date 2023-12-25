@@ -165,8 +165,6 @@ impl<
             ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         >,
     > for Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>
-where
-    group::Value<GroupElement::Scalar>: From<Uint<SCALAR_LIMBS>>,
 {
     fn compose_witness(
         decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>;
@@ -215,7 +213,8 @@ where
             ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         >,
     )> {
-        let multiplicant_value: Uint<SCALAR_LIMBS> = (&witness.multiplicant().value()).into();
+        let multiplicant_value: Uint<SCALAR_LIMBS> =
+            (&witness.multiplicant().value().into()).into();
         let multiplicant = GroupElement::Scalar::new(
             multiplicant_value.into(),
             &language_public_parameters.scalar_group_public_parameters,

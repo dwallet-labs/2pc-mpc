@@ -121,8 +121,6 @@ impl<
         GroupElement,
         EncryptionKey,
     >
-where
-    group::Value<GroupElement::Scalar>: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
 {
     type WitnessSpaceGroupElement = direct_product::FourWayGroupElement<
         self_product::GroupElement<DIMENSION, EncryptionKey::PlaintextSpaceGroupElement>,
@@ -182,10 +180,11 @@ where
 
         let coefficients: [_; DIMENSION] = (*witness.coefficients()).into();
 
-        // TODO: here it's ok to go through modulation right?
         let coefficients = flat_map_results(coefficients.map(|coefficient| {
             GroupElement::Scalar::new(
-                coefficient.value().into(),
+                // TODO: here it's ok to go through modulation right? (is this even modulation -  i
+                // think just trancutaion)
+                Uint::<SCALAR_LIMBS>::from(&coefficient.value().into()).into(),
                 language_public_parameters.scalar_group_public_parameters(),
             )
         }))?;
@@ -226,8 +225,6 @@ impl<
         GroupElement,
         EncryptionKey,
     >
-where
-    group::Value<GroupElement::Scalar>: From<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>,
 {
     fn compose_witness(
         decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],

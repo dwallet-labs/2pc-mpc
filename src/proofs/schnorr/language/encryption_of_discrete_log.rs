@@ -118,7 +118,7 @@ impl<
         let encryption_of_discrete_log =
             encryption_key.encrypt_with_randomness(witness.discrete_log(), witness.randomness());
 
-        let base_by_discrete_log = base.scalar_mul(&witness.discrete_log().value());
+        let base_by_discrete_log = base.scalar_mul(&witness.discrete_log().value().into());
 
         Ok((encryption_of_discrete_log, base_by_discrete_log).into())
     }
@@ -139,8 +139,6 @@ impl<
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         EncryptionKey::RandomnessSpaceGroupElement,
     > for Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>
-where
-    group::Value<GroupElement::Scalar>: From<Uint<SCALAR_LIMBS>>,
 {
     fn compose_witness(
         decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>;
@@ -175,7 +173,8 @@ where
         [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; RANGE_CLAIMS_PER_SCALAR],
         EncryptionKey::RandomnessSpaceGroupElement,
     )> {
-        let discrete_log_value: Uint<SCALAR_LIMBS> = (&witness.discrete_log().value()).into();
+        let discrete_log_value: Uint<SCALAR_LIMBS> =
+            (&witness.discrete_log().value().into()).into();
         let discrete_log = GroupElement::Scalar::new(
             discrete_log_value.into(),
             &language_public_parameters.scalar_group_public_parameters,

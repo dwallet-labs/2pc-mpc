@@ -210,8 +210,7 @@ pub trait DecomposableWitness<
     const RANGE_CLAIMS_PER_SCALAR: usize,
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const WITNESS_LIMBS: usize,
->: KnownOrderScalar<WITNESS_LIMBS> where
-    Self::Value: From<Uint<WITNESS_LIMBS>>,
+>: KnownOrderScalar<WITNESS_LIMBS>
 {
     fn decompose(
         self,
@@ -275,8 +274,6 @@ impl<
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         WITNESS_LIMBS,
     > for Witness
-where
-    Self::Value: From<Uint<WITNESS_LIMBS>>,
 {
 }
 
