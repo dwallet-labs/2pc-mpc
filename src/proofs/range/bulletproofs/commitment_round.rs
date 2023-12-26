@@ -1,29 +1,29 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 use core::iter;
+use std::marker::PhantomData;
 
 use bulletproofs::{
     range_proof_mpc::{dealer::Dealer, messages::BitCommitment, party},
     BulletproofGens, PedersenGens,
 };
-use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U64};
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U256, U64};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    group::{additive_group_of_integers_modulu_n::power_of_two_moduli, ristretto},
+    group::{additive_group_of_integers_modulu_n::power_of_two_moduli, ristretto, Samplable},
     proofs,
     proofs::{
+        range,
         range::{
-            bulletproofs::{
-                decommitment_and_poly_commitment_round, RANGE_CLAIM_BITS, RANGE_CLAIM_LIMBS,
-                SCALAR_LIMBS,
-            },
+            bulletproofs::{decommitment_and_poly_commitment_round, RANGE_CLAIM_BITS},
             RangeProof,
         },
         schnorr::{
-            aggregation::commitment_round, language,
-            language::enhanced::EnhancedLanguageWitnessAccessors, EnhancedLanguage,
+            aggregation::{commitment_round, CommitmentRoundParty},
+            enhanced::{EnhanceableLanguage, EnhancedLanguage, EnhancedLanguageWitnessAccessors},
+            language,
         },
         transcript_protocol::TranscriptProtocol,
     },
@@ -33,20 +33,27 @@ use crate::{
 pub struct Party<
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
-    const WITNESS_MASK_LIMBS: usize,
-    Language: EnhancedLanguage<
+    UnboundedWitnessSpaceGroupElement: Samplable,
+    Language: EnhanceableLanguage<
         REPETITIONS,
-        { SCALAR_LIMBS },
         NUM_RANGE_CLAIMS,
-        { RANGE_CLAIM_LIMBS },
-        WITNESS_MASK_LIMBS,
-        RangeProof = super::RangeProof,
+        { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+        UnboundedWitnessSpaceGroupElement,
     >,
-    ProtocolContext: Clone,
-> where
-    Uint<WITNESS_MASK_LIMBS>: Encoding,
-{
-    pub commitment_round_party: commitment_round::Party<REPETITIONS, Language, ProtocolContext>,
+    ProtocolContext: Clone + Serialize,
+> {
+    pub commitment_round_party: commitment_round::Party<
+        REPETITIONS,
+        EnhancedLanguage<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+            super::RangeProof,
+            UnboundedWitnessSpaceGroupElement,
+            Language,
+        >,
+        ProtocolContext,
+    >,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -58,19 +65,22 @@ pub struct Message {
 impl<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        Language: EnhancedLanguage<
+        UnboundedWitnessSpaceGroupElement: Samplable,
+        Language: EnhanceableLanguage<
             REPETITIONS,
-            { SCALAR_LIMBS },
             NUM_RANGE_CLAIMS,
-            { RANGE_CLAIM_LIMBS },
-            WITNESS_MASK_LIMBS,
-            RangeProof = super::RangeProof,
+            { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+            UnboundedWitnessSpaceGroupElement,
         >,
         ProtocolContext: Clone + Serialize,
-    > Party<REPETITIONS, NUM_RANGE_CLAIMS, WITNESS_MASK_LIMBS, Language, ProtocolContext>
-where
-    Uint<WITNESS_MASK_LIMBS>: Encoding,
+    >
+    Party<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        UnboundedWitnessSpaceGroupElement,
+        Language,
+        ProtocolContext,
+    >
 {
     /// Due to a limitation in Bulletproofs, assumes both the number of parties and the number of
     /// witnesses are powers of 2. If one needs a non-power-of-two, pad to the
@@ -89,11 +99,43 @@ where
             'b,
             REPETITIONS,
             NUM_RANGE_CLAIMS,
-            WITNESS_MASK_LIMBS,
+            UnboundedWitnessSpaceGroupElement,
             Language,
             ProtocolContext,
         >,
     )> {
+        let (commitment_messages, commitment_randomnesses): (Vec<_>, Vec<_>) = self
+            .commitment_round_party
+            .witnesses
+            .clone()
+            .into_iter()
+            .map(|witness| {
+                (
+                    witness.range_proof_commitment_message().clone(),
+                    witness.range_proof_commitment_randomness().clone(),
+                )
+            })
+            .unzip();
+
+        let witnesses: Vec<_> = commitment_messages
+            .into_iter()
+            .map(|witness| <[_; NUM_RANGE_CLAIMS]>::from(witness))
+            .flatten()
+            .map(|witness: ristretto::Scalar| U256::from(witness))
+            .collect();
+
+        if witnesses
+            .iter()
+            .any(|witness| witness > &(&U64::MAX).into())
+        {
+            return Err(range::Error::OutOfRange)?;
+        }
+
+        let witnesses: Vec<u64> = witnesses
+            .into_iter()
+            .map(|witness| U64::from(&witness).into())
+            .collect();
+
         let number_of_parties = self.commitment_round_party.number_of_parties;
         let number_of_witnesses = self.commitment_round_party.witnesses.len();
 
@@ -109,52 +151,10 @@ where
             )
             .ok_or(proofs::Error::InvalidParameters)?;
 
-        let (constrained_witnesses, commitments_randomness): (
-            Vec<[u64; NUM_RANGE_CLAIMS]>,
-            Vec<
-                language::enhanced::RangeProofCommitmentSchemeRandomnessSpaceGroupElement<
-                    REPETITIONS,
-                    { SCALAR_LIMBS },
-                    NUM_RANGE_CLAIMS,
-                    { RANGE_CLAIM_LIMBS },
-                    WITNESS_MASK_LIMBS,
-                    Language,
-                >,
-            >,
-        ) = self
-            .commitment_round_party
-            .witnesses
-            .clone()
-            .into_iter()
-            .map(|witness| {
-                let constrained_witness: [power_of_two_moduli::GroupElement<WITNESS_MASK_LIMBS>;
-                    NUM_RANGE_CLAIMS] = (*witness.constrained_witness()).into();
-
-                let constrained_witness: [u64; NUM_RANGE_CLAIMS] =
-                    constrained_witness.map(|witness_part| {
-                        let witness_part_value: Uint<WITNESS_MASK_LIMBS> = witness_part.into();
-
-                        let witness_part_value: U64 = (&witness_part_value).into();
-
-                        witness_part_value.to_limbs()[0].0
-                    });
-
-                (
-                    constrained_witness,
-                    witness.range_proof_commitment_randomness().clone(),
-                )
-            })
-            .unzip();
-
-        // TODO: DRY
-
-        let constrained_witnesses: Vec<_> =
-            constrained_witnesses.into_iter().flat_map(|x| x).collect();
-
-        let commitments_randomness: Vec<curve25519_dalek::scalar::Scalar> = commitments_randomness
+        let commitments_randomness: Vec<_> = commitment_randomnesses
             .into_iter()
             .flat_map(|multicommitment_randomness| {
-                <[ristretto::Scalar; NUM_RANGE_CLAIMS]>::from(multicommitment_randomness)
+                <[_; NUM_RANGE_CLAIMS]>::from(multicommitment_randomness)
             })
             .map(|randomness| randomness.0)
             .collect();
@@ -166,9 +166,10 @@ where
             RANGE_CLAIM_BITS,
             number_of_parties.into(),
         )
-        .map_err(bulletproofs::ProofError::from)?;
+        .map_err(bulletproofs::ProofError::from)
+        .map_err(range::Error::from)?;
 
-        let parties: Vec<_> = constrained_witnesses
+        let parties: Vec<_> = witnesses
             .into_iter()
             .zip(commitments_randomness.into_iter())
             .map(|(witness, commitment_randomness)| {
@@ -181,7 +182,8 @@ where
                 )
                 .map_err(bulletproofs::ProofError::from)
             })
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(range::Error::from)?;
 
         let (parties_awaiting_bit_challenge, bit_commitments): (Vec<_>, Vec<_>) = parties
             .into_iter()
@@ -194,7 +196,8 @@ where
                     )
                     .map_err(bulletproofs::ProofError::from)
             })
-            .collect::<Result<Vec<(_, _)>, _>>()?
+            .collect::<Result<Vec<(_, _)>, _>>()
+            .map_err(range::Error::from)?
             .into_iter()
             .unzip();
 

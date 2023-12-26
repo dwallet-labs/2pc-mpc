@@ -1,12 +1,14 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
-// pub mod commitment_round;
-// pub mod decommitment_and_poly_commitment_round;
-// pub mod proof_aggregation_round;
-// pub mod proof_share_round;
+
+pub mod commitment_round;
+pub mod decommitment_and_poly_commitment_round;
+pub mod proof_aggregation_round;
+pub mod proof_share_round;
 
 use std::{array, iter};
 
+pub use bulletproofs::ProofError;
 use bulletproofs::{BulletproofGens, PedersenGens};
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U256, U64};
 use curve25519_dalek::traits::Identity;
@@ -82,19 +84,29 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
     )> {
         let number_of_witnesses = witnesses.len();
 
-        // TODO: do I want to check that witnesses are in range and return error here, or just let
-        // the proof fail?
-        let witnesses: Vec<u64> = witnesses
+        let witnesses: Vec<_> = witnesses
             .into_iter()
             .map(|witness| <[_; NUM_RANGE_CLAIMS]>::from(witness))
             .flatten()
-            .map(|witness: ristretto::Scalar| U64::from(&U256::from(witness)).into())
+            .map(|witness: ristretto::Scalar| U256::from(witness))
             .collect();
 
-        let commitments_randomness: Vec<curve25519_dalek::scalar::Scalar> = commitments_randomness
+        if witnesses
+            .iter()
+            .any(|witness| witness > &(&U64::MAX).into())
+        {
+            return Err(range::Error::OutOfRange)?;
+        }
+
+        let witnesses: Vec<u64> = witnesses
+            .into_iter()
+            .map(|witness| U64::from(&witness).into())
+            .collect();
+
+        let commitments_randomness: Vec<_> = commitments_randomness
             .into_iter()
             .flat_map(|multicommitment_randomness| {
-                <[ristretto::Scalar; NUM_RANGE_CLAIMS]>::from(multicommitment_randomness)
+                <[_; NUM_RANGE_CLAIMS]>::from(multicommitment_randomness)
             })
             .map(|randomness| randomness.0)
             .collect();
@@ -130,7 +142,7 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
             commitments_randomness.as_slice(),
             <Self as super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
             rng,
-        )?;
+        ).map_err(range::Error::from)?;
 
         let commitments: proofs::Result<Vec<curve25519_dalek::ristretto::RistrettoPoint>> =
             commitments
@@ -219,7 +231,7 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
             compressed_commitments.as_slice(),
             <Self as super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
             rng,
-        )?)
+        ).map_err(range::Error::from)?)
     }
 }
 

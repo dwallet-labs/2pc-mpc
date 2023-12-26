@@ -29,11 +29,11 @@ pub enum Error {
     #[error("additively homomorphic encryption scheme error")]
     AdditivelyHomomorphicEncryptionScheme(#[from] ahe::Error),
 
-    #[error("bulletproofs error")]
-    Bulletproofs(#[from] bulletproofs::ProofError),
-
     #[error("schnorr proof aggregation protocol error")]
     AggregationProtocol(#[from] schnorr::aggregation::Error),
+
+    #[error("range proof error")]
+    RangeProof(#[from] range::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

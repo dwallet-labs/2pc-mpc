@@ -21,6 +21,15 @@ pub mod lightningproofs;
 
 pub mod bulletproofs;
 
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("at least one of the witnesses is out of range")]
+    OutOfRange,
+
+    #[error("bulletproofs error")]
+    Bulletproofs(#[from] bulletproofs::ProofError),
+}
+
 pub trait RangeProof<
     // The commitment scheme's message space scalar size in limbs
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,

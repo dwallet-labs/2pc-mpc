@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, marker::PhantomData};
 
 use bulletproofs::range_proof_mpc::{
     dealer::{
@@ -12,20 +12,24 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    group::ristretto,
+    group::{ristretto, ristretto::SCALAR_LIMBS},
     proofs,
     proofs::{
-        range::bulletproofs::{
-            commitment_round, decommitment_and_poly_commitment_round, proof_share_round,
-            RANGE_CLAIM_LIMBS, SCALAR_LIMBS,
+        range,
+        range::{
+            bulletproofs::{
+                commitment_round, decommitment_and_poly_commitment_round, proof_share_round,
+            },
+            Samplable,
         },
         schnorr::{
             aggregation::{
                 decommitment_round, decommitment_round::Decommitment, proof_aggregation_round,
+                ProofAggregationRoundParty,
             },
-            enhanced, language,
-            language::enhanced::EnhancedLanguageStatementAccessors,
-            EnhancedLanguage,
+            enhanced,
+            enhanced::{EnhanceableLanguage, EnhancedLanguage, EnhancedLanguageStatementAccessors},
+            language,
         },
     },
     PartyID,
@@ -36,21 +40,27 @@ pub struct Party<
     'b,
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
-    const WITNESS_MASK_LIMBS: usize,
-    Language: EnhancedLanguage<
+    UnboundedWitnessSpaceGroupElement: Samplable,
+    Language: EnhanceableLanguage<
         REPETITIONS,
-        { SCALAR_LIMBS },
         NUM_RANGE_CLAIMS,
-        { RANGE_CLAIM_LIMBS },
-        WITNESS_MASK_LIMBS,
-        RangeProof = super::RangeProof,
+        { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+        UnboundedWitnessSpaceGroupElement,
     >,
-    ProtocolContext: Clone,
-> where
-    Uint<WITNESS_MASK_LIMBS>: Encoding,
-{
-    pub(super) proof_aggregation_round_party:
-        proof_aggregation_round::Party<REPETITIONS, Language, ProtocolContext>,
+    ProtocolContext: Clone + Serialize,
+> {
+    pub(super) proof_aggregation_round_party: proof_aggregation_round::Party<
+        REPETITIONS,
+        EnhancedLanguage<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+            super::RangeProof,
+            UnboundedWitnessSpaceGroupElement,
+            Language,
+        >,
+        ProtocolContext,
+    >,
     pub(super) dealer_awaiting_proof_shares: DealerAwaitingProofShares<'a, 'b>,
 }
 
@@ -59,35 +69,62 @@ impl<
         'b,
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
-        const WITNESS_MASK_LIMBS: usize,
-        Language: EnhancedLanguage<
+        UnboundedWitnessSpaceGroupElement: Samplable,
+        Language: EnhanceableLanguage<
             REPETITIONS,
-            { SCALAR_LIMBS },
             NUM_RANGE_CLAIMS,
-            { RANGE_CLAIM_LIMBS },
-            WITNESS_MASK_LIMBS,
-            RangeProof = super::RangeProof,
+            { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+            UnboundedWitnessSpaceGroupElement,
         >,
         ProtocolContext: Clone + Serialize,
-    > Party<'a, 'b, REPETITIONS, NUM_RANGE_CLAIMS, WITNESS_MASK_LIMBS, Language, ProtocolContext>
-where
-    Uint<WITNESS_MASK_LIMBS>: Encoding,
+    >
+    Party<
+        'a,
+        'b,
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        UnboundedWitnessSpaceGroupElement,
+        Language,
+        ProtocolContext,
+    >
 {
     pub fn aggregate_proof_shares(
         self,
-        messages: HashMap<PartyID, proof_share_round::Message<REPETITIONS, Language>>,
+        messages: HashMap<
+            PartyID,
+            proof_share_round::Message<
+                REPETITIONS,
+                EnhancedLanguage<
+                    REPETITIONS,
+                    NUM_RANGE_CLAIMS,
+                    { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+                    super::RangeProof,
+                    UnboundedWitnessSpaceGroupElement,
+                    Language,
+                >,
+            >,
+        >,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(
         enhanced::Proof<
             REPETITIONS,
-            { SCALAR_LIMBS },
             NUM_RANGE_CLAIMS,
-            { RANGE_CLAIM_LIMBS },
-            WITNESS_MASK_LIMBS,
+            { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+            super::RangeProof,
+            UnboundedWitnessSpaceGroupElement,
             Language,
             ProtocolContext,
         >,
-        Vec<Language::StatementSpaceGroupElement>,
+        Vec<
+            enhanced::StatementSpaceGroupElement<
+                REPETITIONS,
+                NUM_RANGE_CLAIMS,
+                { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+                super::RangeProof,
+                UnboundedWitnessSpaceGroupElement,
+                Language,
+            >,
+        >,
     )> {
         let (schnorr_proof_shares, mut bulletproofs_proof_shares): (Vec<(_, _)>, Vec<(_, _)>) =
             messages
@@ -138,15 +175,16 @@ where
         let range_proof = super::RangeProof(
             self.dealer_awaiting_proof_shares
                 .receive_shares_with_rng(&bulletproofs_proof_shares, rng)
-                .map_err(bulletproofs::ProofError::from)?,
+                .map_err(bulletproofs::ProofError::from)
+                .map_err(range::Error::from)?,
         );
 
         let proof = enhanced::Proof::<
             REPETITIONS,
-            { SCALAR_LIMBS },
             NUM_RANGE_CLAIMS,
-            { RANGE_CLAIM_LIMBS },
-            WITNESS_MASK_LIMBS,
+            { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+            super::RangeProof,
+            UnboundedWitnessSpaceGroupElement,
             Language,
             ProtocolContext,
         > {
