@@ -14,7 +14,7 @@ use crate::{
     proofs,
     proofs::{
         schnorr,
-        schnorr::{language, Proof},
+        schnorr::{aggregation::CommitmentRoundParty, language, Proof},
         TranscriptProtocol,
     },
     Commitment, CommitmentSizedNumber, ComputationalSecuritySizedNumber, PartyID,
@@ -43,15 +43,17 @@ impl<
         const REPETITIONS: usize,
         Language: language::Language<REPETITIONS>,
         ProtocolContext: Clone + Serialize,
-    > Party<REPETITIONS, Language, ProtocolContext>
+    > CommitmentRoundParty<super::Output<REPETITIONS, Language, ProtocolContext>>
+    for Party<REPETITIONS, Language, ProtocolContext>
 {
-    pub fn commit_statements_and_statement_mask(
+    type Commitment = Commitment;
+
+    type DecommitmentRoundParty = decommitment_round::Party<REPETITIONS, Language, ProtocolContext>;
+
+    fn commit_statements_and_statement_mask(
         self,
         rng: &mut impl CryptoRngCore,
-    ) -> proofs::Result<(
-        Commitment,
-        decommitment_round::Party<REPETITIONS, Language, ProtocolContext>,
-    )> {
+    ) -> proofs::Result<(Self::Commitment, Self::DecommitmentRoundParty)> {
         let statements: proofs::Result<Vec<Language::StatementSpaceGroupElement>> = self
             .witnesses
             .iter()

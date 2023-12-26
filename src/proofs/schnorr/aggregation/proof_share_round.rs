@@ -13,7 +13,9 @@ use crate::{
     proofs::{
         schnorr,
         schnorr::{
-            aggregation::{decommitment_round::Decommitment, proof_aggregation_round},
+            aggregation::{
+                decommitment_round::Decommitment, proof_aggregation_round, ProofShareRoundParty,
+            },
             language,
             language::{GroupsPublicParametersAccessors as _, WitnessSpaceValue},
             Proof,
@@ -55,15 +57,18 @@ impl<
         const REPETITIONS: usize,
         Language: language::Language<REPETITIONS>,
         ProtocolContext: Clone + Serialize,
-    > Party<REPETITIONS, Language, ProtocolContext>
+    > ProofShareRoundParty<super::Output<REPETITIONS, Language, ProtocolContext>>
+    for Party<REPETITIONS, Language, ProtocolContext>
 {
-    pub fn generate_proof_share(
+    type Decommitment = Decommitment<REPETITIONS, Language>;
+    type ProofShare = ProofShare<REPETITIONS, Language>;
+    type ProofAggregationRoundParty =
+        proof_aggregation_round::Party<REPETITIONS, Language, ProtocolContext>;
+
+    fn generate_proof_share(
         self,
-        decommitments: HashMap<PartyID, Decommitment<REPETITIONS, Language>>,
-    ) -> proofs::Result<(
-        ProofShare<REPETITIONS, Language>,
-        proof_aggregation_round::Party<REPETITIONS, Language, ProtocolContext>,
-    )> {
+        decommitments: HashMap<PartyID, Self::Decommitment>,
+    ) -> proofs::Result<(Self::ProofShare, Self::ProofAggregationRoundParty)> {
         // TODO: now we are using the same protocol context for us and for decommitments, this is
         // faulty and is a security issue. Instead, we must somehow construct the protocol
         // context from our own, but given their party id (and anyother information which we might

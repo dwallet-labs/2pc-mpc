@@ -11,11 +11,18 @@ use crate::{
     helpers::flat_map_results,
     proofs,
     proofs::schnorr::{
-        aggregation::proof_share_round::ProofShare, language,
-        language::GroupsPublicParametersAccessors as _, Proof,
+        aggregation::{proof_share_round::ProofShare, ProofAggregationRoundParty},
+        language,
+        language::GroupsPublicParametersAccessors as _,
+        Proof,
     },
     PartyID,
 };
+
+pub type Output<const REPETITIONS: usize, Language, ProtocolContext> = (
+    Proof<REPETITIONS, Language, ProtocolContext>,
+    Vec<language::StatementSpaceGroupElement<REPETITIONS, Language>>,
+);
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
@@ -43,15 +50,15 @@ impl<
         const REPETITIONS: usize,
         Language: language::Language<REPETITIONS>,
         ProtocolContext: Clone + Serialize,
-    > Party<REPETITIONS, Language, ProtocolContext>
+    > ProofAggregationRoundParty<Output<REPETITIONS, Language, ProtocolContext>>
+    for Party<REPETITIONS, Language, ProtocolContext>
 {
-    pub fn aggregate_proof_shares(
+    type ProofShare = ProofShare<REPETITIONS, Language>;
+
+    fn aggregate_proof_shares(
         self,
-        proof_shares: HashMap<PartyID, ProofShare<REPETITIONS, Language>>,
-    ) -> proofs::Result<(
-        Proof<REPETITIONS, Language, ProtocolContext>,
-        Vec<Language::StatementSpaceGroupElement>,
-    )> {
+        proof_shares: HashMap<PartyID, Self::ProofShare>,
+    ) -> proofs::Result<Output<REPETITIONS, Language, ProtocolContext>> {
         // TODO: DRY-out!
         // First remove parties that didn't participate in the previous round, as they shouldn't be
         // allowed to join the session half-way, and we can self-heal this malicious behaviour

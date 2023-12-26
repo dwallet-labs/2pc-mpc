@@ -1,11 +1,19 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
+
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
-use serde::Serialize;
+use crypto_bigint::rand_core::CryptoRngCore;
+pub use proof_aggregation_round::Output;
+use serde::{Deserialize, Serialize};
 
-use crate::{proofs::schnorr::language, PartyID};
+use crate::{
+    proofs,
+    proofs::schnorr::{aggregation::decommitment_round::Decommitment, language},
+    PartyID,
+};
 
 pub mod commitment_round;
 pub mod decommitment_round;
@@ -34,6 +42,54 @@ pub enum Error {
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+/// The Commitment Round Party of a Proof Aggregation Protocol.
+pub trait CommitmentRoundParty<Output>: Sized {
+    type Commitment: Serialize + for<'a> Deserialize<'a> + Clone;
+    type DecommitmentRoundParty: DecommitmentRoundParty<Output, Commitment = Self::Commitment>;
+
+    fn commit_statements_and_statement_mask(
+        self,
+        rng: &mut impl CryptoRngCore,
+    ) -> proofs::Result<(Self::Commitment, Self::DecommitmentRoundParty)>;
+}
+
+/// The Decommitment Round Party of a Proof Aggregation Protocol.
+pub trait DecommitmentRoundParty<Output>: Sized {
+    type Commitment: Serialize + for<'a> Deserialize<'a> + Clone;
+    type Decommitment: Serialize + for<'a> Deserialize<'a> + Clone;
+    type ProofShareRoundParty: ProofShareRoundParty<Output, Decommitment = Self::Decommitment>;
+
+    fn decommit_statements_and_statement_mask(
+        self,
+        commitments: HashMap<PartyID, Self::Commitment>,
+    ) -> proofs::Result<(Self::Decommitment, Self::ProofShareRoundParty)>;
+}
+
+/// The Proof Share Round Party of a Proof Aggregation Protocol.
+pub trait ProofShareRoundParty<Output>: Sized {
+    type Decommitment: Serialize + for<'a> Deserialize<'a> + Clone;
+    type ProofShare: Serialize + for<'a> Deserialize<'a> + Clone;
+    type ProofAggregationRoundParty: ProofAggregationRoundParty<
+        Output,
+        ProofShare = Self::ProofShare,
+    >;
+
+    fn generate_proof_share(
+        self,
+        decommitments: HashMap<PartyID, Self::Decommitment>,
+    ) -> proofs::Result<(Self::ProofShare, Self::ProofAggregationRoundParty)>;
+}
+
+/// The Proof Aggregation Round Party of a Proof Aggregation Protocol.
+pub trait ProofAggregationRoundParty<Output>: Sized {
+    type ProofShare: Serialize + for<'a> Deserialize<'a> + Clone;
+
+    fn aggregate_proof_shares(
+        self,
+        proof_shares: HashMap<PartyID, Self::ProofShare>,
+    ) -> proofs::Result<Output>;
+}
 
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {

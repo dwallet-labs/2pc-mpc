@@ -11,7 +11,10 @@ use crate::{
     proofs,
     proofs::{
         schnorr,
-        schnorr::{aggregation::proof_share_round, language},
+        schnorr::{
+            aggregation::{proof_share_round, DecommitmentRoundParty},
+            language,
+        },
     },
     Commitment, ComputationalSecuritySizedNumber, PartyID,
 };
@@ -53,15 +56,17 @@ impl<
         const REPETITIONS: usize,
         Language: language::Language<REPETITIONS>,
         ProtocolContext: Clone + Serialize,
-    > Party<REPETITIONS, Language, ProtocolContext>
+    > DecommitmentRoundParty<super::Output<REPETITIONS, Language, ProtocolContext>>
+    for Party<REPETITIONS, Language, ProtocolContext>
 {
-    pub fn decommit_statements_and_statement_mask(
+    type Commitment = Commitment;
+    type Decommitment = Decommitment<REPETITIONS, Language>;
+    type ProofShareRoundParty = proof_share_round::Party<REPETITIONS, Language, ProtocolContext>;
+
+    fn decommit_statements_and_statement_mask(
         self,
-        commitments: HashMap<PartyID, Commitment>,
-    ) -> proofs::Result<(
-        Decommitment<REPETITIONS, Language>,
-        proof_share_round::Party<REPETITIONS, Language, ProtocolContext>,
-    )> {
+        commitments: HashMap<PartyID, Self::Commitment>,
+    ) -> proofs::Result<(Self::Decommitment, Self::ProofShareRoundParty)> {
         let commitments: HashMap<_, _> = commitments
             .into_iter()
             .filter(|(party_id, _)| *party_id != self.party_id)
