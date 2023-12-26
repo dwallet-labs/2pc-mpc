@@ -3,6 +3,7 @@
 
 use std::collections::{HashMap, HashSet};
 
+use crypto_bigint::rand_core::CryptoRngCore;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -68,6 +69,7 @@ impl<
     fn generate_proof_share(
         self,
         decommitments: HashMap<PartyID, Self::Decommitment>,
+        rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(Self::ProofShare, Self::ProofAggregationRoundParty)> {
         // TODO: now we are using the same protocol context for us and for decommitments, this is
         // faulty and is a security issue. Instead, we must somehow construct the protocol

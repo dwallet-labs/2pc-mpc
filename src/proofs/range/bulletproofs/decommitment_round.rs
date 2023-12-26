@@ -12,11 +12,9 @@ use crate::{
     proofs,
     proofs::{
         range,
-        range::bulletproofs::{commitment_round, proof_share_round},
+        range::bulletproofs::{commitment_round, commitment_round::Commitment, proof_share_round},
         schnorr::{
-            aggregation::{
-                decommitment_round, decommitment_round::Decommitment, DecommitmentRoundParty,
-            },
+            aggregation::{decommitment_round, DecommitmentRoundParty},
             enhanced::{EnhanceableLanguage, EnhancedLanguage},
             language,
         },
@@ -55,8 +53,8 @@ pub struct Party<
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct Message<const REPETITIONS: usize, Language: language::Language<REPETITIONS>> {
-    pub(super) decommitment: Decommitment<REPETITIONS, Language>,
+pub struct Decommitment<Decom> {
+    pub(super) decommitment: Decom,
     pub(super) poly_commitments: Vec<PolyCommitment>,
 }
 
@@ -74,7 +72,16 @@ impl<
         >,
         ProtocolContext: Clone + Serialize,
     >
-    Party<
+    DecommitmentRoundParty<
+        super::Output<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            UnboundedWitnessSpaceGroupElement,
+            Language,
+            ProtocolContext,
+        >,
+    >
+    for Party<
         'a,
         'b,
         REPETITIONS,
@@ -84,12 +91,10 @@ impl<
         ProtocolContext,
     >
 {
-    pub fn decommit_statements_and_generate_poly_commitments(
-        self,
-        messages: HashMap<PartyID, commitment_round::Message>,
-        rng: &mut impl CryptoRngCore,
-    ) -> proofs::Result<(
-        Message<
+    type Commitment = Commitment;
+
+    type Decommitment = Decommitment<
+        decommitment_round::Decommitment<
             REPETITIONS,
             EnhancedLanguage<
                 REPETITIONS,
@@ -100,17 +105,24 @@ impl<
                 Language,
             >,
         >,
-        proof_share_round::Party<
-            'a,
-            'b,
-            REPETITIONS,
-            NUM_RANGE_CLAIMS,
-            UnboundedWitnessSpaceGroupElement,
-            Language,
-            ProtocolContext,
-        >,
-    )> {
-        let (commitments, mut bit_commitments): (Vec<(_, _)>, Vec<(_, _)>) = messages
+    >;
+
+    type ProofShareRoundParty = proof_share_round::Party<
+        'a,
+        'b,
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        UnboundedWitnessSpaceGroupElement,
+        Language,
+        ProtocolContext,
+    >;
+
+    fn decommit_statements_and_statement_mask(
+        self,
+        commitments: HashMap<PartyID, commitment_round::Commitment>,
+        rng: &mut impl CryptoRngCore,
+    ) -> proofs::Result<(Self::Decommitment, Self::ProofShareRoundParty)> {
+        let (commitments, mut bit_commitments): (Vec<(_, _)>, Vec<(_, _)>) = commitments
             .into_iter()
             .map(|(party_id, message)| {
                 (
@@ -124,7 +136,7 @@ impl<
 
         let (decommitment, proof_share_round_party) = self
             .decommitment_round_party
-            .decommit_statements_and_statement_mask(commitments)
+            .decommit_statements_and_statement_mask(commitments, rng)
             .unwrap();
 
         bit_commitments.sort_by_key(|(party_id, _)| *party_id);
@@ -152,7 +164,7 @@ impl<
             parties_awaiting_poly_challenge,
         };
 
-        let message = Message {
+        let message = Decommitment {
             decommitment,
             poly_commitments,
         };

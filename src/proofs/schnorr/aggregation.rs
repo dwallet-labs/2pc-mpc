@@ -48,7 +48,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// The Commitment Round Party of a Proof Aggregation Protocol.
 pub trait CommitmentRoundParty<Output>: Sized {
-    type Commitment: Serialize + for<'a> Deserialize<'a> + Copy + Clone;
+    type Commitment: Serialize + for<'a> Deserialize<'a> + Clone;
+
     type DecommitmentRoundParty: DecommitmentRoundParty<Output, Commitment = Self::Commitment>;
 
     fn commit_statements_and_statement_mask(
@@ -59,13 +60,14 @@ pub trait CommitmentRoundParty<Output>: Sized {
 
 /// The Decommitment Round Party of a Proof Aggregation Protocol.
 pub trait DecommitmentRoundParty<Output>: Sized {
-    type Commitment: Serialize + for<'a> Deserialize<'a> + Copy + Clone;
+    type Commitment: Serialize + for<'a> Deserialize<'a> + Clone;
     type Decommitment: Serialize + for<'a> Deserialize<'a> + Clone;
     type ProofShareRoundParty: ProofShareRoundParty<Output, Decommitment = Self::Decommitment>;
 
     fn decommit_statements_and_statement_mask(
         self,
         commitments: HashMap<PartyID, Self::Commitment>,
+        rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(Self::Decommitment, Self::ProofShareRoundParty)>;
 }
 
@@ -81,6 +83,7 @@ pub trait ProofShareRoundParty<Output>: Sized {
     fn generate_proof_share(
         self,
         decommitments: HashMap<PartyID, Self::Decommitment>,
+        rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(Self::ProofShare, Self::ProofAggregationRoundParty)>;
 }
 
@@ -91,6 +94,7 @@ pub trait ProofAggregationRoundParty<Output>: Sized {
     fn aggregate_proof_shares(
         self,
         proof_shares: HashMap<PartyID, Self::ProofShare>,
+        rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<Output>;
 }
 
@@ -132,7 +136,7 @@ pub(crate) mod tests {
                     (
                         party_id,
                         party
-                            .decommit_statements_and_statement_mask(commitments.clone())
+                            .decommit_statements_and_statement_mask(commitments.clone(), &mut OsRng)
                             .unwrap(),
                     )
                 })
@@ -149,7 +153,9 @@ pub(crate) mod tests {
                 .map(|(party_id, (_, party))| {
                     (
                         party_id,
-                        party.generate_proof_share(decommitments.clone()).unwrap(),
+                        party
+                            .generate_proof_share(decommitments.clone(), &mut OsRng)
+                            .unwrap(),
                     )
                 })
                 .collect();
@@ -165,7 +171,7 @@ pub(crate) mod tests {
                 .next()
                 .unwrap();
 
-        proof_aggregation_round_party.aggregate_proof_shares(proof_shares.clone())
+        proof_aggregation_round_party.aggregate_proof_shares(proof_shares.clone(), &mut OsRng)
     }
 
     #[allow(dead_code)]

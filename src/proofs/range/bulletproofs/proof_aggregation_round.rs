@@ -18,15 +18,14 @@ use crate::{
         range,
         range::{
             bulletproofs::{
-                commitment_round, decommitment_and_poly_commitment_round, proof_share_round,
+                commitment_round, decommitment_round, proof_share_round,
+                proof_share_round::ProofShare,
             },
             Samplable,
         },
         schnorr::{
-            aggregation::{
-                decommitment_round, decommitment_round::Decommitment, proof_aggregation_round,
-                ProofAggregationRoundParty,
-            },
+            aggregation,
+            aggregation::{proof_aggregation_round, ProofAggregationRoundParty},
             enhanced,
             enhanced::{EnhanceableLanguage, EnhancedLanguage, EnhancedLanguageStatementAccessors},
             language,
@@ -64,6 +63,39 @@ pub struct Party<
     pub(super) dealer_awaiting_proof_shares: DealerAwaitingProofShares<'a, 'b>,
 }
 
+pub type Output<
+    const REPETITIONS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    UnboundedWitnessSpaceGroupElement: Samplable,
+    Language: EnhanceableLanguage<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+        UnboundedWitnessSpaceGroupElement,
+    >,
+    ProtocolContext: Clone + Serialize,
+> = (
+    enhanced::Proof<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+        super::RangeProof,
+        UnboundedWitnessSpaceGroupElement,
+        Language,
+        ProtocolContext,
+    >,
+    Vec<
+        enhanced::StatementSpaceGroupElement<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+            super::RangeProof,
+            UnboundedWitnessSpaceGroupElement,
+            Language,
+        >,
+    >,
+);
+
 impl<
         'a,
         'b,
@@ -78,7 +110,16 @@ impl<
         >,
         ProtocolContext: Clone + Serialize,
     >
-    Party<
+    ProofAggregationRoundParty<
+        Output<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            UnboundedWitnessSpaceGroupElement,
+            Language,
+            ProtocolContext,
+        >,
+    >
+    for Party<
         'a,
         'b,
         REPETITIONS,
@@ -88,35 +129,10 @@ impl<
         ProtocolContext,
     >
 {
-    pub fn aggregate_proof_shares(
-        self,
-        messages: HashMap<
-            PartyID,
-            proof_share_round::Message<
-                REPETITIONS,
-                EnhancedLanguage<
-                    REPETITIONS,
-                    NUM_RANGE_CLAIMS,
-                    { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-                    super::RangeProof,
-                    UnboundedWitnessSpaceGroupElement,
-                    Language,
-                >,
-            >,
-        >,
-        rng: &mut impl CryptoRngCore,
-    ) -> proofs::Result<(
-        enhanced::Proof<
+    type ProofShare = ProofShare<
+        aggregation::proof_share_round::ProofShare<
             REPETITIONS,
-            NUM_RANGE_CLAIMS,
-            { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-            super::RangeProof,
-            UnboundedWitnessSpaceGroupElement,
-            Language,
-            ProtocolContext,
-        >,
-        Vec<
-            enhanced::StatementSpaceGroupElement<
+            EnhancedLanguage<
                 REPETITIONS,
                 NUM_RANGE_CLAIMS,
                 { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
@@ -125,9 +141,23 @@ impl<
                 Language,
             >,
         >,
-    )> {
+    >;
+
+    fn aggregate_proof_shares(
+        self,
+        proof_shares: HashMap<PartyID, Self::ProofShare>,
+        rng: &mut impl CryptoRngCore,
+    ) -> proofs::Result<
+        Output<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            UnboundedWitnessSpaceGroupElement,
+            Language,
+            ProtocolContext,
+        >,
+    > {
         let (schnorr_proof_shares, mut bulletproofs_proof_shares): (Vec<(_, _)>, Vec<(_, _)>) =
-            messages
+            proof_shares
                 .into_iter()
                 .map(|(party_id, message)| {
                     (
@@ -141,7 +171,7 @@ impl<
 
         let (schnorr_proof, statements) = self
             .proof_aggregation_round_party
-            .aggregate_proof_shares(schnorr_proof_shares)?;
+            .aggregate_proof_shares(schnorr_proof_shares, rng)?;
 
         bulletproofs_proof_shares.sort_by_key(|(party_id, _)| *party_id);
 
@@ -191,6 +221,9 @@ impl<
             schnorr_proof,
             range_proof,
         };
+
+        // TODO: need to do some verifications of the enhanced proof or smth? the inidividual proofs
+        // were already verified in the aggregation itself.
 
         Ok((proof, statements))
     }

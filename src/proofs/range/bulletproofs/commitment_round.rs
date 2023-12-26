@@ -17,7 +17,7 @@ use crate::{
     proofs::{
         range,
         range::{
-            bulletproofs::{decommitment_and_poly_commitment_round, RANGE_CLAIM_BITS},
+            bulletproofs::{decommitment_round, RANGE_CLAIM_BITS},
             RangeProof,
         },
         schnorr::{
@@ -27,10 +27,11 @@ use crate::{
         },
         transcript_protocol::TranscriptProtocol,
     },
-    Commitment,
 };
 
 pub struct Party<
+    'a,
+    'b,
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
     UnboundedWitnessSpaceGroupElement: Samplable,
@@ -54,15 +55,21 @@ pub struct Party<
         >,
         ProtocolContext,
     >,
+
+    pub bulletproofs_generators: &'b BulletproofGens,
+    pub commitment_generators: &'b PedersenGens,
+    pub transcript: &'a mut Transcript,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct Message {
-    pub(super) commitment: Commitment,
+pub struct Commitment {
+    pub(super) commitment: crate::Commitment,
     pub(super) bit_commitments: Vec<BitCommitment>,
 }
 
 impl<
+        'a,
+        'b,
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
         UnboundedWitnessSpaceGroupElement: Samplable,
@@ -74,7 +81,18 @@ impl<
         >,
         ProtocolContext: Clone + Serialize,
     >
-    Party<
+    CommitmentRoundParty<
+        super::Output<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            UnboundedWitnessSpaceGroupElement,
+            Language,
+            ProtocolContext,
+        >,
+    >
+    for Party<
+        'a,
+        'b,
         REPETITIONS,
         NUM_RANGE_CLAIMS,
         UnboundedWitnessSpaceGroupElement,
@@ -82,28 +100,25 @@ impl<
         ProtocolContext,
     >
 {
+    type Commitment = Commitment;
+    type DecommitmentRoundParty = decommitment_round::Party<
+        'a,
+        'b,
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        UnboundedWitnessSpaceGroupElement,
+        Language,
+        ProtocolContext,
+    >;
+
     /// Due to a limitation in Bulletproofs, assumes both the number of parties and the number of
     /// witnesses are powers of 2. If one needs a non-power-of-two, pad to the
     /// `next_power_of_two` by creating additional parties with zero-valued witnesses and having
     /// every party emulate those locally.
-    pub fn commit_statements<'a, 'b>(
+    fn commit_statements_and_statement_mask(
         self,
-        bulletproofs_generators: &'b BulletproofGens,
-        commitment_generators: &'b PedersenGens,
-        transcript: &'a mut Transcript,
         rng: &mut impl CryptoRngCore,
-    ) -> proofs::Result<(
-        Message,
-        decommitment_and_poly_commitment_round::Party<
-            'a,
-            'b,
-            REPETITIONS,
-            NUM_RANGE_CLAIMS,
-            UnboundedWitnessSpaceGroupElement,
-            Language,
-            ProtocolContext,
-        >,
-    )> {
+    ) -> proofs::Result<(Self::Commitment, Self::DecommitmentRoundParty)> {
         let (commitment_messages, commitment_randomnesses): (Vec<_>, Vec<_>) = self
             .commitment_round_party
             .witnesses
@@ -160,9 +175,9 @@ impl<
             .collect();
 
         let dealer_awaiting_bit_commitments = Dealer::new(
-            &bulletproofs_generators,
-            &commitment_generators,
-            transcript,
+            self.bulletproofs_generators,
+            self.commitment_generators,
+            self.transcript,
             RANGE_CLAIM_BITS,
             number_of_parties.into(),
         )
@@ -174,8 +189,8 @@ impl<
             .zip(commitments_randomness.into_iter())
             .map(|(witness, commitment_randomness)| {
                 party::Party::new(
-                    &bulletproofs_generators,
-                    &commitment_generators,
+                    &self.bulletproofs_generators,
+                    &self.commitment_generators,
                     witness,
                     commitment_randomness,
                     RANGE_CLAIM_BITS,
@@ -205,14 +220,13 @@ impl<
             .commitment_round_party
             .commit_statements_and_statement_mask(rng)?;
 
-        let decommitment_and_polycommitment_round_party =
-            decommitment_and_poly_commitment_round::Party {
-                decommitment_round_party,
-                dealer_awaiting_bit_commitments,
-                parties_awaiting_bit_challenge,
-            };
+        let decommitment_and_polycommitment_round_party = decommitment_round::Party {
+            decommitment_round_party,
+            dealer_awaiting_bit_commitments,
+            parties_awaiting_bit_challenge,
+        };
 
-        let message = Message {
+        let message = Commitment {
             commitment,
             bit_commitments,
         };

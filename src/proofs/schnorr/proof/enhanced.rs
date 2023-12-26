@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use core::array;
+use std::collections::HashMap;
 
+use bulletproofs::{BulletproofGens, PedersenGens};
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Random, Uint};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
@@ -453,7 +455,7 @@ pub(crate) mod tests {
             range,
             range::{bulletproofs::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RangeProof},
             schnorr::{
-                enhanced, language,
+                aggregation, enhanced, language,
                 language::enhanced::tests::{
                     enhanced_language_public_parameters, generate_witnesses,
                 },
@@ -599,5 +601,128 @@ pub(crate) mod tests {
             ),
             "out of range error should fail on range verification"
         );
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn aggregates<
+        const REPETITIONS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
+        Lang: EnhanceableLanguage<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+            UnboundedWitnessSpaceGroupElement,
+        >,
+    >(
+        unbounded_witness_public_parameters: UnboundedWitnessSpaceGroupElement::PublicParameters,
+        language_public_parameters: Lang::PublicParameters,
+        witnesses: Vec<Vec<Lang::WitnessSpaceGroupElement>>,
+    ) {
+        let enhanced_language_public_parameters = enhanced_language_public_parameters::<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            UnboundedWitnessSpaceGroupElement,
+            Lang,
+        >(
+            unbounded_witness_public_parameters,
+            language_public_parameters,
+        );
+
+        let witnesses: Vec<_> = witnesses
+            .into_iter()
+            .map(|witnesses| {
+                generate_witnesses::<
+                    REPETITIONS,
+                    NUM_RANGE_CLAIMS,
+                    UnboundedWitnessSpaceGroupElement,
+                    Lang,
+                >(witnesses, &enhanced_language_public_parameters)
+            })
+            .collect();
+
+        let number_of_parties: u16 = witnesses.len().try_into().unwrap();
+
+        let bulletproofs_generators =
+            BulletproofGens::new(range::bulletproofs::RANGE_CLAIM_BITS, witnesses.len());
+
+        let commitment_generators = PedersenGens::default();
+
+        let range_proof_public_parameters =
+            range::bulletproofs::PublicParameters::<NUM_RANGE_CLAIMS>::default();
+
+        let mut transcripts: Vec<_> = iter::repeat_with(|| {
+            enhanced::Proof::<
+                REPETITIONS,
+                NUM_RANGE_CLAIMS,
+                { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+                range::bulletproofs::RangeProof,
+                UnboundedWitnessSpaceGroupElement,
+                Lang,
+                PhantomData<()>,
+            >::setup_range_proof(&PhantomData, &range_proof_public_parameters)
+            .unwrap()
+        })
+        .take(number_of_parties.into())
+        .collect();
+
+        let commitment_round_parties: HashMap<_, _> = witnesses
+            .clone()
+            .into_iter()
+            .zip(transcripts.iter_mut())
+            .enumerate()
+            .map(|(party_id, (witnesses, transcript))| {
+                let party_id: u16 = (party_id + 1).try_into().unwrap();
+
+                let commitment_round_party = aggregation::commitment_round::Party::<
+                    REPETITIONS,
+                    EnhancedLanguage<
+                        REPETITIONS,
+                        NUM_RANGE_CLAIMS,
+                        { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+                        range::bulletproofs::RangeProof,
+                        UnboundedWitnessSpaceGroupElement,
+                        Lang,
+                    >,
+                    PhantomData<()>,
+                > {
+                    party_id,
+                    threshold: number_of_parties,
+                    number_of_parties,
+                    language_public_parameters: enhanced_language_public_parameters.clone(),
+                    protocol_context: PhantomData,
+                    witnesses: witnesses.clone(),
+                };
+
+                (
+                    party_id,
+                    range::bulletproofs::commitment_round::Party::<
+                        REPETITIONS,
+                        NUM_RANGE_CLAIMS,
+                        UnboundedWitnessSpaceGroupElement,
+                        Lang,
+                        PhantomData<()>,
+                    > {
+                        commitment_round_party,
+                        bulletproofs_generators: &bulletproofs_generators,
+                        commitment_generators: &commitment_generators,
+                        transcript,
+                    },
+                )
+            })
+            .collect();
+
+        // TODO: use bps, use randomizers from enhanced proof etc.
+        aggregation::tests::aggregates::<
+            REPETITIONS,
+            EnhancedLanguage<
+                REPETITIONS,
+                NUM_RANGE_CLAIMS,
+                { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+                range::bulletproofs::RangeProof,
+                UnboundedWitnessSpaceGroupElement,
+                Lang,
+            >,
+        >(&enhanced_language_public_parameters, witnesses)
     }
 }

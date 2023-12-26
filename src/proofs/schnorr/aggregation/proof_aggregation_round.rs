@@ -3,6 +3,7 @@
 
 use std::collections::{HashMap, HashSet};
 
+use crypto_bigint::rand_core::CryptoRngCore;
 use serde::Serialize;
 
 use crate::{
@@ -58,6 +59,7 @@ impl<
     fn aggregate_proof_shares(
         self,
         proof_shares: HashMap<PartyID, Self::ProofShare>,
+        rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<Output<REPETITIONS, Language, ProtocolContext>> {
         // TODO: DRY-out!
         // First remove parties that didn't participate in the previous round, as they shouldn't be

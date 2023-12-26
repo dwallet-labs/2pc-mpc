@@ -523,22 +523,35 @@ pub(crate) mod tests {
         );
     }
 
-    // #[rstest]
-    // #[case(1, 1)]
-    // #[case(1, 2)]
-    // #[case(2, 1)]
-    // #[case(2, 3)]
-    // #[case(5, 2)]
-    // fn aggregates(#[case] number_of_parties: usize, #[case] batch_size: usize) {
-    //     let language_public_parameters = public_parameters();
-    //
-    //     let witnesses =
-    //         iter::repeat_with(|| generate_witnesses(&language_public_parameters, batch_size))
-    //             .take(number_of_parties)
-    //             .collect();
-    //
-    //     aggregation::tests::aggregates::<REPETITIONS, Lang>(&language_public_parameters,
-    // witnesses); }
+    #[rstest]
+    #[case(1, 1)]
+    #[case(1, 2)]
+    #[case(2, 1)]
+    #[case(2, 3)]
+    #[case(5, 2)]
+    fn aggregates(#[case] number_of_parties: usize, #[case] batch_size: usize) {
+        let language_public_parameters = public_parameters();
+
+        let witnesses =
+            iter::repeat_with(|| generate_witnesses(&language_public_parameters, batch_size))
+                .take(number_of_parties)
+                .collect();
+
+        let unbounded_witness_public_parameters = language_public_parameters
+            .randomness_space_public_parameters()
+            .clone();
+
+        schnorr::proof::enhanced::tests::aggregates::<
+            REPETITIONS,
+            RANGE_CLAIMS_PER_SCALAR,
+            paillier::RandomnessSpaceGroupElement,
+            Lang,
+        >(
+            unbounded_witness_public_parameters,
+            language_public_parameters,
+            witnesses,
+        );
+    }
 
     // TODO
     // #[rstest]

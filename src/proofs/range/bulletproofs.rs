@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod commitment_round;
-pub mod decommitment_and_poly_commitment_round;
+pub mod decommitment_round;
 pub mod proof_aggregation_round;
 pub mod proof_share_round;
 
@@ -13,6 +13,7 @@ use bulletproofs::{BulletproofGens, PedersenGens};
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U256, U64};
 use curve25519_dalek::traits::Identity;
 use merlin::Transcript;
+pub use proof_aggregation_round::Output;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -313,181 +314,3 @@ impl<const NUM_RANGE_CLAIMS: usize>
         &self.commitment_scheme_public_parameters
     }
 }
-
-// TODO: is this still needed
-// impl<const NUM_RANGE_CLAIMS: usize, const WITNESS_MASK_LIMBS: usize>
-//     From<self_product::Value<NUM_RANGE_CLAIMS, Uint<WITNESS_MASK_LIMBS>>>
-//     for commitments::MessageSpaceValue<
-//         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-//         range::CommitmentScheme<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS,
-// RangeProof>,     >
-// where
-//     Uint<WITNESS_MASK_LIMBS>: Encoding,
-// {
-//     fn from(value: Value<NUM_RANGE_CLAIMS, Uint<WITNESS_MASK_LIMBS>>) -> Self {
-//         let value: [Uint<WITNESS_MASK_LIMBS>; NUM_RANGE_CLAIMS] = value.into();
-//
-//         // TODO: need to specify when this is safe? for WITNESS_MASK_LIMBS <
-// COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS         // perhaps return result
-//
-//         value
-//             .map(|v|
-// ristretto::Scalar::from(Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::from(&v)))
-//             .map(|scalar| [scalar].into())
-//             .into()
-//     }
-// }
-
-// TODO: do I want the aggregation code?
-//
-// #[cfg(test)]
-// pub(crate) mod tests {
-//     use std::collections::HashMap;
-//
-//     use rand_core::OsRng;
-//
-//     use super::*;
-//     use crate::{
-//         proofs,
-//         proofs::schnorr::{aggregation, Language, Proof},
-//         Commitment, PartyID,
-//     };
-//
-//     #[allow(dead_code)]
-//     pub(crate) fn aggregates_internal<
-//         const REPETITIONS: usize,
-//         const NUM_RANGE_CLAIMS: usize,
-//         const WITNESS_MASK_LIMBS: usize,
-//         Language: EnhancedLanguage<
-//             REPETITIONS,
-//             { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-//             NUM_RANGE_CLAIMS,
-//             { RANGE_CLAIM_LIMBS },
-//             WITNESS_MASK_LIMBS,
-//             RangeProof = super::RangeProof,
-//         >,
-//         ProtocolContext: Clone + Serialize,
-//     >(
-//         commitment_round_parties: HashMap<
-//             PartyID,
-//             commitment_round::Party<
-//                 REPETITIONS,
-//                 NUM_RANGE_CLAIMS,
-//                 WITNESS_MASK_LIMBS,
-//                 Language,
-//                 ProtocolContext,
-//             >,
-//         >,
-//     ) -> proofs::Result<(
-//         enhanced::Proof<
-//             REPETITIONS,
-//             { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-//             NUM_RANGE_CLAIMS,
-//             { RANGE_CLAIM_LIMBS },
-//             WITNESS_MASK_LIMBS,
-//             Language,
-//             ProtocolContext,
-//         >,
-//         Vec<Lang::StatementSpaceGroupElement>,
-//     )> {
-//         let commitments_and_decommitment_round_parties: HashMap<
-//             PartyID,
-//             (
-//                 Commitment,
-//                 decommitment_and_poly_commitment_round::Party<REPETITIONS, Lang,
-// ProtocolContext>,             ),
-//         > = commitment_round_parties .into_iter() .map(|(party_id, party)| { ( party_id, party
-//         > .commit_statements_and_statement_mask(&mut OsRng) .unwrap(), ) }) .collect();
-//
-//         let commitments: HashMap<PartyID, Commitment> =
-// commitments_and_decommitment_round_parties             .iter()
-//             .map(|(party_id, (commitment, _))| (*party_id, *commitment))
-//             .collect();
-//
-//         let decommitments_and_proof_share_round_parties: HashMap<
-//             PartyID,
-//             (
-//                 aggregation::decommitment_round::Decommitment<REPETITIONS, Lang>,
-//                 proof_share_round::Party<REPETITIONS, Lang, ProtocolContext>,
-//             ),
-//         > = commitments_and_decommitment_round_parties .into_iter() .map(|(party_id, (_, party))|
-//         > { ( party_id, party .decommit_statements_and_statement_mask(commitments.clone())
-//         > .unwrap(), ) }) .collect();
-//
-//         let decommitments: HashMap<
-//             PartyID,
-//             aggregation::decommitment_round::Decommitment<REPETITIONS, Lang>,
-//         > = decommitments_and_proof_share_round_parties .iter() .map(|(party_id, (decommitment,
-//         > _))| (*party_id, decommitment.clone())) .collect();
-//
-//         let proof_shares_and_proof_aggregation_round_parties: HashMap<
-//             PartyID,
-//             (
-//                 ProofShare<REPETITIONS, Lang>,
-//                 proof_aggregation_round::Party<REPETITIONS, Lang, ProtocolContext>,
-//             ),
-//         > = decommitments_and_proof_share_round_parties .into_iter() .map(|(party_id, (_,
-//         > party))| { ( party_id, party.generate_proof_share(decommitments.clone()).unwrap(), ) })
-//         > .collect();
-//
-//         let proof_shares: HashMap<PartyID, ProofShare<REPETITIONS, Lang>> =
-//             proof_shares_and_proof_aggregation_round_parties
-//                 .iter()
-//                 .map(|(party_id, (proof_share, _))| (*party_id, proof_share.clone())) // TODO:
-// why can't copy                 .collect();
-//
-//         let (_, (_, proof_aggregation_round_party)) =
-//             proof_shares_and_proof_aggregation_round_parties
-//                 .into_iter()
-//                 .next()
-//                 .unwrap();
-//
-//         proof_aggregation_round_party.aggregate_proof_shares(proof_shares.clone())
-//     }
-//
-//     #[allow(dead_code)]
-//     pub(crate) fn aggregates<
-//         const REPETITIONS: usize,
-//         const NUM_RANGE_CLAIMS: usize,
-//         const WITNESS_MASK_LIMBS: usize,
-//         Language: EnhancedLanguage<
-//             REPETITIONS,
-//             { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-//             NUM_RANGE_CLAIMS,
-//             { RANGE_CLAIM_LIMBS },
-//             WITNESS_MASK_LIMBS,
-//             RangeProof = super::RangeProof,
-//         >,
-//     >(
-//         language_public_parameters: &Lang::PublicParameters,
-//         witnesses: Vec<Vec<Lang::WitnessSpaceGroupElement>>,
-//     ) {
-//         let number_of_parties = witnesses.len().try_into().unwrap();
-//
-//         let commitment_round_parties: HashMap<
-//             PartyID,
-//             commitment_round::Party<REPETITIONS, Lang, ()>,
-//         > = witnesses .into_iter() .enumerate() .map(|(party_id, witnesses)| { let party_id: u16
-//         > = (party_id + 1).try_into().unwrap(); let schnorr_commitment_round_party =
-//         > aggregation::commitment_round::Party { party_id, threshold: number_of_parties,
-//         > number_of_parties, language_public_parameters: language_public_parameters.clone(),
-//         > protocol_context: (), witnesses, };
-//
-//                 (
-//                     party_id,
-//                     commitment_round::Party {
-//                         schnorr_commitment_round_party,
-//                     },
-//                 )
-//             })
-//             .collect();
-//
-//         let res = aggregates_internal(commitment_round_parties);
-//
-//         assert!(
-//             res.is_ok(),
-//             "valid proof aggregation sessions should yield verifiable aggregated proofs, instead
-// got error: {:?}",             res.err()
-//         );
-//     }
-// }

@@ -3,6 +3,7 @@
 
 use std::collections::HashMap;
 
+use crypto_bigint::rand_core::CryptoRngCore;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -66,6 +67,7 @@ impl<
     fn decommit_statements_and_statement_mask(
         self,
         commitments: HashMap<PartyID, Self::Commitment>,
+        rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(Self::Decommitment, Self::ProofShareRoundParty)> {
         let commitments: HashMap<_, _> = commitments
             .into_iter()

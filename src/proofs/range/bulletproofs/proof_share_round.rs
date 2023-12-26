@@ -15,16 +15,14 @@ use crate::{
         range,
         range::{
             bulletproofs::{
-                commitment_round, decommitment_and_poly_commitment_round, proof_aggregation_round,
-                proof_share_round,
+                commitment_round, decommitment_round, decommitment_round::Decommitment,
+                proof_aggregation_round, proof_share_round,
             },
             Samplable,
         },
         schnorr::{
             aggregation,
-            aggregation::{
-                decommitment_round, decommitment_round::Decommitment, ProofShareRoundParty,
-            },
+            aggregation::ProofShareRoundParty,
             enhanced::{EnhanceableLanguage, EnhancedLanguage},
             language,
         },
@@ -63,9 +61,8 @@ pub struct Party<
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct Message<const REPETITIONS: usize, Language: language::Language<REPETITIONS>> {
-    pub(super) schnorr_proof_share:
-        aggregation::proof_share_round::ProofShare<REPETITIONS, Language>,
+pub struct ProofShare<Share> {
+    pub(super) schnorr_proof_share: Share,
     pub(super) bulletproofs_proof_shares: Vec<messages::ProofShare>,
 }
 
@@ -83,7 +80,16 @@ impl<
         >,
         ProtocolContext: Clone + Serialize,
     >
-    Party<
+    ProofShareRoundParty<
+        super::Output<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            UnboundedWitnessSpaceGroupElement,
+            Language,
+            ProtocolContext,
+        >,
+    >
+    for Party<
         'a,
         'b,
         REPETITIONS,
@@ -93,24 +99,8 @@ impl<
         ProtocolContext,
     >
 {
-    pub fn generate_proof_shares(
-        self,
-        messages: HashMap<
-            PartyID,
-            decommitment_and_poly_commitment_round::Message<
-                REPETITIONS,
-                EnhancedLanguage<
-                    REPETITIONS,
-                    NUM_RANGE_CLAIMS,
-                    { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-                    super::RangeProof,
-                    UnboundedWitnessSpaceGroupElement,
-                    Language,
-                >,
-            >,
-        >,
-    ) -> proofs::Result<(
-        Message<
+    type Decommitment = Decommitment<
+        aggregation::decommitment_round::Decommitment<
             REPETITIONS,
             EnhancedLanguage<
                 REPETITIONS,
@@ -121,17 +111,38 @@ impl<
                 Language,
             >,
         >,
-        proof_aggregation_round::Party<
-            'a,
-            'b,
+    >;
+
+    type ProofShare = ProofShare<
+        aggregation::proof_share_round::ProofShare<
             REPETITIONS,
-            NUM_RANGE_CLAIMS,
-            UnboundedWitnessSpaceGroupElement,
-            Language,
-            ProtocolContext,
+            EnhancedLanguage<
+                REPETITIONS,
+                NUM_RANGE_CLAIMS,
+                { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+                super::RangeProof,
+                UnboundedWitnessSpaceGroupElement,
+                Language,
+            >,
         >,
-    )> {
-        let (decommitments, mut poly_commitments): (Vec<(_, _)>, Vec<(_, _)>) = messages
+    >;
+
+    type ProofAggregationRoundParty = proof_aggregation_round::Party<
+        'a,
+        'b,
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        UnboundedWitnessSpaceGroupElement,
+        Language,
+        ProtocolContext,
+    >;
+
+    fn generate_proof_share(
+        self,
+        decommitments: HashMap<PartyID, Self::Decommitment>,
+        rng: &mut impl CryptoRngCore,
+    ) -> proofs::Result<(Self::ProofShare, Self::ProofAggregationRoundParty)> {
+        let (decommitments, mut poly_commitments): (Vec<(_, _)>, Vec<(_, _)>) = decommitments
             .into_iter()
             .map(|(party_id, message)| {
                 (
@@ -145,7 +156,7 @@ impl<
 
         let (schnorr_proof_share, proof_aggregation_round_party) = self
             .proof_share_round_party
-            .generate_proof_share(decommitments)
+            .generate_proof_share(decommitments, rng)
             .unwrap();
 
         poly_commitments.sort_by_key(|(party_id, _)| *party_id);
@@ -177,7 +188,7 @@ impl<
             dealer_awaiting_proof_shares,
         };
 
-        let message = Message {
+        let message = ProofShare {
             schnorr_proof_share,
             bulletproofs_proof_shares,
         };
