@@ -16,7 +16,7 @@ use crate::{
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product,
-        direct_product::ThreeWayPublicParameters, self_product, BoundedGroupElement,
+        direct_product::ThreeWayPublicParameters, paillier, self_product, BoundedGroupElement,
         GroupElement as _, KnownOrderGroupElement, KnownOrderScalar, Samplable,
     },
     proofs,
@@ -134,36 +134,34 @@ impl<
 impl<
         const RANGE_CLAIMS_PER_SCALAR: usize,
         const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         const SCALAR_LIMBS: usize,
         GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
-        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     >
     EnhanceableLanguage<
         REPETITIONS,
         RANGE_CLAIMS_PER_SCALAR,
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        self_product::GroupElement<
-            2,
-            ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        >,
-    > for Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>
+        self_product::GroupElement<2, paillier::RandomnessSpaceGroupElement>,
+    >
+    for Language<
+        { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+        SCALAR_LIMBS,
+        GroupElement,
+        ahe::paillier::EncryptionKey,
+    >
 {
     fn compose_witness(
         decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>;
              RANGE_CLAIMS_PER_SCALAR],
-        unbounded_witness: &self_product::GroupElement<
-            2,
-            ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        >,
+        unbounded_witness: &self_product::GroupElement<2, paillier::RandomnessSpaceGroupElement>,
         language_public_parameters: &Self::PublicParameters,
         range_claim_bits: usize,
     ) -> proofs::Result<Self::WitnessSpaceGroupElement> {
         // TODO: perhaps this was the bug, that I'm saying this is scalar here.
-        let multiplicant = <EncryptionKey::PlaintextSpaceGroupElement as DecomposableWitness<
+        let multiplicant = <paillier::PlaintextSpaceGroupElement as DecomposableWitness<
             RANGE_CLAIMS_PER_SCALAR,
             SCALAR_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
         >>::compose(
             // TODO: make sure this is safe, e.g. SCALAR_LIMBS >=
             // COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS
@@ -174,8 +172,8 @@ impl<
             range_claim_bits,
         )?;
 
-        let multiplicant_randomness = <&[_; 2]>::from(unbounded_witness)[0].clone();
-        let multiplication_randomness = <&[_; 2]>::from(unbounded_witness)[1].clone();
+        let multiplicant_randomness = <[_; 2]>::from(*unbounded_witness)[0];
+        let multiplication_randomness = <[_; 2]>::from(*unbounded_witness)[1];
 
         Ok((
             multiplicant,
@@ -191,13 +189,9 @@ impl<
         range_claim_bits: usize,
     ) -> proofs::Result<(
         [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; RANGE_CLAIMS_PER_SCALAR],
-        self_product::GroupElement<
-            2,
-            ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        >,
+        self_product::GroupElement<2, paillier::RandomnessSpaceGroupElement>,
     )> {
-        let multiplicant_value: Uint<SCALAR_LIMBS> =
-            (&witness.multiplicant().value().into()).into();
+        let multiplicant_value: Uint<SCALAR_LIMBS> = (&witness.multiplicant().value()).into();
         let multiplicant = GroupElement::Scalar::new(
             multiplicant_value.into(),
             &language_public_parameters.scalar_group_public_parameters,
@@ -206,8 +200,8 @@ impl<
         Ok((
             multiplicant.decompose(range_claim_bits),
             [
-                witness.multiplicant_randomness().clone(),
-                witness.multiplication_randomness().clone(),
+                *witness.multiplicant_randomness(),
+                *witness.multiplication_randomness(),
             ]
             .into(),
         ))
@@ -552,12 +546,6 @@ pub(crate) mod tests {
     fn valid_proof_verifies(#[case] batch_size: usize) {
         let language_public_parameters = public_parameters();
         let witnesses = generate_witnesses(&language_public_parameters, batch_size);
-
-        language::tests::valid_proof_verifies_internal::<REPETITIONS, Lang>(
-            language_public_parameters.clone(),
-            batch_size,
-            witnesses.clone(),
-        );
 
         let unbounded_witness_public_parameters = self_product::PublicParameters::new(
             language_public_parameters

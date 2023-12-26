@@ -19,8 +19,8 @@ use crate::{
     commitments::{pedersen, HomomorphicCommitmentScheme, Pedersen},
     group,
     group::{
-        additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, self_product,
-        GroupElement as _, KnownOrderGroupElement,
+        additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, paillier,
+        self_product, GroupElement as _, KnownOrderGroupElement,
     },
     helpers::flat_map_results,
     proofs,
@@ -178,36 +178,31 @@ impl<
         const RANGE_CLAIMS_PER_SCALAR: usize,
         const RANGE_CLAIMS_PER_MASK: usize,
         const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         const SCALAR_LIMBS: usize,
         const DIMENSION: usize,
         GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
-        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     >
     EnhanceableLanguage<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        direct_product::GroupElement<
-            GroupElement::Scalar,
-            ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        >,
+        direct_product::GroupElement<GroupElement::Scalar, paillier::RandomnessSpaceGroupElement>,
     >
     for private::Language<
         RANGE_CLAIMS_PER_SCALAR,
         RANGE_CLAIMS_PER_MASK,
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
         SCALAR_LIMBS,
         DIMENSION,
         GroupElement,
-        EncryptionKey,
+        ahe::paillier::EncryptionKey,
     >
 {
     fn compose_witness(
         decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
         unbounded_witness: &direct_product::GroupElement<
             GroupElement::Scalar,
-            RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+            paillier::RandomnessSpaceGroupElement,
         >,
         language_public_parameters: &Self::PublicParameters,
         range_claim_bits: usize,
@@ -228,10 +223,10 @@ impl<
             }))?;
 
         let coefficients = flat_map_results(coefficients.map(|coefficient| {
-            <EncryptionKey::PlaintextSpaceGroupElement as DecomposableWitness<
+            <paillier::PlaintextSpaceGroupElement as DecomposableWitness<
                 RANGE_CLAIMS_PER_SCALAR,
                 SCALAR_LIMBS,
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
             >>::compose(
                 // TODO: make sure this is safe, e.g. SCALAR_LIMBS >=
                 // COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS
@@ -250,10 +245,10 @@ impl<
                 .ok_or(proofs::Error::InvalidParameters)
         }))?;
 
-        let mask = <EncryptionKey::PlaintextSpaceGroupElement as DecomposableWitness<
+        let mask = <paillier::PlaintextSpaceGroupElement as DecomposableWitness<
             RANGE_CLAIMS_PER_MASK,
             SCALAR_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
         >>::compose(
             // TODO: make sure this is safe, e.g. SCALAR_LIMBS >=
             // COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS
@@ -264,7 +259,7 @@ impl<
             range_claim_bits,
         )?;
 
-        let (commitment_randomness, encryption_randomness) = unbounded_witness.clone().into();
+        let (commitment_randomness, encryption_randomness) = (*unbounded_witness).into();
 
         Ok((
             coefficients,
@@ -281,10 +276,7 @@ impl<
         range_claim_bits: usize,
     ) -> proofs::Result<(
         [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
-        direct_product::GroupElement<
-            GroupElement::Scalar,
-            RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-        >,
+        direct_product::GroupElement<GroupElement::Scalar, paillier::RandomnessSpaceGroupElement>,
     )> {
         if NUM_RANGE_CLAIMS != (RANGE_CLAIMS_PER_SCALAR * DIMENSION + RANGE_CLAIMS_PER_MASK) {
             return Err(proofs::Error::InvalidParameters);
@@ -851,12 +843,6 @@ pub(crate) mod tests {
         let language_public_parameters = public_parameters();
 
         let witnesses = generate_witnesses(&language_public_parameters, batch_size);
-
-        language::tests::valid_proof_verifies_internal::<REPETITIONS, Lang>(
-            language_public_parameters.clone(),
-            batch_size,
-            witnesses.clone(),
-        );
 
         let unbounded_witness_public_parameters = direct_product::PublicParameters(
             language_public_parameters

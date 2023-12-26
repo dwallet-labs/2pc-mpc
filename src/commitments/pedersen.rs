@@ -214,6 +214,7 @@ impl<const BATCH_SIZE: usize, GroupElementValue, ScalarPublicParameters, GroupPu
     }
 }
 
+#[cfg(test)]
 mod tests {
     use bulletproofs::PedersenGens;
     use rand_core::OsRng;
