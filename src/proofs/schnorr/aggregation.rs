@@ -45,7 +45,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// The Commitment Round Party of a Proof Aggregation Protocol.
 pub trait CommitmentRoundParty<Output>: Sized {
-    type Commitment: Serialize + for<'a> Deserialize<'a> + Clone;
+    type Commitment: Serialize + for<'a> Deserialize<'a> + Copy + Clone;
     type DecommitmentRoundParty: DecommitmentRoundParty<Output, Commitment = Self::Commitment>;
 
     fn commit_statements_and_statement_mask(
@@ -56,7 +56,7 @@ pub trait CommitmentRoundParty<Output>: Sized {
 
 /// The Decommitment Round Party of a Proof Aggregation Protocol.
 pub trait DecommitmentRoundParty<Output>: Sized {
-    type Commitment: Serialize + for<'a> Deserialize<'a> + Clone;
+    type Commitment: Serialize + for<'a> Deserialize<'a> + Copy + Clone;
     type Decommitment: Serialize + for<'a> Deserialize<'a> + Clone;
     type ProofShareRoundParty: ProofShareRoundParty<Output, Decommitment = Self::Decommitment>;
 
@@ -98,97 +98,63 @@ pub(crate) mod tests {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::{
-        proofs,
-        proofs::schnorr::{
-            aggregation::{decommitment_round::Decommitment, proof_share_round::ProofShare},
-            Language, Proof,
-        },
-        Commitment,
-    };
+    use crate::{proofs, proofs::schnorr::Language};
 
     #[allow(dead_code)]
-    pub(crate) fn aggregates_internal<
-        const REPETITIONS: usize,
-        Lang: Language<REPETITIONS>,
-        ProtocolContext: Clone + Serialize,
-    >(
-        commitment_round_parties: HashMap<
-            PartyID,
-            commitment_round::Party<REPETITIONS, Lang, ProtocolContext>,
-        >,
-    ) -> proofs::Result<(
-        Proof<REPETITIONS, Lang, ProtocolContext>,
-        Vec<Lang::StatementSpaceGroupElement>,
-    )> {
-        let commitments_and_decommitment_round_parties: HashMap<
-            PartyID,
-            (
-                Commitment,
-                decommitment_round::Party<REPETITIONS, Lang, ProtocolContext>,
-            ),
-        > = commitment_round_parties
-            .into_iter()
-            .map(|(party_id, party)| {
-                (
-                    party_id,
-                    party
-                        .commit_statements_and_statement_mask(&mut OsRng)
-                        .unwrap(),
-                )
-            })
-            .collect();
+    pub(crate) fn aggregates_internal<Output, P: CommitmentRoundParty<Output>>(
+        commitment_round_parties: HashMap<PartyID, P>,
+    ) -> proofs::Result<(Output)> {
+        let commitments_and_decommitment_round_parties: HashMap<_, (_, _)> =
+            commitment_round_parties
+                .into_iter()
+                .map(|(party_id, party)| {
+                    (
+                        party_id,
+                        party
+                            .commit_statements_and_statement_mask(&mut OsRng)
+                            .unwrap(),
+                    )
+                })
+                .collect();
 
-        let commitments: HashMap<PartyID, Commitment> = commitments_and_decommitment_round_parties
+        let commitments: HashMap<_, _> = commitments_and_decommitment_round_parties
             .iter()
-            .map(|(party_id, (commitment, _))| (*party_id, *commitment))
+            .map(|(party_id, (commitment, _))| (*party_id, commitment.clone()))
             .collect();
 
-        let decommitments_and_proof_share_round_parties: HashMap<
-            PartyID,
-            (
-                Decommitment<REPETITIONS, Lang>,
-                proof_share_round::Party<REPETITIONS, Lang, ProtocolContext>,
-            ),
-        > = commitments_and_decommitment_round_parties
-            .into_iter()
-            .map(|(party_id, (_, party))| {
-                (
-                    party_id,
-                    party
-                        .decommit_statements_and_statement_mask(commitments.clone())
-                        .unwrap(),
-                )
-            })
+        let decommitments_and_proof_share_round_parties: HashMap<_, (_, _)> =
+            commitments_and_decommitment_round_parties
+                .into_iter()
+                .map(|(party_id, (_, party))| {
+                    (
+                        party_id,
+                        party
+                            .decommit_statements_and_statement_mask(commitments.clone())
+                            .unwrap(),
+                    )
+                })
+                .collect();
+
+        let decommitments: HashMap<_, _> = decommitments_and_proof_share_round_parties
+            .iter()
+            .map(|(party_id, (decommitment, _))| (*party_id, decommitment.clone()))
             .collect();
 
-        let decommitments: HashMap<PartyID, Decommitment<REPETITIONS, Lang>> =
+        let proof_shares_and_proof_aggregation_round_parties: HashMap<_, (_, _)> =
             decommitments_and_proof_share_round_parties
-                .iter()
-                .map(|(party_id, (decommitment, _))| (*party_id, decommitment.clone()))
+                .into_iter()
+                .map(|(party_id, (_, party))| {
+                    (
+                        party_id,
+                        party.generate_proof_share(decommitments.clone()).unwrap(),
+                    )
+                })
                 .collect();
 
-        let proof_shares_and_proof_aggregation_round_parties: HashMap<
-            PartyID,
-            (
-                ProofShare<REPETITIONS, Lang>,
-                proof_aggregation_round::Party<REPETITIONS, Lang, ProtocolContext>,
-            ),
-        > = decommitments_and_proof_share_round_parties
-            .into_iter()
-            .map(|(party_id, (_, party))| {
-                (
-                    party_id,
-                    party.generate_proof_share(decommitments.clone()).unwrap(),
-                )
-            })
+        let proof_shares: HashMap<_, _> = proof_shares_and_proof_aggregation_round_parties
+            .iter()
+            .map(|(party_id, (proof_share, _))| (*party_id, proof_share.clone())) // TODO: why can't copy
             .collect();
-
-        let proof_shares: HashMap<PartyID, ProofShare<REPETITIONS, Lang>> =
-            proof_shares_and_proof_aggregation_round_parties
-                .iter()
-                .map(|(party_id, (proof_share, _))| (*party_id, proof_share.clone())) // TODO: why can't copy
-                .collect();
 
         let (_, (_, proof_aggregation_round_party)) =
             proof_shares_and_proof_aggregation_round_parties
