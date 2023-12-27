@@ -315,7 +315,7 @@ impl<
         Ok(transcript)
     }
 
-    pub(super) fn sample_randomizers_and_statement_masks(
+    pub(crate) fn sample_randomizers_and_statement_masks(
         number_of_parties: usize,
         batch_size: usize,
         enhanced_language_public_parameters: &EnhancedPublicParameters<
@@ -688,14 +688,16 @@ pub(crate) mod tests {
                         Lang,
                     >,
                     PhantomData<()>,
-                > {
+                >::new_enhanced_session(
                     party_id,
-                    threshold: number_of_parties,
                     number_of_parties,
-                    language_public_parameters: enhanced_language_public_parameters.clone(),
-                    protocol_context: PhantomData,
-                    witnesses: witnesses.clone(),
-                };
+                    number_of_parties,
+                    enhanced_language_public_parameters.clone(),
+                    PhantomData,
+                    witnesses.clone(),
+                    &mut OsRng,
+                )
+                .unwrap();
 
                 (
                     party_id,

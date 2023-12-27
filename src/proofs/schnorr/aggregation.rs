@@ -1,6 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+use core::marker::PhantomData;
 use std::collections::HashMap;
 
 #[cfg(feature = "benchmarking")]
@@ -183,7 +184,7 @@ pub(crate) mod tests {
 
         let commitment_round_parties: HashMap<
             PartyID,
-            commitment_round::Party<REPETITIONS, Lang, ()>,
+            commitment_round::Party<REPETITIONS, Lang, PhantomData<()>>,
         > = witnesses
             .into_iter()
             .enumerate()
@@ -191,14 +192,16 @@ pub(crate) mod tests {
                 let party_id: u16 = (party_id + 1).try_into().unwrap();
                 (
                     party_id,
-                    commitment_round::Party {
+                    commitment_round::Party::new_session(
                         party_id,
-                        threshold: number_of_parties,
                         number_of_parties,
-                        language_public_parameters: language_public_parameters.clone(),
-                        protocol_context: (),
+                        number_of_parties,
+                        language_public_parameters.clone(),
+                        PhantomData,
                         witnesses,
-                    },
+                        &mut OsRng,
+                    )
+                    .unwrap(),
                 )
             })
             .collect();
