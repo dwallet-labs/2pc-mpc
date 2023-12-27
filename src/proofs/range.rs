@@ -253,7 +253,7 @@ pub type CommitmentSchemeCommitmentSpaceValue<
 //             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
 //             NUM_RANGE_CLAIMS,
 //
-//             WITNESS_MASK_LIMBS,
+//
 //         >,
 //     >(
 //         language_public_parameters: &Lang::PublicParameters,
@@ -278,7 +278,7 @@ pub type CommitmentSchemeCommitmentSpaceValue<
 //                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
 //                 NUM_RANGE_CLAIMS,
 //
-//                 WITNESS_MASK_LIMBS,
+//
 //                 Lang,
 //             >(language_public_parameters, batch_size);
 //
@@ -290,7 +290,7 @@ pub type CommitmentSchemeCommitmentSpaceValue<
 //                         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
 //                         NUM_RANGE_CLAIMS,
 //
-//                         WITNESS_MASK_LIMBS,
+//
 //                         Lang,
 //                     >,
 //                 >,
@@ -325,7 +325,7 @@ pub type CommitmentSchemeCommitmentSpaceValue<
 //                             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
 //                             NUM_RANGE_CLAIMS,
 //
-//                             WITNESS_MASK_LIMBS,
+//
 //                             Lang,
 //                         >::prove(
 //                             range_proof_public_parameters,
@@ -344,7 +344,7 @@ pub type CommitmentSchemeCommitmentSpaceValue<
 //                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
 //                 NUM_RANGE_CLAIMS,
 //
-//                 WITNESS_MASK_LIMBS,
+//
 //                 Lang,
 //             >::prove(
 //                 range_proof_public_parameters,

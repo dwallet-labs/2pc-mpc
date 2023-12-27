@@ -257,6 +257,9 @@ impl<
         // TODO: sum commitments in aggregation or something - maybe this can actually remove the
         // multicommitment code?
 
+        // TODO: verify same commitments? how could it be that I call verify using the commitments
+        // of the range proof? I think in aggregation this won't be possible.
+
         self.schnorr_proof
             .verify(
                 number_of_parties,
@@ -285,12 +288,12 @@ impl<
         //     != RANGE_CLAIM_LIMBS
         //         + super::ChallengeSizedNumber::LIMBS
         //         + StatisticalSecuritySizedNumber::LIMBS
-        //     || WITNESS_MASK_LIMBS > RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS
-        //     || Uint::<RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::from(
+        //     || WITNESS_MASK_LIMBS > COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS
+        //     || Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::from(
         //         &Uint::<WITNESS_MASK_LIMBS>::MAX,
         //     ) >= language::enhanced::RangeProofCommitmentSchemeMessageSpaceGroupElement::<
-        //       RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS,
-        //       RANGE_CLAIM_LIMBS, WITNESS_MASK_LIMBS, Language,
+        //       COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS,
+        //         Language,
         //     >::scalar_lower_bound_from_public_parameters(
         //         &range_proof_public_parameters
         //             .as_ref()

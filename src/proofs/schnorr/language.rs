@@ -16,9 +16,8 @@ use crate::{
 };
 
 pub mod commitment_of_discrete_log;
+pub mod committed_linear_evaluation;
 pub mod discrete_log_ratio_of_commited_values;
-// pub mod enhanced;
-mod committed_linear_evaluation;
 pub mod encryption_of_discrete_log;
 pub mod encryption_of_tuple;
 pub mod knowledge_of_decommitment;

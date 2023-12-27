@@ -498,30 +498,30 @@ pub(crate) mod tests {
         .collect()
     }
 
-    // #[rstest]
-    // #[case(1)]
-    // #[case(2)]
-    // #[case(11)]
-    // fn valid_proof_verifies(#[case] batch_size: usize) {
-    //     let language_public_parameters = public_parameters();
-    //
-    //     let witnesses = generate_witnesses(&language_public_parameters, batch_size);
-    //
-    //     let unbounded_witness_public_parameters = language_public_parameters
-    //         .randomness_space_public_parameters()
-    //         .clone();
-    //
-    //     schnorr::proof::enhanced::tests::valid_proof_verifies::<
-    //         REPETITIONS,
-    //         RANGE_CLAIMS_PER_SCALAR,
-    //         paillier::RandomnessSpaceGroupElement,
-    //         Lang,
-    //     >(
-    //         unbounded_witness_public_parameters,
-    //         language_public_parameters,
-    //         witnesses,
-    //     );
-    // }
+    #[rstest]
+    #[case(1)]
+    #[case(2)]
+    #[case(11)]
+    fn valid_proof_verifies(#[case] batch_size: usize) {
+        let language_public_parameters = public_parameters();
+
+        let witnesses = generate_witnesses(&language_public_parameters, batch_size);
+
+        let unbounded_witness_public_parameters = language_public_parameters
+            .randomness_space_public_parameters()
+            .clone();
+
+        schnorr::proof::enhanced::tests::valid_proof_verifies::<
+            REPETITIONS,
+            RANGE_CLAIMS_PER_SCALAR,
+            paillier::RandomnessSpaceGroupElement,
+            Lang,
+        >(
+            unbounded_witness_public_parameters,
+            language_public_parameters,
+            witnesses,
+        );
+    }
 
     #[rstest]
     #[case(1, 1)]
@@ -567,7 +567,7 @@ pub(crate) mod tests {
     //         { ristretto::SCALAR_LIMBS },
     //         RANGE_CLAIMS_PER_SCALAR,
     //         { range::bulletproofs::RANGE_CLAIM_LIMBS },
-    //         WITNESS_MASK_LIMBS,
+    //
     //         Lang,
     //     >(
     //         &language_public_parameters,
@@ -627,7 +627,7 @@ pub(crate) mod tests {
 //             { ristretto::SCALAR_LIMBS },
 //             { RANGE_CLAIMS_PER_SCALAR },
 //             { range::bulletproofs::RANGE_CLAIM_LIMBS },
-//             WITNESS_MASK_LIMBS,
+//
 //             Lang,
 //         >(
 //             &language_public_parameters,
@@ -640,7 +640,7 @@ pub(crate) mod tests {
 //             { ristretto::SCALAR_LIMBS },
 //             { RANGE_CLAIMS_PER_SCALAR },
 //             { range::bulletproofs::RANGE_CLAIM_LIMBS },
-//             WITNESS_MASK_LIMBS,
+//
 //             Lang,
 //         >(language_public_parameters, None, c);
 //     }

@@ -257,16 +257,16 @@ mod benches {
 
     // pub(crate) fn benchmark_enhanced<
     //     const REPETITIONS: usize,
-    //     const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    //     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     //     const NUM_RANGE_CLAIMS: usize,
     //     const RANGE_CLAIM_LIMBS: usize,
     //     const WITNESS_MASK_LIMBS: usize,
     //     Lang: EnhancedLanguage<
     //         REPETITIONS,
-    //         RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+    //         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     //         NUM_RANGE_CLAIMS,
-    //         RANGE_CLAIM_LIMBS,
-    //         WITNESS_MASK_LIMBS,
+    //
+    //
     //     >,
     // >(
     //     language_public_parameters: Lang::PublicParameters,
@@ -279,10 +279,10 @@ mod benches {
     //     for batch_size in [1, 10, 100, 1000] {
     //         let mut witnesses = language::enhanced::tests::generate_witnesses::<
     //             REPETITIONS,
-    //             RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+    //             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
     //             NUM_RANGE_CLAIMS,
-    //             RANGE_CLAIM_LIMBS,
-    //             WITNESS_MASK_LIMBS,
+    //
+    //
     //             Lang,
     //         >(&language_public_parameters, batch_size);
     //

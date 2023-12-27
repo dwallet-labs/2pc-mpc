@@ -570,8 +570,9 @@ pub(crate) mod tests {
     #[case(1, 1)]
     #[case(1, 2)]
     #[case(2, 1)]
-    #[case(2, 3)]
-    #[case(5, 2)]
+    #[case(2, 2)]
+    #[case(8, 1)]
+    #[case(8, 4)]
     fn aggregates(#[case] number_of_parties: usize, #[case] batch_size: usize) {
         let language_public_parameters = public_parameters();
 
@@ -641,7 +642,7 @@ pub(crate) mod tests {
 //             { ristretto::SCALAR_LIMBS },
 //             RANGE_CLAIMS_PER_SCALAR,
 //             { range::bulletproofs::RANGE_CLAIM_LIMBS },
-//             WITNESS_MASK_LIMBS,
+//
 //             Lang,
 //         >,
 //     ) {
@@ -703,7 +704,7 @@ pub(crate) mod tests {
 //             { ristretto::SCALAR_LIMBS },
 //             RANGE_CLAIMS_PER_SCALAR,
 //             { range::bulletproofs::RANGE_CLAIM_LIMBS },
-//             WITNESS_MASK_LIMBS,
+//
 //             Lang,
 //         >(
 //             &language_public_parameters,
@@ -725,7 +726,7 @@ pub(crate) mod tests {
 //             { ristretto::SCALAR_LIMBS },
 //             RANGE_CLAIMS_PER_SCALAR,
 //             { range::bulletproofs::RANGE_CLAIM_LIMBS },
-//             WITNESS_MASK_LIMBS,
+//
 //             Lang,
 //         >(&language_public_parameters, number_of_parties, batch_size);
 //
@@ -744,7 +745,7 @@ pub(crate) mod tests {
 //             { ristretto::SCALAR_LIMBS },
 //             RANGE_CLAIMS_PER_SCALAR,
 //             { range::bulletproofs::RANGE_CLAIM_LIMBS },
-//             WITNESS_MASK_LIMBS,
+//
 //             Lang,
 //         >(
 //             &language_public_parameters,
@@ -801,7 +802,7 @@ pub(crate) mod tests {
 //             { ristretto::SCALAR_LIMBS },
 //             { RANGE_CLAIMS_PER_SCALAR },
 //             { range::bulletproofs::RANGE_CLAIM_LIMBS },
-//             WITNESS_MASK_LIMBS,
+//
 //             Lang,
 //         >(
 //             &language_public_parameters,
@@ -814,7 +815,7 @@ pub(crate) mod tests {
 //             { ristretto::SCALAR_LIMBS },
 //             { RANGE_CLAIMS_PER_SCALAR },
 //             { range::bulletproofs::RANGE_CLAIM_LIMBS },
-//             WITNESS_MASK_LIMBS,
+//
 //             Lang,
 //         >(language_public_parameters, None, c);
 //     }

@@ -4,7 +4,7 @@ pub mod range;
 pub mod schnorr;
 pub(crate) mod transcript_protocol;
 
-// pub use range::{bulletproofs, lightningproofs}; // TODO
+pub use range::{bulletproofs, lightningproofs, RangeProof};
 use transcript_protocol::TranscriptProtocol;
 
 use crate::{ahe, group};

@@ -681,8 +681,9 @@ pub(crate) mod tests {
 
     pub(crate) const DIMENSION: usize = 2;
 
+    // TODO: it's ok to take next power of two here right
     pub(crate) const RANGE_CLAIMS_PER_MASK: usize =
-        { Uint::<MASK_LIMBS>::BITS / range::bulletproofs::RANGE_CLAIM_BITS };
+        { (Uint::<MASK_LIMBS>::BITS / range::bulletproofs::RANGE_CLAIM_BITS).next_power_of_two() };
 
     pub(crate) const NUM_RANGE_CLAIMS: usize =
         { DIMENSION * RANGE_CLAIMS_PER_SCALAR + RANGE_CLAIMS_PER_MASK };
@@ -870,8 +871,9 @@ pub(crate) mod tests {
     #[case(1, 1)]
     #[case(1, 2)]
     #[case(2, 1)]
-    #[case(2, 3)]
-    #[case(5, 2)]
+    #[case(2, 2)]
+    #[case(8, 1)]
+    #[case(8, 4)]
     fn aggregates(#[case] number_of_parties: usize, #[case] batch_size: usize) {
         let language_public_parameters = public_parameters();
 
@@ -894,7 +896,7 @@ pub(crate) mod tests {
             REPETITIONS,
             NUM_RANGE_CLAIMS,
             direct_product::GroupElement<secp256k1::Scalar, paillier::RandomnessSpaceGroupElement>,
-            Lang,
+            EnhancedLang,
         >(
             unbounded_witness_public_parameters,
             language_public_parameters,
@@ -941,7 +943,7 @@ pub(crate) mod tests {
 //             { ristretto::SCALAR_LIMBS },
 //             { NUM_RANGE_CLAIMS },
 //             { range::bulletproofs::RANGE_CLAIM_LIMBS },
-//             WITNESS_MASK_LIMBS,
+//
 //             Lang,
 //         >(
 //             &language_public_parameters,
