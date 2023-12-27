@@ -527,7 +527,7 @@ pub(crate) mod tests {
     #[case(1, 1)]
     #[case(1, 2)]
     #[case(2, 1)]
-    #[case(2, 3)]
+    #[case(2, 2)]
     #[case(5, 2)]
     fn aggregates(#[case] number_of_parties: usize, #[case] batch_size: usize) {
         let language_public_parameters = public_parameters();

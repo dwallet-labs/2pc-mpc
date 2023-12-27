@@ -152,7 +152,7 @@ impl<
             .collect();
 
         let number_of_parties = self.commitment_round_party.number_of_parties;
-        let number_of_witnesses = self.commitment_round_party.witnesses.len();
+        let number_of_witnesses = witnesses.len();
 
         if !number_of_witnesses.is_power_of_two() || !number_of_parties.is_power_of_two() {
             return Err(proofs::Error::InvalidParameters);
@@ -206,7 +206,9 @@ impl<
             .map(|(i, party)| {
                 party
                     .assign_position_with_rng(
-                        usize::from(self.commitment_round_party.party_id) + i,
+                        // TODO: make sure that the -1 here is ok, and this computation is good
+                        (usize::from(self.commitment_round_party.party_id) - 1) * NUM_RANGE_CLAIMS
+                            + i,
                         rng,
                     )
                     .map_err(bulletproofs::ProofError::from)

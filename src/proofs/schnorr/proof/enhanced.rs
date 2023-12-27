@@ -643,8 +643,11 @@ pub(crate) mod tests {
 
         let number_of_parties: u16 = witnesses.len().try_into().unwrap();
 
-        let bulletproofs_generators =
-            BulletproofGens::new(range::bulletproofs::RANGE_CLAIM_BITS, witnesses.len());
+        let number_of_witnesses: usize = witnesses.first().unwrap().len() * NUM_RANGE_CLAIMS;
+        let bulletproofs_generators = BulletproofGens::new(
+            range::bulletproofs::RANGE_CLAIM_BITS,
+            number_of_witnesses * usize::from(number_of_parties),
+        );
 
         let commitment_generators = PedersenGens::default();
 
@@ -712,17 +715,13 @@ pub(crate) mod tests {
             })
             .collect();
 
-        // TODO: use bps, use randomizers from enhanced proof etc.
-        aggregation::tests::aggregates::<
-            REPETITIONS,
-            EnhancedLanguage<
-                REPETITIONS,
-                NUM_RANGE_CLAIMS,
-                { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-                range::bulletproofs::RangeProof,
-                UnboundedWitnessSpaceGroupElement,
-                Lang,
-            >,
-        >(&enhanced_language_public_parameters, witnesses)
+        // TODO: use randomizers from enhanced proof etc.
+        let res = aggregation::tests::aggregates_internal(commitment_round_parties);
+
+        assert!(
+            res.is_ok(),
+            "valid enhanced proof aggregation sessions should yield verifiable aggregated proofs, instead got error: {:?}",
+            res.err()
+        );
     }
 }
