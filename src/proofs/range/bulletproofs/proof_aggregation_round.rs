@@ -248,8 +248,9 @@ impl<
             .collect::<proofs::Result<Vec<_>>>()?;
 
         if schnorr_range_proof_commitments != bulletproofs_commitments {
-            // TODO: ask dolev what to do here, because I need to blame somebody.
-            // maybe this whole thing wasn't even ncessairy?
+            // TODO: instead of summing, just compare individual commitments taken from the
+            // decommitment phase of the schnorr language against the aggregated commitment of the
+            // bulletproofs.
             todo!()
         }
 

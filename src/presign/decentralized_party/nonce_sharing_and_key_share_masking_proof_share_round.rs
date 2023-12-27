@@ -30,14 +30,14 @@ use crate::{
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
     const SCALAR_LIMBS: usize,
-    const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const RANGE_CLAIMS_PER_SCALAR: usize,
     const RANGE_CLAIM_LIMBS: usize,
     const WITNESS_MASK_LIMBS: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    RangeProof: proofs::RangeProof<RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIM_LIMBS>,
+    RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIM_LIMBS>,
     CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, 1, GroupElement::Scalar, GroupElement>,
     ProtocolContext: Clone + Serialize,
 > where
@@ -45,9 +45,8 @@ pub struct Party<
     Uint<WITNESS_MASK_LIMBS>: Encoding,
     group::ScalarValue<SCALAR_LIMBS, GroupElement>: From<Uint<SCALAR_LIMBS>>,
     range::CommitmentSchemeMessageSpaceValue<
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
         RangeProof,
     >: From<enhanced::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
 {
@@ -72,10 +71,8 @@ pub struct Party<
     pub(super) nonce_sharing_proof_share_round_party:
         encryption_of_discrete_log::ProofAggregationProofShareRoundParty<
             SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement::Scalar,
             GroupElement,
@@ -86,10 +83,8 @@ pub struct Party<
     pub(super) key_share_masking_proof_share_round_party:
         encryption_of_tuple::ProofAggregationProofShareRoundParty<
             SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement::Scalar,
             GroupElement,
@@ -101,26 +96,21 @@ pub struct Party<
 
 impl<
         const SCALAR_LIMBS: usize,
-        const RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const RANGE_CLAIMS_PER_SCALAR: usize,
         const RANGE_CLAIM_LIMBS: usize,
         const WITNESS_MASK_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        RangeProof: proofs::RangeProof<
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIM_LIMBS,
-        >,
+        RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RANGE_CLAIM_LIMBS>,
         CommitmentScheme: LanguageCommitmentScheme<SCALAR_LIMBS, 1, GroupElement::Scalar, GroupElement>,
         ProtocolContext: Clone + Serialize,
     >
     Party<
         SCALAR_LIMBS,
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
-        WITNESS_MASK_LIMBS,
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
@@ -133,9 +123,8 @@ where
     Uint<WITNESS_MASK_LIMBS>: Encoding,
     group::ScalarValue<SCALAR_LIMBS, GroupElement>: From<Uint<SCALAR_LIMBS>>,
     range::CommitmentSchemeMessageSpaceValue<
-        RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIM_LIMBS,
         RangeProof,
     >: From<enhanced::ConstrainedWitnessValue<RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS>>,
 {
@@ -145,10 +134,8 @@ where
             PartyID,
             encryption_of_discrete_log::Decommitment<
                 SCALAR_LIMBS,
-                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RANGE_CLAIMS_PER_SCALAR,
-                RANGE_CLAIM_LIMBS,
-                WITNESS_MASK_LIMBS,
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 GroupElement::Scalar,
                 GroupElement,
@@ -160,10 +147,8 @@ where
             PartyID,
             encryption_of_tuple::Decommitment<
                 SCALAR_LIMBS,
-                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RANGE_CLAIMS_PER_SCALAR,
-                RANGE_CLAIM_LIMBS,
-                WITNESS_MASK_LIMBS,
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 GroupElement::Scalar,
                 GroupElement,
@@ -175,10 +160,8 @@ where
         (
             encryption_of_discrete_log::ProofShare<
                 SCALAR_LIMBS,
-                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RANGE_CLAIMS_PER_SCALAR,
-                RANGE_CLAIM_LIMBS,
-                WITNESS_MASK_LIMBS,
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 GroupElement::Scalar,
                 GroupElement,
@@ -187,10 +170,8 @@ where
             >,
             encryption_of_tuple::ProofShare<
                 SCALAR_LIMBS,
-                RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RANGE_CLAIMS_PER_SCALAR,
-                RANGE_CLAIM_LIMBS,
-                WITNESS_MASK_LIMBS,
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 GroupElement::Scalar,
                 GroupElement,
@@ -200,10 +181,8 @@ where
         ),
         nonce_masking_commitment_round::Party<
             SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
@@ -222,10 +201,8 @@ where
 
         let party = nonce_masking_commitment_round::Party::<
             SCALAR_LIMBS,
-            RANGE_PROOF_COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIM_LIMBS,
-            WITNESS_MASK_LIMBS,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
