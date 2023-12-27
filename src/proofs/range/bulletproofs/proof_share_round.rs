@@ -166,7 +166,7 @@ impl<
             .flat_map(|(_, poly_commitments)| poly_commitments)
             .collect();
 
-        let (dealer_awaiting_proof_shares, bit_challenge) = self
+        let (dealer_awaiting_proof_shares, poly_challenge) = self
             .dealer_awaiting_poly_commitments
             .receive_poly_commitments(poly_commitments)
             .map_err(bulletproofs::ProofError::from)
@@ -177,7 +177,7 @@ impl<
             .into_iter()
             .map(|party| {
                 party
-                    .apply_challenge(&bit_challenge)
+                    .apply_challenge(&poly_challenge)
                     .map_err(bulletproofs::ProofError::from)
             })
             .collect::<Result<Vec<_>, _>>()

@@ -248,7 +248,7 @@ impl<
             })
             .collect::<Vec<_>>()
             .try_into()
-            .map_err(|_| proofs::Error::Conversion)?;
+            .map_err(|_| proofs::Error::InternalError)?;
 
         Ok(Self::new(&statement_masks, &responses))
     }
@@ -335,7 +335,7 @@ impl<
                 })
                 .collect::<Vec<_>>()
                 .try_into()
-                .map_err(|_| proofs::Error::Conversion)?;
+                .map_err(|_| proofs::Error::InternalError)?;
 
         if response_statements == reconstructed_response_statements {
             return Ok(());

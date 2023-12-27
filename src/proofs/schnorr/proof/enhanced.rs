@@ -422,7 +422,7 @@ impl<
             )
             .collect::<Vec<_>>()
             .try_into()
-            .map_err(|_| proofs::Error::Conversion)?;
+            .map_err(|_| proofs::Error::InternalError)?;
 
         let statement_masks = flat_map_results(randomizers.clone().map(|randomizer| {
             EnhancedLanguage::<

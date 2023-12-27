@@ -177,7 +177,7 @@ impl<
                         })
                         .collect::<Vec<_>>()
                         .try_into()
-                        .map_err(|_| proofs::Error::Conversion)
+                        .map_err(|_| proofs::Error::InternalError)
                 })
             },
         )?;

@@ -154,7 +154,7 @@ impl<
         let coefficients: [_; DIMENSION] = (*witness.coefficients()).into();
 
         let group_order =
-            Option::<_>::from(NonZero::new(group_order)).ok_or(proofs::Error::Conversion)?;
+            Option::<_>::from(NonZero::new(group_order)).ok_or(proofs::Error::InternalError)?;
 
         let coefficients = flat_map_results(coefficients.map(|coefficient| {
             let coefficient = coefficient.value().into().reduce(&group_order).into();

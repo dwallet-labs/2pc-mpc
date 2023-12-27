@@ -38,7 +38,7 @@ pub struct Party<
 > {
     pub(super) party_id: PartyID,
     pub(super) threshold: PartyID,
-    pub(super) number_of_parties: PartyID,
+    pub(crate) number_of_parties: PartyID,
     pub(super) language_public_parameters: Language::PublicParameters,
     pub(super) protocol_context: ProtocolContext,
     pub(super) previous_round_party_ids: HashSet<PartyID>,
@@ -134,7 +134,7 @@ impl<
                             .map(|(aggregated_reponse, response)| aggregated_reponse + response)
                             .collect::<Vec<_>>()
                             .try_into()
-                            .map_err(|_| proofs::Error::Conversion)
+                            .map_err(|_| proofs::Error::InternalError)
                     })
                 });
 

@@ -1,3 +1,4 @@
+use core::{array, iter};
 use std::{collections::HashMap, marker::PhantomData};
 
 use bulletproofs::range_proof_mpc::{
@@ -18,8 +19,8 @@ use crate::{
         range,
         range::{
             bulletproofs::{
-                commitment_round, decommitment_round, proof_share_round,
-                proof_share_round::ProofShare,
+                commitment_round, decommitment_round, flat_map_results, proof_share_round,
+                proof_share_round::ProofShare, COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             },
             Samplable,
         },
@@ -156,6 +157,8 @@ impl<
             ProtocolContext,
         >,
     > {
+        // TODO: handle this someway that doesn't expose this member in the party struct
+        let number_of_schnorr_parties = self.proof_aggregation_round_party.number_of_parties;
         let (schnorr_proof_shares, mut bulletproofs_proof_shares): (Vec<(_, _)>, Vec<(_, _)>) =
             proof_shares
                 .into_iter()
@@ -183,20 +186,68 @@ impl<
         let schnorr_range_proof_commitments: Vec<_> = statements
             .clone()
             .into_iter()
-            .flat_map(|statement| {
-                <[_; NUM_RANGE_CLAIMS]>::from(statement.range_proof_commitment().clone())
-            })
-            .map(|x: ristretto::GroupElement| x.0)
+            .map(|statement| statement.range_proof_commitment().clone())
             .collect();
 
-        let bulletproofs_range_proof_commitments: Vec<_> = self
+        let bulletproofs_commitments: Vec<_> = self
             .dealer_awaiting_proof_shares
             .bit_commitments
             .iter()
             .map(|vc| vc.V_j.decompress().ok_or(proofs::Error::InvalidParameters))
             .collect::<Result<Vec<_>, _>>()?;
 
-        if schnorr_range_proof_commitments != bulletproofs_range_proof_commitments {
+        let number_of_witnesses = schnorr_range_proof_commitments
+            .len()
+            .checked_mul(number_of_schnorr_parties.into())
+            .ok_or(proofs::Error::InternalError)?;
+
+        // TODO: note that we create a `GroupElement` here without checking it is in the group.
+        // We need to make sure bulletproofs make that check for it to be safe.
+        let mut bulletproofs_commitments_iter = bulletproofs_commitments
+            .into_iter()
+            .map(|point| ristretto::GroupElement(point));
+
+        let bulletproofs_commitments = iter::repeat_with(|| {
+            flat_map_results(array::from_fn(|_| {
+                bulletproofs_commitments_iter
+                    .next()
+                    .ok_or(proofs::Error::InternalError)
+            }))
+            .map(
+                range::CommitmentSchemeCommitmentSpaceGroupElement::<
+                    { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+                    NUM_RANGE_CLAIMS,
+                    range::bulletproofs::RangeProof,
+                >::from,
+            )
+        })
+        .take(number_of_witnesses)
+        .collect::<proofs::Result<Vec<_>>>()?;
+
+        // TODO: proper error handling with all the options here, proper errors.
+        let bulletproofs_commitments = (0..schnorr_range_proof_commitments.len())
+            .map(|i| {
+                (0..number_of_schnorr_parties.into())
+                    .map(|j: usize| {
+                        j.checked_mul(schnorr_range_proof_commitments.len())
+                            .and_then(|index| index.checked_add(i))
+                            .and_then(|index| bulletproofs_commitments.get(index).cloned())
+                            .ok_or(proofs::Error::InternalError)
+                    })
+                    .collect::<proofs::Result<Vec<_>>>()
+            })
+            .collect::<proofs::Result<Vec<_>>>()?;
+
+        let bulletproofs_commitments: Vec<_> = bulletproofs_commitments
+            .into_iter()
+            .map(|v| {
+                v.into_iter()
+                    .reduce(|a, b| a + b)
+                    .ok_or(proofs::Error::InternalError)
+            })
+            .collect::<proofs::Result<Vec<_>>>()?;
+
+        if schnorr_range_proof_commitments != bulletproofs_commitments {
             // TODO: ask dolev what to do here, because I need to blame somebody.
             // maybe this whole thing wasn't even ncessairy?
             todo!()

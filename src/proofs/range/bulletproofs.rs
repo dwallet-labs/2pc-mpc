@@ -161,14 +161,7 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
             .into_iter()
             .map(|point| ristretto::GroupElement(point));
 
-        let commitments: proofs::Result<
-            Vec<
-                commitments::CommitmentSpaceGroupElement<
-                    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                    Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
-                >,
-            >,
-        > = iter::repeat_with(|| {
+        let commitments: proofs::Result<Vec<_>> = iter::repeat_with(|| {
             flat_map_results(array::from_fn(|_| {
                 commitments_iter
                     .next()

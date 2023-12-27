@@ -14,8 +14,8 @@ pub enum Error {
     #[error("invalid parameters")]
     InvalidParameters,
 
-    #[error("conversion error")]
-    Conversion,
+    #[error("an internal error that should never have happened and signifies a bug")]
+    InternalError,
 
     #[error("serialization/deserialization error")]
     Serialization(#[from] serde_json::Error),

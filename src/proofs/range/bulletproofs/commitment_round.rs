@@ -132,10 +132,11 @@ impl<
             })
             .unzip();
 
+        let batch_size = commitment_messages.len();
+
         let witnesses: Vec<_> = commitment_messages
             .into_iter()
-            .map(|witness| <[_; NUM_RANGE_CLAIMS]>::from(witness))
-            .flatten()
+            .flat_map(|witness| <[_; NUM_RANGE_CLAIMS]>::from(witness))
             .map(|witness: ristretto::Scalar| U256::from(witness))
             .collect();
 
@@ -162,9 +163,9 @@ impl<
             .checked_mul(
                 number_of_witnesses
                     .try_into()
-                    .map_err(|_| proofs::Error::Conversion)?,
+                    .map_err(|_| proofs::Error::InternalError)?,
             )
-            .ok_or(proofs::Error::InvalidParameters)?;
+            .ok_or(proofs::Error::InternalError)?;
 
         let commitments_randomness: Vec<_> = commitment_randomnesses
             .into_iter()
@@ -204,17 +205,21 @@ impl<
             .into_iter()
             .enumerate()
             .map(|(i, party)| {
-                party
-                    .assign_position_with_rng(
-                        // TODO: make sure that the -1 here is ok, and this computation is good
-                        (usize::from(self.commitment_round_party.party_id) - 1) * NUM_RANGE_CLAIMS
-                            + i,
-                        rng,
-                    )
-                    .map_err(bulletproofs::ProofError::from)
+                usize::from(self.commitment_round_party.party_id)
+                    .checked_sub(1)
+                    .and_then(|position| position.checked_mul(NUM_RANGE_CLAIMS))
+                    .and_then(|position| position.checked_mul(batch_size))
+                    .and_then(|position| position.checked_add(i))
+                    .ok_or(proofs::Error::InternalError)
+                    .and_then(|position| {
+                        party
+                            .assign_position_with_rng(position, rng)
+                            .map_err(bulletproofs::ProofError::from)
+                            .map_err(range::Error::from)
+                            .map_err(proofs::Error::from)
+                    })
             })
-            .collect::<Result<Vec<(_, _)>, _>>()
-            .map_err(range::Error::from)?
+            .collect::<Result<Vec<(_, _)>, _>>()?
             .into_iter()
             .unzip();
 
@@ -222,7 +227,7 @@ impl<
             .commitment_round_party
             .commit_statements_and_statement_mask(rng)?;
 
-        let decommitment_and_polycommitment_round_party = decommitment_round::Party {
+        let decommitment_round_party = decommitment_round::Party {
             decommitment_round_party,
             dealer_awaiting_bit_commitments,
             parties_awaiting_bit_challenge,
@@ -233,6 +238,6 @@ impl<
             bit_commitments,
         };
 
-        Ok((message, decommitment_and_polycommitment_round_party))
+        Ok((message, decommitment_round_party))
     }
 }
