@@ -260,6 +260,12 @@ impl<
         // TODO: verify same commitments? how could it be that I call verify using the commitments
         // of the range proof? I think in aggregation this won't be possible.
 
+        // TODO: dolev wants me to add the commitments of bp to the proof, and get the statement
+        // just from the schnorr. Then this interface would work.
+
+        // Another options is that the user wouldn't get the bulletproof aggregated at all, and
+        // instead we'll give them the range proof from cggmp.
+
         self.schnorr_proof
             .verify(
                 number_of_parties,
