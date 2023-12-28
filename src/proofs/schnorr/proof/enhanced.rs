@@ -603,8 +603,10 @@ pub(crate) mod tests {
                     )
                     .err()
                     .unwrap(),
-                proofs::Error::RangeProof(range::Error::Bulletproofs(
-                    bulletproofs::ProofError::VerificationError
+                proofs::Error::Range(range::Error::Bulletproofs(
+                    range::bulletproofs::Error::Bulletproofs(
+                        bulletproofs::ProofError::VerificationError
+                    )
                 ))
             ),
             "out of range error should fail on range verification"
@@ -741,4 +743,7 @@ pub(crate) mod tests {
             "valid aggregated enhanced proofs should verify"
         );
     }
+
+    // TODO: a test that checks a valid range proof but on commitment that is different from the
+    // aggregated commitment.
 }

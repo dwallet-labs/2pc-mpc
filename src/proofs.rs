@@ -33,7 +33,7 @@ pub enum Error {
     AggregationProtocol(#[from] schnorr::aggregation::Error),
 
     #[error("range proof error")]
-    RangeProof(#[from] range::Error),
+    Range(#[from] range::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

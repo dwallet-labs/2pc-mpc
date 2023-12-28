@@ -150,6 +150,7 @@ impl<
             .dealer_awaiting_bit_commitments
             .receive_bit_commitments(bit_commitments)
             .map_err(bulletproofs::ProofError::from)
+            .map_err(range::bulletproofs::Error::from)
             .map_err(range::Error::from)?;
 
         let (parties_awaiting_poly_challenge, poly_commitments): (Vec<_>, Vec<_>) = self

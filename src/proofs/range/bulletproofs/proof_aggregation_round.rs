@@ -61,6 +61,7 @@ pub struct Party<
         >,
         ProtocolContext,
     >,
+    pub(super) aggregation_commitments: Vec<ristretto::GroupElement>,
     pub(super) dealer_awaiting_proof_shares: DealerAwaitingProofShares<'a, 'b>,
 }
 
@@ -159,6 +160,7 @@ impl<
     > {
         // TODO: handle this someway that doesn't expose this member in the party struct
         let number_of_schnorr_parties = self.proof_aggregation_round_party.number_of_parties;
+
         let (schnorr_proof_shares, mut bulletproofs_proof_shares): (Vec<(_, _)>, Vec<(_, _)>) =
             proof_shares
                 .into_iter()
@@ -183,83 +185,70 @@ impl<
             .flat_map(|(_, bulletproofs_proof_shares)| bulletproofs_proof_shares)
             .collect();
 
-        let schnorr_range_proof_commitments: Vec<_> = statements
-            .clone()
-            .into_iter()
-            .map(|statement| statement.range_proof_commitment().clone())
-            .collect();
-
+        // TODO: note that we create a `GroupElement` here without checking it is in the group.
+        // We need to make sure bulletproofs make that check for it to be safe.
         let bulletproofs_commitments: Vec<_> = self
             .dealer_awaiting_proof_shares
             .bit_commitments
             .iter()
-            .map(|vc| vc.V_j.decompress().ok_or(proofs::Error::InvalidParameters))
+            .map(|vc| {
+                vc.V_j
+                    .decompress()
+                    .map(ristretto::GroupElement)
+                    .ok_or(proofs::Error::InvalidParameters)
+            })
             .collect::<Result<Vec<_>, _>>()?;
 
-        let number_of_witnesses = schnorr_range_proof_commitments
-            .len()
-            .checked_mul(number_of_schnorr_parties.into())
-            .ok_or(proofs::Error::InternalError)?;
+        if bulletproofs_commitments != self.aggregation_commitments {
+            if bulletproofs_commitments != self.aggregation_commitments {
+                // TODO: make sure this is guranteed actually
+                return Err(proofs::Error::InternalError);
+            }
 
-        // TODO: note that we create a `GroupElement` here without checking it is in the group.
-        // We need to make sure bulletproofs make that check for it to be safe.
-        let mut bulletproofs_commitments_iter = bulletproofs_commitments
-            .into_iter()
-            .map(|point| ristretto::GroupElement(point));
+            let number_of_witnesses = statements
+                .len()
+                .checked_mul(NUM_RANGE_CLAIMS)
+                .ok_or(proofs::Error::InternalError)?;
 
-        let bulletproofs_commitments = iter::repeat_with(|| {
-            flat_map_results(array::from_fn(|_| {
-                bulletproofs_commitments_iter
-                    .next()
-                    .ok_or(proofs::Error::InternalError)
-            }))
-            .map(
-                range::CommitmentSchemeCommitmentSpaceGroupElement::<
-                    { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-                    NUM_RANGE_CLAIMS,
-                    range::bulletproofs::RangeProof,
-                >::from,
-            )
-        })
-        .take(number_of_witnesses)
-        .collect::<proofs::Result<Vec<_>>>()?;
+            let mut iter = bulletproofs_commitments
+                .into_iter()
+                .zip(self.aggregation_commitments.clone().into_iter());
 
-        // TODO: proper error handling with all the options here, proper errors.
-        let bulletproofs_commitments = (0..schnorr_range_proof_commitments.len())
-            .map(|i| {
-                (0..number_of_schnorr_parties.into())
-                    .map(|j: usize| {
-                        j.checked_mul(schnorr_range_proof_commitments.len())
-                            .and_then(|index| index.checked_add(i))
-                            .and_then(|index| bulletproofs_commitments.get(index).cloned())
-                            .ok_or(proofs::Error::InternalError)
-                    })
+            let parties_commitments = iter::repeat_with(|| {
+                iter::repeat_with(|| iter.next().ok_or(proofs::Error::InternalError))
+                    .take(number_of_schnorr_parties.into())
                     .collect::<proofs::Result<Vec<_>>>()
             })
+            .take(number_of_witnesses)
             .collect::<proofs::Result<Vec<_>>>()?;
 
-        let bulletproofs_commitments: Vec<_> = bulletproofs_commitments
-            .into_iter()
-            .map(|v| {
-                v.into_iter()
-                    .reduce(|a, b| a + b)
-                    .ok_or(proofs::Error::InternalError)
-            })
-            .collect::<proofs::Result<Vec<_>>>()?;
+            // TODO: use actual party id!!!!
+            let malicious_parties = parties_commitments
+                .into_iter()
+                .enumerate()
+                .filter(|(_, commitments)| {
+                    commitments
+                        .into_iter()
+                        .any(|(bulletproof_commitment, schnorr_commitment)| {
+                            bulletproof_commitment != schnorr_commitment
+                        })
+                })
+                .map(|(party_id, _)| party_id.try_into().unwrap())
+                .collect();
 
-        if schnorr_range_proof_commitments != bulletproofs_commitments {
-            // TODO: instead of summing, just compare individual commitments taken from the
-            // decommitment phase of the schnorr language against the aggregated commitment of the
-            // bulletproofs.
-            todo!()
+            return Err(super::Error::RangeProofSchnorrMismatch(malicious_parties))
+                .map_err(range::bulletproofs::Error::from)
+                .map_err(range::Error::from)?;
         }
 
-        let range_proof = super::RangeProof(
-            self.dealer_awaiting_proof_shares
-                .receive_shares_with_rng(&bulletproofs_proof_shares, rng)
-                .map_err(bulletproofs::ProofError::from)
-                .map_err(range::Error::from)?,
-        );
+        let proof = self
+            .dealer_awaiting_proof_shares
+            .receive_shares_with_rng(&bulletproofs_proof_shares, rng)
+            .map_err(bulletproofs::ProofError::from)
+            .map_err(range::bulletproofs::Error::from)
+            .map_err(range::Error::from)?;
+
+        let range_proof = super::RangeProof::new_aggregated(proof, self.aggregation_commitments);
 
         let proof = enhanced::Proof::<
             REPETITIONS,
@@ -274,7 +263,7 @@ impl<
             range_proof,
         };
 
-        // TODO: need to do some verifications of the enhanced proof or smth? the inidividual proofs
+        // TODO: need to do some verifications of the enhanced proof or smth? the individual proofs
         // were already verified in the aggregation itself.
 
         Ok((proof, statements))

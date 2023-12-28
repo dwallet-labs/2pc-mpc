@@ -10,6 +10,7 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    group::ristretto,
     proofs,
     proofs::{
         range,
@@ -142,7 +143,7 @@ impl<
         decommitments: HashMap<PartyID, Self::Decommitment>,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(Self::ProofShare, Self::ProofAggregationRoundParty)> {
-        let (decommitments, mut poly_commitments): (Vec<(_, _)>, Vec<(_, _)>) = decommitments
+        let (mut decommitments, mut poly_commitments): (Vec<(_, _)>, Vec<(_, _)>) = decommitments
             .into_iter()
             .map(|(party_id, message)| {
                 (
@@ -152,11 +153,9 @@ impl<
             })
             .unzip();
 
-        let decommitments: HashMap<_, _> = decommitments.into_iter().collect();
-
         let (schnorr_proof_share, proof_aggregation_round_party) = self
             .proof_share_round_party
-            .generate_proof_share(decommitments, rng)
+            .generate_proof_share(decommitments.clone().into_iter().collect(), rng)
             .unwrap();
 
         poly_commitments.sort_by_key(|(party_id, _)| *party_id);
@@ -170,6 +169,7 @@ impl<
             .dealer_awaiting_poly_commitments
             .receive_poly_commitments(poly_commitments)
             .map_err(bulletproofs::ProofError::from)
+            .map_err(range::bulletproofs::Error::from)
             .map_err(range::Error::from)?;
 
         let bulletproofs_proof_shares: Vec<_> = self
@@ -181,10 +181,25 @@ impl<
                     .map_err(bulletproofs::ProofError::from)
             })
             .collect::<Result<Vec<_>, _>>()
+            .map_err(range::bulletproofs::Error::from)
             .map_err(range::Error::from)?;
 
-        let finalization_round_party = proof_aggregation_round::Party {
+        decommitments.sort_by_key(|(party_id, _)| *party_id);
+
+        let statements = decommitments
+            .into_iter()
+            .flat_map(|(_, decommitment)| decommitment.statements);
+
+        let aggregation_commitments = statements
+            .flat_map(|statement| {
+                let (range_proof_commitment, _) = statement.into();
+                <[ristretto::GroupElement; NUM_RANGE_CLAIMS]>::from(range_proof_commitment)
+            })
+            .collect();
+
+        let proof_aggregation_round_party = proof_aggregation_round::Party {
             proof_aggregation_round_party,
+            aggregation_commitments,
             dealer_awaiting_proof_shares,
         };
 
@@ -193,6 +208,6 @@ impl<
             bulletproofs_proof_shares,
         };
 
-        Ok((message, finalization_round_party))
+        Ok((message, proof_aggregation_round_party))
     }
 }

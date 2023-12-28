@@ -183,6 +183,7 @@ impl<
             number_of_parties.into(),
         )
         .map_err(bulletproofs::ProofError::from)
+        .map_err(range::bulletproofs::Error::from)
         .map_err(range::Error::from)?;
 
         let parties: Vec<_> = witnesses
@@ -199,6 +200,7 @@ impl<
                 .map_err(bulletproofs::ProofError::from)
             })
             .collect::<Result<Vec<_>, _>>()
+            .map_err(range::bulletproofs::Error::from)
             .map_err(range::Error::from)?;
 
         let (parties_awaiting_bit_challenge, bit_commitments): (Vec<_>, Vec<_>) = parties
@@ -215,6 +217,7 @@ impl<
                         party
                             .assign_position_with_rng(position, rng)
                             .map_err(bulletproofs::ProofError::from)
+                            .map_err(range::bulletproofs::Error::from)
                             .map_err(range::Error::from)
                             .map_err(proofs::Error::from)
                     })

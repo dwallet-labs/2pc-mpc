@@ -27,7 +27,7 @@ pub enum Error {
     OutOfRange,
 
     #[error("bulletproofs error")]
-    Bulletproofs(#[from] bulletproofs::ProofError),
+    Bulletproofs(#[from] bulletproofs::Error),
 }
 
 pub trait RangeProof<

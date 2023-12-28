@@ -348,6 +348,26 @@ impl<FirstGroupPublicParameters, SecondGroupPublicParameters>
     }
 }
 
+impl<FirstValue, SecondValue> From<Value<FirstValue, SecondValue>> for (FirstValue, SecondValue) {
+    fn from(value: Value<FirstValue, SecondValue>) -> Self {
+        (value.0, value.1)
+    }
+}
+
+impl<'r, FirstValue, SecondValue> From<&'r Value<FirstValue, SecondValue>>
+    for (&'r FirstValue, &'r SecondValue)
+{
+    fn from(value: &'r Value<FirstValue, SecondValue>) -> Self {
+        (&value.0, &value.1)
+    }
+}
+
+impl<FirstValue, SecondValue> From<(FirstValue, SecondValue)> for Value<FirstValue, SecondValue> {
+    fn from(value: (FirstValue, SecondValue)) -> Self {
+        Self(value.0, value.1)
+    }
+}
+
 impl<'r, FirstGroupPublicParameters, SecondGroupPublicParameters>
     From<&'r PublicParameters<FirstGroupPublicParameters, SecondGroupPublicParameters>>
     for (
