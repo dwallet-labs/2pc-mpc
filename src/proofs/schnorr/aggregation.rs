@@ -206,12 +206,13 @@ pub(crate) mod tests {
             })
             .collect();
 
-        let res = aggregates_internal(commitment_round_parties);
+        let (proof, statements) = aggregates_internal(commitment_round_parties).unwrap();
 
         assert!(
-            res.is_ok(),
-            "valid proof aggregation sessions should yield verifiable aggregated proofs, instead got error: {:?}",
-            res.err()
+            proof
+                .verify(None, &PhantomData, &language_public_parameters, statements)
+                .is_ok(),
+            "valid aggregated proofs should verify"
         );
     }
 }

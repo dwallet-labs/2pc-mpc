@@ -522,18 +522,17 @@ pub(crate) mod tests {
         )
         .unwrap();
 
-        let res = proof.verify(
-            None,
-            &PhantomData,
-            &enhanced_language_public_parameters,
-            statements,
-            &mut OsRng,
-        );
-
         assert!(
-            res.is_ok(),
-            "valid enhanced proofs should verify, got error: {:?}",
-            res.err().unwrap()
+            proof
+                .verify(
+                    None,
+                    &PhantomData,
+                    &enhanced_language_public_parameters,
+                    statements,
+                    &mut OsRng,
+                )
+                .is_ok(),
+            "valid enhanced proofs should verify",
         );
     }
 
@@ -726,13 +725,20 @@ pub(crate) mod tests {
             })
             .collect();
 
-        // TODO: use randomizers from enhanced proof etc.
-        let res = aggregation::tests::aggregates_internal(commitment_round_parties);
+        let (proof, statements) =
+            aggregation::tests::aggregates_internal(commitment_round_parties).unwrap();
 
         assert!(
-            res.is_ok(),
-            "valid enhanced proof aggregation sessions should yield verifiable aggregated proofs, instead got error: {:?}",
-            res.err()
+            proof
+                .verify(
+                    None,
+                    &PhantomData,
+                    &enhanced_language_public_parameters,
+                    statements,
+                    &mut OsRng,
+                )
+                .is_ok(),
+            "valid aggregated enhanced proofs should verify"
         );
     }
 }
