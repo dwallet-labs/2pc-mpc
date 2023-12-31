@@ -1,8 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use core::array;
-
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::Serialize;
 
@@ -112,7 +110,7 @@ impl<
             rng,
             &self
                 .range_proof_public_parameters
-                .commitment_public_parameters()
+                .commitment_scheme_public_parameters()
                 .randomness_space_public_parameters(),
         )?;
 

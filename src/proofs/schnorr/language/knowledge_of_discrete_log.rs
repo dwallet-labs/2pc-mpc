@@ -120,6 +120,9 @@ impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
     }
 }
 
+pub type Proof<Scalar, GroupElement, ProtocolContext> =
+    schnorr::Proof<{ REPETITIONS }, Language<Scalar, GroupElement>, ProtocolContext>;
+
 #[cfg(any(test, feature = "benchmarking"))]
 mod tests {
     use rstest::rstest;

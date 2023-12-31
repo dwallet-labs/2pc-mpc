@@ -15,8 +15,7 @@ use crate::{
     proofs::{
         schnorr::{
             encryption_of_discrete_log, knowledge_of_discrete_log,
-            language::{enhanced, GroupsPublicParameters},
-            Proof,
+            language::GroupsPublicParameters, Proof,
         },
         transcript_protocol::TranscriptProtocol,
     },
@@ -31,6 +30,7 @@ pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    UnboundedEncDLWitness: group::GroupElement + Samplable,
     RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
 > {
@@ -41,6 +41,7 @@ pub struct Party<
     pub group_public_parameters: GroupElement::PublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
     pub range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
+    pub unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
 }
 
 impl Commitment {
@@ -70,6 +71,7 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        UnboundedEncDLWitness: group::GroupElement + Samplable,
         RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         ProtocolContext: Clone + Serialize,
     >
@@ -80,6 +82,7 @@ impl<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
+        UnboundedEncDLWitness,
         RangeProof,
         ProtocolContext,
     >
@@ -96,12 +99,13 @@ impl<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
+            UnboundedEncDLWitness,
             RangeProof,
             ProtocolContext,
         >,
     )> {
         let secret_key_share =
-            GroupElement::Scalar::sample(rng, &self.scalar_group_public_parameters)?;
+            GroupElement::Scalar::sample(&self.scalar_group_public_parameters, rng)?;
 
         let language_public_parameters =
             knowledge_of_discrete_log::PublicParameters::new::<GroupElement::Scalar, GroupElement>(
@@ -136,6 +140,8 @@ impl<
             scalar_group_public_parameters: self.scalar_group_public_parameters,
             encryption_scheme_public_parameters: self.encryption_scheme_public_parameters,
             range_proof_public_parameters: self.range_proof_public_parameters,
+            unbounded_encdl_witness_public_parameters: self
+                .unbounded_encdl_witness_public_parameters,
             protocol_context: self.protocol_context,
             secret_key_share,
             public_key_share,

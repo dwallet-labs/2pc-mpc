@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::marker::PhantomData;
+
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +16,15 @@ use crate::{
     group,
     group::{GroupElement as _, PrimeGroupElement, Samplable},
     proofs,
-    proofs::schnorr::{encryption_of_discrete_log, knowledge_of_discrete_log, language::enhanced},
+    proofs::{
+        range,
+        range::CommitmentPublicParametersAccessor,
+        schnorr,
+        schnorr::{
+            encryption_of_discrete_log, enhanced::EnhancedPublicParameters,
+            knowledge_of_discrete_log, language,
+        },
+    },
     AdditivelyHomomorphicEncryptionKey, ComputationalSecuritySizedNumber,
 };
 
@@ -48,6 +58,7 @@ pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    UnboundedEncDLWitness: group::GroupElement + Samplable,
     RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
 > {
@@ -55,6 +66,7 @@ pub struct Party<
     pub(super) scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub(super) encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
     pub(super) range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
+    pub(super) unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
     // TODO: should we get this like that? is it the same for both the centralized & decentralized
     // party (and all their parties?)
     pub(super) protocol_context: ProtocolContext,
@@ -72,7 +84,7 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
+        UnboundedEncDLWitness: group::GroupElement + Samplable,
         RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         ProtocolContext: Clone + Serialize,
     >
@@ -83,6 +95,7 @@ impl<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
+        UnboundedEncDLWitness,
         RangeProof,
         ProtocolContext,
     >
@@ -125,7 +138,7 @@ impl<
             decentralized_party_secret_key_share_encryption_and_proof.range_proof_commitment,
             &self
                 .range_proof_public_parameters
-                .commitment_public_parameters()
+                .commitment_scheme_public_parameters()
                 .commitment_space_public_parameters(),
         )?;
 
@@ -153,11 +166,26 @@ impl<
         )
             .into();
 
+        let encryption_of_discrete_log_language_public_parameters = language::PublicParameters::<
+            { encryption_of_discrete_log::REPETITIONS },
+            encryption_of_discrete_log::Language<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+        >::new(
+            self.scalar_group_public_parameters.clone(),
+            self.group_public_parameters.clone(),
+            self.encryption_scheme_public_parameters,
+        );
+
         let encryption_of_discrete_log_language_public_parameters = EnhancedPublicParameters::<
             { encryption_of_discrete_log::REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            UnboundedWitnessSpaceGroupElement,
+            RangeProof,
+            UnboundedEncDLWitness,
             encryption_of_discrete_log::Language<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 SCALAR_LIMBS,
@@ -165,18 +193,18 @@ impl<
                 EncryptionKey,
             >,
         >::new::<
-            SCALAR_LIMBS,
-            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            GroupElement::Scalar,
-            GroupElement,
-            EncryptionKey,
             RangeProof,
+            UnboundedEncDLWitness,
+            encryption_of_discrete_log::Language<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
         >(
-            self.scalar_group_public_parameters,
-            self.group_public_parameters,
+            self.unbounded_encdl_witness_public_parameters,
             self.range_proof_public_parameters.clone(),
-            self.encryption_scheme_public_parameters,
+            encryption_of_discrete_log_language_public_parameters,
         );
 
         decentralized_party_secret_key_share_encryption_and_proof

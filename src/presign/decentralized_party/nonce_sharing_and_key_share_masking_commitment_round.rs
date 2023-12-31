@@ -182,7 +182,7 @@ where
             rng,
             &self
                 .range_proof_public_parameters
-                .commitment_public_parameters()
+                .commitment_scheme_public_parameters()
                 .randomness_space_public_parameters(),
             batch_size,
         )?;
@@ -290,7 +290,7 @@ where
             rng,
             &self
                 .range_proof_public_parameters
-                .commitment_public_parameters()
+                .commitment_scheme_public_parameters()
                 .randomness_space_public_parameters(),
             batch_size,
         )?;
