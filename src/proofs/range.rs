@@ -11,13 +11,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     commitments,
-    commitments::HomomorphicCommitmentScheme,
+    commitments::{GroupsPublicParametersAccessors, HomomorphicCommitmentScheme},
     group,
     group::{self_product, NumbersGroupElement, Samplable},
     proofs::{
         schnorr::{
-            aggregation::CommitmentRoundParty,
-            enhanced,
+            aggregation, enhanced,
             enhanced::{EnhanceableLanguage, EnhancedPublicParameters},
         },
         Result,
@@ -70,7 +69,8 @@ pub trait RangeProof<
     + PartialEq;
 
     /// The commitment round party of enhanced Schnorr proof aggregation protocol using this range proof.
-    type AggregationCommitmentRoundParty<const REPETITIONS: usize,
+    type AggregationCommitmentRoundParty<
+        const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
         UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
         Language: EnhanceableLanguage<
@@ -79,7 +79,7 @@ pub trait RangeProof<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedWitnessSpaceGroupElement,
         >,
-        ProtocolContext: Clone + Serialize>: CommitmentRoundParty<AggregationOutput<REPETITIONS, NUM_RANGE_CLAIMS, COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, UnboundedWitnessSpaceGroupElement, Self, Language, ProtocolContext>>;
+        ProtocolContext: Clone + Serialize>: aggregation::CommitmentRoundParty<AggregationOutput<REPETITIONS, NUM_RANGE_CLAIMS, COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, UnboundedWitnessSpaceGroupElement, Self, Language, ProtocolContext>>;
 
     /// Proves in zero-knowledge that all witnesses committed in `commitment` are bounded by their corresponding
     /// range upper bound in range_claims.
@@ -172,16 +172,276 @@ pub type AggregationOutput<
     >,
 );
 
-pub trait CommitmentPublicParametersAccessor<CommitmentPublicParameters>:
-    AsRef<CommitmentPublicParameters>
+pub type CommitmentRoundParty<
+    const REPETITIONS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    UnboundedWitnessSpaceGroupElement: Samplable,
+    Proof: RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    Language: EnhanceableLanguage<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+    >,
+    ProtocolContext: Clone + Serialize,
+> = Proof::AggregationCommitmentRoundParty<
+    REPETITIONS,
+    NUM_RANGE_CLAIMS,
+    UnboundedWitnessSpaceGroupElement,
+    Language,
+    ProtocolContext,
+>;
+
+pub type Commitment<
+    const REPETITIONS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    UnboundedWitnessSpaceGroupElement: Samplable,
+    Proof: RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    Language: EnhanceableLanguage<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+    >,
+    ProtocolContext: Clone + Serialize,
+> = <CommitmentRoundParty<
+    REPETITIONS,
+    NUM_RANGE_CLAIMS,
+    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+    UnboundedWitnessSpaceGroupElement,
+    Proof,
+    Language,
+    ProtocolContext,
+> as aggregation::CommitmentRoundParty<
+    AggregationOutput<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+        Proof,
+        Language,
+        ProtocolContext,
+    >,
+>>::Commitment;
+
+pub type DecommitmentRoundParty<
+    const REPETITIONS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    UnboundedWitnessSpaceGroupElement: Samplable,
+    Proof: RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    Language: EnhanceableLanguage<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+    >,
+    ProtocolContext: Clone + Serialize,
+> = <Proof::AggregationCommitmentRoundParty<
+    REPETITIONS,
+    NUM_RANGE_CLAIMS,
+    UnboundedWitnessSpaceGroupElement,
+    Language,
+    ProtocolContext,
+> as aggregation::CommitmentRoundParty<
+    AggregationOutput<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+        Proof,
+        Language,
+        ProtocolContext,
+    >,
+>>::DecommitmentRoundParty;
+
+pub type Decommitment<
+    const REPETITIONS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    UnboundedWitnessSpaceGroupElement: Samplable,
+    Proof: RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    Language: EnhanceableLanguage<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+    >,
+    ProtocolContext: Clone + Serialize,
+> = <DecommitmentRoundParty<
+    REPETITIONS,
+    NUM_RANGE_CLAIMS,
+    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+    UnboundedWitnessSpaceGroupElement,
+    Proof,
+    Language,
+    ProtocolContext,
+> as aggregation::DecommitmentRoundParty<
+    AggregationOutput<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+        Proof,
+        Language,
+        ProtocolContext,
+    >,
+>>::Decommitment;
+
+pub type ProofShareRoundParty<
+    const REPETITIONS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    UnboundedWitnessSpaceGroupElement: Samplable,
+    Proof: RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    Language: EnhanceableLanguage<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+    >,
+    ProtocolContext: Clone + Serialize,
+> = <DecommitmentRoundParty<
+    REPETITIONS,
+    NUM_RANGE_CLAIMS,
+    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+    UnboundedWitnessSpaceGroupElement,
+    Proof,
+    Language,
+    ProtocolContext,
+> as aggregation::DecommitmentRoundParty<
+    AggregationOutput<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+        Proof,
+        Language,
+        ProtocolContext,
+    >,
+>>::ProofShareRoundParty;
+
+pub type ProofShare<
+    const REPETITIONS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    UnboundedWitnessSpaceGroupElement: Samplable,
+    Proof: RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    Language: EnhanceableLanguage<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+    >,
+    ProtocolContext: Clone + Serialize,
+> = <ProofShareRoundParty<
+    REPETITIONS,
+    NUM_RANGE_CLAIMS,
+    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+    UnboundedWitnessSpaceGroupElement,
+    Proof,
+    Language,
+    ProtocolContext,
+> as aggregation::ProofShareRoundParty<
+    AggregationOutput<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+        Proof,
+        Language,
+        ProtocolContext,
+    >,
+>>::ProofShare;
+
+pub type ProofAggregationRoundParty<
+    const REPETITIONS: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    UnboundedWitnessSpaceGroupElement: Samplable,
+    Proof: RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    Language: EnhanceableLanguage<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+    >,
+    ProtocolContext: Clone + Serialize,
+> = <ProofShareRoundParty<
+    REPETITIONS,
+    NUM_RANGE_CLAIMS,
+    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+    UnboundedWitnessSpaceGroupElement,
+    Proof,
+    Language,
+    ProtocolContext,
+> as aggregation::ProofShareRoundParty<
+    AggregationOutput<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedWitnessSpaceGroupElement,
+        Proof,
+        Language,
+        ProtocolContext,
+    >,
+>>::ProofAggregationRoundParty;
+
+pub trait PublicParametersAccessors<
+    'a,
+    const NUM_RANGE_CLAIMS: usize,
+    RangeClaimPublicParameters: 'a,
+    RandomnessSpacePublicParameters: 'a,
+    CommitmentSpacePublicParameters: 'a,
+    CommitmentSchemePublicParameters: 'a,
+>: AsRef<CommitmentSchemePublicParameters> where
+    CommitmentSchemePublicParameters: AsRef<
+        commitments::GroupsPublicParameters<
+            self_product::PublicParameters<NUM_RANGE_CLAIMS, RangeClaimPublicParameters>,
+            RandomnessSpacePublicParameters,
+            CommitmentSpacePublicParameters,
+        >,
+    >,
 {
-    fn commitment_scheme_public_parameters(&self) -> &CommitmentPublicParameters {
+    fn commitment_scheme_public_parameters(&'a self) -> &'a CommitmentSchemePublicParameters {
         self.as_ref()
+    }
+
+    fn range_claim_public_parameters(&'a self) -> &'a RangeClaimPublicParameters {
+        &self
+            .commitment_scheme_public_parameters()
+            .message_space_public_parameters()
+            .public_parameters
     }
 }
 
-impl<CommitmentPublicParameters, T: AsRef<CommitmentPublicParameters>>
-    CommitmentPublicParametersAccessor<CommitmentPublicParameters> for T
+impl<
+        'a,
+        const NUM_RANGE_CLAIMS: usize,
+        RangeClaimPublicParameters: 'a,
+        RandomnessSpacePublicParameters: 'a,
+        CommitmentSpacePublicParameters: 'a,
+        CommitmentSchemePublicParameters: 'a,
+        T: AsRef<CommitmentSchemePublicParameters>,
+    >
+    PublicParametersAccessors<
+        'a,
+        NUM_RANGE_CLAIMS,
+        RangeClaimPublicParameters,
+        RandomnessSpacePublicParameters,
+        CommitmentSpacePublicParameters,
+        CommitmentSchemePublicParameters,
+    > for T
+where
+    CommitmentSchemePublicParameters: AsRef<
+        commitments::GroupsPublicParameters<
+            self_product::PublicParameters<NUM_RANGE_CLAIMS, RangeClaimPublicParameters>,
+            RandomnessSpacePublicParameters,
+            CommitmentSpacePublicParameters,
+        >,
+    >,
 {
 }
 

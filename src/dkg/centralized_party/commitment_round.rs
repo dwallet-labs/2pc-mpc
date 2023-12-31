@@ -139,7 +139,7 @@ where
 
         let public_key_share: GroupElement = public_key_share
             .first()
-            .ok_or(crate::Error::APIMismatch)?
+            .ok_or(crate::Error::InternalError)?
             .clone();
 
         let commitment_randomness = ComputationalSecuritySizedNumber::random(rng);

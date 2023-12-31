@@ -11,9 +11,9 @@ use crate::{
     group,
     group::{PrimeGroupElement, Samplable},
     proofs,
-    proofs::schnorr::{
-        aggregation::decommitment_round::Decommitment, encryption_of_discrete_log,
-        language::enhanced,
+    proofs::{
+        range,
+        schnorr::{encryption_of_discrete_log, enhanced::EnhanceableLanguage},
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
 };
@@ -29,7 +29,19 @@ pub struct Party<
     UnboundedEncDLWitness: group::GroupElement + Samplable,
     RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
-> {
+> where
+    encryption_of_discrete_log::Language<
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        GroupElement,
+        EncryptionKey,
+    >: EnhanceableLanguage<
+        { encryption_of_discrete_log::REPETITIONS },
+        RANGE_CLAIMS_PER_SCALAR,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedEncDLWitness,
+    >,
+{
     pub(super) party_id: PartyID,
     pub(super) threshold: PartyID,
     pub(super) number_of_parties: PartyID,
@@ -40,18 +52,20 @@ pub struct Party<
     pub(super) unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
     pub(super) range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
     pub(super) commitment_to_centralized_party_secret_key_share: Commitment,
-    pub(super) encryption_of_secret_share_decommitment_round_party:
-        encryption_of_discrete_log::ProofAggregationDecommitmentRoundParty<
-            SCALAR_LIMBS,
-            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
+    pub(super) encryption_of_secret_share_decommitment_round_party: range::DecommitmentRoundParty<
+        { encryption_of_discrete_log::REPETITIONS },
+        RANGE_CLAIMS_PER_SCALAR,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedEncDLWitness,
+        RangeProof,
+        encryption_of_discrete_log::Language<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
-            GroupElement::Scalar,
+            SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
-            RangeProof,
-            ProtocolContext,
         >,
+        ProtocolContext,
+    >,
     pub(super) share_of_decentralized_party_secret_key_share: GroupElement::Scalar,
 }
 
@@ -92,17 +106,37 @@ where
 {
     pub fn decommit_share_of_decentralize_party_public_key_share(
         self,
-        commitments: HashMap<PartyID, Commitment>,
+        commitments: HashMap<
+            PartyID,
+            range::Commitment<
+                { encryption_of_discrete_log::REPETITIONS },
+                RANGE_CLAIMS_PER_SCALAR,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                UnboundedEncDLWitness,
+                RangeProof,
+                encryption_of_discrete_log::Language<
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    SCALAR_LIMBS,
+                    GroupElement,
+                    EncryptionKey,
+                >,
+                ProtocolContext,
+            >,
+        >,
     ) -> crate::Result<(
-        encryption_of_discrete_log::Decommitment<
-            SCALAR_LIMBS,
-            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        range::Decommitment<
+            { encryption_of_discrete_log::REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            GroupElement::Scalar,
-            GroupElement,
-            EncryptionKey,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            UnboundedEncDLWitness,
             RangeProof,
+            encryption_of_discrete_log::Language<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+            ProtocolContext,
         >,
         proof_share_round::Party<
             SCALAR_LIMBS,
@@ -111,6 +145,7 @@ where
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
+            UnboundedEncDLWitness,
             RangeProof,
             ProtocolContext,
         >,

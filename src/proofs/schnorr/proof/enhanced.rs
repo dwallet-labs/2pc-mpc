@@ -18,8 +18,8 @@ use crate::{
     proofs::{
         range,
         range::{
-            CommitmentPublicParametersAccessor, CommitmentSchemeMessageSpaceGroupElement,
-            CommitmentSchemeRandomnessSpaceGroupElement,
+            CommitmentSchemeMessageSpaceGroupElement, CommitmentSchemeRandomnessSpaceGroupElement,
+            PublicParametersAccessors,
         },
         schnorr::{
             enhanced,
@@ -465,9 +465,7 @@ pub(crate) mod tests {
             range::{bulletproofs::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RangeProof},
             schnorr::{
                 aggregation, enhanced, language,
-                language::enhanced::tests::{
-                    enhanced_language_public_parameters, generate_witnesses,
-                },
+                language::enhanced::tests::enhanced_language_public_parameters,
             },
         },
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
@@ -499,12 +497,17 @@ pub(crate) mod tests {
             language_public_parameters,
         );
 
-        let witnesses = generate_witnesses::<
+        let witnesses = EnhancedLanguage::<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
+            { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+            range::bulletproofs::RangeProof,
             UnboundedWitnessSpaceGroupElement,
             Lang,
-        >(witnesses, &enhanced_language_public_parameters);
+        >::generate_witnesses(
+            witnesses, &enhanced_language_public_parameters, &mut OsRng
+        )
+        .unwrap();
 
         let (proof, statements) = enhanced::Proof::<
             REPETITIONS,
@@ -642,12 +645,17 @@ pub(crate) mod tests {
         let witnesses: Vec<_> = witnesses
             .into_iter()
             .map(|witnesses| {
-                generate_witnesses::<
+                EnhancedLanguage::<
                     REPETITIONS,
                     NUM_RANGE_CLAIMS,
+                    { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+                    range::bulletproofs::RangeProof,
                     UnboundedWitnessSpaceGroupElement,
                     Lang,
-                >(witnesses, &enhanced_language_public_parameters)
+                >::generate_witnesses(
+                    witnesses, &enhanced_language_public_parameters, &mut OsRng
+                )
+                .unwrap()
             })
             .collect();
 
@@ -668,7 +676,7 @@ pub(crate) mod tests {
                 (
                     party_id,
                     <range::bulletproofs::RangeProof as range::RangeProof<
-                        { range::bulletproofs::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+                        { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
                     >>::new_enhanced_session::<
                         REPETITIONS,
                         NUM_RANGE_CLAIMS,

@@ -57,8 +57,8 @@ pub enum Error {
     #[error("invalid parameters")]
     InvalidParameters,
 
-    #[error("API mismatch")]
-    APIMismatch,
+    #[error("an internal error that should never have happened and signifies a bug")]
+    InternalError,
 
     #[error("group error")]
     Group(#[from] group::Error),

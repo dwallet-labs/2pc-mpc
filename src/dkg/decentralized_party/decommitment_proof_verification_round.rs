@@ -8,6 +8,7 @@ use crate::{
     dkg::centralized_party,
     group,
     group::PrimeGroupElement,
+    proofs,
     proofs::schnorr::{knowledge_of_discrete_log, language::GroupsPublicParameters},
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
 };
@@ -33,7 +34,6 @@ pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
 > {
     pub(super) party_id: PartyID,
@@ -55,7 +55,6 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         ProtocolContext: Clone + Serialize,
     >
     Party<

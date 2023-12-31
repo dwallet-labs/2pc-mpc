@@ -25,12 +25,12 @@ use crate::{
     proofs::{
         range,
         range::{
-            CommitmentPublicParametersAccessor, CommitmentScheme,
-            CommitmentSchemeCommitmentSpaceGroupElement,
+            CommitmentScheme, CommitmentSchemeCommitmentSpaceGroupElement,
             CommitmentSchemeCommitmentSpacePublicParameters,
             CommitmentSchemeMessageSpaceGroupElement, CommitmentSchemeMessageSpacePublicParameters,
             CommitmentSchemePublicParameters, CommitmentSchemeRandomnessSpaceGroupElement,
-            CommitmentSchemeRandomnessSpacePublicParameters,
+            CommitmentSchemeRandomnessSpacePublicParameters, PublicParametersAccessors,
+            RangeClaimGroupElement,
         },
         schnorr,
         schnorr::{
@@ -134,11 +134,7 @@ impl<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        CommitmentSchemeMessageSpacePublicParameters<
-            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            NUM_RANGE_CLAIMS,
-            RangeProof,
-        >,
+        group::PublicParameters<RangeProof::RangeClaimGroupElement>,
         CommitmentSchemeRandomnessSpacePublicParameters<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
@@ -280,6 +276,133 @@ impl<
 {
 }
 
+impl<
+        const REPETITIONS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        RangeProof: range::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
+        Language: EnhanceableLanguage<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            UnboundedWitnessSpaceGroupElement,
+        >,
+    >
+    EnhancedLanguage<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RangeProof,
+        UnboundedWitnessSpaceGroupElement,
+        Language,
+    >
+{
+    pub fn generate_witness(
+        witness: Language::WitnessSpaceGroupElement,
+        enhanced_language_public_parameters: &language::PublicParameters<
+            REPETITIONS,
+            EnhancedLanguage<
+                REPETITIONS,
+                NUM_RANGE_CLAIMS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RangeProof,
+                UnboundedWitnessSpaceGroupElement,
+                Language,
+            >,
+        >,
+        rng: &mut impl CryptoRngCore,
+    ) -> proofs::Result<
+        language::WitnessSpaceGroupElement<
+            REPETITIONS,
+            EnhancedLanguage<
+                REPETITIONS,
+                NUM_RANGE_CLAIMS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RangeProof,
+                UnboundedWitnessSpaceGroupElement,
+                Language,
+            >,
+        >,
+    > {
+        let (decomposed_witness, unbounded_element) = Language::decompose_witness(
+            &witness,
+            &enhanced_language_public_parameters.language_public_parameters,
+            RangeProof::RANGE_CLAIM_BITS,
+        )?;
+
+        let range_proof_commitment_message = flat_map_results(
+            decomposed_witness
+                .map(group::Value::<RangeProof::RangeClaimGroupElement>::from)
+                .map(|value| {
+                    RangeProof::RangeClaimGroupElement::new(
+                        value,
+                        enhanced_language_public_parameters
+                            .range_proof_public_parameters
+                            .range_claim_public_parameters(),
+                    )
+                }),
+        )?
+        .into();
+
+        let commitment_randomness = CommitmentSchemeRandomnessSpaceGroupElement::<
+            { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >::sample(
+            enhanced_language_public_parameters
+                .range_proof_public_parameters
+                .commitment_scheme_public_parameters()
+                .randomness_space_public_parameters(),
+            rng,
+        )?;
+
+        Ok((
+            range_proof_commitment_message,
+            commitment_randomness,
+            unbounded_element,
+        )
+            .into())
+    }
+
+    pub fn generate_witnesses(
+        witnesses: Vec<Language::WitnessSpaceGroupElement>,
+        enhanced_language_public_parameters: &language::PublicParameters<
+            REPETITIONS,
+            EnhancedLanguage<
+                REPETITIONS,
+                NUM_RANGE_CLAIMS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RangeProof,
+                UnboundedWitnessSpaceGroupElement,
+                Language,
+            >,
+        >,
+        rng: &mut impl CryptoRngCore,
+    ) -> proofs::Result<
+        Vec<
+            language::WitnessSpaceGroupElement<
+                REPETITIONS,
+                EnhancedLanguage<
+                    REPETITIONS,
+                    NUM_RANGE_CLAIMS,
+                    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                    RangeProof,
+                    UnboundedWitnessSpaceGroupElement,
+                    Language,
+                >,
+            >,
+        >,
+    > {
+        witnesses
+            .into_iter()
+            .map(|witness| {
+                Self::generate_witness(witness, enhanced_language_public_parameters, rng)
+            })
+            .collect::<proofs::Result<Vec<_>>>()
+    }
+}
+
 // TODO: accessors
 
 #[derive(Debug, PartialEq, Serialize, Clone)]
@@ -287,7 +410,7 @@ pub struct PublicParameters<
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-    MessageSpacePublicParameters,
+    RangeClaimPublicParameters,
     RandomnessSpacePublicParameters,
     CommitmentSpacePublicParameters,
     RangeProofPublicParameters,
@@ -297,7 +420,7 @@ pub struct PublicParameters<
 > {
     pub groups_public_parameters: GroupsPublicParameters<
         direct_product::ThreeWayPublicParameters<
-            MessageSpacePublicParameters,
+            self_product::PublicParameters<NUM_RANGE_CLAIMS, RangeClaimPublicParameters>,
             RandomnessSpacePublicParameters,
             UnboundedWitnessSpacePublicParameters,
         >,
@@ -314,7 +437,7 @@ impl<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
         const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        MessageSpacePublicParameters: Clone,
+        RangeClaimPublicParameters: Clone,
         RandomnessSpacePublicParameters: Clone,
         CommitmentSpacePublicParameters: Clone,
         RangeProofPublicParameters,
@@ -326,7 +449,7 @@ impl<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        MessageSpacePublicParameters,
+        RangeClaimPublicParameters,
         RandomnessSpacePublicParameters,
         CommitmentSpacePublicParameters,
         RangeProofPublicParameters,
@@ -345,11 +468,6 @@ impl<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             PublicParameters<NUM_RANGE_CLAIMS> = RangeProofPublicParameters,
         >,
-        CommitmentSchemeMessageSpaceGroupElement<
-            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            NUM_RANGE_CLAIMS,
-            RangeProof,
-        >: group::GroupElement<PublicParameters = MessageSpacePublicParameters>,
         CommitmentSchemeRandomnessSpaceGroupElement<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
@@ -360,13 +478,15 @@ impl<
             NUM_RANGE_CLAIMS,
             RangeProof,
         >: group::GroupElement<PublicParameters = CommitmentSpacePublicParameters>,
+        RangeProof::RangeClaimGroupElement:
+            group::GroupElement<PublicParameters = RangeClaimPublicParameters>,
         CommitmentSchemePublicParameters<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RangeProof,
         >: AsRef<
             commitments::GroupsPublicParameters<
-                MessageSpacePublicParameters,
+                self_product::PublicParameters<NUM_RANGE_CLAIMS, RangeClaimPublicParameters>,
                 RandomnessSpacePublicParameters,
                 CommitmentSpacePublicParameters,
             >,
@@ -432,7 +552,7 @@ impl<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
         const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-        MessageSpacePublicParameters,
+        RangeClaimPublicParameters,
         RandomnessSpacePublicParameters,
         CommitmentSpacePublicParameters,
         CommitmentSchemePublicParameters,
@@ -443,7 +563,7 @@ impl<
     AsRef<
         GroupsPublicParameters<
             direct_product::ThreeWayPublicParameters<
-                MessageSpacePublicParameters,
+                self_product::PublicParameters<NUM_RANGE_CLAIMS, RangeClaimPublicParameters>,
                 RandomnessSpacePublicParameters,
                 UnboundedWitnessSpacePublicParameters,
             >,
@@ -457,7 +577,7 @@ impl<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        MessageSpacePublicParameters,
+        RangeClaimPublicParameters,
         RandomnessSpacePublicParameters,
         CommitmentSpacePublicParameters,
         CommitmentSchemePublicParameters,
@@ -470,7 +590,7 @@ impl<
         &self,
     ) -> &GroupsPublicParameters<
         direct_product::ThreeWayPublicParameters<
-            MessageSpacePublicParameters,
+            self_product::PublicParameters<NUM_RANGE_CLAIMS, RangeClaimPublicParameters>,
             RandomnessSpacePublicParameters,
             UnboundedWitnessSpacePublicParameters,
         >,
@@ -698,69 +818,5 @@ pub(crate) mod tests {
             range::bulletproofs::PublicParameters::default(),
             language_public_parameters,
         )
-    }
-
-    pub(crate) fn generate_witnesses<
-        const REPETITIONS: usize,
-        const NUM_RANGE_CLAIMS: usize,
-        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
-        Lang: EnhanceableLanguage<
-            REPETITIONS,
-            NUM_RANGE_CLAIMS,
-            { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-            UnboundedWitnessSpaceGroupElement,
-        >,
-    >(
-        witnesses: Vec<Lang::WitnessSpaceGroupElement>,
-        enhanced_language_public_parameters: &language::PublicParameters<
-            REPETITIONS,
-            EnhancedLang<REPETITIONS, NUM_RANGE_CLAIMS, UnboundedWitnessSpaceGroupElement, Lang>,
-        >,
-    ) -> Vec<
-        language::WitnessSpaceGroupElement<
-            REPETITIONS,
-            EnhancedLang<REPETITIONS, NUM_RANGE_CLAIMS, UnboundedWitnessSpaceGroupElement, Lang>,
-        >,
-    > {
-        witnesses
-            .into_iter()
-            .map(|witness| {
-                let (decomposed_witness, unbounded_element) = Lang::decompose_witness(
-                    &witness,
-                    &enhanced_language_public_parameters.language_public_parameters,
-                    range::bulletproofs::RANGE_CLAIM_BITS,
-                )
-                .unwrap();
-
-                let range_proof_commitment_message = decomposed_witness
-                    .map(
-                        RangeClaimGroupElement::<
-                            { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-                            range::bulletproofs::RangeProof,
-                        >::from,
-                    )
-                    .into();
-
-                let commitment_randomness = CommitmentSchemeRandomnessSpaceGroupElement::<
-                    { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-                    NUM_RANGE_CLAIMS,
-                    range::bulletproofs::RangeProof,
-                >::sample(
-                    enhanced_language_public_parameters
-                        .range_proof_public_parameters
-                        .commitment_scheme_public_parameters()
-                        .randomness_space_public_parameters(),
-                    &mut OsRng,
-                )
-                .unwrap();
-
-                (
-                    range_proof_commitment_message,
-                    commitment_randomness,
-                    unbounded_element,
-                )
-                    .into()
-            })
-            .collect()
     }
 }

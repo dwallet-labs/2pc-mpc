@@ -12,10 +12,12 @@ use crate::{
     group,
     group::{GroupElement as _, PrimeGroupElement, Samplable},
     proofs,
-    proofs::schnorr::{
-        aggregation::decommitment_round::Decommitment,
-        encryption_of_discrete_log, language,
-        language::{enhanced, enhanced::EnhancedLanguageStatementAccessors as _},
+    proofs::{
+        range,
+        schnorr::{
+            aggregation::decommitment_round::Decommitment, encryption_of_discrete_log,
+            enhanced::EnhanceableLanguage, language,
+        },
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
 };
@@ -44,7 +46,19 @@ pub struct Party<
     UnboundedEncDLWitness: group::GroupElement + Samplable,
     RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
-> {
+> where
+    encryption_of_discrete_log::Language<
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        GroupElement,
+        EncryptionKey,
+    >: EnhanceableLanguage<
+        { encryption_of_discrete_log::REPETITIONS },
+        RANGE_CLAIMS_PER_SCALAR,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedEncDLWitness,
+    >,
+{
     pub(super) party_id: PartyID,
     pub(super) threshold: PartyID,
     pub(super) number_of_parties: PartyID,
@@ -56,15 +70,18 @@ pub struct Party<
     pub(super) range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
     pub(super) commitment_to_centralized_party_secret_key_share: Commitment,
     pub(super) encryption_of_secret_share_proof_aggregation_round_party:
-        encryption_of_discrete_log::ProofAggregationProofAggregationRoundParty<
-            SCALAR_LIMBS,
-            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        range::ProofAggregationRoundParty<
+            { encryption_of_discrete_log::REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            GroupElement::Scalar,
-            GroupElement,
-            EncryptionKey,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            UnboundedEncDLWitness,
             RangeProof,
+            encryption_of_discrete_log::Language<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
             ProtocolContext,
         >,
     pub(super) share_of_decentralized_party_secret_key_share: GroupElement::Scalar,
@@ -109,15 +126,19 @@ where
         self,
         proof_shares: HashMap<
             PartyID,
-            encryption_of_discrete_log::ProofShare<
-                SCALAR_LIMBS,
-                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            range::ProofShare<
+                { encryption_of_discrete_log::REPETITIONS },
                 RANGE_CLAIMS_PER_SCALAR,
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-                GroupElement::Scalar,
-                GroupElement,
-                EncryptionKey,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                UnboundedEncDLWitness,
                 RangeProof,
+                encryption_of_discrete_log::Language<
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    SCALAR_LIMBS,
+                    GroupElement,
+                    EncryptionKey,
+                >,
+                ProtocolContext,
             >,
         >,
     ) -> crate::Result<(
@@ -130,13 +151,13 @@ where
             GroupElement::Value,
             group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
             encryption_of_discrete_log::EnhancedProof<
-                SCALAR_LIMBS,
-                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RANGE_CLAIMS_PER_SCALAR,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
-                GroupElement::Scalar,
+                SCALAR_LIMBS,
                 GroupElement,
                 EncryptionKey,
+                UnboundedEncDLWitness,
                 RangeProof,
                 ProtocolContext,
             >,

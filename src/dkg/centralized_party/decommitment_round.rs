@@ -14,14 +14,14 @@ use crate::{
         decentralized_party::proof_aggregation_round::SecretKeyShareEncryptionAndProof,
     },
     group,
-    group::{GroupElement as _, PrimeGroupElement, Samplable},
+    group::{direct_product, GroupElement as _, PrimeGroupElement, Samplable},
     proofs,
     proofs::{
         range,
         range::CommitmentPublicParametersAccessor,
         schnorr,
         schnorr::{
-            encryption_of_discrete_log,
+            encryption_of_discrete_log, enhanced,
             enhanced::{EnhanceableLanguage, EnhancedPublicParameters},
             knowledge_of_discrete_log, language,
         },
@@ -124,13 +124,13 @@ where
             GroupElement::Value,
             group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
             encryption_of_discrete_log::EnhancedProof<
-                SCALAR_LIMBS,
-                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RANGE_CLAIMS_PER_SCALAR,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
-                GroupElement::Scalar,
+                SCALAR_LIMBS,
                 GroupElement,
                 EncryptionKey,
+                UnboundedEncDLWitness,
                 RangeProof,
                 ProtocolContext,
             >,
@@ -192,19 +192,7 @@ where
             );
 
         let encryption_of_discrete_log_enhanced_language_public_parameters =
-            EnhancedPublicParameters::<
-                { encryption_of_discrete_log::REPETITIONS },
-                RANGE_CLAIMS_PER_SCALAR,
-                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                RangeProof,
-                UnboundedEncDLWitness,
-                encryption_of_discrete_log::Language<
-                    PLAINTEXT_SPACE_SCALAR_LIMBS,
-                    SCALAR_LIMBS,
-                    GroupElement,
-                    EncryptionKey,
-                >,
-            >::new::<
+            enhanced::PublicParameters::new::<
                 RangeProof,
                 UnboundedEncDLWitness,
                 encryption_of_discrete_log::Language<
@@ -227,9 +215,8 @@ where
                 None,
                 &self.protocol_context,
                 &encryption_of_discrete_log_enhanced_language_public_parameters,
-                // &self.range_proof_public_parameters,
                 vec![statement],
-                // rng,
+                rng,
             )?;
 
         let public_key_share_decommitment_proof = PublicKeyShareDecommitmentAndProof::<
