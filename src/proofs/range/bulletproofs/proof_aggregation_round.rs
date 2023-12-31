@@ -222,7 +222,7 @@ impl<
             .take(number_of_witnesses)
             .collect::<proofs::Result<Vec<_>>>()?;
 
-            // TODO: use actual party id!!!!
+            // TODO: use actual party id!!!! This should be for the whole of bulletproofs
             let malicious_parties = parties_commitments
                 .into_iter()
                 .enumerate()
@@ -233,7 +233,7 @@ impl<
                             bulletproof_commitment != schnorr_commitment
                         })
                 })
-                .map(|(party_id, _)| party_id.try_into().unwrap())
+                .map(|(party_id, _)| party_id.try_into().unwrap()) // TODO: no unwrap when using actual pid
                 .collect();
 
             return Err(super::Error::RangeProofSchnorrMismatch(malicious_parties))
