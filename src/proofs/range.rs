@@ -15,9 +15,14 @@ use crate::{
     group,
     group::{self_product, NumbersGroupElement, Samplable},
     proofs::{
-        schnorr::{aggregation::CommitmentRoundParty, enhanced, enhanced::EnhanceableLanguage},
+        schnorr::{
+            aggregation::CommitmentRoundParty,
+            enhanced,
+            enhanced::{EnhanceableLanguage, EnhancedPublicParameters},
+        },
         Result,
     },
+    PartyID,
 };
 
 pub mod lightningproofs;
@@ -64,17 +69,17 @@ pub trait RangeProof<
     + Clone
     + PartialEq;
 
-    // /// The commitment round party of enhanced Schnorr proof aggregation protocol using this range proof.
-    // type AggregationCommitmentRoundParty<const REPETITIONS: usize,
-    //     const NUM_RANGE_CLAIMS: usize,
-    //     UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
-    //     Language: EnhanceableLanguage<
-    //         REPETITIONS,
-    //         NUM_RANGE_CLAIMS,
-    //         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-    //         UnboundedWitnessSpaceGroupElement,
-    //     >,
-    //     ProtocolContext: Clone + Serialize>: CommitmentRoundParty<AggregationOutput<REPETITIONS, NUM_RANGE_CLAIMS, COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, UnboundedWitnessSpaceGroupElement, Self, Language, ProtocolContext>>;
+    /// The commitment round party of enhanced Schnorr proof aggregation protocol using this range proof.
+    type AggregationCommitmentRoundParty<const REPETITIONS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
+        Language: EnhanceableLanguage<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            UnboundedWitnessSpaceGroupElement,
+        >,
+        ProtocolContext: Clone + Serialize>: CommitmentRoundParty<AggregationOutput<REPETITIONS, NUM_RANGE_CLAIMS, COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, UnboundedWitnessSpaceGroupElement, Self, Language, ProtocolContext>>;
 
     /// Proves in zero-knowledge that all witnesses committed in `commitment` are bounded by their corresponding
     /// range upper bound in range_claims.
@@ -86,24 +91,40 @@ pub trait RangeProof<
         rng: &mut impl CryptoRngCore,
     ) -> Result<(Self, Vec<commitments::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme<NUM_RANGE_CLAIMS>>>)>;
 
-    // /// Starts a new enhanced Schnorr proof aggregation session, by returning its commitment round party instance.
-    // fn new_enhanced_session<const REPETITIONS: usize,
-    //     const NUM_RANGE_CLAIMS: usize,
-    //     UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
-    //     Language: EnhanceableLanguage<
-    //         REPETITIONS,
-    //         NUM_RANGE_CLAIMS,
-    //         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-    //         UnboundedWitnessSpaceGroupElement,
-    //     >,
-    //     ProtocolContext: Clone + Serialize>(
-    //     public_parameters: &Self::PublicParameters<NUM_RANGE_CLAIMS>,
-    //     // TODO: schnorr witnesses etc.
-    //     witnesses: Vec<CommitmentSchemeMessageSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS, Self>>,
-    //     commitments_randomness: Vec<CommitmentSchemeRandomnessSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS, Self>>,
-    //     transcript: &mut Transcript,
-    //     rng: &mut impl CryptoRngCore,
-    // ) -> Self::AggregationCommitmentRoundParty<REPETITIONS, NUM_RANGE_CLAIMS, UnboundedWitnessSpaceGroupElement, Language, ProtocolContext>;
+    /// Starts a new enhanced Schnorr proof aggregation session, by returning its commitment round party instance.
+    fn new_enhanced_session<const REPETITIONS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
+        Language: EnhanceableLanguage<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            UnboundedWitnessSpaceGroupElement,
+        >,
+        ProtocolContext: Clone + Serialize>(
+        party_id: PartyID,
+        threshold: PartyID,
+        number_of_parties: PartyID,
+        language_public_parameters: EnhancedPublicParameters<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            Self,
+            UnboundedWitnessSpaceGroupElement,
+            Language,
+        >,
+        protocol_context: ProtocolContext,
+        witnesses: Vec<
+            enhanced::WitnessSpaceGroupElement<
+                REPETITIONS,
+                NUM_RANGE_CLAIMS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                Self,
+                UnboundedWitnessSpaceGroupElement,
+                Language,
+            >,
+        >,
+    ) -> Self::AggregationCommitmentRoundParty<REPETITIONS, NUM_RANGE_CLAIMS, UnboundedWitnessSpaceGroupElement, Language, ProtocolContext>;
 
     /// Verifies that all witnesses committed in `commitment` are bounded by their corresponding
     /// range upper bound in range_claims.

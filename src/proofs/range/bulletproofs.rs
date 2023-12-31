@@ -26,7 +26,17 @@ use crate::{
     },
     helpers::flat_map_results,
     proofs,
-    proofs::{range, range::Samplable, schnorr::enhanced::EnhanceableLanguage},
+    proofs::{
+        range,
+        range::{
+            CommitmentSchemeMessageSpaceGroupElement, CommitmentSchemeRandomnessSpaceGroupElement,
+            Samplable,
+        },
+        schnorr::{
+            enhanced,
+            enhanced::{EnhanceableLanguage, EnhancedPublicParameters},
+        },
+    },
     PartyID,
 };
 
@@ -96,20 +106,24 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
 
     type PublicParameters<const NUM_RANGE_CLAIMS: usize> = PublicParameters<NUM_RANGE_CLAIMS>;
 
-    // type AggregationCommitmentRoundParty<
-    //     const REPETITIONS: usize,
-    //     const NUM_RANGE_CLAIMS: usize,
-    //     UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
-    //     Language: EnhanceableLanguage<
-    //         REPETITIONS,
-    //         NUM_RANGE_CLAIMS,
-    //         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-    //         UnboundedWitnessSpaceGroupElement,
-    //     >,
-    //     ProtocolContext: Clone + Serialize,
-    // > = commitment_round::Party< REPETITIONS, NUM_RANGE_CLAIMS,
-    // > UnboundedWitnessSpaceGroupElement, Language, ProtocolContext,
-    // >;
+    type AggregationCommitmentRoundParty<
+        const REPETITIONS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
+        Language: EnhanceableLanguage<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            UnboundedWitnessSpaceGroupElement,
+        >,
+        ProtocolContext: Clone + Serialize,
+    > = commitment_round::Party<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        UnboundedWitnessSpaceGroupElement,
+        Language,
+        ProtocolContext,
+    >;
 
     fn prove<const NUM_RANGE_CLAIMS: usize>(
         _public_parameters: &Self::PublicParameters<NUM_RANGE_CLAIMS>,
@@ -231,6 +245,57 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
         .collect();
 
         Ok((RangeProof::new(proof), commitments?))
+    }
+
+    fn new_enhanced_session<
+        const REPETITIONS: usize,
+        const NUM_RANGE_CLAIMS: usize,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
+        Language: EnhanceableLanguage<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            UnboundedWitnessSpaceGroupElement,
+        >,
+        ProtocolContext: Clone + Serialize,
+    >(
+        party_id: PartyID,
+        threshold: PartyID,
+        number_of_parties: PartyID,
+        language_public_parameters: EnhancedPublicParameters<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            Self,
+            UnboundedWitnessSpaceGroupElement,
+            Language,
+        >,
+        protocol_context: ProtocolContext,
+        witnesses: Vec<
+            enhanced::WitnessSpaceGroupElement<
+                REPETITIONS,
+                NUM_RANGE_CLAIMS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                Self,
+                UnboundedWitnessSpaceGroupElement,
+                Language,
+            >,
+        >,
+    ) -> Self::AggregationCommitmentRoundParty<
+        REPETITIONS,
+        NUM_RANGE_CLAIMS,
+        UnboundedWitnessSpaceGroupElement,
+        Language,
+        ProtocolContext,
+    > {
+        commitment_round::Party {
+            party_id,
+            threshold,
+            number_of_parties,
+            language_public_parameters,
+            protocol_context,
+            witnesses,
+        }
     }
 
     fn verify<const NUM_RANGE_CLAIMS: usize>(

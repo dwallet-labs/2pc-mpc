@@ -23,11 +23,15 @@ use crate::{
         schnorr::{
             aggregation::{commitment_round, CommitmentRoundParty},
             enhanced,
-            enhanced::{EnhanceableLanguage, EnhancedLanguage, EnhancedLanguageWitnessAccessors},
+            enhanced::{
+                EnhanceableLanguage, EnhancedLanguage, EnhancedLanguageWitnessAccessors,
+                EnhancedPublicParameters,
+            },
             language,
         },
         transcript_protocol::TranscriptProtocol,
     },
+    PartyID,
 };
 
 pub struct Party<
@@ -42,9 +46,21 @@ pub struct Party<
     >,
     ProtocolContext: Clone + Serialize,
 > {
-    pub commitment_round_party: commitment_round::Party<
+    pub party_id: PartyID,
+    pub threshold: PartyID,
+    pub number_of_parties: PartyID,
+    pub language_public_parameters: EnhancedPublicParameters<
         REPETITIONS,
-        EnhancedLanguage<
+        NUM_RANGE_CLAIMS,
+        { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+        super::RangeProof,
+        UnboundedWitnessSpaceGroupElement,
+        Language,
+    >,
+    // TODO: should I use the same protocol context for both bp & schnorr?
+    pub protocol_context: ProtocolContext,
+    pub witnesses: Vec<
+        enhanced::WitnessSpaceGroupElement<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
             { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
@@ -52,7 +68,6 @@ pub struct Party<
             UnboundedWitnessSpaceGroupElement,
             Language,
         >,
-        ProtocolContext,
     >,
 }
 
@@ -109,7 +124,6 @@ impl<
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(Self::Commitment, Self::DecommitmentRoundParty)> {
         let (commitment_messages, commitment_randomnesses): (Vec<_>, Vec<_>) = self
-            .commitment_round_party
             .witnesses
             .clone()
             .into_iter()
@@ -141,7 +155,7 @@ impl<
             .map(|witness| U64::from(&witness).into())
             .collect();
 
-        let number_of_parties = self.commitment_round_party.number_of_parties;
+        let number_of_parties = self.number_of_parties;
         let number_of_witnesses = witnesses.len();
 
         if !number_of_witnesses.is_power_of_two() || !number_of_parties.is_power_of_two() {
@@ -171,7 +185,6 @@ impl<
 
         let commitment_generators = PedersenGens::default();
 
-        // TODO: should I use the schnorr's protocol context here?
         let transcript = enhanced::Proof::<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
@@ -181,8 +194,7 @@ impl<
             Language,
             ProtocolContext,
         >::setup_range_proof(
-            &self.commitment_round_party.protocol_context,
-            &super::PublicParameters::default(),
+            &self.protocol_context, &super::PublicParameters::default()
         )?;
 
         let dealer_awaiting_bit_commitments = Dealer::new(
@@ -217,7 +229,7 @@ impl<
             .into_iter()
             .enumerate()
             .map(|(i, party)| {
-                usize::from(self.commitment_round_party.party_id)
+                usize::from(self.party_id)
                     .checked_sub(1)
                     .and_then(|position| position.checked_mul(NUM_RANGE_CLAIMS))
                     .and_then(|position| position.checked_mul(batch_size))
@@ -236,9 +248,18 @@ impl<
             .into_iter()
             .unzip();
 
-        let (commitment, decommitment_round_party) = self
-            .commitment_round_party
-            .commit_statements_and_statement_mask(rng)?;
+        let commitment_round_party = commitment_round::Party::new_enhanced_session(
+            self.party_id,
+            self.threshold,
+            self.number_of_parties,
+            self.language_public_parameters,
+            self.protocol_context,
+            self.witnesses,
+            rng,
+        )?;
+
+        let (commitment, decommitment_round_party) =
+            commitment_round_party.commit_statements_and_statement_mask(rng)?;
 
         let decommitment_round_party = decommitment_round::Party {
             decommitment_round_party,

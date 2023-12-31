@@ -661,44 +661,28 @@ pub(crate) mod tests {
         let commitment_round_parties: HashMap<_, _> = witnesses
             .clone()
             .into_iter()
-            .zip(transcripts.iter_mut())
             .enumerate()
-            .map(|(party_id, (witnesses, transcript))| {
+            .map(|(party_id, witnesses)| {
                 let party_id: u16 = (party_id + 1).try_into().unwrap();
-
-                let commitment_round_party = aggregation::commitment_round::Party::<
-                    REPETITIONS,
-                    EnhancedLanguage<
-                        REPETITIONS,
-                        NUM_RANGE_CLAIMS,
-                        { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-                        range::bulletproofs::RangeProof,
-                        UnboundedWitnessSpaceGroupElement,
-                        Lang,
-                    >,
-                    PhantomData<()>,
-                >::new_enhanced_session(
-                    party_id,
-                    number_of_parties,
-                    number_of_parties,
-                    enhanced_language_public_parameters.clone(),
-                    PhantomData,
-                    witnesses.clone(),
-                    &mut OsRng,
-                )
-                .unwrap();
 
                 (
                     party_id,
-                    range::bulletproofs::commitment_round::Party::<
+                    <range::bulletproofs::RangeProof as range::RangeProof<
+                        { range::bulletproofs::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+                    >>::new_enhanced_session::<
                         REPETITIONS,
                         NUM_RANGE_CLAIMS,
                         UnboundedWitnessSpaceGroupElement,
                         Lang,
                         PhantomData<()>,
-                    > {
-                        commitment_round_party,
-                    },
+                    >(
+                        party_id,
+                        number_of_parties,
+                        number_of_parties,
+                        enhanced_language_public_parameters.clone(),
+                        PhantomData,
+                        witnesses.clone(),
+                    ),
                 )
             })
             .collect();

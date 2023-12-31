@@ -64,7 +64,6 @@ pub struct Party<
     pub(super) dealer_awaiting_proof_shares: DealerAwaitingProofShares,
 }
 
-// TODO: use range's output
 pub type Output<
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
@@ -76,27 +75,15 @@ pub type Output<
         UnboundedWitnessSpaceGroupElement,
     >,
     ProtocolContext: Clone + Serialize,
-> = (
-    enhanced::Proof<
-        REPETITIONS,
-        NUM_RANGE_CLAIMS,
-        { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-        super::RangeProof,
-        UnboundedWitnessSpaceGroupElement,
-        Language,
-        ProtocolContext,
-    >,
-    Vec<
-        enhanced::StatementSpaceGroupElement<
-            REPETITIONS,
-            NUM_RANGE_CLAIMS,
-            { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-            super::RangeProof,
-            UnboundedWitnessSpaceGroupElement,
-            Language,
-        >,
-    >,
-);
+> = range::AggregationOutput<
+    REPETITIONS,
+    NUM_RANGE_CLAIMS,
+    { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+    UnboundedWitnessSpaceGroupElement,
+    super::RangeProof,
+    Language,
+    ProtocolContext,
+>;
 
 impl<
         const REPETITIONS: usize,
