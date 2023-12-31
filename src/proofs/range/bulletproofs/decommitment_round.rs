@@ -23,8 +23,6 @@ use crate::{
 };
 
 pub struct Party<
-    'a,
-    'b,
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
     UnboundedWitnessSpaceGroupElement: Samplable,
@@ -48,8 +46,8 @@ pub struct Party<
         >,
         ProtocolContext,
     >,
-    pub(super) dealer_awaiting_bit_commitments: DealerAwaitingBitCommitments<'a, 'b>,
-    pub(super) parties_awaiting_bit_challenge: Vec<PartyAwaitingBitChallenge<'b>>,
+    pub(super) dealer_awaiting_bit_commitments: DealerAwaitingBitCommitments,
+    pub(super) parties_awaiting_bit_challenge: Vec<PartyAwaitingBitChallenge>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -59,8 +57,6 @@ pub struct Decommitment<Decom> {
 }
 
 impl<
-        'a,
-        'b,
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
         UnboundedWitnessSpaceGroupElement: Samplable,
@@ -82,8 +78,6 @@ impl<
         >,
     >
     for Party<
-        'a,
-        'b,
         REPETITIONS,
         NUM_RANGE_CLAIMS,
         UnboundedWitnessSpaceGroupElement,
@@ -108,8 +102,6 @@ impl<
     >;
 
     type ProofShareRoundParty = proof_share_round::Party<
-        'a,
-        'b,
         REPETITIONS,
         NUM_RANGE_CLAIMS,
         UnboundedWitnessSpaceGroupElement,

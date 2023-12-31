@@ -32,8 +32,6 @@ use crate::{
 };
 
 pub struct Party<
-    'a,
-    'b,
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
     UnboundedWitnessSpaceGroupElement: Samplable,
@@ -57,7 +55,7 @@ pub struct Party<
         >,
         ProtocolContext,
     >,
-    pub(super) dealer_awaiting_poly_commitments: DealerAwaitingPolyCommitments<'a, 'b>,
+    pub(super) dealer_awaiting_poly_commitments: DealerAwaitingPolyCommitments,
     pub(super) parties_awaiting_poly_challenge: Vec<PartyAwaitingPolyChallenge>,
 }
 
@@ -68,8 +66,6 @@ pub struct ProofShare<Share> {
 }
 
 impl<
-        'a,
-        'b,
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
         UnboundedWitnessSpaceGroupElement: Samplable,
@@ -91,8 +87,6 @@ impl<
         >,
     >
     for Party<
-        'a,
-        'b,
         REPETITIONS,
         NUM_RANGE_CLAIMS,
         UnboundedWitnessSpaceGroupElement,
@@ -129,8 +123,6 @@ impl<
     >;
 
     type ProofAggregationRoundParty = proof_aggregation_round::Party<
-        'a,
-        'b,
         REPETITIONS,
         NUM_RANGE_CLAIMS,
         UnboundedWitnessSpaceGroupElement,

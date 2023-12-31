@@ -172,7 +172,7 @@ impl<
             &enhanced_language_public_parameters.range_proof_public_parameters,
             commitment_messages,
             commitment_randomnesses,
-            &mut transcript,
+            transcript,
             rng,
         )?;
 
@@ -276,12 +276,12 @@ impl<
             .and(self.range_proof.verify(
                 &enhanced_language_public_parameters.range_proof_public_parameters,
                 commitments,
-                &mut transcript,
+                transcript,
                 rng,
             ))
     }
 
-    fn setup_range_proof(
+    pub(crate) fn setup_range_proof(
         protocol_context: &ProtocolContext,
         range_proof_public_parameters: &range::PublicParameters<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -654,30 +654,9 @@ pub(crate) mod tests {
         let number_of_parties: u16 = witnesses.len().try_into().unwrap();
 
         let number_of_witnesses: usize = witnesses.first().unwrap().len() * NUM_RANGE_CLAIMS;
-        let bulletproofs_generators = BulletproofGens::new(
-            range::bulletproofs::RANGE_CLAIM_BITS,
-            number_of_witnesses * usize::from(number_of_parties),
-        );
-
-        let commitment_generators = PedersenGens::default();
 
         let range_proof_public_parameters =
             range::bulletproofs::PublicParameters::<NUM_RANGE_CLAIMS>::default();
-
-        let mut transcripts: Vec<_> = iter::repeat_with(|| {
-            enhanced::Proof::<
-                REPETITIONS,
-                NUM_RANGE_CLAIMS,
-                { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
-                range::bulletproofs::RangeProof,
-                UnboundedWitnessSpaceGroupElement,
-                Lang,
-                PhantomData<()>,
-            >::setup_range_proof(&PhantomData, &range_proof_public_parameters)
-            .unwrap()
-        })
-        .take(number_of_parties.into())
-        .collect();
 
         let commitment_round_parties: HashMap<_, _> = witnesses
             .clone()
@@ -719,9 +698,6 @@ pub(crate) mod tests {
                         PhantomData<()>,
                     > {
                         commitment_round_party,
-                        bulletproofs_generators: &bulletproofs_generators,
-                        commitment_generators: &commitment_generators,
-                        transcript,
                     },
                 )
             })

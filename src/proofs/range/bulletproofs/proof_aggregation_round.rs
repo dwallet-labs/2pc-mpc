@@ -13,6 +13,7 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    group,
     group::{ristretto, ristretto::SCALAR_LIMBS},
     proofs,
     proofs::{
@@ -36,8 +37,6 @@ use crate::{
 };
 
 pub struct Party<
-    'a,
-    'b,
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
     UnboundedWitnessSpaceGroupElement: Samplable,
@@ -62,9 +61,10 @@ pub struct Party<
         ProtocolContext,
     >,
     pub(super) aggregation_commitments: Vec<ristretto::GroupElement>,
-    pub(super) dealer_awaiting_proof_shares: DealerAwaitingProofShares<'a, 'b>,
+    pub(super) dealer_awaiting_proof_shares: DealerAwaitingProofShares,
 }
 
+// TODO: use range's output
 pub type Output<
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
@@ -99,11 +99,9 @@ pub type Output<
 );
 
 impl<
-        'a,
-        'b,
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
-        UnboundedWitnessSpaceGroupElement: Samplable,
+        UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
         Language: EnhanceableLanguage<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
@@ -122,8 +120,6 @@ impl<
         >,
     >
     for Party<
-        'a,
-        'b,
         REPETITIONS,
         NUM_RANGE_CLAIMS,
         UnboundedWitnessSpaceGroupElement,

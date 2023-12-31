@@ -84,7 +84,7 @@ checksum = "8d696c370c750c948ada61c69a0ee2cbbb9c50b1019ddb86d9317157a99c2cae"
 [[package]]
 name = "bulletproofs"
 version = "4.0.0"
-source = "git+https://github.com/ycscaly/bulletproofs.git#27203081a51783d9bcdcf3fd1f4e1c330f0f4e92"
+source = "git+https://github.com/ycscaly/bulletproofs.git#9265044ad456ff20a7945cf5848d2319f98feb51"
 dependencies = [
  "byteorder",
  "clear_on_drop",

@@ -22,6 +22,7 @@ use crate::{
         },
         schnorr::{
             aggregation::{commitment_round, CommitmentRoundParty},
+            enhanced,
             enhanced::{EnhanceableLanguage, EnhancedLanguage, EnhancedLanguageWitnessAccessors},
             language,
         },
@@ -30,8 +31,6 @@ use crate::{
 };
 
 pub struct Party<
-    'a,
-    'b,
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
     UnboundedWitnessSpaceGroupElement: Samplable,
@@ -55,10 +54,6 @@ pub struct Party<
         >,
         ProtocolContext,
     >,
-
-    pub bulletproofs_generators: &'b BulletproofGens,
-    pub commitment_generators: &'b PedersenGens,
-    pub transcript: &'a mut Transcript,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -68,8 +63,6 @@ pub struct Commitment {
 }
 
 impl<
-        'a,
-        'b,
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
         UnboundedWitnessSpaceGroupElement: Samplable,
@@ -91,8 +84,6 @@ impl<
         >,
     >
     for Party<
-        'a,
-        'b,
         REPETITIONS,
         NUM_RANGE_CLAIMS,
         UnboundedWitnessSpaceGroupElement,
@@ -102,8 +93,6 @@ impl<
 {
     type Commitment = Commitment;
     type DecommitmentRoundParty = decommitment_round::Party<
-        'a,
-        'b,
         REPETITIONS,
         NUM_RANGE_CLAIMS,
         UnboundedWitnessSpaceGroupElement,
@@ -175,10 +164,31 @@ impl<
             .map(|randomness| randomness.0)
             .collect();
 
+        let bulletproofs_generators = BulletproofGens::new(
+            range::bulletproofs::RANGE_CLAIM_BITS,
+            number_of_parties.into(),
+        );
+
+        let commitment_generators = PedersenGens::default();
+
+        // TODO: should I use the schnorr's protocol context here?
+        let transcript = enhanced::Proof::<
+            REPETITIONS,
+            NUM_RANGE_CLAIMS,
+            { super::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },
+            range::bulletproofs::RangeProof,
+            UnboundedWitnessSpaceGroupElement,
+            Language,
+            ProtocolContext,
+        >::setup_range_proof(
+            &self.commitment_round_party.protocol_context,
+            &super::PublicParameters::default(),
+        )?;
+
         let dealer_awaiting_bit_commitments = Dealer::new(
-            self.bulletproofs_generators,
-            self.commitment_generators,
-            self.transcript,
+            bulletproofs_generators.clone(),
+            commitment_generators.clone(),
+            transcript,
             RANGE_CLAIM_BITS,
             number_of_parties.into(),
         )
@@ -191,8 +201,8 @@ impl<
             .zip(commitments_randomness.into_iter())
             .map(|(witness, commitment_randomness)| {
                 party::Party::new(
-                    &self.bulletproofs_generators,
-                    &self.commitment_generators,
+                    bulletproofs_generators.clone(),
+                    commitment_generators.clone(),
                     witness,
                     commitment_randomness,
                     RANGE_CLAIM_BITS,

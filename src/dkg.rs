@@ -4,7 +4,7 @@
 use crate::group::CyclicGroupElement;
 
 pub mod centralized_party;
-// pub mod decentralized_party;
+pub mod decentralized_party;
 
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {

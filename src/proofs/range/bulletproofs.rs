@@ -19,13 +19,14 @@ use serde::{Deserialize, Serialize};
 use crate::{
     commitments,
     commitments::{multipedersen::MultiPedersen, pedersen, GroupsPublicParameters, Pedersen},
+    group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, ristretto, self_product,
         self_product::Value,
     },
     helpers::flat_map_results,
     proofs,
-    proofs::range,
+    proofs::{range, range::Samplable, schnorr::enhanced::EnhanceableLanguage},
     PartyID,
 };
 
@@ -84,7 +85,6 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
 
     type RangeClaimGroupElement = ristretto::Scalar;
 
-    // TODO: change to multipedersen.
     type CommitmentScheme<const NUM_RANGE_CLAIMS: usize> = MultiPedersen<
         NUM_RANGE_CLAIMS,
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -95,6 +95,21 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
     const RANGE_CLAIM_BITS: usize = RANGE_CLAIM_BITS;
 
     type PublicParameters<const NUM_RANGE_CLAIMS: usize> = PublicParameters<NUM_RANGE_CLAIMS>;
+
+    // type AggregationCommitmentRoundParty<
+    //     const REPETITIONS: usize,
+    //     const NUM_RANGE_CLAIMS: usize,
+    //     UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
+    //     Language: EnhanceableLanguage<
+    //         REPETITIONS,
+    //         NUM_RANGE_CLAIMS,
+    //         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+    //         UnboundedWitnessSpaceGroupElement,
+    //     >,
+    //     ProtocolContext: Clone + Serialize,
+    // > = commitment_round::Party< REPETITIONS, NUM_RANGE_CLAIMS,
+    // > UnboundedWitnessSpaceGroupElement, Language, ProtocolContext,
+    // >;
 
     fn prove<const NUM_RANGE_CLAIMS: usize>(
         _public_parameters: &Self::PublicParameters<NUM_RANGE_CLAIMS>,
@@ -110,7 +125,7 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
                 Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
             >,
         >,
-        transcript: &mut Transcript,
+        transcript: Transcript,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(
         Self,
@@ -174,8 +189,8 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
         let commitment_generators = PedersenGens::default();
 
         let (proof, commitments) = bulletproofs::RangeProof::prove_multiple_with_rng(
-            &bulletproofs_generators,
-            &commitment_generators,
+            bulletproofs_generators,
+            commitment_generators,
             transcript,
             witnesses.as_slice(),
             commitments_randomness.as_slice(),
@@ -227,7 +242,7 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
                 Self::CommitmentScheme<NUM_RANGE_CLAIMS>,
             >,
         >,
-        transcript: &mut Transcript,
+        transcript: Transcript,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<()> {
         let commitments = if (self.aggregation_commitments.is_empty()) {
@@ -266,10 +281,11 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
         let commitment_generators = PedersenGens::default();
 
         // TODO: convert their verification error to our range proof error?
+        let mut transcript = transcript;
         Ok(self.proof.verify_multiple_with_rng(
             &bulletproofs_generators,
             &commitment_generators,
-            transcript,
+            &mut transcript,
             compressed_commitments.as_slice(),
             <Self as super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>::RANGE_CLAIM_BITS,
             rng,

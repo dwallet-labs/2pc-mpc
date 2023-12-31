@@ -14,7 +14,7 @@ use crate::{
     proofs,
     proofs::{
         schnorr::{
-            encryption_of_discrete_log, knowledge_of_discrete_log,
+            encryption_of_discrete_log, enhanced::EnhanceableLanguage, knowledge_of_discrete_log,
             language::GroupsPublicParameters, Proof,
         },
         transcript_protocol::TranscriptProtocol,
@@ -40,8 +40,8 @@ pub struct Party<
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub group_public_parameters: GroupElement::PublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    pub range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
     pub unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
+    pub range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
 }
 
 impl Commitment {
@@ -86,6 +86,18 @@ impl<
         RangeProof,
         ProtocolContext,
     >
+where
+    encryption_of_discrete_log::Language<
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        GroupElement,
+        EncryptionKey,
+    >: EnhanceableLanguage<
+        { encryption_of_discrete_log::REPETITIONS },
+        RANGE_CLAIMS_PER_SCALAR,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        UnboundedEncDLWitness,
+    >,
 {
     pub fn sample_commit_and_prove_secret_key_share(
         self,
@@ -139,9 +151,9 @@ impl<
             group_public_parameters: self.group_public_parameters,
             scalar_group_public_parameters: self.scalar_group_public_parameters,
             encryption_scheme_public_parameters: self.encryption_scheme_public_parameters,
-            range_proof_public_parameters: self.range_proof_public_parameters,
             unbounded_encdl_witness_public_parameters: self
                 .unbounded_encdl_witness_public_parameters,
+            range_proof_public_parameters: self.range_proof_public_parameters,
             protocol_context: self.protocol_context,
             secret_key_share,
             public_key_share,
