@@ -59,6 +59,37 @@ pub struct Language<
     _encryption_key_choice: PhantomData<EncryptionKey>,
 }
 
+pub type WitnessSpaceGroupElement<
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+> = direct_product::GroupElement<
+    EncryptionKey::PlaintextSpaceGroupElement,
+    EncryptionKey::RandomnessSpaceGroupElement,
+>;
+
+pub type StatementSpaceGroupElement<
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+> = direct_product::GroupElement<EncryptionKey::CiphertextSpaceGroupElement, GroupElement>;
+
+/// The Public Parameters of the Encryption of Discrete Log Schnorr Language.
+pub type PublicParameters<
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+> = private::PublicParameters<
+    group::PublicParameters<GroupElement::Scalar>,
+    GroupElement::PublicParameters,
+    GroupElement::Value,
+    group::PublicParameters<EncryptionKey::PlaintextSpaceGroupElement>,
+    group::PublicParameters<EncryptionKey::RandomnessSpaceGroupElement>,
+    group::PublicParameters<EncryptionKey::CiphertextSpaceGroupElement>,
+    EncryptionKey::PublicParameters,
+>;
+
 impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         const SCALAR_LIMBS: usize,
@@ -67,23 +98,18 @@ impl<
     > schnorr::Language<REPETITIONS>
     for Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>
 {
-    type WitnessSpaceGroupElement = direct_product::GroupElement<
-        EncryptionKey::PlaintextSpaceGroupElement,
-        EncryptionKey::RandomnessSpaceGroupElement,
+    type WitnessSpaceGroupElement =
+        WitnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>;
+
+    type StatementSpaceGroupElement = StatementSpaceGroupElement<
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        GroupElement,
+        EncryptionKey,
     >;
 
-    type StatementSpaceGroupElement =
-        direct_product::GroupElement<EncryptionKey::CiphertextSpaceGroupElement, GroupElement>;
-
-    type PublicParameters = PublicParameters<
-        group::PublicParameters<GroupElement::Scalar>,
-        GroupElement::PublicParameters,
-        GroupElement::Value,
-        group::PublicParameters<EncryptionKey::PlaintextSpaceGroupElement>,
-        group::PublicParameters<EncryptionKey::RandomnessSpaceGroupElement>,
-        group::PublicParameters<EncryptionKey::CiphertextSpaceGroupElement>,
-        EncryptionKey::PublicParameters,
-    >;
+    type PublicParameters =
+        PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>;
 
     const NAME: &'static str = "Encryption of Discrete Log";
 
@@ -172,28 +198,34 @@ impl<
     }
 }
 
-/// The Public Parameters of the Encryption of Discrete Log Schnorr Language.
-#[derive(Debug, PartialEq, Serialize, Clone)]
-pub struct PublicParameters<
-    ScalarPublicParameters,
-    GroupPublicParameters,
-    GroupElementValue,
-    PlaintextSpacePublicParameters,
-    RandomnessSpacePublicParameters,
-    CiphertextSpacePublicParameters,
-    EncryptionKeyPublicParameters,
-> {
-    pub groups_public_parameters: GroupsPublicParameters<
-        direct_product::PublicParameters<
-            PlaintextSpacePublicParameters,
-            RandomnessSpacePublicParameters,
+pub(super) mod private {
+    use super::*;
+
+    #[derive(Debug, PartialEq, Serialize, Clone)]
+    pub struct PublicParameters<
+        ScalarPublicParameters,
+        GroupPublicParameters,
+        GroupElementValue,
+        PlaintextSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CiphertextSpacePublicParameters,
+        EncryptionKeyPublicParameters,
+    > {
+        pub groups_public_parameters: GroupsPublicParameters<
+            direct_product::PublicParameters<
+                PlaintextSpacePublicParameters,
+                RandomnessSpacePublicParameters,
+            >,
+            direct_product::PublicParameters<
+                CiphertextSpacePublicParameters,
+                GroupPublicParameters,
+            >,
         >,
-        direct_product::PublicParameters<CiphertextSpacePublicParameters, GroupPublicParameters>,
-    >,
-    pub scalar_group_public_parameters: ScalarPublicParameters,
-    pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
-    // The base of the discrete log
-    pub generator: GroupElementValue,
+        pub scalar_group_public_parameters: ScalarPublicParameters,
+        pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
+        // The base of the discrete log
+        pub generator: GroupElementValue,
+    }
 }
 
 impl<
@@ -217,7 +249,7 @@ impl<
             >,
         >,
     >
-    for PublicParameters<
+    for private::PublicParameters<
         ScalarPublicParameters,
         GroupPublicParameters,
         GroupElementValue,
@@ -255,7 +287,7 @@ impl<
             >,
         >,
     >
-    PublicParameters<
+    private::PublicParameters<
         ScalarPublicParameters,
         GroupPublicParameters,
         GroupElementValue,

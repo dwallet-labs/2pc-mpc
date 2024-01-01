@@ -9,16 +9,16 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ahe::GroupsPublicParametersAccessors as _,
     commitments::GroupsPublicParametersAccessors as _,
-    dkg::{
-        decentralized_party,
-        decentralized_party::proof_aggregation_round::SecretKeyShareEncryptionAndProof,
-    },
+    // dkg::{
+    //     decentralized_party,
+    //     decentralized_party::proof_aggregation_round::SecretKeyShareEncryptionAndProof,
+    // },
     group,
     group::{direct_product, GroupElement as _, PrimeGroupElement, Samplable},
     proofs,
     proofs::{
         range,
-        range::CommitmentPublicParametersAccessor,
+        range::PublicParametersAccessors,
         schnorr,
         schnorr::{
             encryption_of_discrete_log, enhanced,
@@ -26,8 +26,23 @@ use crate::{
             knowledge_of_discrete_log, language,
         },
     },
-    AdditivelyHomomorphicEncryptionKey, ComputationalSecuritySizedNumber,
+    AdditivelyHomomorphicEncryptionKey,
+    ComputationalSecuritySizedNumber,
 };
+
+// TODO: delete
+#[derive(PartialEq, Serialize, Deserialize, Clone)]
+pub struct SecretKeyShareEncryptionAndProof<
+    RangeProofCommitmentValue,
+    GroupElementValue,
+    CiphertextValue,
+    EncDLProof,
+> {
+    pub(in crate::dkg) public_key_share: GroupElementValue,
+    pub(in crate::dkg) range_proof_commitment: RangeProofCommitmentValue,
+    pub(in crate::dkg) encryption_of_secret_key_share: CiphertextValue,
+    pub(in crate::dkg) encryption_of_secret_key_share_proof: EncDLProof,
+}
 
 #[derive(Clone)]
 pub struct Output<
@@ -101,21 +116,41 @@ impl<
         ProtocolContext,
     >
 where
+    // TODO: I'd love to solve this huge restriction, which seems completely useless to me and is
+    // required because Rust.
     encryption_of_discrete_log::Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-    >: EnhanceableLanguage<
-        { encryption_of_discrete_log::REPETITIONS },
-        RANGE_CLAIMS_PER_SCALAR,
-        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        UnboundedEncDLWitness,
-    >,
+    >: schnorr::Language<
+            { encryption_of_discrete_log::REPETITIONS },
+            WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                EncryptionKey,
+            >,
+            StatementSpaceGroupElement = encryption_of_discrete_log::StatementSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+            PublicParameters = encryption_of_discrete_log::PublicParameters<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+        > + EnhanceableLanguage<
+            { encryption_of_discrete_log::REPETITIONS },
+            RANGE_CLAIMS_PER_SCALAR,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            UnboundedEncDLWitness,
+        >,
 {
     pub fn decommit_proof_public_key_share(
         self,
-        decentralized_party_secret_key_share_encryption_and_proof: decentralized_party::SecretKeyShareEncryptionAndProof<
+        decentralized_party_secret_key_share_encryption_and_proof: SecretKeyShareEncryptionAndProof<
             range::CommitmentSchemeCommitmentSpaceValue<
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RANGE_CLAIMS_PER_SCALAR,
@@ -180,12 +215,12 @@ where
             .into();
 
         let encryption_of_discrete_log_language_public_parameters =
-            encryption_of_discrete_log::PublicParameters::new::<
+            encryption_of_discrete_log::PublicParameters::<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 SCALAR_LIMBS,
                 GroupElement,
                 EncryptionKey,
-            >(
+            >::new::<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>(
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
                 self.encryption_scheme_public_parameters,

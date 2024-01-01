@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod ahe;
 pub mod commitments;
-// pub mod dkg;
+pub mod dkg;
 pub mod group;
 pub(crate) mod helpers;
 // pub mod presign;
