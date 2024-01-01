@@ -94,7 +94,7 @@ impl<const N: usize, GroupElementValue: Serialize + for<'a> Deserialize<'a> + Co
 }
 
 impl<const N: usize, G: group::GroupElement> group::GroupElement for GroupElement<N, G> {
-    type Value = Value<N, group::Value<G>>;
+    type Value = Value<N, G::Value>;
 
     type PublicParameters = PublicParameters<N, G::PublicParameters>;
 
@@ -142,9 +142,7 @@ impl<const N: usize, G: group::GroupElement> group::GroupElement for GroupElemen
     }
 }
 
-impl<const N: usize, G: group::GroupElement> From<GroupElement<N, G>>
-    for group::Value<GroupElement<N, G>>
-{
+impl<const N: usize, G: group::GroupElement> From<GroupElement<N, G>> for Value<N, G::Value> {
     fn from(value: GroupElement<N, G>) -> Self {
         Self(value.0.map(|element| element.into()))
     }
@@ -170,7 +168,7 @@ impl<
 }
 
 impl<const N: usize, G: group::GroupElement> From<GroupElement<N, G>>
-    for group::PublicParameters<GroupElement<N, G>>
+    for PublicParameters<N, G::PublicParameters>
 {
     fn from(value: GroupElement<N, G>) -> Self {
         value.public_parameters()

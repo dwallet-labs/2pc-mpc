@@ -98,7 +98,7 @@ impl group::GroupElement for Scalar {
     }
 }
 
-impl From<Scalar> for group::PublicParameters<Scalar> {
+impl From<Scalar> for PublicParameters {
     fn from(_value: Scalar) -> Self {
         Self::default()
     }

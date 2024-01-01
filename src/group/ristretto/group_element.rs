@@ -98,7 +98,7 @@ impl group::GroupElement for GroupElement {
     }
 }
 
-impl From<GroupElement> for group::PublicParameters<GroupElement> {
+impl From<GroupElement> for PublicParameters {
     fn from(_value: GroupElement) -> Self {
         Self::default()
     }

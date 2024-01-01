@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<const LIMBS: usize> From<GroupElement<LIMBS>> for group::PublicParameters<GroupElement<LIMBS>>
+impl<const LIMBS: usize> From<GroupElement<LIMBS>> for ()
 where
     Uint<LIMBS>: Encoding,
 {

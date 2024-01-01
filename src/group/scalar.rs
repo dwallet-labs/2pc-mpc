@@ -184,16 +184,14 @@ impl<'r, const SCALAR_LIMBS: usize, S: GroupElement + Mul<&'r S, Output = S>> Mu
 }
 
 impl<const SCALAR_LIMBS: usize, S: GroupElement> From<Scalar<SCALAR_LIMBS, S>>
-    for group::PublicParameters<Scalar<SCALAR_LIMBS, S>>
+    for PublicParameters<S::PublicParameters>
 {
     fn from(value: Scalar<SCALAR_LIMBS, S>) -> Self {
         PublicParameters(value.0.into())
     }
 }
 
-impl<const SCALAR_LIMBS: usize, S: GroupElement> From<Scalar<SCALAR_LIMBS, S>>
-    for group::Value<Scalar<SCALAR_LIMBS, S>>
-{
+impl<const SCALAR_LIMBS: usize, S: GroupElement> From<Scalar<SCALAR_LIMBS, S>> for Value<S::Value> {
     fn from(value: Scalar<SCALAR_LIMBS, S>) -> Self {
         Value(value.0.into())
     }

@@ -154,7 +154,7 @@ impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupEle
 
 impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
     From<GroupElement<FirstGroupElement, SecondGroupElement>>
-    for group::Value<GroupElement<FirstGroupElement, SecondGroupElement>>
+    for Value<FirstGroupElement::Value, SecondGroupElement::Value>
 {
     fn from(value: GroupElement<FirstGroupElement, SecondGroupElement>) -> Self {
         Self(value.0.into(), value.1.into())
@@ -163,7 +163,7 @@ impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupEle
 
 impl<FirstGroupElement: group::GroupElement, SecondGroupElement: group::GroupElement>
     From<GroupElement<FirstGroupElement, SecondGroupElement>>
-    for group::PublicParameters<GroupElement<FirstGroupElement, SecondGroupElement>>
+    for PublicParameters<FirstGroupElement::PublicParameters, SecondGroupElement::PublicParameters>
 {
     fn from(value: GroupElement<FirstGroupElement, SecondGroupElement>) -> Self {
         Self(value.0.into(), value.1.into())
