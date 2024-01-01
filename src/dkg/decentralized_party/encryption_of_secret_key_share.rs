@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+use core::marker::PhantomData;
+
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::Serialize;
 
@@ -9,7 +11,7 @@ use crate::{
     ahe::GroupsPublicParametersAccessors,
     commitments,
     commitments::GroupsPublicParametersAccessors as _,
-    dkg::decentralized_party::decommitment_round,
+    dkg::decentralized_party::decommitment_proof_verification_round,
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, GroupElement as _,
@@ -107,13 +109,12 @@ where
             UnboundedEncDLWitness,
         >,
 {
-    // TODO: consistent naming with presign
-    pub fn sample_and_commit_share_of_decentralize_party_secret_key_share(
+    pub fn sample_secret_key_share_and_initialize_proof_aggregation(
         self,
         commitment_to_centralized_party_secret_key_share: Commitment,
         rng: &mut impl CryptoRngCore,
     ) -> crate::Result<(
-        range::Commitment<
+        range::CommitmentRoundParty<
             { encryption_of_discrete_log::REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -127,15 +128,13 @@ where
             >,
             ProtocolContext,
         >,
-        decommitment_round::Party<
+        decommitment_proof_verification_round::Party<
             SCALAR_LIMBS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
-            UnboundedEncDLWitness,
-            RangeProof,
             ProtocolContext,
         >,
     )> {
@@ -255,21 +254,13 @@ where
             vec![share_of_decentralized_party_secret_key_share_witness],
         );
 
-        let (
-            encryption_of_secret_share_commitment,
-            encryption_of_secret_share_decommitment_round_party,
-        ) = encryption_of_secret_share_commitment_round_party
-            .commit_statements_and_statement_mask(rng)?;
-
-        let decommitment_round_party = decommitment_round::Party::<
+        let decommitment_round_party = decommitment_proof_verification_round::Party::<
             SCALAR_LIMBS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
-            UnboundedEncDLWitness,
-            RangeProof,
             ProtocolContext,
         > {
             party_id: self.party_id,
@@ -278,17 +269,13 @@ where
             protocol_context: self.protocol_context,
             group_public_parameters: self.group_public_parameters,
             scalar_group_public_parameters: self.scalar_group_public_parameters,
-            encryption_scheme_public_parameters: self.encryption_scheme_public_parameters,
-            unbounded_encdl_witness_public_parameters: self
-                .unbounded_encdl_witness_public_parameters,
-            range_proof_public_parameters: self.range_proof_public_parameters,
             commitment_to_centralized_party_secret_key_share,
-            encryption_of_secret_share_decommitment_round_party,
             share_of_decentralized_party_secret_key_share,
+            _encryption_key_choice: PhantomData,
         };
 
         Ok((
-            encryption_of_secret_share_commitment,
+            encryption_of_secret_share_commitment_round_party,
             decommitment_round_party,
         ))
     }

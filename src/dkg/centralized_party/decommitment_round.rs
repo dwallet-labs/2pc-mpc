@@ -9,10 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ahe::GroupsPublicParametersAccessors as _,
     commitments::GroupsPublicParametersAccessors as _,
-    dkg::{
-        decentralized_party,
-        decentralized_party::proof_aggregation_round::SecretKeyShareEncryptionAndProof,
-    },
+    dkg::decentralized_party,
     group,
     group::{direct_product, GroupElement as _, PrimeGroupElement, Samplable},
     proofs,
@@ -135,13 +132,13 @@ where
 {
     pub fn decommit_proof_public_key_share(
         self,
-        decentralized_party_secret_key_share_encryption_and_proof: SecretKeyShareEncryptionAndProof<
+        decentralized_party_secret_key_share_encryption_and_proof: decentralized_party::SecretKeyShareEncryptionAndProof<
+            GroupElement::Value,
             range::CommitmentSchemeCommitmentSpaceValue<
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RANGE_CLAIMS_PER_SCALAR,
                 RangeProof,
             >,
-            GroupElement::Value,
             group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
             encryption_of_discrete_log::EnhancedProof<
                 RANGE_CLAIMS_PER_SCALAR,

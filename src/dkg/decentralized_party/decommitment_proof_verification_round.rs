@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::marker::PhantomData;
+
 use crypto_bigint::{Encoding, Uint};
 use serde::Serialize;
 
@@ -9,7 +11,12 @@ use crate::{
     group,
     group::PrimeGroupElement,
     proofs,
-    proofs::schnorr::{knowledge_of_discrete_log, language::GroupsPublicParameters},
+    proofs::schnorr::{
+        encryption_of_discrete_log,
+        enhanced::EnhancedLanguageStatementAccessors,
+        knowledge_of_discrete_log,
+        language::{encryption_of_discrete_log::StatementAccessors, GroupsPublicParameters},
+    },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
 };
 
@@ -44,8 +51,8 @@ pub struct Party<
     pub(super) scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub(super) commitment_to_centralized_party_secret_key_share: Commitment,
     pub(super) share_of_decentralized_party_secret_key_share: GroupElement::Scalar,
-    pub(super) public_key_share: GroupElement,
-    pub(super) encryption_of_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
+
+    pub(super) _encryption_key_choice: PhantomData<EncryptionKey>,
 }
 
 impl<
@@ -73,9 +80,20 @@ impl<
             GroupElement::Value,
             knowledge_of_discrete_log::Proof<GroupElement::Scalar, GroupElement, ProtocolContext>,
         >,
+        encryption_of_secret_share: encryption_of_discrete_log::StatementSpaceGroupElement<
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+        >,
     ) -> crate::Result<
         Output<SCALAR_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, GroupElement, EncryptionKey>,
     > {
+        let public_key_share = encryption_of_secret_share.base_by_discrete_log().clone();
+        let encryption_of_secret_key_share = encryption_of_secret_share
+            .encryption_of_discrete_log()
+            .clone();
+
         let centralized_party_public_key_share = GroupElement::new(
             decommitment_and_proof.public_key_share,
             &self.group_public_parameters,
@@ -102,13 +120,12 @@ impl<
             vec![centralized_party_public_key_share.clone()],
         )?;
 
-        let public_key =
-            centralized_party_public_key_share.clone() + &self.public_key_share.clone();
+        let public_key = centralized_party_public_key_share.clone() + &public_key_share.clone();
 
         Ok(Output {
-            public_key_share: self.public_key_share,
+            public_key_share,
             public_key,
-            encryption_of_secret_key_share: self.encryption_of_secret_key_share,
+            encryption_of_secret_key_share,
             centralized_party_public_key_share,
         })
     }

@@ -23,11 +23,14 @@ pub(crate) mod tests {
             paillier::tests::{N, SECRET_KEY},
             AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors,
         },
-        dkg::centralized_party,
+        dkg::{centralized_party, decentralized_party::SecretKeyShareEncryptionAndProof},
         group::{ristretto, secp256k1, CyclicGroupElement},
         proofs::{
             range::{bulletproofs, RangeProof},
-            schnorr::enhanced::tests::RANGE_CLAIMS_PER_SCALAR,
+            schnorr::{
+                aggregation::tests::aggregates_internal,
+                enhanced::{tests::RANGE_CLAIMS_PER_SCALAR, EnhancedLanguageStatementAccessors},
+            },
         },
     };
 
@@ -77,12 +80,13 @@ pub(crate) mod tests {
             .sample_commit_and_prove_secret_key_share(&mut OsRng)
             .unwrap();
 
-        let decentralized_party_commitment_round_parties: HashMap<_, _> = (1..=number_of_parties)
+        let decentralized_party_encryption_of_secret_key_share_parties: HashMap<_, _> = (1
+            ..=number_of_parties)
             .map(|party_id| {
                 let party_id: u16 = party_id.try_into().unwrap();
                 (
                     party_id,
-                    decentralized_party::commitment_round::Party::<
+                    decentralized_party::encryption_of_secret_key_share::Party::<
                         { secp256k1::SCALAR_LIMBS },
                         { ristretto::SCALAR_LIMBS },
                         { RANGE_CLAIMS_PER_SCALAR },
@@ -109,94 +113,50 @@ pub(crate) mod tests {
             })
             .collect();
 
-        let decentralized_party_commitments_and_decommitment_round_parties: HashMap<_, _> =
-            decentralized_party_commitment_round_parties
+        let (
+            decentralized_party_encryption_of_secret_key_share_commitment_round_parties,
+            decentralized_party_decommitment_proof_verification_round_parties,
+        ): (HashMap<_, _>, HashMap<_, _>) =
+            decentralized_party_encryption_of_secret_key_share_parties
                 .into_iter()
                 .map(|(party_id, party)| {
+                    let (
+                        encryption_of_secret_key_share_commitment_round_party,
+                        decommitment_proof_verification_round_party,
+                    ) = party
+                        .sample_secret_key_share_and_initialize_proof_aggregation(
+                            commitment_to_centralized_party_secret_key_share,
+                            &mut OsRng,
+                        )
+                        .unwrap();
                     (
-                        party_id,
-                        party
-                            .sample_and_commit_share_of_decentralize_party_secret_key_share(
-                                commitment_to_centralized_party_secret_key_share,
-                                &mut OsRng,
-                            )
-                            .unwrap(),
+                        (
+                            party_id,
+                            encryption_of_secret_key_share_commitment_round_party,
+                        ),
+                        (party_id, decommitment_proof_verification_round_party),
                     )
                 })
-                .collect();
+                .unzip();
 
-        let commitments: HashMap<_, _> =
-            decentralized_party_commitments_and_decommitment_round_parties
-                .iter()
-                .map(|(party_id, (commitment, _))| (*party_id, commitment.clone()))
-                .collect();
+        let (
+            encryption_of_decentralized_party_secret_share_proof,
+            encryption_of_decentralized_party_secret_share,
+        ) = aggregates_internal(
+            decentralized_party_encryption_of_secret_key_share_commitment_round_parties,
+        )
+        .unwrap();
 
-        let decentralized_party_decommitments_and_proof_share_round_parties: HashMap<_, _> =
-            decentralized_party_commitments_and_decommitment_round_parties
-                .into_iter()
-                .map(|(party_id, (_, party))| {
-                    (
-                        party_id,
-                        party
-                            .decommit_share_of_decentralize_party_public_key_share(
-                                commitments.clone(),
-                                &mut OsRng,
-                            )
-                            .unwrap(),
-                    )
-                })
-                .collect();
+        let encryption_of_decentralized_party_secret_share =
+            encryption_of_decentralized_party_secret_share
+                .first()
+                .unwrap()
+                .clone();
 
-        let decommitments: HashMap<_, _> =
-            decentralized_party_decommitments_and_proof_share_round_parties
-                .iter()
-                .map(|(party_id, (decommitment, _))| (*party_id, decommitment.clone()))
-                .collect();
-
-        let decentralized_party_proof_shares_and_proof_aggregation_round_parties: HashMap<_, _> =
-            decentralized_party_decommitments_and_proof_share_round_parties
-                .into_iter()
-                .map(|(party_id, (_, party))| {
-                    (
-                        party_id,
-                        party
-                            .generate_proof_share(decommitments.clone(), &mut OsRng)
-                            .unwrap(),
-                    )
-                })
-                .collect();
-
-        let proof_shares: HashMap<_, _> =
-            decentralized_party_proof_shares_and_proof_aggregation_round_parties
-                .iter()
-                .map(|(party_id, (proof_share, _))| (*party_id, proof_share.clone()))
-                .collect();
-
-        let decentralized_party_secret_key_share_encryption_and_proofs_and_decommitment_proof_verification_round_parties: HashMap<_, _> =
-            decentralized_party_proof_shares_and_proof_aggregation_round_parties
-                .into_iter()
-                .map(|(party_id, (_, party))| {
-                    (
-                        party_id,
-                        party.aggregate_proof_shares(proof_shares.clone(), &mut OsRng).unwrap(),
-                    )
-                })
-                .collect();
-
-        let secret_key_share_encryption_and_proofs: Vec<_> =
-            decentralized_party_secret_key_share_encryption_and_proofs_and_decommitment_proof_verification_round_parties
-                .iter()
-                .map(|(_, (proof_share, _))| proof_share.clone())
-                .collect();
-
-        let secret_key_share_encryption_and_proof = secret_key_share_encryption_and_proofs
-            .first()
-            .unwrap()
-            .clone();
-
-        assert!(secret_key_share_encryption_and_proofs
-            .into_iter()
-            .all(|enc_proof| enc_proof == secret_key_share_encryption_and_proof));
+        let secret_key_share_encryption_and_proof = SecretKeyShareEncryptionAndProof::new(
+            encryption_of_decentralized_party_secret_share,
+            encryption_of_decentralized_party_secret_share_proof,
+        );
 
         let (
             centralized_party_public_key_share_decommitment_and_proof,
@@ -219,12 +179,19 @@ pub(crate) mod tests {
         );
 
         let decentralized_party_dkg_outputs: HashMap<_, _> =
-            decentralized_party_secret_key_share_encryption_and_proofs_and_decommitment_proof_verification_round_parties
+            decentralized_party_decommitment_proof_verification_round_parties
                 .into_iter()
-                .map(|(party_id, (_, party))| {
+                .map(|(party_id, party)| {
                     (
                         party_id,
-                        party.verify_decommitment_and_proof_of_centralized_party_public_key_share(centralized_party_public_key_share_decommitment_and_proof.clone()).unwrap(),
+                        party
+                            .verify_decommitment_and_proof_of_centralized_party_public_key_share(
+                                centralized_party_public_key_share_decommitment_and_proof.clone(),
+                                encryption_of_decentralized_party_secret_share
+                                    .language_statement()
+                                    .clone(),
+                            )
+                            .unwrap(),
                     )
                 })
                 .collect();
