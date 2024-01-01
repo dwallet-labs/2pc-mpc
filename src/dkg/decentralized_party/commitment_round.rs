@@ -13,11 +13,11 @@ use crate::{
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, GroupElement as _,
-        PrimeGroupElement, Samplable,
+        KnownOrderScalar, NumbersGroupElement, PrimeGroupElement, Samplable,
     },
     proofs,
     proofs::{
-        range,
+        range, schnorr,
         schnorr::{
             aggregation::CommitmentRoundParty,
             encryption_of_discrete_log, enhanced,
@@ -75,17 +75,37 @@ impl<
         ProtocolContext,
     >
 where
+    // TODO: I'd love to solve this huge restriction, which seems completely useless to me and is
+    // required because Rust.
     encryption_of_discrete_log::Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-    >: EnhanceableLanguage<
-        { encryption_of_discrete_log::REPETITIONS },
-        RANGE_CLAIMS_PER_SCALAR,
-        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        UnboundedEncDLWitness,
-    >,
+    >: schnorr::Language<
+            { encryption_of_discrete_log::REPETITIONS },
+            WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                EncryptionKey,
+            >,
+            StatementSpaceGroupElement = encryption_of_discrete_log::StatementSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+            PublicParameters = encryption_of_discrete_log::PublicParameters<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+        > + EnhanceableLanguage<
+            { encryption_of_discrete_log::REPETITIONS },
+            RANGE_CLAIMS_PER_SCALAR,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            UnboundedEncDLWitness,
+        >,
 {
     // TODO: consistent naming with presign
     pub fn sample_and_commit_share_of_decentralize_party_secret_key_share(
@@ -144,27 +164,16 @@ where
             GroupElement::Scalar::sample(&self.scalar_group_public_parameters, rng)?;
 
         let encryption_of_discrete_log_language_public_parameters =
-            encryption_of_discrete_log::PublicParameters::new::<
+            encryption_of_discrete_log::PublicParameters::<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 SCALAR_LIMBS,
                 GroupElement,
                 EncryptionKey,
-            >(
+            >::new::<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>(
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
-                self.encryption_scheme_public_parameters,
+                self.encryption_scheme_public_parameters.clone(),
             );
-
-        // // TODO: remove
-        // let encryption_of_discrete_log_language_public_parameters: language::PublicParameters<
-        //     { encryption_of_discrete_log::REPETITIONS },
-        //     encryption_of_discrete_log::Language<
-        //         PLAINTEXT_SPACE_SCALAR_LIMBS,
-        //         SCALAR_LIMBS,
-        //         GroupElement,
-        //         EncryptionKey,
-        //     >,
-        // > = todo!();
 
         let encryption_of_discrete_log_enhanced_language_public_parameters =
             EnhancedPublicParameters::<
@@ -189,10 +198,13 @@ where
                     EncryptionKey,
                 >,
             >(
-                self.unbounded_encdl_witness_public_parameters,
+                self.unbounded_encdl_witness_public_parameters.clone(),
                 self.range_proof_public_parameters.clone(),
                 encryption_of_discrete_log_language_public_parameters,
             );
+
+        let share_of_decentralized_party_secret_key_share_value: Uint<SCALAR_LIMBS> =
+            share_of_decentralized_party_secret_key_share.into();
 
         let share_of_decentralized_party_secret_key_share_witness = EnhancedLanguage::<
             { encryption_of_discrete_log::REPETITIONS },
@@ -207,24 +219,21 @@ where
                 EncryptionKey,
             >,
         >::generate_witness(
-            // (
-            //     EncryptionKey::PlaintextSpaceGroupElement::new(
-            //         Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(
-            //             share_of_decentralized_party_secret_key_share.into(),
-            //         )
-            //         .into(),
-            //         self.encryption_scheme_public_parameters
-            //             .plaintext_space_public_parameters(),
-            //     )?,
-            //     encryption_randomness,
-            // )
-            //     .into(),
-            todo!(),
+            (
+                EncryptionKey::PlaintextSpaceGroupElement::new(
+                    Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(
+                        &share_of_decentralized_party_secret_key_share_value,
+                    )
+                    .into(),
+                    self.encryption_scheme_public_parameters
+                        .plaintext_space_public_parameters(),
+                )?,
+                encryption_randomness,
+            )
+                .into(),
             &encryption_of_discrete_log_enhanced_language_public_parameters,
             rng,
         )?;
-
-        // TODO: use range proof's aggregation type
 
         let encryption_of_secret_share_commitment_round_party = RangeProof::new_enhanced_session::<
             { encryption_of_discrete_log::REPETITIONS },

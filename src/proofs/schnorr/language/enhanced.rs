@@ -403,8 +403,6 @@ impl<
     }
 }
 
-// TODO: accessors
-
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
     const REPETITIONS: usize,

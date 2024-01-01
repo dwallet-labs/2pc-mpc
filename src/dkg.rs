@@ -4,7 +4,7 @@
 use crate::group::CyclicGroupElement;
 
 pub mod centralized_party;
-// pub mod decentralized_party;
+pub mod decentralized_party;
 
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
@@ -21,19 +21,19 @@ pub(crate) mod tests {
         ahe::{
             paillier,
             paillier::tests::{N, SECRET_KEY},
-            AdditivelyHomomorphicDecryptionKey,
+            AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors,
         },
         dkg::centralized_party,
         group::{ristretto, secp256k1, CyclicGroupElement},
         proofs::{
             range::{bulletproofs, RangeProof},
-            schnorr::language::enhanced::tests::RANGE_CLAIMS_PER_SCALAR,
+            schnorr::enhanced::tests::RANGE_CLAIMS_PER_SCALAR,
         },
     };
 
     #[test]
-    fn dkg_succeeds() {
-        let number_of_parties = 3;
+    fn generates_distributed_key() {
+        let number_of_parties = 4;
         let threshold = 2;
 
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
@@ -52,12 +52,11 @@ pub(crate) mod tests {
         let centralized_party_commitment_round_party = centralized_party::commitment_round::Party::<
             { secp256k1::SCALAR_LIMBS },
             { ristretto::SCALAR_LIMBS },
-            RANGE_CLAIMS_PER_SCALAR,
-            { bulletproofs::RANGE_CLAIM_LIMBS },
-            { WITNESS_MASK_LIMBS },
+            { RANGE_CLAIMS_PER_SCALAR },
             { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
             secp256k1::GroupElement,
             paillier::EncryptionKey,
+            paillier::RandomnessSpaceGroupElement,
             bulletproofs::RangeProof,
             PhantomData<()>,
         > {
@@ -66,6 +65,9 @@ pub(crate) mod tests {
             group_public_parameters: secp256k1_group_public_parameters.clone(),
             encryption_scheme_public_parameters: paillier_public_parameters.clone(),
             range_proof_public_parameters: bulletproofs_public_parameters.clone(),
+            unbounded_encdl_witness_public_parameters: paillier_public_parameters
+                .randomness_space_public_parameters()
+                .clone(),
         };
 
         let (
@@ -83,12 +85,11 @@ pub(crate) mod tests {
                     decentralized_party::commitment_round::Party::<
                         { secp256k1::SCALAR_LIMBS },
                         { ristretto::SCALAR_LIMBS },
-                        RANGE_CLAIMS_PER_SCALAR,
-                        { bulletproofs::RANGE_CLAIM_LIMBS },
-                        { WITNESS_MASK_LIMBS },
+                        { RANGE_CLAIMS_PER_SCALAR },
                         { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
                         secp256k1::GroupElement,
                         paillier::EncryptionKey,
+                        paillier::RandomnessSpaceGroupElement,
                         bulletproofs::RangeProof,
                         PhantomData<()>,
                     > {
@@ -99,6 +100,9 @@ pub(crate) mod tests {
                         scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
                         group_public_parameters: secp256k1_group_public_parameters.clone(),
                         encryption_scheme_public_parameters: paillier_public_parameters.clone(),
+                        unbounded_encdl_witness_public_parameters: paillier_public_parameters
+                            .randomness_space_public_parameters()
+                            .clone(),
                         range_proof_public_parameters: bulletproofs_public_parameters.clone(),
                     },
                 )
@@ -124,7 +128,7 @@ pub(crate) mod tests {
         let commitments: HashMap<_, _> =
             decentralized_party_commitments_and_decommitment_round_parties
                 .iter()
-                .map(|(party_id, (commitment, _))| (*party_id, *commitment))
+                .map(|(party_id, (commitment, _))| (*party_id, commitment.clone()))
                 .collect();
 
         let decentralized_party_decommitments_and_proof_share_round_parties: HashMap<_, _> =
@@ -136,6 +140,7 @@ pub(crate) mod tests {
                         party
                             .decommit_share_of_decentralize_party_public_key_share(
                                 commitments.clone(),
+                                &mut OsRng,
                             )
                             .unwrap(),
                     )
@@ -154,7 +159,9 @@ pub(crate) mod tests {
                 .map(|(party_id, (_, party))| {
                     (
                         party_id,
-                        party.generate_proof_share(decommitments.clone()).unwrap(),
+                        party
+                            .generate_proof_share(decommitments.clone(), &mut OsRng)
+                            .unwrap(),
                     )
                 })
                 .collect();
@@ -171,7 +178,7 @@ pub(crate) mod tests {
                 .map(|(party_id, (_, party))| {
                     (
                         party_id,
-                        party.aggregate_proof_shares(proof_shares.clone()).unwrap(),
+                        party.aggregate_proof_shares(proof_shares.clone(), &mut OsRng).unwrap(),
                     )
                 })
                 .collect();

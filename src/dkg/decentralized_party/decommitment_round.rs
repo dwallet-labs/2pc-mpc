@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use crypto_bigint::{Encoding, Uint};
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::Serialize;
 
 use super::proof_share_round;
@@ -12,8 +12,11 @@ use crate::{
     group::{PrimeGroupElement, Samplable},
     proofs,
     proofs::{
-        range,
-        schnorr::{encryption_of_discrete_log, enhanced::EnhanceableLanguage},
+        range, schnorr,
+        schnorr::{
+            aggregation::DecommitmentRoundParty, encryption_of_discrete_log,
+            enhanced::EnhanceableLanguage,
+        },
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
 };
@@ -92,17 +95,37 @@ impl<
         ProtocolContext,
     >
 where
+    // TODO: I'd love to solve this huge restriction, which seems completely useless to me and is
+    // required because Rust.
     encryption_of_discrete_log::Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-    >: EnhanceableLanguage<
-        { encryption_of_discrete_log::REPETITIONS },
-        RANGE_CLAIMS_PER_SCALAR,
-        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        UnboundedEncDLWitness,
-    >,
+    >: schnorr::Language<
+            { encryption_of_discrete_log::REPETITIONS },
+            WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                EncryptionKey,
+            >,
+            StatementSpaceGroupElement = encryption_of_discrete_log::StatementSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+            PublicParameters = encryption_of_discrete_log::PublicParameters<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+        > + EnhanceableLanguage<
+            { encryption_of_discrete_log::REPETITIONS },
+            RANGE_CLAIMS_PER_SCALAR,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            UnboundedEncDLWitness,
+        >,
 {
     pub fn decommit_share_of_decentralize_party_public_key_share(
         self,
@@ -123,6 +146,7 @@ where
                 ProtocolContext,
             >,
         >,
+        rng: &mut impl CryptoRngCore,
     ) -> crate::Result<(
         range::Decommitment<
             { encryption_of_discrete_log::REPETITIONS },
@@ -155,7 +179,7 @@ where
             encryption_of_secret_share_proof_share_round_party,
         ) = self
             .encryption_of_secret_share_decommitment_round_party
-            .decommit_statements_and_statement_mask(commitments)?;
+            .decommit_statements_and_statement_mask(commitments, rng)?;
 
         let proof_share_round_party = proof_share_round::Party::<
             SCALAR_LIMBS,
@@ -164,6 +188,7 @@ where
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
+            UnboundedEncDLWitness,
             RangeProof,
             ProtocolContext,
         > {

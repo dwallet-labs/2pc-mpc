@@ -10,6 +10,11 @@ pub use proof::Proof;
 
 pub mod enhanced {
     pub use super::{language::enhanced::*, proof::enhanced::*};
+
+    #[cfg(any(test, feature = "benchmarking"))]
+    pub(crate) mod tests {
+        pub use super::super::{language::enhanced::tests::*, proof::enhanced::tests::*};
+    }
 }
 
 pub mod aggregation;

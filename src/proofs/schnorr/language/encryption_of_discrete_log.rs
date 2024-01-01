@@ -412,7 +412,7 @@ pub trait StatementAccessors<
     GroupElement: group::GroupElement,
 >
 {
-    fn ciphertext(&self) -> &CiphertextSpaceGroupElement;
+    fn encryption_of_discrete_log(&self) -> &CiphertextSpaceGroupElement;
 
     // TODO: name
     fn base_by_discrete_log(&self) -> &GroupElement;
@@ -422,7 +422,7 @@ impl<CiphertextSpaceGroupElement: group::GroupElement, GroupElement: group::Grou
     StatementAccessors<CiphertextSpaceGroupElement, GroupElement>
     for direct_product::GroupElement<CiphertextSpaceGroupElement, GroupElement>
 {
-    fn ciphertext(&self) -> &CiphertextSpaceGroupElement {
+    fn encryption_of_discrete_log(&self) -> &CiphertextSpaceGroupElement {
         let (ciphertext, _): (&_, &_) = self.into();
 
         ciphertext
@@ -496,7 +496,12 @@ pub(crate) mod tests {
 
         let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
 
-        let language_public_parameters = PublicParameters::new::<
+        let language_public_parameters = PublicParameters::<
+            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+            { secp256k1::SCALAR_LIMBS },
+            secp256k1::GroupElement,
+            paillier::EncryptionKey,
+        >::new::<
             { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
             { secp256k1::SCALAR_LIMBS },
             secp256k1::GroupElement,

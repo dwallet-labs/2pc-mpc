@@ -9,10 +9,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ahe::GroupsPublicParametersAccessors as _,
     commitments::GroupsPublicParametersAccessors as _,
-    // dkg::{
-    //     decentralized_party,
-    //     decentralized_party::proof_aggregation_round::SecretKeyShareEncryptionAndProof,
-    // },
+    dkg::{
+        decentralized_party,
+        decentralized_party::proof_aggregation_round::SecretKeyShareEncryptionAndProof,
+    },
     group,
     group::{direct_product, GroupElement as _, PrimeGroupElement, Samplable},
     proofs,
@@ -26,23 +26,8 @@ use crate::{
             knowledge_of_discrete_log, language,
         },
     },
-    AdditivelyHomomorphicEncryptionKey,
-    ComputationalSecuritySizedNumber,
+    AdditivelyHomomorphicEncryptionKey, ComputationalSecuritySizedNumber,
 };
-
-// TODO: delete
-#[derive(PartialEq, Serialize, Deserialize, Clone)]
-pub struct SecretKeyShareEncryptionAndProof<
-    RangeProofCommitmentValue,
-    GroupElementValue,
-    CiphertextValue,
-    EncDLProof,
-> {
-    pub(in crate::dkg) public_key_share: GroupElementValue,
-    pub(in crate::dkg) range_proof_commitment: RangeProofCommitmentValue,
-    pub(in crate::dkg) encryption_of_secret_key_share: CiphertextValue,
-    pub(in crate::dkg) encryption_of_secret_key_share_proof: EncDLProof,
-}
 
 #[derive(Clone)]
 pub struct Output<

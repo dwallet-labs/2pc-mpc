@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use crypto_bigint::{Encoding, Uint};
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::{Deserialize, Serialize};
 
 use super::proof_share_round;
@@ -13,10 +13,13 @@ use crate::{
     group::{GroupElement as _, PrimeGroupElement, Samplable},
     proofs,
     proofs::{
-        range,
+        range, schnorr,
         schnorr::{
-            aggregation::decommitment_round::Decommitment, encryption_of_discrete_log,
-            enhanced::EnhanceableLanguage, language,
+            aggregation::{decommitment_round::Decommitment, ProofAggregationRoundParty},
+            encryption_of_discrete_log,
+            enhanced::{EnhanceableLanguage, EnhancedLanguageStatementAccessors},
+            language,
+            language::encryption_of_discrete_log::StatementAccessors,
         },
     },
     AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
@@ -110,17 +113,37 @@ impl<
         ProtocolContext,
     >
 where
+    // TODO: I'd love to solve this huge restriction, which seems completely useless to me and is
+    // required because Rust.
     encryption_of_discrete_log::Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-    >: EnhanceableLanguage<
-        { encryption_of_discrete_log::REPETITIONS },
-        RANGE_CLAIMS_PER_SCALAR,
-        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        UnboundedEncDLWitness,
-    >,
+    >: schnorr::Language<
+            { encryption_of_discrete_log::REPETITIONS },
+            WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                EncryptionKey,
+            >,
+            StatementSpaceGroupElement = encryption_of_discrete_log::StatementSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+            PublicParameters = encryption_of_discrete_log::PublicParameters<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+        > + EnhanceableLanguage<
+            { encryption_of_discrete_log::REPETITIONS },
+            RANGE_CLAIMS_PER_SCALAR,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            UnboundedEncDLWitness,
+        >,
 {
     pub fn aggregate_proof_shares(
         self,
@@ -141,6 +164,7 @@ where
                 ProtocolContext,
             >,
         >,
+        rng: &mut impl CryptoRngCore,
     ) -> crate::Result<(
         SecretKeyShareEncryptionAndProof<
             range::CommitmentSchemeCommitmentSpaceValue<
@@ -174,15 +198,18 @@ where
     )> {
         let (encryption_of_secret_key_share_proof, statements) = self
             .encryption_of_secret_share_proof_aggregation_round_party
-            .aggregate_proof_shares(proof_shares)?;
+            .aggregate_proof_shares(proof_shares, rng)?;
 
-        let statement = statements.first().ok_or(crate::Error::APIMismatch)?;
+        let statement = statements.first().ok_or(crate::Error::InternalError)?;
 
         let decentralized_party_secret_key_share_encryption_and_proof =
             SecretKeyShareEncryptionAndProof {
-                public_key_share: (&statement.generator_by_discrete_log()).value(),
+                public_key_share: (&statement.language_statement().base_by_discrete_log()).value(),
                 range_proof_commitment: (statement.range_proof_commitment()).value(),
-                encryption_of_secret_key_share: (&statement.encryption_of_discrete_log()).value(),
+                encryption_of_secret_key_share: (&statement
+                    .language_statement()
+                    .encryption_of_discrete_log())
+                    .value(),
                 encryption_of_secret_key_share_proof,
             };
 
@@ -206,8 +233,14 @@ where
                     .commitment_to_centralized_party_secret_key_share,
                 share_of_decentralized_party_secret_key_share: self
                     .share_of_decentralized_party_secret_key_share,
-                public_key_share: statement.generator_by_discrete_log().clone(),
-                encryption_of_secret_key_share: statement.encryption_of_discrete_log().clone(),
+                public_key_share: statement
+                    .language_statement()
+                    .base_by_discrete_log()
+                    .clone(),
+                encryption_of_secret_key_share: statement
+                    .language_statement()
+                    .encryption_of_discrete_log()
+                    .clone(),
             };
 
         Ok((
