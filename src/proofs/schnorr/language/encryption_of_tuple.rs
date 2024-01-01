@@ -63,6 +63,38 @@ pub struct Language<
     _encryption_key_choice: PhantomData<EncryptionKey>,
 }
 
+/// The Witness Space Group Element of the Encryption of a Tuple Schnorr Language.
+pub type WitnessSpaceGroupElement<
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+> = direct_product::ThreeWayGroupElement<
+    EncryptionKey::PlaintextSpaceGroupElement,
+    EncryptionKey::RandomnessSpaceGroupElement,
+    EncryptionKey::RandomnessSpaceGroupElement,
+>;
+
+/// The Statement Space Group Element  of the Encryption of a Tuple Schnorr Language.
+pub type StatementSpaceGroupElement<
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+> = self_product::GroupElement<2, EncryptionKey::CiphertextSpaceGroupElement>;
+
+/// The Public Parameters of the Encryption of a Tuple Schnorr Language.
+pub type PublicParameters<
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+> = private::PublicParameters<
+    group::PublicParameters<GroupElement::Scalar>,
+    group::PublicParameters<EncryptionKey::PlaintextSpaceGroupElement>,
+    group::PublicParameters<EncryptionKey::RandomnessSpaceGroupElement>,
+    group::PublicParameters<EncryptionKey::CiphertextSpaceGroupElement>,
+    EncryptionKey::PublicParameters,
+    group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
+>;
+
 impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         const SCALAR_LIMBS: usize,
@@ -71,23 +103,14 @@ impl<
     > schnorr::Language<REPETITIONS>
     for Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>
 {
-    type WitnessSpaceGroupElement = direct_product::ThreeWayGroupElement<
-        EncryptionKey::PlaintextSpaceGroupElement,
-        EncryptionKey::RandomnessSpaceGroupElement,
-        EncryptionKey::RandomnessSpaceGroupElement,
-    >;
+    type WitnessSpaceGroupElement =
+        WitnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>;
 
     type StatementSpaceGroupElement =
-        self_product::GroupElement<2, EncryptionKey::CiphertextSpaceGroupElement>;
+        StatementSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, EncryptionKey>;
 
-    type PublicParameters = PublicParameters<
-        group::PublicParameters<GroupElement::Scalar>,
-        group::PublicParameters<EncryptionKey::PlaintextSpaceGroupElement>,
-        group::PublicParameters<EncryptionKey::RandomnessSpaceGroupElement>,
-        group::PublicParameters<EncryptionKey::CiphertextSpaceGroupElement>,
-        EncryptionKey::PublicParameters,
-        group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
-    >;
+    type PublicParameters =
+        PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>;
 
     const NAME: &'static str = "Encryption of a Tuple";
 
@@ -111,23 +134,23 @@ impl<
             )?;
 
         // TODO: name?
-        let encryption_of_multiplicant = encryption_key
-            .encrypt_with_randomness(witness.multiplicant(), witness.multiplicant_randomness());
+        let encryption_of_multiplicand = encryption_key
+            .encrypt_with_randomness(witness.multiplicand(), witness.multiplicand_randomness());
 
         // no mask needed, as we're not doing any homomorphic additions? TODO: why
-        let mask = witness.multiplicant().neutral();
+        let mask = witness.multiplicand().neutral();
 
         // TODO: name?
-        let encryption_of_multiplication = encryption_key
+        let encryption_of_product = encryption_key
             .evaluate_circuit_private_linear_combination_with_randomness(
-                &[*witness.multiplicant()],
+                &[*witness.multiplicand()],
                 &[ciphertext],
                 &group_order,
                 &mask,
-                witness.multiplication_randomness(),
+                witness.product_randomness(),
             )?;
 
-        Ok([encryption_of_multiplicant, encryption_of_multiplication].into())
+        Ok([encryption_of_multiplicand, encryption_of_product].into())
     }
 }
 
@@ -158,7 +181,7 @@ impl<
         range_claim_bits: usize,
     ) -> proofs::Result<Self::WitnessSpaceGroupElement> {
         // TODO: perhaps this was the bug, that I'm saying this is scalar here.
-        let multiplicant = <paillier::PlaintextSpaceGroupElement as DecomposableWitness<
+        let multiplicand = <paillier::PlaintextSpaceGroupElement as DecomposableWitness<
             RANGE_CLAIMS_PER_SCALAR,
             SCALAR_LIMBS,
             { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
@@ -172,15 +195,10 @@ impl<
             range_claim_bits,
         )?;
 
-        let multiplicant_randomness = <[_; 2]>::from(*unbounded_witness)[0];
-        let multiplication_randomness = <[_; 2]>::from(*unbounded_witness)[1];
+        let multiplicand_randomness = <[_; 2]>::from(*unbounded_witness)[0];
+        let product_randomness = <[_; 2]>::from(*unbounded_witness)[1];
 
-        Ok((
-            multiplicant,
-            multiplicant_randomness,
-            multiplication_randomness,
-        )
-            .into())
+        Ok((multiplicand, multiplicand_randomness, product_randomness).into())
     }
 
     fn decompose_witness(
@@ -191,45 +209,48 @@ impl<
         [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; RANGE_CLAIMS_PER_SCALAR],
         self_product::GroupElement<2, paillier::RandomnessSpaceGroupElement>,
     )> {
-        let multiplicant_value: Uint<SCALAR_LIMBS> = (&witness.multiplicant().value()).into();
-        let multiplicant = GroupElement::Scalar::new(
-            multiplicant_value.into(),
+        let multiplicand_value: Uint<SCALAR_LIMBS> = (&witness.multiplicand().value()).into();
+        let multiplicand = GroupElement::Scalar::new(
+            multiplicand_value.into(),
             &language_public_parameters.scalar_group_public_parameters,
         )?;
 
         Ok((
-            multiplicant.decompose(range_claim_bits),
+            multiplicand.decompose(range_claim_bits),
             [
-                *witness.multiplicant_randomness(),
-                *witness.multiplication_randomness(),
+                *witness.multiplicand_randomness(),
+                *witness.product_randomness(),
             ]
             .into(),
         ))
     }
 }
 
-/// The Public Parameters of the Encryption of a Tuple Schnorr Language
-#[derive(Debug, PartialEq, Serialize, Clone)]
-pub struct PublicParameters<
-    ScalarPublicParameters,
-    PlaintextSpacePublicParameters,
-    RandomnessSpacePublicParameters,
-    CiphertextSpacePublicParameters,
-    EncryptionKeyPublicParameters,
-    CiphertextSpaceValue,
-> {
-    pub groups_public_parameters: GroupsPublicParameters<
-        direct_product::ThreeWayPublicParameters<
-            PlaintextSpacePublicParameters,
-            RandomnessSpacePublicParameters,
-            RandomnessSpacePublicParameters,
+pub(super) mod private {
+    use super::*;
+
+    #[derive(Debug, PartialEq, Serialize, Clone)]
+    pub struct PublicParameters<
+        ScalarPublicParameters,
+        PlaintextSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CiphertextSpacePublicParameters,
+        EncryptionKeyPublicParameters,
+        CiphertextSpaceValue,
+    > {
+        pub groups_public_parameters: GroupsPublicParameters<
+            direct_product::ThreeWayPublicParameters<
+                PlaintextSpacePublicParameters,
+                RandomnessSpacePublicParameters,
+                RandomnessSpacePublicParameters,
+            >,
+            self_product::PublicParameters<2, CiphertextSpacePublicParameters>,
         >,
-        self_product::PublicParameters<2, CiphertextSpacePublicParameters>,
-    >,
-    pub scalar_group_public_parameters: ScalarPublicParameters,
-    pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
-    // TODO: name
-    pub ciphertext: CiphertextSpaceValue,
+        pub scalar_group_public_parameters: ScalarPublicParameters,
+        pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
+        // TODO: name
+        pub ciphertext: CiphertextSpaceValue,
+    }
 }
 
 impl<
@@ -250,7 +271,7 @@ impl<
             self_product::PublicParameters<2, CiphertextSpacePublicParameters>,
         >,
     >
-    for PublicParameters<
+    for private::PublicParameters<
         ScalarPublicParameters,
         PlaintextSpacePublicParameters,
         RandomnessSpacePublicParameters,
@@ -287,7 +308,7 @@ impl<
         >,
         CiphertextSpaceValue,
     >
-    PublicParameters<
+    private::PublicParameters<
         ScalarPublicParameters,
         PlaintextSpacePublicParameters,
         RandomnessSpacePublicParameters,
@@ -354,11 +375,11 @@ pub trait WitnessAccessors<
 >
 {
     // TODO: names
-    fn multiplicant(&self) -> &PlaintextSpaceGroupElement;
+    fn multiplicand(&self) -> &PlaintextSpaceGroupElement;
 
-    fn multiplicant_randomness(&self) -> &RandomnessSpaceGroupElement;
+    fn multiplicand_randomness(&self) -> &RandomnessSpaceGroupElement;
 
-    fn multiplication_randomness(&self) -> &RandomnessSpaceGroupElement;
+    fn product_randomness(&self) -> &RandomnessSpaceGroupElement;
 }
 
 impl<
@@ -371,64 +392,65 @@ impl<
         RandomnessSpaceGroupElement,
     >
 {
-    fn multiplicant(&self) -> &PlaintextSpaceGroupElement {
-        let (multiplicant, ..): (&_, &_, &_) = self.into();
+    fn multiplicand(&self) -> &PlaintextSpaceGroupElement {
+        let (multiplicand, ..): (&_, &_, &_) = self.into();
 
-        multiplicant
+        multiplicand
     }
 
-    fn multiplicant_randomness(&self) -> &RandomnessSpaceGroupElement {
-        let (_, multiplicant_randomness, _): (&_, &_, &_) = self.into();
+    fn multiplicand_randomness(&self) -> &RandomnessSpaceGroupElement {
+        let (_, multiplicand_randomness, _): (&_, &_, &_) = self.into();
 
-        multiplicant_randomness
+        multiplicand_randomness
     }
 
-    fn multiplication_randomness(&self) -> &RandomnessSpaceGroupElement {
-        let (_, _, multiplication_randomness): (&_, &_, &_) = self.into();
+    fn product_randomness(&self) -> &RandomnessSpaceGroupElement {
+        let (_, _, product_randomness): (&_, &_, &_) = self.into();
 
-        multiplication_randomness
+        product_randomness
     }
 }
 
 pub trait StatementAccessors<CiphertextSpaceGroupElement: group::GroupElement> {
     // TODO: names
-    fn encryption_of_multiplicant(&self) -> &CiphertextSpaceGroupElement;
+    fn encryption_of_multiplicand(&self) -> &CiphertextSpaceGroupElement;
 
-    fn encryption_of_multiplication(&self) -> &CiphertextSpaceGroupElement;
+    fn encryption_of_product(&self) -> &CiphertextSpaceGroupElement;
 }
 
 impl<CiphertextSpaceGroupElement: group::GroupElement>
     StatementAccessors<CiphertextSpaceGroupElement>
     for self_product::GroupElement<2, CiphertextSpaceGroupElement>
 {
-    fn encryption_of_multiplicant(&self) -> &CiphertextSpaceGroupElement {
+    fn encryption_of_multiplicand(&self) -> &CiphertextSpaceGroupElement {
         let value: &[_; 2] = self.into();
 
         &value[0]
     }
 
-    fn encryption_of_multiplication(&self) -> &CiphertextSpaceGroupElement {
+    fn encryption_of_product(&self) -> &CiphertextSpaceGroupElement {
         let value: &[_; 2] = self.into();
 
         &value[1]
     }
 }
 
-pub type EnhancedLanguage<
+pub type EnhancedProof<
     const NUM_RANGE_CLAIMS: usize,
     const MESSAGE_SPACE_SCALAR_LIMBS: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,
-    CommitmentScheme,
     GroupElement,
     EncryptionKey,
+    UnboundedWitnessSpaceGroupElement,
+    RangeProof,
     ProtocolContext,
 > = schnorr::enhanced::Proof<
     REPETITIONS,
     NUM_RANGE_CLAIMS,
-    SCALAR_LIMBS,
-    CommitmentScheme,
-    ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+    MESSAGE_SPACE_SCALAR_LIMBS,
+    RangeProof,
+    UnboundedWitnessSpaceGroupElement,
     Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>,
     ProtocolContext,
 >;
@@ -489,7 +511,12 @@ pub(crate) mod tests {
             .1
             .value();
 
-        let language_public_parameters = PublicParameters::new::<
+        let language_public_parameters = PublicParameters::<
+            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+            { secp256k1::SCALAR_LIMBS },
+            secp256k1::GroupElement,
+            paillier::EncryptionKey,
+        >::new::<
             { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
             { secp256k1::SCALAR_LIMBS },
             secp256k1::GroupElement,
@@ -508,9 +535,9 @@ pub(crate) mod tests {
         batch_size: usize,
     ) -> Vec<language::WitnessSpaceGroupElement<REPETITIONS, Lang>> {
         iter::repeat_with(|| {
-            let multiplicant = generate_scalar_plaintext();
+            let multiplicand = generate_scalar_plaintext();
 
-            let multiplicant_randomness = paillier::RandomnessSpaceGroupElement::sample(
+            let multiplicand_randomness = paillier::RandomnessSpaceGroupElement::sample(
                 language_public_parameters
                     .encryption_scheme_public_parameters
                     .randomness_space_public_parameters(),
@@ -518,7 +545,7 @@ pub(crate) mod tests {
             )
             .unwrap();
 
-            let multiplication_randomness = paillier::RandomnessSpaceGroupElement::sample(
+            let product_randomness = paillier::RandomnessSpaceGroupElement::sample(
                 language_public_parameters
                     .encryption_scheme_public_parameters
                     .randomness_space_public_parameters(),
@@ -526,12 +553,7 @@ pub(crate) mod tests {
             )
             .unwrap();
 
-            (
-                multiplicant,
-                multiplicant_randomness,
-                multiplication_randomness,
-            )
-                .into()
+            (multiplicand, multiplicand_randomness, product_randomness).into()
         })
         .take(batch_size)
         .collect()

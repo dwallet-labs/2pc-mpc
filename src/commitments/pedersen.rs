@@ -111,15 +111,15 @@ where
     }
 }
 
-type MessageSpaceGroupElement<const BATCH_SIZE: usize, Scalar> =
+pub type MessageSpaceGroupElement<const BATCH_SIZE: usize, Scalar> =
     self_product::GroupElement<BATCH_SIZE, Scalar>;
-type MessageSpacePublicParameters<const BATCH_SIZE: usize, Scalar> =
+pub type MessageSpacePublicParameters<const BATCH_SIZE: usize, Scalar> =
     group::PublicParameters<MessageSpaceGroupElement<BATCH_SIZE, Scalar>>;
-type RandomnessSpaceGroupElement<Scalar> = Scalar;
-type RandomnessSpacePublicParameters<Scalar> =
+pub type RandomnessSpaceGroupElement<Scalar> = Scalar;
+pub type RandomnessSpacePublicParameters<Scalar> =
     group::PublicParameters<RandomnessSpaceGroupElement<Scalar>>;
-type CommitmentSpaceGroupElement<GroupElement> = GroupElement;
-type CommitmentSpacePublicParameters<GroupElement> =
+pub type CommitmentSpaceGroupElement<GroupElement> = GroupElement;
+pub type CommitmentSpacePublicParameters<GroupElement> =
     group::PublicParameters<CommitmentSpaceGroupElement<GroupElement>>;
 
 // TODO: generate pedersen parameters from hash or what Avichay approves of, and don't allow any

@@ -60,6 +60,7 @@ pub struct EnhancedLanguage<
 }
 
 // TODO: use this code in protocols. Or maybe the other compose/decompose.
+// TODO: get rid of the Language restriction and see if it helps
 pub trait EnhanceableLanguage<
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,

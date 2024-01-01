@@ -59,6 +59,7 @@ pub struct Language<
     _encryption_key_choice: PhantomData<EncryptionKey>,
 }
 
+/// The Witness Space Group Element of the Encryption of Discrete Log Schnorr Language.
 pub type WitnessSpaceGroupElement<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
@@ -67,6 +68,7 @@ pub type WitnessSpaceGroupElement<
     EncryptionKey::RandomnessSpaceGroupElement,
 >;
 
+/// The Statement Space Group Element  of the Encryption of Discrete Log Schnorr Language.
 pub type StatementSpaceGroupElement<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,

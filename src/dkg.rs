@@ -86,7 +86,7 @@ pub(crate) mod tests {
                 let party_id: u16 = party_id.try_into().unwrap();
                 (
                     party_id,
-                    decentralized_party::encryption_of_secret_key_share::Party::<
+                    decentralized_party::encryption_of_secret_key_share_round::Party::<
                         { secp256k1::SCALAR_LIMBS },
                         { ristretto::SCALAR_LIMBS },
                         { RANGE_CLAIMS_PER_SCALAR },
@@ -201,15 +201,14 @@ pub(crate) mod tests {
             .all(|(_, dkg_output)| {
                 let decentralized_party_secret_key_share_decryption: LargeBiPrimeSizedNumber =
                     paillier_decryption_key
-                        .decrypt(&dkg_output.encryption_of_secret_key_share)
+                        .decrypt(&dkg_output.encrypted_secret_key_share)
                         .into();
 
                 let decentralized_party_secret_key_share: secp256k1::Scalar =
                     decentralized_party_secret_key_share_decryption.into();
 
-                (dkg_output.encryption_of_secret_key_share
-                    == centralized_party_dkg_output
-                        .encryption_of_decentralized_party_secret_key_share)
+                (dkg_output.encrypted_secret_key_share
+                    == centralized_party_dkg_output.encrypted_decentralized_party_secret_key_share)
                     && (decentralized_party_secret_key_share * &generator
                         == dkg_output.public_key_share)
                     && (dkg_output.centralized_party_public_key_share

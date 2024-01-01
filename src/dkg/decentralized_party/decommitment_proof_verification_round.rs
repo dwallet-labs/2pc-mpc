@@ -29,7 +29,7 @@ pub struct Output<
 > {
     pub public_key_share: GroupElement,
     pub public_key: GroupElement,
-    pub encryption_of_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
+    pub encrypted_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
     pub centralized_party_public_key_share: GroupElement,
 }
 
@@ -90,7 +90,7 @@ impl<
         Output<SCALAR_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, GroupElement, EncryptionKey>,
     > {
         let public_key_share = encryption_of_secret_share.base_by_discrete_log().clone();
-        let encryption_of_secret_key_share = encryption_of_secret_share
+        let encrypted_secret_key_share = encryption_of_secret_share
             .encryption_of_discrete_log()
             .clone();
 
@@ -125,7 +125,7 @@ impl<
         Ok(Output {
             public_key_share,
             public_key,
-            encryption_of_secret_key_share,
+            encrypted_secret_key_share,
             centralized_party_public_key_share,
         })
     }

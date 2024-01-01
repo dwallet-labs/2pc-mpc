@@ -23,6 +23,9 @@ use crate::{
     },
 };
 
+// TODO: name
+pub const ZERO_KNOWLEDGE_REPETITIONS: usize = 1;
+
 /// Knowledge of Decommitment Schnorr Language.
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Language<

@@ -162,7 +162,7 @@ where
         let share_of_decentralized_party_secret_key_share =
             GroupElement::Scalar::sample(&self.scalar_group_public_parameters, rng)?;
 
-        let encryption_of_discrete_log_language_public_parameters =
+        let language_public_parameters =
             encryption_of_discrete_log::PublicParameters::<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 SCALAR_LIMBS,
@@ -174,33 +174,32 @@ where
                 self.encryption_scheme_public_parameters.clone(),
             );
 
-        let encryption_of_discrete_log_enhanced_language_public_parameters =
-            EnhancedPublicParameters::<
-                { encryption_of_discrete_log::REPETITIONS },
-                RANGE_CLAIMS_PER_SCALAR,
-                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                RangeProof,
-                UnboundedEncDLWitness,
-                encryption_of_discrete_log::Language<
-                    PLAINTEXT_SPACE_SCALAR_LIMBS,
-                    SCALAR_LIMBS,
-                    GroupElement,
-                    EncryptionKey,
-                >,
-            >::new::<
-                RangeProof,
-                UnboundedEncDLWitness,
-                encryption_of_discrete_log::Language<
-                    PLAINTEXT_SPACE_SCALAR_LIMBS,
-                    SCALAR_LIMBS,
-                    GroupElement,
-                    EncryptionKey,
-                >,
-            >(
-                self.unbounded_encdl_witness_public_parameters.clone(),
-                self.range_proof_public_parameters.clone(),
-                encryption_of_discrete_log_language_public_parameters,
-            );
+        let language_public_parameters = EnhancedPublicParameters::<
+            { encryption_of_discrete_log::REPETITIONS },
+            RANGE_CLAIMS_PER_SCALAR,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RangeProof,
+            UnboundedEncDLWitness,
+            encryption_of_discrete_log::Language<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+        >::new::<
+            RangeProof,
+            UnboundedEncDLWitness,
+            encryption_of_discrete_log::Language<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+        >(
+            self.unbounded_encdl_witness_public_parameters.clone(),
+            self.range_proof_public_parameters.clone(),
+            language_public_parameters,
+        );
 
         let share_of_decentralized_party_secret_key_share_value: Uint<SCALAR_LIMBS> =
             share_of_decentralized_party_secret_key_share.into();
@@ -219,6 +218,7 @@ where
             >,
         >::generate_witness(
             (
+                // TODO: DRY
                 EncryptionKey::PlaintextSpaceGroupElement::new(
                     Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(
                         &share_of_decentralized_party_secret_key_share_value,
@@ -230,7 +230,7 @@ where
                 encryption_randomness,
             )
                 .into(),
-            &encryption_of_discrete_log_enhanced_language_public_parameters,
+            &language_public_parameters,
             rng,
         )?;
 
@@ -249,7 +249,7 @@ where
             self.party_id,
             self.threshold,
             self.number_of_parties,
-            encryption_of_discrete_log_enhanced_language_public_parameters,
+            language_public_parameters,
             self.protocol_context.clone(),
             vec![share_of_decentralized_party_secret_key_share_witness],
         );

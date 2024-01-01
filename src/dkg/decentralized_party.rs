@@ -19,7 +19,7 @@ use crate::{
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 pub mod decommitment_proof_verification_round;
-pub mod encryption_of_secret_key_share;
+pub mod encryption_of_secret_key_share_round;
 
 #[derive(PartialEq, Serialize, Deserialize, Clone)]
 pub struct SecretKeyShareEncryptionAndProof<
@@ -29,8 +29,8 @@ pub struct SecretKeyShareEncryptionAndProof<
     EncDLProof,
 > {
     pub(in crate::dkg) public_key_share: GroupElementValue,
+    pub(in crate::dkg) encrypted_secret_key_share: CiphertextValue,
     pub(in crate::dkg) range_proof_commitment: RangeProofCommitmentValue,
-    pub(in crate::dkg) encryption_of_secret_key_share: CiphertextValue,
     pub(in crate::dkg) encryption_of_secret_key_share_proof: EncDLProof,
 }
 
@@ -126,16 +126,22 @@ where
             ProtocolContext,
         >,
     ) -> Self {
-        SecretKeyShareEncryptionAndProof {
-            public_key_share: (&encryption_of_secret_share
-                .language_statement()
-                .base_by_discrete_log())
-                .value(),
-            range_proof_commitment: (encryption_of_secret_share.range_proof_commitment()).value(),
-            encryption_of_secret_key_share: (&encryption_of_secret_share
-                .language_statement()
-                .encryption_of_discrete_log())
-                .value(),
+        let encrypted_secret_key_share = (&encryption_of_secret_share
+            .language_statement()
+            .encryption_of_discrete_log())
+            .value();
+
+        let public_key_share = (&encryption_of_secret_share
+            .language_statement()
+            .base_by_discrete_log())
+            .value();
+
+        let range_proof_commitment = (encryption_of_secret_share.range_proof_commitment()).value();
+
+        Self {
+            public_key_share,
+            encrypted_secret_key_share,
+            range_proof_commitment,
             encryption_of_secret_key_share_proof,
         }
     }

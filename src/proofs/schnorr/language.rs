@@ -68,7 +68,7 @@ pub trait Language<
         128
     }
 
-    // TODO: rename to `homomorphose`
+    // TODO: rename to `homomorphose`, credit Eschel
     /// A group homomorphism $\phi:\HH\to\GG$  from $(\HH_\pp, +)$, the witness space,
     /// to $(\GG_\pp,\cdot)$, the statement space space.
     fn group_homomorphism(

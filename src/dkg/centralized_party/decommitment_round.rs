@@ -36,8 +36,7 @@ pub struct Output<
     pub secret_key_share: GroupElement::Scalar,
     pub public_key_share: GroupElement,
     pub public_key: GroupElement,
-    pub encryption_of_decentralized_party_secret_key_share:
-        EncryptionKey::CiphertextSpaceGroupElement,
+    pub encrypted_decentralized_party_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
     pub decentralized_party_public_key_share: GroupElement,
 }
 
@@ -160,6 +159,20 @@ where
         >,
         Output<SCALAR_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, GroupElement, EncryptionKey>,
     )> {
+        let encrypted_decentralized_party_secret_key_share =
+            EncryptionKey::CiphertextSpaceGroupElement::new(
+                decentralized_party_secret_key_share_encryption_and_proof
+                    .encrypted_secret_key_share,
+                &self
+                    .encryption_scheme_public_parameters
+                    .ciphertext_space_public_parameters(),
+            )?;
+
+        let decentralized_party_public_key_share = GroupElement::new(
+            decentralized_party_secret_key_share_encryption_and_proof.public_key_share,
+            &self.group_public_parameters,
+        )?;
+
         let range_proof_commitment = range::CommitmentSchemeCommitmentSpaceGroupElement::<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -172,24 +185,10 @@ where
                 .commitment_space_public_parameters(),
         )?;
 
-        let encryption_of_decentralized_party_secret_key_share =
-            EncryptionKey::CiphertextSpaceGroupElement::new(
-                decentralized_party_secret_key_share_encryption_and_proof
-                    .encryption_of_secret_key_share,
-                &self
-                    .encryption_scheme_public_parameters
-                    .ciphertext_space_public_parameters(),
-            )?;
-
-        let decentralized_party_public_key_share = GroupElement::new(
-            decentralized_party_secret_key_share_encryption_and_proof.public_key_share,
-            &self.group_public_parameters,
-        )?;
-
         let statement = (
             range_proof_commitment,
             (
-                encryption_of_decentralized_party_secret_key_share.clone(),
+                encrypted_decentralized_party_secret_key_share.clone(),
                 decentralized_party_public_key_share.clone(),
             )
                 .into(),
@@ -251,7 +250,7 @@ where
             secret_key_share: self.secret_key_share,
             public_key_share: self.public_key_share,
             public_key,
-            encryption_of_decentralized_party_secret_key_share,
+            encrypted_decentralized_party_secret_key_share,
             decentralized_party_public_key_share,
         };
 
