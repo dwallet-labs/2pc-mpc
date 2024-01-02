@@ -265,7 +265,19 @@ pub trait CyclicGroupElement: GroupElement {
     // TODO: generator value from public parameters
 
     /// Returns the value of generator of the group
-    fn generator_from_public_parameters(public_parameters: &Self::PublicParameters) -> Self::Value;
+    fn generator_value_from_public_parameters(
+        public_parameters: &Self::PublicParameters,
+    ) -> Self::Value;
+
+    /// Attempts to instantiate the generator of the group
+    fn generator_from_public_parameters(
+        public_parameters: &Self::PublicParameters,
+    ) -> Result<Self> {
+        Self::new(
+            Self::generator_value_from_public_parameters(public_parameters),
+            public_parameters,
+        )
+    }
 }
 
 pub trait KnownOrderScalar<const SCALAR_LIMBS: usize>:

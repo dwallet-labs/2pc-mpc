@@ -202,7 +202,7 @@ impl CyclicGroupElement for GroupElement {
         Self(ProjectivePoint::GENERATOR)
     }
 
-    fn generator_from_public_parameters(
+    fn generator_value_from_public_parameters(
         _public_parameters: &Self::PublicParameters,
     ) -> Self::Value {
         Value(AffinePoint::GENERATOR)

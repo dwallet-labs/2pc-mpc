@@ -48,8 +48,8 @@ pub struct Party<
     pub number_of_parties: PartyID,
     // TODO: should we get this like that?
     pub protocol_context: ProtocolContext,
-    pub group_public_parameters: GroupElement::PublicParameters,
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+    pub group_public_parameters: GroupElement::PublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
     pub commitment_scheme_public_parameters: commitments::PublicParameters<
         SCALAR_LIMBS,
@@ -58,6 +58,7 @@ pub struct Party<
     pub unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
     pub unbounded_encdh_witness_public_parameters: UnboundedEncDHWitness::PublicParameters,
     pub range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
+    // TODO: why do we need all the following? think we can delete them.
     pub public_key_share: GroupElement,
     pub public_key: GroupElement,
     pub encrypted_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,

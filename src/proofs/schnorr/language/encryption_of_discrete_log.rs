@@ -8,8 +8,6 @@ use std::{marker::PhantomData, ops::Mul};
 use crypto_bigint::{Encoding, Uint};
 use serde::Serialize;
 
-pub const REPETITIONS: usize = 1;
-
 use crate::{
     ahe,
     ahe::{paillier::EncryptionKey as PaillierEncryptionKey, GroupsPublicParametersAccessors},
@@ -32,6 +30,8 @@ use crate::{
     },
     AdditivelyHomomorphicEncryptionKey,
 };
+
+pub const REPETITIONS: usize = 1;
 
 // TODO: doc that this is a language just for class groups, otherwise we need the enhanced version.
 /// Encryption of Discrete Log Schnorr Language
@@ -127,12 +127,12 @@ impl<
         let encryption_key =
             EncryptionKey::new(&language_public_parameters.encryption_scheme_public_parameters)?;
 
-        let encryption_of_discrete_log =
+        let encrypted_discrete_log =
             encryption_key.encrypt_with_randomness(witness.discrete_log(), witness.randomness());
 
         let base_by_discrete_log = base.scalar_mul(&witness.discrete_log().value().into());
 
-        Ok((encryption_of_discrete_log, base_by_discrete_log).into())
+        Ok((encrypted_discrete_log, base_by_discrete_log).into())
     }
 }
 
@@ -326,7 +326,8 @@ impl<
             group::GroupElement<PublicParameters = CiphertextSpacePublicParameters>,
     {
         // TODO: maybe we don't want the generator all the time?
-        let generator = GroupElement::generator_from_public_parameters(&group_public_parameters);
+        let generator =
+            GroupElement::generator_value_from_public_parameters(&group_public_parameters);
         Self {
             groups_public_parameters: GroupsPublicParameters {
                 witness_space_public_parameters: (
@@ -414,7 +415,7 @@ pub trait StatementAccessors<
     GroupElement: group::GroupElement,
 >
 {
-    fn encryption_of_discrete_log(&self) -> &CiphertextSpaceGroupElement;
+    fn encrypted_discrete_log(&self) -> &CiphertextSpaceGroupElement;
 
     // TODO: name
     fn base_by_discrete_log(&self) -> &GroupElement;
@@ -424,7 +425,7 @@ impl<CiphertextSpaceGroupElement: group::GroupElement, GroupElement: group::Grou
     StatementAccessors<CiphertextSpaceGroupElement, GroupElement>
     for direct_product::GroupElement<CiphertextSpaceGroupElement, GroupElement>
 {
-    fn encryption_of_discrete_log(&self) -> &CiphertextSpaceGroupElement {
+    fn encrypted_discrete_log(&self) -> &CiphertextSpaceGroupElement {
         let (ciphertext, _): (&_, &_) = self.into();
 
         ciphertext
@@ -459,7 +460,7 @@ pub type EnhancedProof<
 
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
-    use core::{array, iter};
+    use core::iter;
 
     use crypto_bigint::{NonZero, Random, U128, U256};
     use paillier::tests::N;
@@ -469,9 +470,14 @@ pub(crate) mod tests {
     use super::*;
     use crate::{
         ahe::paillier,
+        commitments::pedersen,
         group::{ristretto, secp256k1, self_product},
         proofs::schnorr::{
-            aggregation, language, language::enhanced::tests::generate_scalar_plaintext,
+            aggregation, language,
+            language::enhanced::tests::{
+                enhanced_language_public_parameters, generate_scalar_plaintext,
+                RANGE_CLAIMS_PER_SCALAR,
+            },
         },
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
@@ -482,13 +488,6 @@ pub(crate) mod tests {
         secp256k1::GroupElement,
         paillier::EncryptionKey,
     >;
-
-    use crate::{
-        commitments::pedersen,
-        proofs::schnorr::language::enhanced::tests::{
-            enhanced_language_public_parameters, RANGE_CLAIMS_PER_SCALAR,
-        },
-    };
 
     pub(crate) fn public_parameters() -> language::PublicParameters<REPETITIONS, Lang> {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();

@@ -1,8 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::group::CyclicGroupElement;
-
 pub mod centralized_party;
 pub mod decentralized_party;
 
@@ -144,8 +142,7 @@ pub(crate) mod tests {
             encryption_of_decentralized_party_secret_share,
         ) = aggregates_internal(
             decentralized_party_encryption_of_secret_key_share_commitment_round_parties,
-        )
-        .unwrap();
+        );
 
         let encryption_of_decentralized_party_secret_share =
             encryption_of_decentralized_party_secret_share

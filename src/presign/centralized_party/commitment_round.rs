@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     commitments,
@@ -44,6 +44,7 @@ pub struct Party<
     pub encrypted_decentralized_party_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
 }
 
+#[derive(PartialEq, Serialize, Deserialize, Clone)]
 pub struct SignatureNonceSharesCommitmentsAndBatchedProof<
     const SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,

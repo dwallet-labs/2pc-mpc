@@ -185,7 +185,7 @@ impl CyclicGroupElement for GroupElement {
         Self(RISTRETTO_BASEPOINT_POINT)
     }
 
-    fn generator_from_public_parameters(
+    fn generator_value_from_public_parameters(
         _public_parameters: &Self::PublicParameters,
     ) -> Self::Value {
         Self(RISTRETTO_BASEPOINT_POINT)

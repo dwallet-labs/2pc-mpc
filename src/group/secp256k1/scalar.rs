@@ -292,7 +292,7 @@ impl CyclicGroupElement for Scalar {
         Scalar(k256::Scalar::ONE)
     }
 
-    fn generator_from_public_parameters(
+    fn generator_value_from_public_parameters(
         _public_parameters: &Self::PublicParameters,
     ) -> Self::Value {
         Scalar(k256::Scalar::ONE)

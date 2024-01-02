@@ -38,6 +38,7 @@ pub struct Output<
     pub(super) encrypted_masked_key_shares: Vec<CiphertextValue>,
     pub(super) key_share_masking_range_proof_commitments: Vec<RangeProofCommitmentValue>,
     pub(super) masks_and_encrypted_masked_key_share_proof: EncDHProof,
+    pub(super) encrypted_nonces: Vec<CiphertextValue>,
     pub(super) nonce_public_shares: Vec<GroupElementValue>,
     pub(super) nonce_sharing_range_proof_commitments: Vec<RangeProofCommitmentValue>,
     pub(super) encrypted_nonce_shares_and_public_shares_proof: EncDLProof,
@@ -201,12 +202,14 @@ where
             ProtocolContext,
         >,
     ) -> Self {
+        // TODO: check sizes match?
+
         let encrypted_masks: Vec<_> = masks_and_encrypted_masked_key_share
             .iter()
             .map(|mask_and_encrypted_masked_key_share| {
                 mask_and_encrypted_masked_key_share
                     .language_statement()
-                    .encryption_of_multiplicand()
+                    .encrypted_multiplicand()
                     .value()
             })
             .collect();
@@ -216,7 +219,7 @@ where
             .map(|mask_and_encrypted_masked_key_share| {
                 mask_and_encrypted_masked_key_share
                     .language_statement()
-                    .encryption_of_product()
+                    .encrypted_product()
                     .value()
             })
             .collect();
@@ -230,6 +233,16 @@ where
                         .value()
                 })
                 .collect();
+
+        let encrypted_nonces: Vec<_> = encrypted_nonce_shares_and_public_shares
+            .iter()
+            .map(|nonce_share_encryption_and_public_share| {
+                nonce_share_encryption_and_public_share
+                    .language_statement()
+                    .encrypted_discrete_log()
+                    .value()
+            })
+            .collect();
 
         let nonce_public_shares: Vec<_> = encrypted_nonce_shares_and_public_shares
             .iter()
@@ -256,6 +269,7 @@ where
             encrypted_masked_key_shares,
             key_share_masking_range_proof_commitments,
             masks_and_encrypted_masked_key_share_proof,
+            encrypted_nonces,
             nonce_public_shares,
             nonce_sharing_range_proof_commitments,
             encrypted_nonce_shares_and_public_shares_proof,
@@ -283,8 +297,7 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
             SCALAR_LIMBS,
             EncryptionKey,
         >,
-        encrypted_nonce_share_and_public_share:
-        encryption_of_discrete_log::StatementSpaceGroupElement<
+        encrypted_nonce_share_and_public_share: encryption_of_discrete_log::StatementSpaceGroupElement<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
             GroupElement,
@@ -301,20 +314,20 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
         EncryptionKey::CiphertextSpaceGroupElement: group::GroupElement<Value = CiphertextValue>,
     {
         let encrypted_mask = mask_and_encrypted_masked_key_share
-            .encryption_of_multiplicand()
+            .encrypted_multiplicand()
             .value();
 
         let encrypted_masked_key_share = mask_and_encrypted_masked_key_share
-            .encryption_of_product()
+            .encrypted_product()
             .value();
 
         let nonce_public_share = encrypted_nonce_share_and_public_share
             .base_by_discrete_log()
             .value();
 
-        let encrypted_masked_nonce = encrypted_masked_nonce.encryption_of_product().value();
+        let encrypted_masked_nonce = encrypted_masked_nonce.encrypted_product().value();
 
-        // TODO: I don't need to match encryption of the nonce E(k) from both the previous round
+        // TODO: I don't need to match encrypted nonce E(k) from both the previous round
         // aggregation and the current one right?
 
         Presign {

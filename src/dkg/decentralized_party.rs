@@ -128,7 +128,7 @@ where
     ) -> Self {
         let encrypted_secret_key_share = (&encryption_of_secret_share
             .language_statement()
-            .encryption_of_discrete_log())
+            .encrypted_discrete_log())
             .value();
 
         let public_key_share = (&encryption_of_secret_share

@@ -159,7 +159,7 @@ where
 
         let encrypted_masks: Vec<_> = masks_and_encrypted_masked_key_share
             .iter()
-            .map(|statement| statement.encryption_of_multiplicand().clone())
+            .map(|statement| statement.encrypted_multiplicand().clone())
             .collect();
 
         // TODO: we're not sampling new encryption randomness here for the encryption of the nonce

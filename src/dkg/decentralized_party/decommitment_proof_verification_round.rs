@@ -90,9 +90,8 @@ impl<
         Output<SCALAR_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, GroupElement, EncryptionKey>,
     > {
         let public_key_share = encryption_of_secret_share.base_by_discrete_log().clone();
-        let encrypted_secret_key_share = encryption_of_secret_share
-            .encryption_of_discrete_log()
-            .clone();
+        let encrypted_secret_key_share =
+            encryption_of_secret_share.encrypted_discrete_log().clone();
 
         let centralized_party_public_key_share = GroupElement::new(
             decommitment_and_proof.public_key_share,

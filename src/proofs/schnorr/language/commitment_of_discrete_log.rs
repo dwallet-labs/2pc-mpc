@@ -210,7 +210,8 @@ impl<
         >,
     {
         // TODO: maybe we don't want the generator all the time?
-        let generator = GroupElement::generator_from_public_parameters(&group_public_parameters);
+        let generator =
+            GroupElement::generator_value_from_public_parameters(&group_public_parameters);
         Self {
             groups_public_parameters: GroupsPublicParameters {
                 witness_space_public_parameters: group::PublicParameters::<

@@ -296,7 +296,9 @@ impl CyclicGroupElement for Scalar {
         Scalar(curve25519_dalek::scalar::Scalar::one())
     }
 
-    fn generator_from_public_parameters(public_parameters: &Self::PublicParameters) -> Self::Value {
+    fn generator_value_from_public_parameters(
+        public_parameters: &Self::PublicParameters,
+    ) -> Self::Value {
         Scalar(curve25519_dalek::scalar::Scalar::one())
     }
 }

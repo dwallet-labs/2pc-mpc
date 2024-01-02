@@ -111,68 +111,165 @@ pub(crate) mod tests {
     #[allow(dead_code)]
     pub(crate) fn aggregates_internal<Output, P: CommitmentRoundParty<Output>>(
         commitment_round_parties: HashMap<PartyID, P>,
-    ) -> proofs::Result<(Output)> {
-        let commitments_and_decommitment_round_parties: HashMap<_, (_, _)> =
+    ) -> Output {
+        aggregates_internal_multiple(
             commitment_round_parties
                 .into_iter()
-                .map(|(party_id, party)| {
+                .map(|(party_id, party)| (party_id, vec![party]))
+                .collect(),
+        )
+        .into_iter()
+        .next()
+        .unwrap()
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn aggregates_internal_multiple<Output, P: CommitmentRoundParty<Output>>(
+        commitment_round_parties: HashMap<PartyID, Vec<P>>,
+    ) -> Vec<Output> {
+        let batch_size = commitment_round_parties
+            .iter()
+            .next()
+            .unwrap()
+            .clone()
+            .1
+            .len();
+
+        let commitments_and_decommitment_round_parties: HashMap<_, Vec<(_, _)>> =
+            commitment_round_parties
+                .into_iter()
+                .map(|(party_id, parties)| {
                     (
                         party_id,
-                        party
-                            .commit_statements_and_statement_mask(&mut OsRng)
-                            .unwrap(),
+                        parties
+                            .into_iter()
+                            .map(|party| {
+                                party
+                                    .commit_statements_and_statement_mask(&mut OsRng)
+                                    .unwrap()
+                            })
+                            .collect(),
                     )
                 })
                 .collect();
 
-        let commitments: HashMap<_, _> = commitments_and_decommitment_round_parties
+        let commitments: HashMap<_, Vec<_>> = commitments_and_decommitment_round_parties
             .iter()
-            .map(|(party_id, (commitment, _))| (*party_id, commitment.clone()))
+            .map(|(party_id, v)| {
+                (
+                    *party_id,
+                    v.iter().map(|(commitment, _)| commitment.clone()).collect(),
+                )
+            })
             .collect();
 
-        let decommitments_and_proof_share_round_parties: HashMap<_, (_, _)> =
+        let commitments: Vec<HashMap<_, _>> = (0..batch_size)
+            .map(|i| {
+                commitments
+                    .iter()
+                    .map(|(party_id, commitments)| (*party_id, commitments[i].clone()))
+                    .collect()
+            })
+            .collect();
+
+        let decommitments_and_proof_share_round_parties: HashMap<_, Vec<(_, _)>> =
             commitments_and_decommitment_round_parties
                 .into_iter()
-                .map(|(party_id, (_, party))| {
+                .map(|(party_id, v)| {
                     (
                         party_id,
-                        party
-                            .decommit_statements_and_statement_mask(commitments.clone(), &mut OsRng)
-                            .unwrap(),
+                        v.into_iter()
+                            .enumerate()
+                            .map(|(i, (_, party))| {
+                                party
+                                    .decommit_statements_and_statement_mask(
+                                        commitments[i].clone(),
+                                        &mut OsRng,
+                                    )
+                                    .unwrap()
+                            })
+                            .collect(),
                     )
                 })
                 .collect();
 
-        let decommitments: HashMap<_, _> = decommitments_and_proof_share_round_parties
+        let decommitments: HashMap<_, Vec<_>> = decommitments_and_proof_share_round_parties
             .iter()
-            .map(|(party_id, (decommitment, _))| (*party_id, decommitment.clone()))
+            .map(|(party_id, v)| {
+                (
+                    *party_id,
+                    v.iter()
+                        .map(|(decommitment, _)| decommitment.clone())
+                        .collect(),
+                )
+            })
             .collect();
 
-        let proof_shares_and_proof_aggregation_round_parties: HashMap<_, (_, _)> =
+        let decommitments: Vec<HashMap<_, _>> = (0..batch_size)
+            .map(|i| {
+                decommitments
+                    .iter()
+                    .map(|(party_id, decommitments)| (*party_id, decommitments[i].clone()))
+                    .collect()
+            })
+            .collect();
+
+        let proof_shares_and_proof_aggregation_round_parties: HashMap<_, Vec<(_, _)>> =
             decommitments_and_proof_share_round_parties
                 .into_iter()
-                .map(|(party_id, (_, party))| {
+                .map(|(party_id, v)| {
                     (
                         party_id,
-                        party
-                            .generate_proof_share(decommitments.clone(), &mut OsRng)
-                            .unwrap(),
+                        v.into_iter()
+                            .enumerate()
+                            .map(|(i, (_, party))| {
+                                party
+                                    .generate_proof_share(decommitments[i].clone(), &mut OsRng)
+                                    .unwrap()
+                            })
+                            .collect(),
                     )
                 })
                 .collect();
 
-        let proof_shares: HashMap<_, _> = proof_shares_and_proof_aggregation_round_parties
+        let proof_shares: HashMap<_, Vec<_>> = proof_shares_and_proof_aggregation_round_parties
             .iter()
-            .map(|(party_id, (proof_share, _))| (*party_id, proof_share.clone())) // TODO: why can't copy
+            .map(|(party_id, v)| {
+                (
+                    *party_id,
+                    v.iter()
+                        .map(|(proof_share, _)| proof_share.clone())
+                        .collect(),
+                )
+            })
             .collect();
 
-        let (_, (_, proof_aggregation_round_party)) =
-            proof_shares_and_proof_aggregation_round_parties
-                .into_iter()
-                .next()
-                .unwrap();
+        let proof_shares: Vec<HashMap<_, _>> = (0..batch_size)
+            .map(|i| {
+                proof_shares
+                    .iter()
+                    .map(|(party_id, proof_shares)| (*party_id, proof_shares[i].clone()))
+                    .collect()
+            })
+            .collect();
 
-        proof_aggregation_round_party.aggregate_proof_shares(proof_shares.clone(), &mut OsRng)
+        let (_, proof_aggregation_round_parties) = proof_shares_and_proof_aggregation_round_parties
+            .into_iter()
+            .next()
+            .unwrap();
+
+        let (_, proof_aggregation_round_parties): (Vec<_>, Vec<_>) =
+            proof_aggregation_round_parties.into_iter().unzip();
+
+        proof_aggregation_round_parties
+            .into_iter()
+            .enumerate()
+            .map(|(i, proof_aggregation_round_party)| {
+                proof_aggregation_round_party
+                    .aggregate_proof_shares(proof_shares[i].clone(), &mut OsRng)
+                    .unwrap()
+            })
+            .collect()
     }
 
     #[allow(dead_code)]
@@ -206,7 +303,7 @@ pub(crate) mod tests {
             })
             .collect();
 
-        let (proof, statements) = aggregates_internal(commitment_round_parties).unwrap();
+        let (proof, statements) = aggregates_internal(commitment_round_parties);
 
         assert!(
             proof

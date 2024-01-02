@@ -134,14 +134,14 @@ impl<
             )?;
 
         // TODO: name?
-        let encryption_of_multiplicand = encryption_key
+        let encrypted_multiplicand = encryption_key
             .encrypt_with_randomness(witness.multiplicand(), witness.multiplicand_randomness());
 
         // no mask needed, as we're not doing any homomorphic additions? TODO: why
         let mask = witness.multiplicand().neutral();
 
         // TODO: name?
-        let encryption_of_product = encryption_key
+        let encrypted_product = encryption_key
             .evaluate_circuit_private_linear_combination_with_randomness(
                 &[*witness.multiplicand()],
                 &[ciphertext],
@@ -150,7 +150,7 @@ impl<
                 witness.product_randomness(),
             )?;
 
-        Ok([encryption_of_multiplicand, encryption_of_product].into())
+        Ok([encrypted_multiplicand, encrypted_product].into())
     }
 }
 
@@ -413,22 +413,22 @@ impl<
 
 pub trait StatementAccessors<CiphertextSpaceGroupElement: group::GroupElement> {
     // TODO: names
-    fn encryption_of_multiplicand(&self) -> &CiphertextSpaceGroupElement;
+    fn encrypted_multiplicand(&self) -> &CiphertextSpaceGroupElement;
 
-    fn encryption_of_product(&self) -> &CiphertextSpaceGroupElement;
+    fn encrypted_product(&self) -> &CiphertextSpaceGroupElement;
 }
 
 impl<CiphertextSpaceGroupElement: group::GroupElement>
     StatementAccessors<CiphertextSpaceGroupElement>
     for self_product::GroupElement<2, CiphertextSpaceGroupElement>
 {
-    fn encryption_of_multiplicand(&self) -> &CiphertextSpaceGroupElement {
+    fn encrypted_multiplicand(&self) -> &CiphertextSpaceGroupElement {
         let value: &[_; 2] = self.into();
 
         &value[0]
     }
 
-    fn encryption_of_product(&self) -> &CiphertextSpaceGroupElement {
+    fn encrypted_product(&self) -> &CiphertextSpaceGroupElement {
         let value: &[_; 2] = self.into();
 
         &value[1]
