@@ -82,7 +82,7 @@ pub type Proof<
 mod private {
     use super::*;
 
-    #[derive(Clone, PartialEq, Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
     pub struct Proof<SchnorrProof, RangeProof> {
         pub(crate) schnorr_proof: SchnorrProof,
         pub(crate) range_proof: RangeProof,

@@ -25,7 +25,7 @@ use crate::{
     Commitment, PartyID,
 };
 
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ProofShare<const REPETITIONS: usize, Language: schnorr::Language<REPETITIONS>>(
     #[serde(with = "crate::helpers::const_generic_array_serialization")]
     pub(super)  [WitnessSpaceValue<REPETITIONS, Language>; REPETITIONS],

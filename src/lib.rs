@@ -32,7 +32,7 @@ pub type StatisticalSecuritySizedNumber = U64;
 /// parameter, which is double in size, as collisions can be found in the root of the space.
 pub type CommitmentSizedNumber = <ComputationalSecuritySizedNumber as Concat>::Output;
 
-#[derive(PartialEq, Serialize, Deserialize, Clone, Copy)]
+#[derive(PartialEq, Debug, Eq, Serialize, Deserialize, Clone, Copy)]
 pub struct Commitment(CommitmentSizedNumber);
 
 impl Commitment {

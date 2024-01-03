@@ -88,6 +88,7 @@ pub trait GroupElement:
         + Clone
         + Debug
         + PartialEq
+        + Eq
         + ConstantTimeEq
         + ConditionallySelectable
         + Copy;

@@ -21,7 +21,7 @@ use crate::{
 pub mod decommitment_proof_verification_round;
 pub mod encryption_of_secret_key_share_round;
 
-#[derive(PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SecretKeyShareEncryptionAndProof<
     GroupElementValue,
     RangeProofCommitmentValue,

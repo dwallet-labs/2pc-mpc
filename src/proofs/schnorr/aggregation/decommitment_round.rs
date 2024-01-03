@@ -20,7 +20,7 @@ use crate::{
     Commitment, ComputationalSecuritySizedNumber, PartyID,
 };
 
-#[derive(PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Decommitment<const REPETITIONS: usize, Language: language::Language<REPETITIONS>> {
     pub(crate) statements: Vec<group::Value<Language::StatementSpaceGroupElement>>,
     #[serde(with = "crate::helpers::const_generic_array_serialization")]
