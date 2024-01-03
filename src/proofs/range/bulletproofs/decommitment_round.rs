@@ -50,7 +50,7 @@ pub struct Party<
     pub(super) parties_awaiting_bit_challenge: Vec<PartyAwaitingBitChallenge>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Decommitment<Decom> {
     pub(super) decommitment: Decom,
     pub(super) poly_commitments: Vec<PolyCommitment>,

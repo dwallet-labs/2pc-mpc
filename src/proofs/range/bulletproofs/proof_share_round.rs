@@ -59,7 +59,7 @@ pub struct Party<
     pub(super) parties_awaiting_poly_challenge: Vec<PartyAwaitingPolyChallenge>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ProofShare<Share> {
     pub(super) schnorr_proof_share: Share,
     pub(super) bulletproofs_proof_shares: Vec<messages::ProofShare>,

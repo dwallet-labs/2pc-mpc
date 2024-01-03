@@ -71,7 +71,7 @@ pub struct Party<
     >,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Commitment {
     pub(super) commitment: crate::Commitment,
     pub(super) bit_commitments: Vec<BitCommitment>,
