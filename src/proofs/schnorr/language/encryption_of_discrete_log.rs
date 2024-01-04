@@ -68,7 +68,7 @@ pub type WitnessSpaceGroupElement<
     EncryptionKey::RandomnessSpaceGroupElement,
 >;
 
-/// The Statement Space Group Element  of the Encryption of Discrete Log Schnorr Language.
+/// The Statement Space Group Element of the Encryption of Discrete Log Schnorr Language.
 pub type StatementSpaceGroupElement<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,

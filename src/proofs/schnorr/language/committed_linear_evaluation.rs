@@ -60,20 +60,62 @@ pub const REPETITIONS: usize = 1;
 /// `PrimeOrderGroupElement`.
 ///
 /// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
-pub type Language<
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub struct Language<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const RANGE_CLAIMS_PER_MASK: usize,
     const DIMENSION: usize,
     GroupElement,
     EncryptionKey,
-> = private::Language<
-    0,
-    0,
-    PLAINTEXT_SPACE_SCALAR_LIMBS,
-    SCALAR_LIMBS,
+> {
+    _group_element_choice: PhantomData<GroupElement>,
+    _encryption_key_choice: PhantomData<EncryptionKey>,
+}
+
+/// The Witness Space Group Element of the Committed Linear Evaluation Schnorr Language
+pub type WitnessSpaceGroupElement<
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    const DIMENSION: usize,
+    GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+> = direct_product::FourWayGroupElement<
+    self_product::GroupElement<DIMENSION, EncryptionKey::PlaintextSpaceGroupElement>,
+    GroupElement::Scalar,
+    EncryptionKey::PlaintextSpaceGroupElement,
+    EncryptionKey::RandomnessSpaceGroupElement,
+>;
+
+/// The Statement Space Group Element Committed Linear Evaluation Schnorr Language.
+pub type StatementSpaceGroupElement<
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+> = direct_product::GroupElement<EncryptionKey::CiphertextSpaceGroupElement, GroupElement>;
+
+/// The Public Parameters of the Committed Linear Evaluation Schnorr Language.
+///
+/// In order to prove an affine transformation, set `ciphertexts[0]` to an encryption of one with
+/// randomness zero ($\Enc(1; 0)$).
+pub type PublicParameters<
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    const SCALAR_LIMBS: usize,
+    const DIMENSION: usize,
+    GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+> = private::PublicParameters<
     DIMENSION,
-    GroupElement,
-    EncryptionKey,
+    group::PublicParameters<GroupElement::Scalar>,
+    GroupElement::PublicParameters,
+    GroupElement::Value,
+    group::PublicParameters<EncryptionKey::PlaintextSpaceGroupElement>,
+    group::PublicParameters<EncryptionKey::RandomnessSpaceGroupElement>,
+    group::PublicParameters<EncryptionKey::CiphertextSpaceGroupElement>,
+    group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
+    EncryptionKey::PublicParameters,
 >;
 
 impl<
@@ -85,36 +127,37 @@ impl<
         GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     > schnorr::Language<REPETITIONS>
-    for private::Language<
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIMS_PER_MASK,
+    for Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIMS_PER_MASK,
         DIMENSION,
         GroupElement,
         EncryptionKey,
     >
 {
-    type WitnessSpaceGroupElement = direct_product::FourWayGroupElement<
-        self_product::GroupElement<DIMENSION, EncryptionKey::PlaintextSpaceGroupElement>,
-        GroupElement::Scalar,
-        EncryptionKey::PlaintextSpaceGroupElement,
-        EncryptionKey::RandomnessSpaceGroupElement,
+    type WitnessSpaceGroupElement = WitnessSpaceGroupElement<
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        DIMENSION,
+        GroupElement,
+        EncryptionKey,
     >;
 
-    type StatementSpaceGroupElement =
-        direct_product::GroupElement<EncryptionKey::CiphertextSpaceGroupElement, GroupElement>;
+    type StatementSpaceGroupElement = StatementSpaceGroupElement<
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        GroupElement,
+        EncryptionKey,
+    >;
 
     type PublicParameters = PublicParameters<
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        SCALAR_LIMBS,
         DIMENSION,
-        group::PublicParameters<GroupElement::Scalar>,
-        GroupElement::PublicParameters,
-        GroupElement::Value,
-        group::PublicParameters<EncryptionKey::PlaintextSpaceGroupElement>,
-        group::PublicParameters<EncryptionKey::RandomnessSpaceGroupElement>,
-        group::PublicParameters<EncryptionKey::CiphertextSpaceGroupElement>,
-        group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
-        EncryptionKey::PublicParameters,
+        GroupElement,
+        EncryptionKey,
     >;
 
     const NAME: &'static str = "Committed Linear Evaluation";
@@ -188,11 +231,11 @@ impl<
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         direct_product::GroupElement<GroupElement::Scalar, paillier::RandomnessSpaceGroupElement>,
     >
-    for private::Language<
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIMS_PER_MASK,
+    for Language<
         { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
         SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIMS_PER_MASK,
         DIMENSION,
         GroupElement,
         ahe::paillier::EncryptionKey,
@@ -307,43 +350,6 @@ impl<
     }
 }
 
-/// The Public Parameters of the Committed Linear Evaluation Schnorr Language
-///
-/// In order to prove an affine transformation, set `ciphertexts[0]` to an encryption of one with
-/// randomness zero ($\Enc(1; 0)$).
-#[derive(Debug, PartialEq, Serialize, Clone)]
-pub struct PublicParameters<
-    const DIMENSION: usize,
-    ScalarPublicParameters,
-    GroupPublicParameters,
-    GroupElementValue,
-    PlaintextSpacePublicParameters,
-    RandomnessSpacePublicParameters,
-    CiphertextSpacePublicParameters,
-    CiphertextSpaceValue: Serialize,
-    EncryptionKeyPublicParameters,
-> {
-    pub groups_public_parameters: GroupsPublicParameters<
-        direct_product::FourWayPublicParameters<
-            self_product::PublicParameters<DIMENSION, PlaintextSpacePublicParameters>,
-            ScalarPublicParameters,
-            PlaintextSpacePublicParameters,
-            RandomnessSpacePublicParameters,
-        >,
-        direct_product::PublicParameters<CiphertextSpacePublicParameters, GroupPublicParameters>,
-    >,
-    pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
-    pub commitment_scheme_public_parameters: pedersen::PublicParameters<
-        DIMENSION,
-        GroupElementValue,
-        ScalarPublicParameters,
-        GroupPublicParameters,
-    >,
-
-    #[serde(with = "crate::helpers::const_generic_array_serialization")]
-    pub ciphertexts: [CiphertextSpaceValue; DIMENSION],
-}
-
 impl<
         const DIMENSION: usize,
         ScalarPublicParameters,
@@ -369,7 +375,7 @@ impl<
             >,
         >,
     >
-    for PublicParameters<
+    for private::PublicParameters<
         DIMENSION,
         ScalarPublicParameters,
         GroupPublicParameters,
@@ -413,7 +419,7 @@ impl<
             >,
         >,
     >
-    PublicParameters<
+    private::PublicParameters<
         DIMENSION,
         ScalarPublicParameters,
         GroupPublicParameters,
@@ -612,18 +618,40 @@ impl<CiphertextSpaceGroupElement: group::GroupElement, GroupElement: group::Grou
 pub(super) mod private {
     use super::*;
 
-    #[derive(Clone, Serialize, Deserialize, PartialEq)]
-    pub struct Language<
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIMS_PER_MASK: usize,
-        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        const SCALAR_LIMBS: usize,
+    #[derive(Debug, PartialEq, Serialize, Clone)]
+    pub struct PublicParameters<
         const DIMENSION: usize,
-        GroupElement,
-        EncryptionKey,
+        ScalarPublicParameters,
+        GroupPublicParameters,
+        GroupElementValue,
+        PlaintextSpacePublicParameters,
+        RandomnessSpacePublicParameters,
+        CiphertextSpacePublicParameters,
+        CiphertextSpaceValue: Serialize,
+        EncryptionKeyPublicParameters,
     > {
-        _group_element_choice: PhantomData<GroupElement>,
-        _encryption_key_choice: PhantomData<EncryptionKey>,
+        pub groups_public_parameters: GroupsPublicParameters<
+            direct_product::FourWayPublicParameters<
+                self_product::PublicParameters<DIMENSION, PlaintextSpacePublicParameters>,
+                ScalarPublicParameters,
+                PlaintextSpacePublicParameters,
+                RandomnessSpacePublicParameters,
+            >,
+            direct_product::PublicParameters<
+                CiphertextSpacePublicParameters,
+                GroupPublicParameters,
+            >,
+        >,
+        pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
+        pub commitment_scheme_public_parameters: pedersen::PublicParameters<
+            DIMENSION,
+            GroupElementValue,
+            ScalarPublicParameters,
+            GroupPublicParameters,
+        >,
+
+        #[serde(with = "crate::helpers::const_generic_array_serialization")]
+        pub ciphertexts: [CiphertextSpaceValue; DIMENSION],
     }
 }
 
@@ -645,11 +673,11 @@ pub type EnhancedProof<
     SCALAR_LIMBS,
     CommitmentScheme,
     ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-    private::Language<
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIMS_PER_MASK,
+    Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RANGE_CLAIMS_PER_MASK,
         DIMENSION,
         GroupElement,
         EncryptionKey,
@@ -690,17 +718,9 @@ pub(crate) mod tests {
 
     pub type Lang = Language<
         { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-        { U256::LIMBS },
-        { DIMENSION },
-        secp256k1::GroupElement,
-        paillier::EncryptionKey,
-    >;
-
-    pub type EnhancedLang = private::Language<
+        { secp256k1::SCALAR_LIMBS },
         { RANGE_CLAIMS_PER_SCALAR },
         { RANGE_CLAIMS_PER_MASK },
-        { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-        { secp256k1::SCALAR_LIMBS },
         { DIMENSION },
         secp256k1::GroupElement,
         paillier::EncryptionKey,
@@ -778,7 +798,13 @@ pub(crate) mod tests {
             randomness_generator.value(),
         );
 
-        let language_public_parameters = PublicParameters::new::<
+        let language_public_parameters = PublicParameters::<
+            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+            { secp256k1::SCALAR_LIMBS },
+            { DIMENSION },
+            secp256k1::GroupElement,
+            paillier::EncryptionKey,
+        >::new::<
             { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
             { secp256k1::SCALAR_LIMBS },
             secp256k1::GroupElement,
@@ -859,7 +885,7 @@ pub(crate) mod tests {
             REPETITIONS,
             NUM_RANGE_CLAIMS,
             direct_product::GroupElement<secp256k1::Scalar, paillier::RandomnessSpaceGroupElement>,
-            EnhancedLang,
+            Lang,
         >(
             unbounded_witness_public_parameters,
             language_public_parameters,
@@ -896,7 +922,7 @@ pub(crate) mod tests {
             REPETITIONS,
             NUM_RANGE_CLAIMS,
             direct_product::GroupElement<secp256k1::Scalar, paillier::RandomnessSpaceGroupElement>,
-            EnhancedLang,
+            Lang,
         >(
             unbounded_witness_public_parameters,
             language_public_parameters,
