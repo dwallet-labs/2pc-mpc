@@ -6,13 +6,13 @@ use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 use crypto_bigint::{rand_core::CryptoRngCore, NonZero, Uint, U256};
 use k256::elliptic_curve::{scalar::FromUintUnchecked, Field};
 use serde::{Deserialize, Serialize};
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use super::{GroupElement, SCALAR_LIMBS};
 use crate::{
     group,
     group::{
-        secp256k1::ORDER, BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement,
+        secp256k1::ORDER, BoundedGroupElement, CyclicGroupElement, Invert, KnownOrderGroupElement,
         KnownOrderScalar, MulByGenerator, PrimeGroupElement, Samplable,
     },
     traits::Reduce,
@@ -296,6 +296,12 @@ impl CyclicGroupElement for Scalar {
         _public_parameters: &Self::PublicParameters,
     ) -> Self::Value {
         Scalar(k256::Scalar::ONE)
+    }
+}
+
+impl Invert for Scalar {
+    fn invert(&self) -> CtOption<Self> {
+        <k256::Scalar as k256::elliptic_curve::ops::Invert>::invert(&self.0).map(Self)
     }
 }
 

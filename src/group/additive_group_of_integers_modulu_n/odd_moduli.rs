@@ -9,11 +9,12 @@ use crypto_bigint::{
     Encoding, NonZero, Random, RandomMod, Uint,
 };
 use serde::{Deserialize, Serialize};
+use subtle::{ConditionallySelectable, CtOption};
 
 use crate::{
     group,
     group::{
-        BoundedGroupElement, CyclicGroupElement, GroupElement as _, KnownOrderGroupElement,
+        BoundedGroupElement, CyclicGroupElement, GroupElement as _, Invert, KnownOrderGroupElement,
         KnownOrderScalar, MulByGenerator, Samplable,
     },
     traits::Reduce,
@@ -299,6 +300,18 @@ impl<const LIMBS: usize> From<GroupElement<LIMBS>> for Uint<LIMBS> {
 impl<'r, const LIMBS: usize> From<&'r GroupElement<LIMBS>> for Uint<LIMBS> {
     fn from(value: &'r GroupElement<LIMBS>) -> Self {
         value.0.retrieve()
+    }
+}
+
+impl<const LIMBS: usize> Invert for GroupElement<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
+{
+    fn invert(&self) -> CtOption<Self> {
+        let inv = <DynResidue<LIMBS> as crypto_bigint::Invert>::invert(&self.0);
+        let default = self.neutral().0;
+
+        CtOption::new(Self(inv.unwrap_or(default)), inv.is_some())
     }
 }
 

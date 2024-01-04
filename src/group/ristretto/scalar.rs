@@ -4,10 +4,12 @@
 use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, NonZero, Random, Uint, U256};
+use k256::elliptic_curve::ff::Field;
 use serde::{Deserialize, Serialize};
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use super::{GroupElement, SCALAR_LIMBS};
+use crate::group::{GroupElement as _, Invert};
 // TODO: use original dalek repos.
 // TODO: ct_eq
 use crate::{
@@ -300,6 +302,12 @@ impl CyclicGroupElement for Scalar {
         public_parameters: &Self::PublicParameters,
     ) -> Self::Value {
         Scalar(curve25519_dalek::scalar::Scalar::one())
+    }
+}
+
+impl Invert for Scalar {
+    fn invert(&self) -> CtOption<Self> {
+        CtOption::new(Self(self.0.invert()), !self.is_neutral())
     }
 }
 

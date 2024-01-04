@@ -11,7 +11,7 @@ use std::{
 pub(crate) use benches::benchmark_scalar_mul_bounded;
 use crypto_bigint::{rand_core::CryptoRngCore, NonZero, Random, RandomMod, Uint, Zero};
 use serde::{Deserialize, Serialize};
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 pub mod direct_product;
 
@@ -281,11 +281,18 @@ pub trait CyclicGroupElement: GroupElement {
     }
 }
 
+/// Perform an inversion on a field element (i.e. base field element or scalar)
+pub trait Invert: Sized {
+    /// Invert a field element.
+    fn invert(&self) -> CtOption<Self>;
+}
+
 pub trait KnownOrderScalar<const SCALAR_LIMBS: usize>:
     KnownOrderGroupElement<SCALAR_LIMBS, Scalar = Self>
     + NumbersGroupElement<SCALAR_LIMBS>
     + Mul<Self, Output = Self>
     + for<'r> Mul<&'r Self, Output = Self>
+    + Invert
     + Samplable
     + Copy
     + Into<Uint<SCALAR_LIMBS>>

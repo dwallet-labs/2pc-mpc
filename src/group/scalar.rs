@@ -5,12 +5,13 @@ use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use crate::{
     group,
     group::{
-        BoundedGroupElement, GroupElement, KnownOrderGroupElement, KnownOrderScalar, Samplable,
+        BoundedGroupElement, GroupElement, Invert, KnownOrderGroupElement, KnownOrderScalar,
+        Samplable,
     },
 };
 
@@ -218,15 +219,29 @@ impl<const SCALAR_LIMBS: usize, S: Into<Uint<SCALAR_LIMBS>>> From<Scalar<SCALAR_
     }
 }
 
+impl<const SCALAR_LIMBS: usize, S: KnownOrderScalar<SCALAR_LIMBS>> Invert
+    for Scalar<SCALAR_LIMBS, S>
+where
+    S: Default + ConditionallySelectable,
+{
+    fn invert(&self) -> CtOption<Self> {
+        self.0.invert().map(Self)
+    }
+}
+
 impl<const SCALAR_LIMBS: usize, S: KnownOrderScalar<SCALAR_LIMBS>> KnownOrderScalar<SCALAR_LIMBS>
     for Scalar<SCALAR_LIMBS, S>
 where
     S::Value: From<Uint<SCALAR_LIMBS>> + Into<Uint<SCALAR_LIMBS>>,
+    S: Default + ConditionallySelectable,
 {
 }
 
 impl<const SCALAR_LIMBS: usize, S: KnownOrderScalar<SCALAR_LIMBS>>
     KnownOrderGroupElement<SCALAR_LIMBS> for Scalar<SCALAR_LIMBS, S>
+where
+    S::Value: From<Uint<SCALAR_LIMBS>> + Into<Uint<SCALAR_LIMBS>>,
+    S: Default + ConditionallySelectable,
 {
     type Scalar = Self;
 
