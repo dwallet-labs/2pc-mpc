@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+use core::fmt::Debug;
+
 pub use multipedersen::MultiPedersen;
 pub use pedersen::Pedersen;
 use serde::{Deserialize, Serialize};
@@ -26,7 +28,7 @@ pub mod pedersen;
 ///
 /// As defined in Definitions 2.4, 2.5 in the paper.
 pub trait HomomorphicCommitmentScheme<const MESSAGE_SPACE_SCALAR_LIMBS: usize>:
-    PartialEq + Clone
+    PartialEq + Clone + Debug + Eq
 {
     /// The Message space group element of the commitment scheme
     type MessageSpaceGroupElement: BoundedGroupElement<MESSAGE_SPACE_SCALAR_LIMBS> + Samplable;

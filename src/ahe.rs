@@ -29,7 +29,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// An Encryption Key of an Additively Homomorphic Encryption scheme.
 pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize>:
-    Into<Self::PublicParameters> + PartialEq + Clone + Debug
+    Into<Self::PublicParameters> + PartialEq + Clone + Debug + Eq
 {
     type PlaintextSpaceGroupElement: KnownOrderScalar<PLAINTEXT_SPACE_SCALAR_LIMBS> + Samplable;
     type RandomnessSpaceGroupElement: GroupElement + Samplable;

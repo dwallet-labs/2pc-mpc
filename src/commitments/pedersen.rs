@@ -1,6 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
+use core::fmt::Debug;
 use std::{marker::PhantomData, ops::Mul};
 
 use serde::{Deserialize, Serialize};
@@ -13,7 +14,6 @@ use crate::{
     group::{self_product, BoundedGroupElement, KnownOrderGroupElement, Samplable},
     helpers::const_generic_array_serialization,
 };
-
 // TODO: the message generator should be a random power of the randomness generator, which can be
 // the generator of the group. we actually have a use-case here for a cyclic group without a
 // generator. Maybe I can just drop the cyclic group requirement. actually we need also the
@@ -24,7 +24,7 @@ use crate::{
 /// A Batched Pedersen Commitment
 /// The public parameters ['PublicParameters'] for this commitment should be carefully constructed.
 /// TODO: Safe for cyclic groups, but doesn't need generator(s). Known order?
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug, Eq)]
 pub struct Pedersen<
     const BATCH_SIZE: usize,
     const SCALAR_LIMBS: usize,

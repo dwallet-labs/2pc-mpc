@@ -21,7 +21,7 @@ use crate::{
 };
 
 /// An Encryption Key of the Paillier Additively Homomorphic Encryption Scheme.
-#[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Clone, Debug, Serialize, Deserialize, Eq)]
 pub struct EncryptionKey(tiresias::EncryptionKey);
 
 /// An Decryption Key of the Paillier Additively Homomorphic Encryption Scheme.

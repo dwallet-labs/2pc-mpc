@@ -31,7 +31,7 @@ pub(crate) const REPETITIONS: usize = 1;
 ///
 /// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
 /// `PrimeOrderGroupElement`.
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug, Eq)]
 pub struct Language<Scalar, GroupElement> {
     _scalar_choice: PhantomData<Scalar>,
     _group_element_choice: PhantomData<GroupElement>,

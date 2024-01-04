@@ -27,7 +27,7 @@ use crate::{
 /// A Batched Pedersen Commitment
 /// The public parameters ['PublicParameters'] for this commitment should be carefully constructed.
 /// TODO: Safe for cyclic groups, but doesn't need generator(s). Known order?
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug, Eq)]
 pub struct MultiPedersen<
     const BATCH_SIZE: usize,
     const SCALAR_LIMBS: usize,

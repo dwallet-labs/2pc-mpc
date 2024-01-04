@@ -45,7 +45,7 @@ use crate::{
 /// An Enhanced Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.
 /// As defined in Appendix B. Schnorr Protocols in the paper.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct EnhancedLanguage<
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,

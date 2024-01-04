@@ -48,7 +48,7 @@ pub const REPETITIONS: usize = 1;
 /// `PrimeOrderGroupElement`.
 ///
 /// In regards to additively homomorphic encryption schemes, we proved it for `paillier`.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug, Eq)]
 pub struct Language<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,

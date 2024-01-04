@@ -40,7 +40,7 @@ pub enum Error {
 pub trait RangeProof<
     // The commitment scheme's message space scalar size in limbs
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
->: Serialize + for<'a> Deserialize<'a> + Clone + PartialEq
+>: Serialize + for<'a> Deserialize<'a> + Clone + PartialEq + Debug + Eq
 {
     /// A unique string representing the name of this range proof; will be inserted to the Fiat-Shamir
     /// transcript.

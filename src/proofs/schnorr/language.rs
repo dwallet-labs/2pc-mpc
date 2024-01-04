@@ -1,5 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
+use core::fmt::Debug;
+
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
 // todo
@@ -35,7 +37,7 @@ pub(super) mod enhanced;
 pub trait Language<
     // Number of times schnorr proofs for this language should be repeated to achieve sufficient security
     const REPETITIONS: usize,
->: Clone + PartialEq {
+>: Clone + PartialEq + Eq + Debug {
     /// An element of the witness space $(\HH_\pp, +)$
     type WitnessSpaceGroupElement: GroupElement + Samplable;
 

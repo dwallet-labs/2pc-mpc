@@ -27,7 +27,7 @@ use crate::{
 pub const ZERO_KNOWLEDGE_REPETITIONS: usize = 1;
 
 /// Knowledge of Decommitment Schnorr Language.
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug, Eq)]
 pub struct Language<
     const REPETITIONS: usize,
     const MESSAGE_SPACE_SCALAR_LIMBS: usize,
