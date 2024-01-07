@@ -217,7 +217,9 @@ where
                 None,
                 &self.protocol_context,
                 &language_public_parameters,
-                centralized_party_nonce_shares_commitments_and_batched_proof.commitments,
+                centralized_party_nonce_shares_commitments_and_batched_proof
+                    .commitments
+                    .clone(),
             )?;
 
         let masks_shares = GroupElement::Scalar::sample_batch(
@@ -494,6 +496,8 @@ where
             public_key: self.public_key,
             encrypted_secret_key_share: self.encrypted_secret_key_share,
             centralized_party_public_key_share: self.centralized_party_public_key_share,
+            centralized_party_nonce_shares_commitments:
+                centralized_party_nonce_shares_commitments_and_batched_proof.commitments,
             shares_of_signature_nonce_shares_witnesses,
             shares_of_signature_nonce_shares_encryption_randomness,
         };

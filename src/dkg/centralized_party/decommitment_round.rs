@@ -223,6 +223,7 @@ where
                 encryption_of_discrete_log_language_public_parameters,
             );
 
+        // TODO: also we need to verify that the public key was DKG'ed right.
         decentralized_party_secret_key_share_encryption_and_proof
             .encryption_of_secret_key_share_proof
             .verify(

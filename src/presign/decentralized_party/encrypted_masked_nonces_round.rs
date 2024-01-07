@@ -58,6 +58,7 @@ pub struct Party<
     pub(super) public_key: GroupElement,
     pub(super) encrypted_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
     pub(super) centralized_party_public_key_share: GroupElement,
+    pub(super) centralized_party_nonce_shares_commitments: Vec<GroupElement>,
     pub(super) shares_of_signature_nonce_shares_witnesses:
         Vec<EncryptionKey::PlaintextSpaceGroupElement>,
     pub(super) shares_of_signature_nonce_shares_encryption_randomness:

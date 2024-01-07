@@ -4,25 +4,29 @@ use std::{marker::PhantomData, ops::Mul};
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
-// pub use language::aliases::discrete_log_ratio_of_commited_values::*;
+// pub use language::aliases::committment_of_discrete_log::*;
 use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
 use crate::{
-    commitments,
-    commitments::{pedersen, HomomorphicCommitmentScheme, Pedersen},
+    commitments::HomomorphicCommitmentScheme,
     group,
-    group::{self_product, CyclicGroupElement, GroupElement, KnownOrderGroupElement, Samplable},
+    group::{
+        self_product, BoundedGroupElement, CyclicGroupElement, GroupElement, Samplable, Value,
+    },
     proofs,
     proofs::{
         schnorr,
-        schnorr::{aggregation, language, language::GroupsPublicParametersAccessors},
+        schnorr::{
+            aggregation, language,
+            language::{StatementSpacePublicParameters, WitnessSpacePublicParameters},
+        },
     },
 };
 
 pub(crate) const REPETITIONS: usize = 1;
 
-/// Ratio Between Committed Values is the Discrete Log Schnorr Language.
+/// Commitment of Discrete Log Schnorr Language
 ///
 /// SECURITY NOTICE:
 /// Because correctness and zero-knowledge is guaranteed for any group in this language, we choose
@@ -34,73 +38,62 @@ pub(crate) const REPETITIONS: usize = 1;
 /// In the paper, we have proved it for any prime known-order group; so it is safe to use with a
 /// `PrimeOrderGroupElement`.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug, Eq)]
-pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
+pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement, CommitmentScheme> {
     _scalar_choice: PhantomData<Scalar>,
     _group_element_choice: PhantomData<GroupElement>,
+    _commitment_choice: PhantomData<CommitmentScheme>,
 }
 
-impl<const SCALAR_LIMBS: usize, Scalar, GroupElement> schnorr::Language<REPETITIONS>
-    for Language<SCALAR_LIMBS, Scalar, GroupElement>
-where
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
-        + Samplable
-        + Mul<GroupElement, Output = GroupElement>
-        + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-        + Copy,
-    GroupElement: group::GroupElement,
+impl<
+        const SCALAR_LIMBS: usize,
+        Scalar: BoundedGroupElement<SCALAR_LIMBS>
+            + Samplable
+            + Mul<GroupElement, Output = GroupElement>
+            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
+            + Copy,
+        GroupElement: CyclicGroupElement,
+        CommitmentScheme: HomomorphicCommitmentScheme<
+            SCALAR_LIMBS,
+            MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+            RandomnessSpaceGroupElement = Scalar,
+            CommitmentSpaceGroupElement = GroupElement,
+        >,
+    > schnorr::Language<REPETITIONS>
+    for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
 {
-    type WitnessSpaceGroupElement = self_product::GroupElement<3, Scalar>;
+    type WitnessSpaceGroupElement = self_product::GroupElement<2, Scalar>;
     type StatementSpaceGroupElement = self_product::GroupElement<2, GroupElement>;
 
     type PublicParameters = PublicParameters<
         Scalar::PublicParameters,
         GroupElement::PublicParameters,
+        CommitmentScheme::PublicParameters,
         GroupElement::Value,
     >;
-    const NAME: &'static str = "Ratio Between Committed Values is the Discrete Log";
+
+    const NAME: &'static str = "Commitment of Discrete Log";
 
     fn group_homomorphism(
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<Self::StatementSpaceGroupElement> {
+        let base = GroupElement::new(
+            language_public_parameters.base,
+            &language_public_parameters
+                .groups_public_parameters
+                .statement_space_public_parameters
+                .public_parameters,
+        )?;
+
         let commitment_scheme =
-            Pedersen::new(&language_public_parameters.commitment_scheme_public_parameters)?;
-
-        // The paper specifies a trick to transform this langauge into a homomorphism:
-        // Use $g^x$ as the base for the message of the second commitment, and then the commitment
-        // on $m*x$ becomes the commitment on $m$, with the discrete log $x$ now appearing
-        // in the message base of the second commitment.
-        // TODO: can we assure somehow that the generators are independent (message from
-        // randomness)?
-        let altered_base_commitment_scheme_public_parameters =
-            pedersen::PublicParameters::new::<SCALAR_LIMBS, Scalar, GroupElement>(
-                language_public_parameters
-                    .witness_space_public_parameters()
-                    .public_parameters
-                    .clone(),
-                language_public_parameters
-                    .statement_space_public_parameters()
-                    .public_parameters
-                    .clone(),
-                [language_public_parameters.base_by_discrete_log],
-                language_public_parameters
-                    .commitment_scheme_public_parameters
-                    .randomness_generator
-                    .clone(),
-            );
-
-        let altered_base_commitment_scheme =
-            Pedersen::new(&altered_base_commitment_scheme_public_parameters)?;
+            CommitmentScheme::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
         Ok([
             commitment_scheme.commit(
                 &[witness.commitment_message().clone()].into(),
-                witness.first_commitment_randomness(),
+                witness.commitment_randomness(),
             ),
-            altered_base_commitment_scheme.commit(
-                &[witness.commitment_message().clone()].into(),
-                witness.second_commitment_randomness(),
-            ),
+            witness.commitment_message().clone() * base,
         ]
         .into())
     }
@@ -109,70 +102,125 @@ where
 pub trait WitnessAccessors<Scalar: group::GroupElement> {
     fn commitment_message(&self) -> &Scalar;
 
-    fn first_commitment_randomness(&self) -> &Scalar;
-
-    fn second_commitment_randomness(&self) -> &Scalar;
+    fn commitment_randomness(&self) -> &Scalar;
 }
 
 impl<Scalar: group::GroupElement> WitnessAccessors<Scalar>
-    for self_product::GroupElement<3, Scalar>
+    for self_product::GroupElement<2, Scalar>
 {
     fn commitment_message(&self) -> &Scalar {
-        let value: &[Scalar; 3] = self.into();
+        let value: &[Scalar; 2] = self.into();
 
         &value[0]
     }
 
-    fn first_commitment_randomness(&self) -> &Scalar {
-        let value: &[Scalar; 3] = self.into();
+    fn commitment_randomness(&self) -> &Scalar {
+        let value: &[Scalar; 2] = self.into();
 
         &value[1]
     }
+}
 
-    fn second_commitment_randomness(&self) -> &Scalar {
-        let value: &[Scalar; 3] = self.into();
+pub trait StatementAccessors<GroupElement: group::GroupElement> {
+    fn committment_of_discrete_log(&self) -> &GroupElement;
 
-        &value[2]
+    // TODO: name
+    fn base_by_discrete_log(&self) -> &GroupElement;
+}
+
+impl<GroupElement: group::GroupElement> StatementAccessors<GroupElement>
+    for self_product::GroupElement<2, GroupElement>
+{
+    fn committment_of_discrete_log(&self) -> &GroupElement {
+        let value: &[_; 2] = self.into();
+
+        &value[0]
+    }
+
+    fn base_by_discrete_log(&self) -> &GroupElement {
+        let value: &[_; 2] = self.into();
+
+        &value[1]
     }
 }
 
-/// The Public Parameters of the Ratio Between Committed Values is the Discrete Log Schnorr
-/// Language.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct PublicParameters<ScalarPublicParameters, GroupPublicParameters, GroupElementValue> {
+/// The Public Parameters of the Commitment of Discrete Log Schnorr Language
+#[derive(Debug, PartialEq, Serialize, Clone)]
+pub struct PublicParameters<
+    ScalarPublicParameters,
+    GroupPublicParameters,
+    CommitmentSchemePublicParameters,
+    GroupElementValue,
+> {
     pub groups_public_parameters: GroupsPublicParameters<
-        self_product::PublicParameters<3, ScalarPublicParameters>,
+        self_product::PublicParameters<2, ScalarPublicParameters>,
         self_product::PublicParameters<2, GroupPublicParameters>,
     >,
-    pub commitment_scheme_public_parameters: pedersen::PublicParameters<
-        1,
-        GroupElementValue,
-        ScalarPublicParameters,
-        GroupPublicParameters,
-    >,
-    // The base $g$ by the discrete log (witness $x$) $g^x$ used as the public key in the paper.
-    pub base_by_discrete_log: GroupElementValue,
+    pub commitment_scheme_public_parameters: CommitmentSchemePublicParameters,
+    pub base: GroupElementValue,
 }
 
-impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
-    PublicParameters<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
+impl<
+        ScalarPublicParameters,
+        GroupPublicParameters,
+        CommitmentSchemePublicParameters,
+        GroupElementValue,
+    >
+    AsRef<
+        GroupsPublicParameters<
+            self_product::PublicParameters<2, ScalarPublicParameters>,
+            self_product::PublicParameters<2, GroupPublicParameters>,
+        >,
+    >
+    for PublicParameters<
+        ScalarPublicParameters,
+        GroupPublicParameters,
+        CommitmentSchemePublicParameters,
+        GroupElementValue,
+    >
+{
+    fn as_ref(
+        &self,
+    ) -> &GroupsPublicParameters<
+        self_product::PublicParameters<2, ScalarPublicParameters>,
+        self_product::PublicParameters<2, GroupPublicParameters>,
+    > {
+        &self.groups_public_parameters
+    }
+}
+
+impl<
+        ScalarPublicParameters,
+        GroupPublicParameters,
+        CommitmentSchemePublicParameters,
+        GroupElementValue,
+    >
+    PublicParameters<
+        ScalarPublicParameters,
+        GroupPublicParameters,
+        CommitmentSchemePublicParameters,
+        GroupElementValue,
+    >
 {
     pub fn new<
         const SCALAR_LIMBS: usize,
-        Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
+        Scalar: BoundedGroupElement<SCALAR_LIMBS>
             + Samplable
             + Mul<GroupElement, Output = GroupElement>
             + for<'r> Mul<&'r GroupElement, Output = GroupElement>
             + Copy,
         GroupElement,
+        CommitmentScheme: HomomorphicCommitmentScheme<
+            SCALAR_LIMBS,
+            MessageSpaceGroupElement = self_product::GroupElement<1, Scalar>,
+            RandomnessSpaceGroupElement = Scalar,
+            CommitmentSpaceGroupElement = GroupElement,
+        >,
     >(
         scalar_group_public_parameters: Scalar::PublicParameters,
         group_public_parameters: GroupElement::PublicParameters,
-        commitment_scheme_public_parameters: commitments::PublicParameters<
-            SCALAR_LIMBS,
-            Pedersen<1, SCALAR_LIMBS, Scalar, GroupElement>,
-        >,
-        base_by_discrete_log: GroupElement,
+        commitment_scheme_public_parameters: CommitmentScheme::PublicParameters,
+        base: GroupElementValue,
     ) -> Self
     where
         Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
@@ -180,11 +228,15 @@ impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
             Value = GroupElementValue,
             PublicParameters = GroupPublicParameters,
         >,
+        CommitmentScheme: HomomorphicCommitmentScheme<
+            SCALAR_LIMBS,
+            PublicParameters = CommitmentSchemePublicParameters,
+        >,
     {
         Self {
             groups_public_parameters: GroupsPublicParameters {
                 witness_space_public_parameters: group::PublicParameters::<
-                    self_product::GroupElement<3, Scalar>,
+                    self_product::GroupElement<2, Scalar>,
                 >::new(
                     scalar_group_public_parameters
                 ),
@@ -193,26 +245,8 @@ impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
                 >::new(group_public_parameters),
             },
             commitment_scheme_public_parameters,
-            base_by_discrete_log: base_by_discrete_log.value(),
+            base,
         }
-    }
-}
-
-impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
-    AsRef<
-        GroupsPublicParameters<
-            self_product::PublicParameters<3, ScalarPublicParameters>,
-            self_product::PublicParameters<2, GroupPublicParameters>,
-        >,
-    > for PublicParameters<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
-{
-    fn as_ref(
-        &self,
-    ) -> &GroupsPublicParameters<
-        self_product::PublicParameters<3, ScalarPublicParameters>,
-        self_product::PublicParameters<2, GroupPublicParameters>,
-    > {
-        &self.groups_public_parameters
     }
 }
 
@@ -223,14 +257,18 @@ mod tests {
 
     use super::*;
     use crate::{
-        commitments::pedersen,
+        commitments::{pedersen, Pedersen},
         group,
         group::{secp256k1, GroupElement, Samplable},
         proofs::schnorr::{aggregation, language},
     };
 
-    pub(crate) type Lang =
-        Language<{ secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>;
+    pub(crate) type Lang = Language<
+        { secp256k1::SCALAR_LIMBS },
+        secp256k1::Scalar,
+        secp256k1::GroupElement,
+        Pedersen<1, { secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
+    >;
 
     pub(crate) fn language_public_parameters() -> language::PublicParameters<REPETITIONS, Lang> {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
@@ -244,11 +282,6 @@ mod tests {
         )
         .unwrap();
 
-        let discrete_log =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
-
-        let base_by_discrete_log = discrete_log * generator;
-
         let message_generator =
             secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
                 * generator;
@@ -257,6 +290,7 @@ mod tests {
             secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
                 * generator;
 
+        // TODO: have some Default function for this
         // TODO: this is not safe; we need a proper way to derive generators
         let pedersen_public_parameters = pedersen::PublicParameters::new::<
             { secp256k1::SCALAR_LIMBS },
@@ -273,11 +307,12 @@ mod tests {
             { secp256k1::SCALAR_LIMBS },
             secp256k1::Scalar,
             secp256k1::GroupElement,
+            Pedersen<1, { secp256k1::SCALAR_LIMBS }, secp256k1::Scalar, secp256k1::GroupElement>,
         >(
             secp256k1_scalar_public_parameters,
             secp256k1_group_public_parameters,
             pedersen_public_parameters,
-            base_by_discrete_log,
+            generator.value(),
         )
     }
 
@@ -336,13 +371,11 @@ mod benches {
 
     use super::*;
     use crate::{
+        commitments::Pedersen,
         group::secp256k1,
         proofs::schnorr::{
             aggregation, language,
-            language::discrete_log_ratio_of_commited_values::{
-                tests::{language_public_parameters, Lang},
-                REPETITIONS,
-            },
+            language::committment_of_discrete_log::tests::{language_public_parameters, Lang},
         },
     };
 

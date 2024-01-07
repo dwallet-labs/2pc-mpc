@@ -16,7 +16,7 @@ use crate::{
         CiphertextSpaceGroupElement, GroupsPublicParametersAccessors, RandomnessSpaceGroupElement,
     },
     commitments,
-    commitments::{pedersen, HomomorphicCommitmentScheme, Pedersen},
+    commitments::{multipedersen, HomomorphicCommitmentScheme, MultiPedersen},
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, paillier,
@@ -83,7 +83,7 @@ pub type WitnessSpaceGroupElement<
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
 > = direct_product::FourWayGroupElement<
     self_product::GroupElement<DIMENSION, EncryptionKey::PlaintextSpaceGroupElement>,
-    GroupElement::Scalar,
+    self_product::GroupElement<DIMENSION, GroupElement::Scalar>,
     EncryptionKey::PlaintextSpaceGroupElement,
     EncryptionKey::RandomnessSpaceGroupElement,
 >;
@@ -92,9 +92,13 @@ pub type WitnessSpaceGroupElement<
 pub type StatementSpaceGroupElement<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,
+    const DIMENSION: usize,
     GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-> = direct_product::GroupElement<EncryptionKey::CiphertextSpaceGroupElement, GroupElement>;
+> = direct_product::GroupElement<
+    EncryptionKey::CiphertextSpaceGroupElement,
+    self_product::GroupElement<DIMENSION, GroupElement>,
+>;
 
 /// The Public Parameters of the Committed Linear Evaluation Schnorr Language.
 ///
@@ -148,6 +152,7 @@ impl<
     type StatementSpaceGroupElement = StatementSpaceGroupElement<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
+        DIMENSION,
         GroupElement,
         EncryptionKey,
     >;
@@ -174,7 +179,7 @@ impl<
             EncryptionKey::new(&language_public_parameters.encryption_scheme_public_parameters)?;
 
         let commitment_scheme =
-            Pedersen::new(&language_public_parameters.commitment_scheme_public_parameters)?;
+            MultiPedersen::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
         let ciphertexts = flat_map_results(language_public_parameters.ciphertexts.map(|value| {
             ahe::CiphertextSpaceGroupElement::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>::new(
@@ -229,7 +234,10 @@ impl<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        direct_product::GroupElement<GroupElement::Scalar, paillier::RandomnessSpaceGroupElement>,
+        direct_product::GroupElement<
+            self_product::GroupElement<DIMENSION, GroupElement::Scalar>,
+            paillier::RandomnessSpaceGroupElement,
+        >,
     >
     for Language<
         { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
@@ -244,7 +252,7 @@ impl<
     fn compose_witness(
         decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
         unbounded_witness: &direct_product::GroupElement<
-            GroupElement::Scalar,
+            self_product::GroupElement<DIMENSION, GroupElement::Scalar>,
             paillier::RandomnessSpaceGroupElement,
         >,
         language_public_parameters: &Self::PublicParameters,
@@ -319,7 +327,10 @@ impl<
         range_claim_bits: usize,
     ) -> proofs::Result<(
         [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
-        direct_product::GroupElement<GroupElement::Scalar, paillier::RandomnessSpaceGroupElement>,
+        direct_product::GroupElement<
+            self_product::GroupElement<DIMENSION, GroupElement::Scalar>,
+            paillier::RandomnessSpaceGroupElement,
+        >,
     )> {
         if NUM_RANGE_CLAIMS != (RANGE_CLAIMS_PER_SCALAR * DIMENSION + RANGE_CLAIMS_PER_MASK) {
             return Err(proofs::Error::InvalidParameters);
@@ -365,13 +376,13 @@ impl<
         GroupsPublicParameters<
             direct_product::FourWayPublicParameters<
                 self_product::PublicParameters<DIMENSION, PlaintextSpacePublicParameters>,
-                ScalarPublicParameters,
+                self_product::PublicParameters<DIMENSION, ScalarPublicParameters>,
                 PlaintextSpacePublicParameters,
                 RandomnessSpacePublicParameters,
             >,
             direct_product::PublicParameters<
                 CiphertextSpacePublicParameters,
-                GroupPublicParameters,
+                self_product::PublicParameters<DIMENSION, GroupPublicParameters>,
             >,
         >,
     >
@@ -392,11 +403,14 @@ impl<
     ) -> &GroupsPublicParameters<
         direct_product::FourWayPublicParameters<
             self_product::PublicParameters<DIMENSION, PlaintextSpacePublicParameters>,
-            ScalarPublicParameters,
+            self_product::PublicParameters<DIMENSION, ScalarPublicParameters>,
             PlaintextSpacePublicParameters,
             RandomnessSpacePublicParameters,
         >,
-        direct_product::PublicParameters<CiphertextSpacePublicParameters, GroupPublicParameters>,
+        direct_product::PublicParameters<
+            CiphertextSpacePublicParameters,
+            self_product::PublicParameters<DIMENSION, GroupPublicParameters>,
+        >,
     > {
         &self.groups_public_parameters
     }
@@ -442,7 +456,7 @@ impl<
         encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
         commitment_scheme_public_parameters: commitments::PublicParameters<
             SCALAR_LIMBS,
-            Pedersen<DIMENSION, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
+            MultiPedersen<DIMENSION, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >,
         ciphertexts: [ahe::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>;
             DIMENSION],
@@ -465,35 +479,32 @@ impl<
         >,
     {
         Self {
-            groups_public_parameters:
-                GroupsPublicParameters {
-                    witness_space_public_parameters:
-                        (
-                            self_product::PublicParameters::<
-                                DIMENSION,
-                                PlaintextSpacePublicParameters,
-                            >::new(
-                                encryption_scheme_public_parameters
-                                    .plaintext_space_public_parameters()
-                                    .clone(),
-                            ),
-                            scalar_group_public_parameters,
-                            encryption_scheme_public_parameters
-                                .plaintext_space_public_parameters()
-                                .clone(),
-                            encryption_scheme_public_parameters
-                                .randomness_space_public_parameters()
-                                .clone(),
-                        )
-                            .into(),
-                    statement_space_public_parameters: (
+            groups_public_parameters: GroupsPublicParameters {
+                witness_space_public_parameters: (
+                    self_product::PublicParameters::<DIMENSION, _>::new(
                         encryption_scheme_public_parameters
-                            .ciphertext_space_public_parameters()
+                            .plaintext_space_public_parameters()
                             .clone(),
-                        group_public_parameters,
-                    )
-                        .into(),
-                },
+                    ),
+                    self_product::PublicParameters::<DIMENSION, _>::new(
+                        scalar_group_public_parameters,
+                    ),
+                    encryption_scheme_public_parameters
+                        .plaintext_space_public_parameters()
+                        .clone(),
+                    encryption_scheme_public_parameters
+                        .randomness_space_public_parameters()
+                        .clone(),
+                )
+                    .into(),
+                statement_space_public_parameters: (
+                    encryption_scheme_public_parameters
+                        .ciphertext_space_public_parameters()
+                        .clone(),
+                    self_product::PublicParameters::<DIMENSION, _>::new(group_public_parameters),
+                )
+                    .into(),
+            },
             encryption_scheme_public_parameters,
             commitment_scheme_public_parameters,
             ciphertexts,
@@ -524,7 +535,7 @@ impl<
             .witness_space_public_parameters)
             .into();
 
-        scalar_group_public_parameters
+        &scalar_group_public_parameters.public_parameters
     }
 
     pub fn group_public_parameters(&self) -> &GroupPublicParameters {
@@ -533,7 +544,7 @@ impl<
             .statement_space_public_parameters)
             .into();
 
-        group_public_parameters
+        &group_public_parameters.public_parameters
     }
 }
 
@@ -547,7 +558,7 @@ pub trait WitnessAccessors<
     fn coefficients(&self) -> &self_product::GroupElement<DIMENSION, PlaintextSpaceGroupElement>;
 
     fn mask(&self) -> &PlaintextSpaceGroupElement;
-    fn commitment_randomness(&self) -> &Scalar;
+    fn commitment_randomness(&self) -> &self_product::GroupElement<DIMENSION, Scalar>;
     fn encryption_randomness(&self) -> &RandomnessSpaceGroupElement;
 }
 
@@ -559,7 +570,7 @@ impl<
     > WitnessAccessors<DIMENSION, Scalar, PlaintextSpaceGroupElement, RandomnessSpaceGroupElement>
     for direct_product::FourWayGroupElement<
         self_product::GroupElement<DIMENSION, PlaintextSpaceGroupElement>,
-        Scalar,
+        self_product::GroupElement<DIMENSION, Scalar>,
         PlaintextSpaceGroupElement,
         RandomnessSpaceGroupElement,
     >
@@ -575,7 +586,7 @@ impl<
 
         mask
     }
-    fn commitment_randomness(&self) -> &Scalar {
+    fn commitment_randomness(&self) -> &self_product::GroupElement<DIMENSION, Scalar> {
         let (_, commitment_randomness, ..): (&_, &_, &_, &_) = self.into();
 
         commitment_randomness
@@ -588,6 +599,7 @@ impl<
 }
 
 pub trait StatementAccessors<
+    const DIMENSION: usize,
     CiphertextSpaceGroupElement: group::GroupElement,
     GroupElement: group::GroupElement,
 >
@@ -595,12 +607,18 @@ pub trait StatementAccessors<
     // TODO: name
     fn ciphertext(&self) -> &CiphertextSpaceGroupElement;
 
-    fn commitment(&self) -> &GroupElement;
+    fn commitments(&self) -> &self_product::GroupElement<DIMENSION, GroupElement>;
 }
 
-impl<CiphertextSpaceGroupElement: group::GroupElement, GroupElement: group::GroupElement>
-    StatementAccessors<CiphertextSpaceGroupElement, GroupElement>
-    for direct_product::GroupElement<CiphertextSpaceGroupElement, GroupElement>
+impl<
+        const DIMENSION: usize,
+        CiphertextSpaceGroupElement: group::GroupElement,
+        GroupElement: group::GroupElement,
+    > StatementAccessors<DIMENSION, CiphertextSpaceGroupElement, GroupElement>
+    for direct_product::GroupElement<
+        CiphertextSpaceGroupElement,
+        self_product::GroupElement<DIMENSION, GroupElement>,
+    >
 {
     fn ciphertext(&self) -> &CiphertextSpaceGroupElement {
         let (ciphertext, _): (&_, &_) = self.into();
@@ -608,10 +626,10 @@ impl<CiphertextSpaceGroupElement: group::GroupElement, GroupElement: group::Grou
         ciphertext
     }
 
-    fn commitment(&self) -> &GroupElement {
-        let (_, commitment): (&_, &_) = self.into();
+    fn commitments(&self) -> &self_product::GroupElement<DIMENSION, GroupElement> {
+        let (_, commitments): (&_, &_) = self.into();
 
-        commitment
+        commitments
     }
 }
 
@@ -633,17 +651,17 @@ pub(super) mod private {
         pub groups_public_parameters: GroupsPublicParameters<
             direct_product::FourWayPublicParameters<
                 self_product::PublicParameters<DIMENSION, PlaintextSpacePublicParameters>,
-                ScalarPublicParameters,
+                self_product::PublicParameters<DIMENSION, ScalarPublicParameters>,
                 PlaintextSpacePublicParameters,
                 RandomnessSpacePublicParameters,
             >,
             direct_product::PublicParameters<
                 CiphertextSpacePublicParameters,
-                GroupPublicParameters,
+                self_product::PublicParameters<DIMENSION, GroupPublicParameters>,
             >,
         >,
         pub encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
-        pub commitment_scheme_public_parameters: pedersen::PublicParameters<
+        pub commitment_scheme_public_parameters: multipedersen::PublicParameters<
             DIMENSION,
             GroupElementValue,
             ScalarPublicParameters,
@@ -663,16 +681,17 @@ pub type EnhancedProof<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,
     const DIMENSION: usize,
-    CommitmentScheme,
     GroupElement,
     EncryptionKey,
+    UnboundedWitnessSpaceGroupElement,
+    RangeProof,
     ProtocolContext,
 > = schnorr::enhanced::Proof<
     REPETITIONS,
     NUM_RANGE_CLAIMS,
-    SCALAR_LIMBS,
-    CommitmentScheme,
-    ahe::RandomnessSpaceGroupElement<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+    MESSAGE_SPACE_SCALAR_LIMBS,
+    RangeProof,
+    UnboundedWitnessSpaceGroupElement,
     Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
@@ -697,7 +716,6 @@ pub(crate) mod tests {
     use super::*;
     use crate::{
         ahe::paillier,
-        commitments::Pedersen,
         group::{ristretto, secp256k1, self_product, Samplable},
         proofs::schnorr::{aggregation, language},
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
@@ -726,11 +744,8 @@ pub(crate) mod tests {
         paillier::EncryptionKey,
     >;
 
-    use crate::{
-        commitments::pedersen,
-        proofs::schnorr::language::enhanced::tests::{
-            enhanced_language_public_parameters, generate_scalar_plaintext, RANGE_CLAIMS_PER_SCALAR,
-        },
+    use crate::proofs::schnorr::language::enhanced::tests::{
+        enhanced_language_public_parameters, generate_scalar_plaintext, RANGE_CLAIMS_PER_SCALAR,
     };
 
     pub(crate) fn public_parameters() -> language::PublicParameters<REPETITIONS, Lang> {
@@ -774,27 +789,23 @@ pub(crate) mod tests {
         )
         .unwrap();
 
-        let message_generators = array::from_fn(|_| {
-            let generator =
-                secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                    * generator;
-
-            generator.value()
-        });
+        let message_generator =
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
+                * generator;
 
         let randomness_generator =
             secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
                 * generator;
 
         // TODO: this is not safe; we need a proper way to derive generators
-        let pedersen_public_parameters = pedersen::PublicParameters::new::<
+        let pedersen_public_parameters = multipedersen::PublicParameters::new::<
             { secp256k1::SCALAR_LIMBS },
             secp256k1::Scalar,
             secp256k1::GroupElement,
         >(
             secp256k1_scalar_public_parameters.clone(),
             secp256k1_group_public_parameters.clone(),
-            message_generators,
+            message_generator.value(),
             randomness_generator.value(),
         );
 
@@ -827,7 +838,13 @@ pub(crate) mod tests {
         iter::repeat_with(|| {
             let coefficients = array::from_fn(|_| generate_scalar_plaintext()).into();
 
-            let commitment_randomness = secp256k1::Scalar::sample(
+            let first_commitment_randomness = secp256k1::Scalar::sample(
+                &language_public_parameters.scalar_group_public_parameters(),
+                &mut OsRng,
+            )
+            .unwrap();
+
+            let second_commitment_randomness = secp256k1::Scalar::sample(
                 &language_public_parameters.scalar_group_public_parameters(),
                 &mut OsRng,
             )
@@ -852,7 +869,7 @@ pub(crate) mod tests {
 
             (
                 coefficients,
-                commitment_randomness,
+                [first_commitment_randomness, second_commitment_randomness].into(),
                 mask,
                 encryption_randomness,
             )
@@ -872,9 +889,11 @@ pub(crate) mod tests {
         let witnesses = generate_witnesses(&language_public_parameters, batch_size);
 
         let unbounded_witness_public_parameters = direct_product::PublicParameters(
-            language_public_parameters
-                .scalar_group_public_parameters()
-                .clone(),
+            self_product::PublicParameters::new(
+                language_public_parameters
+                    .scalar_group_public_parameters()
+                    .clone(),
+            ),
             language_public_parameters
                 .encryption_scheme_public_parameters
                 .randomness_space_public_parameters()
@@ -884,7 +903,10 @@ pub(crate) mod tests {
         schnorr::proof::enhanced::tests::valid_proof_verifies::<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
-            direct_product::GroupElement<secp256k1::Scalar, paillier::RandomnessSpaceGroupElement>,
+            direct_product::GroupElement<
+                self_product::GroupElement<DIMENSION, secp256k1::Scalar>,
+                paillier::RandomnessSpaceGroupElement,
+            >,
             Lang,
         >(
             unbounded_witness_public_parameters,
@@ -909,9 +931,11 @@ pub(crate) mod tests {
                 .collect();
 
         let unbounded_witness_public_parameters = direct_product::PublicParameters(
-            language_public_parameters
-                .scalar_group_public_parameters()
-                .clone(),
+            self_product::PublicParameters::new(
+                language_public_parameters
+                    .scalar_group_public_parameters()
+                    .clone(),
+            ),
             language_public_parameters
                 .encryption_scheme_public_parameters
                 .randomness_space_public_parameters()
@@ -921,7 +945,10 @@ pub(crate) mod tests {
         schnorr::proof::enhanced::tests::aggregates::<
             REPETITIONS,
             NUM_RANGE_CLAIMS,
-            direct_product::GroupElement<secp256k1::Scalar, paillier::RandomnessSpaceGroupElement>,
+            direct_product::GroupElement<
+                self_product::GroupElement<DIMENSION, secp256k1::Scalar>,
+                paillier::RandomnessSpaceGroupElement,
+            >,
             Lang,
         >(
             unbounded_witness_public_parameters,

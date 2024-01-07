@@ -17,9 +17,9 @@ use crate::{
     proofs,
 };
 
-pub mod commitment_of_discrete_log;
+pub mod committment_of_discrete_log;
 pub mod committed_linear_evaluation;
-pub mod discrete_log_ratio_of_commited_values;
+pub mod discrete_log_ratio_of_committed_values;
 pub mod encryption_of_discrete_log;
 pub mod encryption_of_tuple;
 pub mod knowledge_of_decommitment;

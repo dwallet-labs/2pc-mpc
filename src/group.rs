@@ -354,6 +354,12 @@ pub trait Samplable: GroupElement {
     }
 }
 
+/// Access to the x affine coordinate of an elliptic curve point, for ECDSA.
+pub trait AffineXCoordinate<const SCALAR_LIMBS: usize>: PrimeGroupElement<SCALAR_LIMBS> {
+    /// Get the affine x-coordinate as a scalar.
+    fn x(&self) -> Self::Scalar;
+}
+
 #[cfg(test)]
 mod tests {
     use crypto_bigint::U64;

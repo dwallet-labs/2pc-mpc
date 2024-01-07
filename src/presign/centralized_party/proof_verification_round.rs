@@ -423,11 +423,8 @@ where
                         (encrypted_masked_key_share, (nonce_share, commitment_randomness)),
                     ),
                 )| {
-                    let nonce_public_share = nonce_share * &generator;
-
                     Presign {
                         nonce_share: nonce_share.value(),
-                        nonce_public_share: nonce_public_share.value(),
                         decentralized_party_nonce_public_share,
                         encrypted_mask,
                         encrypted_masked_key_share,

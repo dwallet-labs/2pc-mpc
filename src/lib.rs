@@ -15,8 +15,8 @@ pub mod group;
 pub(crate) mod helpers;
 pub mod presign;
 pub mod proofs;
-mod traits;
 pub mod sign;
+mod traits;
 
 /// Represents an unsigned integer sized based on the computation security parameter, denoted as
 /// $\kappa$.
@@ -69,6 +69,9 @@ pub enum Error {
 
     #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]
     WrongDecommitment,
+
+    #[error("the other party maliciously attempted to bypass validity checks by sending commitments whose homomorphic evaluation did not equal expected values")]
+    CommitmentsHomomorphicEvaluation,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -83,7 +86,7 @@ criterion_group!(
     proofs::schnorr::knowledge_of_decommitment::benchmark_lightningproofs_single_message,
     proofs::schnorr::knowledge_of_decommitment::benchmark_lightningproofs_encdl,
     proofs::schnorr::knowledge_of_decommitment::benchmark_lightningproofs_dcom_eval,
-    proofs::schnorr::commitment_of_discrete_log::benchmark,
+    proofs::schnorr::committment_of_discrete_log::benchmark,
     proofs::schnorr::discrete_log_ratio_of_commited_values::benchmark,
     // todo
     // proofs::schnorr::encryption_of_discrete_log::benchmark,

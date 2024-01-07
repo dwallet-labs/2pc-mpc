@@ -4,9 +4,10 @@
 use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 
 use crypto_bigint::{Uint, U256};
+use elliptic_curve::point::AffineCoordinates;
 use k256::{
     elliptic_curve,
-    elliptic_curve::{group::prime::PrimeCurveAffine, Group},
+    elliptic_curve::{group::prime::PrimeCurveAffine, ops::Reduce, Group},
     AffinePoint, ProjectivePoint,
 };
 use serde::{Deserialize, Serialize};
@@ -17,8 +18,8 @@ use crate::{
     group,
     group::{
         secp256k1::{scalar::Scalar, CURVE_EQUATION_A, CURVE_EQUATION_B, MODULUS, ORDER},
-        BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement, MulByGenerator,
-        PrimeGroupElement,
+        AffineXCoordinate, BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement,
+        MulByGenerator, PrimeGroupElement,
     },
 };
 
@@ -250,3 +251,13 @@ impl<'r> MulByGenerator<&'r Scalar> for GroupElement {
 }
 
 impl PrimeGroupElement<SCALAR_LIMBS> for GroupElement {}
+
+impl AffineXCoordinate<SCALAR_LIMBS> for GroupElement {
+    fn x(&self) -> Scalar {
+        // Lift x-coordinate of 𝑹 (element of base field) into a serialized big
+        // integer, then reduce it into an element of the scalar field
+        Scalar(<k256::Scalar as Reduce<U256>>::reduce_bytes(
+            &self.0.to_affine().x(),
+        ))
+    }
+}
