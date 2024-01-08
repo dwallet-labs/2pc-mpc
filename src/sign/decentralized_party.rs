@@ -135,7 +135,7 @@ where
             UnboundedDComEvalWitness,
         >,
 {
-    pub fn sign(
+    pub fn partially_decrypt_encrypted_signature_parts(
         self,
         message: GroupElement::Scalar,
         public_nonce_encrypted_partial_signature_and_proof: PublicNonceEncryptedPartialSignatureAndProof<

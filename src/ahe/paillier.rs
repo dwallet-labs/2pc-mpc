@@ -1,32 +1,43 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto_bigint::{NonZero, Uint};
+use std::collections::HashMap;
+
+use crypto_bigint::{rand_core::CryptoRngCore, NonZero, Uint};
 pub use group::paillier::{
     CiphertextSpaceGroupElement, CiphertextSpacePublicParameters, PlaintextSpaceGroupElement,
     RandomnessSpaceGroupElement, RandomnessSpacePublicParameters,
 };
 use serde::{Deserialize, Serialize};
-use tiresias::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
+use tiresias::{
+    proofs::ProofOfEqualityOfDiscreteLogs, LargeBiPrimeSizedNumber, Message,
+    PaillierModulusSizedNumber,
+};
 
 use crate::{
     ahe,
-    ahe::GroupsPublicParametersAccessors as _,
+    ahe::{AdditivelyHomomorphicDecryptionKeyShare, GroupsPublicParametersAccessors as _},
     group,
     group::{
         additive_group_of_integers_modulu_n::odd_moduli, paillier::PlaintextSpacePublicParameters,
         GroupElement,
     },
-    AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
+    AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey, PartyID,
 };
+
+// TODO: don't wrap, impl straight for tiresias, but do it from the tiresias project.
 
 /// An Encryption Key of the Paillier Additively Homomorphic Encryption Scheme.
 #[derive(PartialEq, Clone, Debug, Serialize, Deserialize, Eq)]
 pub struct EncryptionKey(tiresias::EncryptionKey);
 
 /// An Decryption Key of the Paillier Additively Homomorphic Encryption Scheme.
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug, Eq)]
 pub struct DecryptionKey(tiresias::DecryptionKey);
+
+/// An Decryption Key Share of the Paillier Additively Homomorphic Encryption Scheme.
+#[derive(PartialEq, Clone, Debug, Eq)]
+pub struct DecryptionKeyShare(tiresias::DecryptionKeyShare);
 
 pub const PLAINTEXT_SPACE_SCALAR_LIMBS: usize = LargeBiPrimeSizedNumber::LIMBS;
 pub const RANDOMNESS_SPACE_SCALAR_LIMBS: usize = LargeBiPrimeSizedNumber::LIMBS;
@@ -102,6 +113,7 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
                 .into(),
             &randomness.into(),
         );
+
         CiphertextSpaceGroupElement::new(
             ciphertext.into(),
             &CiphertextSpacePublicParameters {
@@ -206,6 +218,164 @@ impl From<tiresias::DecryptionKey> for DecryptionKey {
 impl Into<EncryptionKey> for DecryptionKey {
     fn into(self) -> EncryptionKey {
         EncryptionKey(self.0.encryption_key)
+    }
+}
+
+impl AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>
+    for DecryptionKeyShare
+{
+    type DecryptionShare = PaillierModulusSizedNumber;
+    type PartialDecryptionProof = ProofOfEqualityOfDiscreteLogs;
+
+    fn generate_decryption_share_semi_honest(
+        &self,
+        ciphertext: &CiphertextSpaceGroupElement,
+    ) -> ahe::Result<Self::DecryptionShare> {
+        self.0
+            .generate_decryption_shares_semi_honest(vec![ciphertext.into()])?
+            .first()
+            .ok_or(ahe::Error::InternalError)
+            .copied()
+    }
+
+    fn generate_decryption_shares(
+        &self,
+        ciphertexts: Vec<CiphertextSpaceGroupElement>,
+        rng: &mut impl CryptoRngCore,
+    ) -> ahe::Result<(Vec<Self::DecryptionShare>, Self::PartialDecryptionProof)> {
+        let ciphertexts = ciphertexts.into_iter().map(|ct| ct.into()).collect();
+        let message = self.0.generate_decryption_shares(ciphertexts, rng)?;
+
+        Ok((message.decryption_shares, message.proof))
+    }
+
+    fn combine_decryption_shares_semi_honest(
+        &self,
+        encryption_key: EncryptionKey,
+        decryption_shares: HashMap<PartyID, Self::DecryptionShare>,
+    ) -> ahe::Result<PlaintextSpaceGroupElement> {
+        let decrypters: Vec<_> = decryption_shares.clone().into_keys().collect();
+
+        let absolute_adjusted_lagrange_coefficients: HashMap<u16, _> = decrypters
+            .clone()
+            .into_iter()
+            .map(|j| {
+                (
+                    j,
+                    tiresias::DecryptionKeyShare::compute_absolute_adjusted_lagrange_coefficient(
+                        j,
+                        self.0.number_of_parties,
+                        decrypters.clone(),
+                        &self.0.precomputed_values,
+                    ),
+                )
+            })
+            .collect();
+
+        let decryption_shares = decryption_shares
+            .into_iter()
+            .map(|(party_id, decryption_share)| (party_id, vec![decryption_share]))
+            .collect();
+
+        let plaintext = tiresias::DecryptionKeyShare::combine_decryption_shares_semi_honest(
+            self.0.encryption_key.clone(),
+            decryption_shares,
+            self.0.precomputed_values.clone(),
+            absolute_adjusted_lagrange_coefficients,
+        )?;
+
+        let plaintext = plaintext.first().ok_or(ahe::Error::InternalError)?;
+
+        Ok(PlaintextSpaceGroupElement::new(
+            *plaintext,
+            &odd_moduli::PublicParameters {
+                modulus: NonZero::new(self.0.encryption_key.n).unwrap(),
+            },
+        )?)
+    }
+
+    fn combine_decryption_shares(
+        &self,
+        encryption_key: EncryptionKey,
+        ciphertexts: Vec<CiphertextSpaceGroupElement>,
+        decryption_shares_and_proofs: HashMap<
+            PartyID,
+            (Vec<Self::DecryptionShare>, Self::PartialDecryptionProof),
+        >,
+        rng: &mut impl CryptoRngCore,
+    ) -> ahe::Result<Vec<PlaintextSpaceGroupElement>> {
+        // let decrypters: Vec<_> = decryption_shares_and_proofs.clone().into_keys().collect();
+        //
+        // let absolute_adjusted_lagrange_coefficients: HashMap<u16, _> = decrypters
+        //     .clone()
+        //     .into_iter()
+        //     .map(|j| {
+        //         (
+        //             j,
+        //             tiresias::DecryptionKeyShare::compute_absolute_adjusted_lagrange_coefficient(
+        //                 j,
+        //                 self.0.number_of_parties,
+        //                 decrypters.clone(),
+        //                 &self.0.precomputed_values,
+        //             ),
+        //         )
+        //     })
+        //     .collect();
+        //
+        // let ciphertexts = ciphertexts.into_iter().map(|ct| ct.into()).collect();
+        //
+        // let messages = decryption_shares_and_proofs
+        //     .into_iter()
+        //     .map(|(party_id, (decryption_shares, proof))| {
+        //         (
+        //             party_id,
+        //             Message {
+        //                 decryption_shares,
+        //                 proof,
+        //             },
+        //         )
+        //     })
+        //     .collect();
+        //
+        // let plaintexts = tiresias::DecryptionKeyShare::combine_decryption_shares(
+        //     self.0.threshold,
+        //     self.0.number_of_parties,
+        //     self.0.encryption_key,
+        //     ciphertexts,
+        //     messages,
+        //     self.0.base,
+        //     todo!(), // TODO: how to handle this?
+        //     self.0.precomputed_values,
+        //     absolute_adjusted_lagrange_coefficients,
+        //     rng,     // TODO: is it even safe to send (`Send + Sync + Clone`) `rng`?
+        // )?;
+        //
+        // plaintexts
+        //     .into_iter()
+        //     .map(|plaintext| {
+        //         PlaintextSpaceGroupElement::new(
+        //             *plaintext,
+        //             &odd_moduli::PublicParameters {
+        //                 modulus: NonZero::new(self.0.encryption_key.n).unwrap(),
+        //             },
+        //         )
+        //     })
+        //     .collect()?
+
+        todo!()
+    }
+}
+
+impl From<tiresias::DecryptionKeyShare> for DecryptionKeyShare {
+    fn from(value: tiresias::DecryptionKeyShare) -> Self {
+        Self(value)
+    }
+}
+
+impl Into<EncryptionKey> for DecryptionKeyShare {
+    fn into(self) -> EncryptionKey {
+        todo!()
+        // EncryptionKey(self.0.encryption_key)
     }
 }
 

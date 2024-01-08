@@ -1081,7 +1081,7 @@ dependencies = [
 [[package]]
 name = "tiresias"
 version = "0.1.0"
-source = "git+https://github.com/odsy-network/tiresias.git#16558f006fcfbe8b7f04a9677f2b23e20e9b049c"
+source = "git+https://github.com/odsy-network/tiresias.git?branch=expose_precomputed_values#7defffeef7426e1d92fb2f9fb6de0f1c61f987a7"
 dependencies = [
  "crypto-bigint",
  "gcd",

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pub mod paillier;
 
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
 
 use crypto_bigint::{rand_core::CryptoRngCore, Random, Uint};
 use serde::{Deserialize, Serialize};
@@ -10,9 +10,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     group,
     group::{GroupElement, KnownOrderGroupElement, KnownOrderScalar, Samplable},
+    PartyID,
 };
 
-/// An error in encryption key instantiation [`AdditivelyHomomorphicEncryptionKey::new()`]
+/// An error in encryption related operations
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
 pub enum Error {
     #[error("unsafe public parameters: circuit-privacy cannot be ensured by this scheme using these public parameters.")]
@@ -21,6 +22,16 @@ pub enum Error {
     GroupInstantiation(#[from] group::Error),
     #[error("zero dimension: cannot evalute a zero-dimension linear combination")]
     ZeroDimension,
+
+    #[error("an internal error that should never have happened and signifies a bug")]
+    InternalError,
+    // TODO: now we're returning `ahe::Error` in e.g. `DecryptionKeyShare` methods. That means
+    // that this crate must specifically implement the traits for each crate it wishes to work
+    // with. However, we wish to migrate so that the implementations would be done in Tiresias. In
+    // that case, we should either have the error be external, or import it generically, need to
+    // think how best done.
+    #[error("tiresias error")]
+    Tiresias(#[from] tiresias::Error),
 }
 
 /// The Result of the `new()` operation of types implementing the
@@ -58,8 +69,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
         self.clone().into()
     }
 
-    /// Instantiate the encryption key from the public parameters of the encryption scheme,
-    /// plaintext, randomness and ciphertext groups.
+    /// Instantiate the encryption key from the public parameters of the encryption scheme.
     fn new(public_parameters: &Self::PublicParameters) -> Result<Self>;
 
     /// $\Enc(pk, \pt; \eta_{\sf enc}) \to \ct$: Encrypt `plaintext` to `self` using
@@ -258,7 +268,7 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     type SecretKey;
 
     /// Instantiate the decryption key from the public parameters of the encryption scheme,
-    /// plaintext, randomness, ciphertext groups and the secret key.
+    /// and the secret key.
     fn new(
         encryption_scheme_public_parameters: &EncryptionKey::PublicParameters,
         secret_key: Self::SecretKey,
@@ -271,6 +281,52 @@ pub trait AdditivelyHomomorphicDecryptionKey<
         &self,
         ciphertext: &EncryptionKey::CiphertextSpaceGroupElement,
     ) -> EncryptionKey::PlaintextSpaceGroupElement;
+}
+
+/// A Decryption Key Share of a Threshold Additively Homomorphic Encryption scheme
+pub trait AdditivelyHomomorphicDecryptionKeyShare<
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+>: Into<EncryptionKey> + Clone + PartialEq
+{
+    type DecryptionShare;
+    type PartialDecryptionProof;
+
+    // TODO: doc
+    fn generate_decryption_share_semi_honest(
+        &self,
+        ciphertext: &EncryptionKey::CiphertextSpaceGroupElement,
+    ) -> Result<Self::DecryptionShare>;
+
+    // TODO: doc
+    fn generate_decryption_shares(
+        &self,
+        ciphertexts: Vec<EncryptionKey::CiphertextSpaceGroupElement>,
+        rng: &mut impl CryptoRngCore,
+    ) -> Result<(Vec<Self::DecryptionShare>, Self::PartialDecryptionProof)>;
+
+    // TODO: what will we do with these? it's a problem to compute them again & again..
+    // precomputed_values: PrecomputedValues,
+    // absolute_adjusted_lagrange_coefficients: HashMap<
+    // u16,
+    // AdjustedLagrangeCoefficientSizedNumber,
+    // >,
+    fn combine_decryption_shares_semi_honest(
+        &self,
+        encryption_key: EncryptionKey,
+        decryption_shares: HashMap<PartyID, Self::DecryptionShare>,
+    ) -> Result<EncryptionKey::PlaintextSpaceGroupElement>;
+
+    fn combine_decryption_shares(
+        &self,
+        encryption_key: EncryptionKey,
+        ciphertexts: Vec<EncryptionKey::CiphertextSpaceGroupElement>,
+        decryption_shares_and_proofs: HashMap<
+            PartyID,
+            (Vec<Self::DecryptionShare>, Self::PartialDecryptionProof),
+        >,
+        rng: &mut impl CryptoRngCore,
+    ) -> Result<Vec<EncryptionKey::PlaintextSpaceGroupElement>>;
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
