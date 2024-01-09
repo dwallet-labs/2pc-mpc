@@ -67,6 +67,9 @@ pub enum Error {
     #[error("proofs error")]
     Proofs(#[from] proofs::Error),
 
+    #[error("error in homomorphic encryption related operations")]
+    HomomorphicEncryption(#[from] ahe::Error),
+
     #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]
     WrongDecommitment,
 

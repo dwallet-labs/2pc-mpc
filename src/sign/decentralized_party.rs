@@ -7,7 +7,7 @@ use serde::Serialize;
 use super::{centralized_party::PublicNonceEncryptedPartialSignatureAndProof, DIMENSION};
 use crate::{
     ahe,
-    ahe::GroupsPublicParametersAccessors as _,
+    ahe::{AdditivelyHomomorphicDecryptionKeyShare, GroupsPublicParametersAccessors as _},
     commitments,
     commitments::{GroupsPublicParametersAccessors as _, MultiPedersen, Pedersen},
     group,
@@ -42,10 +42,12 @@ pub struct Party<
     const NUM_RANGE_CLAIMS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    DecryptionKeyShare: AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
     UnboundedDComEvalWitness: group::GroupElement + Samplable,
     RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
 > {
+    pub decryption_key_share: DecryptionKeyShare,
     // TODO: should we get this like that? is it the same for both the centralized & decentralized
     // party (and all their parties?)
     pub protocol_context: ProtocolContext,
@@ -77,6 +79,7 @@ impl<
         const NUM_RANGE_CLAIMS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS> + AffineXCoordinate<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        DecryptionKeyShare: AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         UnboundedDComEvalWitness: group::GroupElement + Samplable,
         RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         ProtocolContext: Clone + Serialize,
@@ -90,6 +93,7 @@ impl<
         NUM_RANGE_CLAIMS,
         GroupElement,
         EncryptionKey,
+        DecryptionKeyShare,
         UnboundedDComEvalWitness,
         RangeProof,
         ProtocolContext,
@@ -181,7 +185,10 @@ where
             >,
         >,
         rng: &mut impl CryptoRngCore,
-    ) -> crate::Result<()> {
+    ) -> crate::Result<(
+        DecryptionKeyShare::DecryptionShare,
+        DecryptionKeyShare::DecryptionShare,
+    )> {
         let language_public_parameters = committment_of_discrete_log::PublicParameters::new::<
             SCALAR_LIMBS,
             GroupElement::Scalar,
@@ -345,7 +352,7 @@ where
                 vec![(
                     range_proof_commitment,
                     (
-                        encrypted_partial_signature,
+                        encrypted_partial_signature.clone(),
                         coefficient_commitments.clone().into(),
                     )
                         .into(),
@@ -375,6 +382,17 @@ where
             return Err(crate::Error::CommitmentsHomomorphicEvaluation);
         }
 
-        Ok(())
+        let partial_signature_decryption_share = self
+            .decryption_key_share
+            .generate_decryption_share_semi_honest(&encrypted_partial_signature)?;
+
+        let masked_nonce_decryption_share = self
+            .decryption_key_share
+            .generate_decryption_share_semi_honest(&self.encrypted_masked_nonce)?;
+
+        Ok((
+            partial_signature_decryption_share,
+            masked_nonce_decryption_share,
+        ))
     }
 }
