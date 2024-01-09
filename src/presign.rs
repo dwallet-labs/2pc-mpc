@@ -12,7 +12,7 @@ pub(crate) mod tests {
     use crypto_bigint::U256;
     use rand_core::OsRng;
     use rstest::rstest;
-    use tiresias::LargeBiPrimeSizedNumber;
+    use tiresias::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 
     use super::*;
     use crate::{
@@ -25,8 +25,10 @@ pub(crate) mod tests {
         },
         commitments::pedersen,
         group::{
-            ristretto, secp256k1, self_product, CyclicGroupElement, GroupElement as _, Samplable,
+            multiplicative_group_of_integers_modulu_n, ristretto, secp256k1, self_product,
+            CyclicGroupElement, GroupElement as _, Samplable,
         },
+        presign::tests::paillier::CIPHERTEXT_SPACE_SCALAR_LIMBS,
         proofs::{
             range::{bulletproofs, RangeProof},
             schnorr::{
@@ -36,7 +38,6 @@ pub(crate) mod tests {
         },
     };
 
-    // TODO: rstest with cases for batch size
     #[rstest]
     #[case(1)]
     #[case(2)]
@@ -44,6 +45,28 @@ pub(crate) mod tests {
         let number_of_parties = 4;
         let threshold = 2;
 
+        generates_presignatures_internal(number_of_parties, threshold, batch_size);
+    }
+
+    pub fn generates_presignatures_internal(
+        number_of_parties: u16,
+        threshold: u16,
+        batch_size: usize,
+    ) -> (
+        Vec<
+            centralized_party::Presign<
+                secp256k1::group_element::Value,
+                secp256k1::Scalar,
+                multiplicative_group_of_integers_modulu_n::Value<{ CIPHERTEXT_SPACE_SCALAR_LIMBS }>,
+            >,
+        >,
+        Vec<
+            decentralized_party::Presign<
+                secp256k1::group_element::Value,
+                multiplicative_group_of_integers_modulu_n::Value<{ CIPHERTEXT_SPACE_SCALAR_LIMBS }>,
+            >,
+        >,
+    ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
@@ -352,8 +375,9 @@ pub(crate) mod tests {
             .collect();
 
         assert!(centralized_party_presigns
+            .clone()
             .into_iter()
-            .zip(decentralized_party_presigns.into_iter())
+            .zip(decentralized_party_presigns.clone().into_iter())
             .all(|(centralized_party_presign, decentralized_party_presign)| {
                 centralized_party_presign.decentralized_party_nonce_public_share
                     == decentralized_party_presign.nonce_public_share
@@ -362,6 +386,8 @@ pub(crate) mod tests {
                     && centralized_party_presign.encrypted_masked_key_share
                         == decentralized_party_presign.encrypted_masked_key_share
             }));
+
+        (centralized_party_presigns, decentralized_party_presigns)
     }
 }
 

@@ -205,10 +205,10 @@ impl<
             Option::<_>::from(NonZero::new(group_order)).ok_or(proofs::Error::InternalError)?;
 
         let coefficients = flat_map_results(coefficients.map(|coefficient| {
+            // TODO: here it's ok to go through modulation right?
             let coefficient = coefficient.value().into().reduce(&group_order).into();
 
             GroupElement::Scalar::new(
-                // TODO: here it's ok to go through modulation right?
                 coefficient,
                 language_public_parameters.scalar_group_public_parameters(),
             )

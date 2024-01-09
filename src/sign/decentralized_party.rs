@@ -1,7 +1,10 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto_bigint::rand_core::CryptoRngCore;
+use std::collections::HashMap;
+
+use crypto_bigint::{rand_core::CryptoRngCore, NonZero, Uint};
+use k256::elliptic_curve::Group;
 use serde::Serialize;
 
 use super::{centralized_party::PublicNonceEncryptedPartialSignatureAndProof, DIMENSION};
@@ -11,7 +14,10 @@ use crate::{
     commitments,
     commitments::{GroupsPublicParametersAccessors as _, MultiPedersen, Pedersen},
     group,
-    group::{AffineXCoordinate, GroupElement, PrimeGroupElement, Samplable},
+    group::{
+        AffineXCoordinate, GroupElement, Invert, KnownOrderGroupElement, PrimeGroupElement,
+        Samplable,
+    },
     helpers::flat_map_results,
     proofs,
     proofs::{
@@ -29,7 +35,8 @@ use crate::{
         },
     },
     sign::decentralized_party::schnorr::enhanced::EnhancedPublicParameters,
-    AdditivelyHomomorphicEncryptionKey,
+    traits::Reduce,
+    AdditivelyHomomorphicEncryptionKey, PartyID,
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -65,9 +72,9 @@ pub struct Party<
     pub nonce_public_share: GroupElement,
     pub encrypted_mask: EncryptionKey::CiphertextSpaceGroupElement,
     pub encrypted_masked_key_share: EncryptionKey::CiphertextSpaceGroupElement,
-    pub encrypted_masked_nonce: EncryptionKey::CiphertextSpaceGroupElement,
+    pub encrypted_masked_nonce_share: EncryptionKey::CiphertextSpaceGroupElement,
     pub centralized_party_public_key_share: GroupElement,
-    pub centralized_party_nonce_shares_commitment: GroupElement,
+    pub centralized_party_nonce_share_commitment: GroupElement,
 }
 
 impl<
@@ -189,6 +196,13 @@ where
         DecryptionKeyShare::DecryptionShare,
         DecryptionKeyShare::DecryptionShare,
     )> {
+        let public_nonce = GroupElement::new(
+            public_nonce_encrypted_partial_signature_and_proof.public_nonce,
+            &self.group_public_parameters,
+        )?; // $R$
+
+        let nonce_x_coordinate = public_nonce.x(); // $r$
+
         let language_public_parameters = committment_of_discrete_log::PublicParameters::new::<
             SCALAR_LIMBS,
             GroupElement::Scalar,
@@ -208,8 +222,8 @@ where
                 &self.protocol_context,
                 &language_public_parameters,
                 vec![[
+                    self.centralized_party_nonce_share_commitment.clone(),
                     self.nonce_public_share,
-                    self.centralized_party_nonce_shares_commitment.clone(),
                 ]
                 .into()],
             )?;
@@ -238,7 +252,7 @@ where
                 &self.protocol_context,
                 &language_public_parameters,
                 vec![[
-                    self.centralized_party_nonce_shares_commitment.clone(),
+                    self.centralized_party_nonce_share_commitment.clone(),
                     nonce_share_by_key_share_commitment.clone(),
                 ]
                 .into()],
@@ -252,13 +266,7 @@ where
                 public_nonce_encrypted_partial_signature_and_proof.first_coefficient_commitment,
                 public_nonce_encrypted_partial_signature_and_proof.second_coefficient_commitment,
             ]
-            .map(|value| {
-                GroupElement::new(
-                    public_nonce_encrypted_partial_signature_and_proof
-                        .nonce_share_by_key_share_commitment,
-                    &self.group_public_parameters,
-                )
-            }),
+            .map(|value| GroupElement::new(value, &self.group_public_parameters)),
         )?;
 
         // TODO: From.
@@ -353,7 +361,12 @@ where
                     range_proof_commitment,
                     (
                         encrypted_partial_signature.clone(),
-                        coefficient_commitments.clone().into(),
+                        [
+                            ((nonce_x_coordinate * nonce_share_by_key_share_commitment)
+                                + (message * &self.centralized_party_nonce_share_commitment)),
+                            (nonce_x_coordinate * &self.centralized_party_nonce_share_commitment),
+                        ]
+                        .into(),
                     )
                         .into(),
                 )
@@ -366,33 +379,85 @@ where
         // need to do it explicitly as stated in the paper, where you seek "records" holding more
         // info?
 
-        let public_nonce = GroupElement::new(
-            public_nonce_encrypted_partial_signature_and_proof.public_nonce,
-            &self.group_public_parameters,
-        )?; // $R$
-
-        let nonce_x_coordinate = public_nonce.x(); // $r$
-
-        if coefficient_commitments[0]
-            != ((nonce_x_coordinate * nonce_share_by_key_share_commitment)
-                + (message * &self.centralized_party_nonce_shares_commitment))
-            || coefficient_commitments[1]
-                != (nonce_x_coordinate * &self.centralized_party_nonce_shares_commitment)
-        {
-            return Err(crate::Error::CommitmentsHomomorphicEvaluation);
-        }
-
         let partial_signature_decryption_share = self
             .decryption_key_share
             .generate_decryption_share_semi_honest(&encrypted_partial_signature)?;
 
         let masked_nonce_decryption_share = self
             .decryption_key_share
-            .generate_decryption_share_semi_honest(&self.encrypted_masked_nonce)?;
+            .generate_decryption_share_semi_honest(&self.encrypted_masked_nonce_share)?;
 
         Ok((
             partial_signature_decryption_share,
             masked_nonce_decryption_share,
         ))
     }
+
+    // TODO: seperate to struct?
+    pub fn decrypt_signature(
+        encryption_key: EncryptionKey,
+        // TODO: name
+        hint: DecryptionKeyShare::Hint,
+        scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+        partial_signature_decryption_shares: HashMap<PartyID, DecryptionKeyShare::DecryptionShare>,
+        masked_nonce_decryption_shares: HashMap<PartyID, DecryptionKeyShare::DecryptionShare>,
+    ) -> crate::Result<GroupElement::Scalar> {
+        let partial_signature: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> =
+            DecryptionKeyShare::combine_decryption_shares_semi_honest(
+                partial_signature_decryption_shares,
+                &encryption_key,
+                hint.clone(),
+            )?
+            .into();
+
+        // TODO: perhaps have it as a method of NumbersGroupElement, i.e. `value_from_uint()`
+        let group_order =
+            GroupElement::Scalar::order_from_public_parameters(&scalar_group_public_parameters);
+
+        let group_order =
+            Option::<_>::from(NonZero::new(group_order)).ok_or(proofs::Error::InternalError)?;
+
+        let partial_signature = GroupElement::Scalar::new(
+            partial_signature.reduce(&group_order).into(),
+            &scalar_group_public_parameters,
+        )?;
+
+        let masked_nonce: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> =
+            DecryptionKeyShare::combine_decryption_shares_semi_honest(
+                masked_nonce_decryption_shares,
+                &encryption_key,
+                hint,
+            )?
+            .into();
+
+        let masked_nonce = GroupElement::Scalar::new(
+            masked_nonce.reduce(&group_order).into(),
+            &scalar_group_public_parameters,
+        )?;
+
+        let inverted_masked_nonce = masked_nonce.invert();
+
+        if inverted_masked_nonce.is_none().into() {
+            // TODO: what error to output here?
+            todo!();
+        }
+
+        // TODO: what is meant by this OUtput Ua if ...
+
+        // TODO: add logic where the decryption fails?
+        // TODO: add logic where the decryption succeeds but the signature is invalid; as honest
+        // verifier I should wish to see proofs for everyone. As malicious verifier, other honest
+        // verifiers should request to see proofs, and if all pass, blame me for wrong decryption.
+
+        // TODO: get r too, verify the sig, don't output if fails? or have it externally?
+
+        // TODO: have the signature verification party for both decentralized & centralized party?
+        // if so, should I put the malicious detection logic in this party?
+
+        // TODO: wha tabout malleability?
+
+        Ok(inverted_masked_nonce.unwrap() * partial_signature)
+    }
+
+    // TODO: add verify signature function for advancing the party for all lazy parties.
 }

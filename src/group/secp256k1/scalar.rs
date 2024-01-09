@@ -21,7 +21,7 @@ use crate::{
 /// A Scalar of the prime field $\mathbb{Z}_p$ over which the secp256k1 prime group is
 /// defined.
 #[derive(PartialEq, PartialOrd, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct Scalar(pub(super) k256::Scalar);
+pub struct Scalar(pub(crate) k256::Scalar);
 
 impl ConstantTimeEq for Scalar {
     fn ct_eq(&self, other: &Self) -> Choice {

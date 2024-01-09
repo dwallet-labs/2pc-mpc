@@ -52,6 +52,7 @@ pub struct PublicNonceEncryptedPartialSignatureAndProof<
     pub(super) encrypted_partial_signature_proof: DComEvalProof,
 }
 
+// TODO: consistent order of generics with other protocols.
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
@@ -81,6 +82,7 @@ pub struct Party<
     pub range_proof_public_parameters: RangeProof::PublicParameters<NUM_RANGE_CLAIMS>,
     pub secret_key_share: GroupElement::Scalar,
     pub public_key_share: GroupElement,
+    pub nonce_share_commitment_randomness: GroupElement::Scalar,
     pub nonce_share: GroupElement::Scalar,
     pub decentralized_party_nonce_public_share: GroupElement,
     pub encrypted_mask: EncryptionKey::CiphertextSpaceGroupElement,
@@ -215,9 +217,6 @@ where
         // TODO: name
         let public_nonce = inverted_nonce_share * self.decentralized_party_nonce_public_share; // $R$
 
-        let nonce_share_commitment_randomness =
-            GroupElement::Scalar::sample(&self.scalar_group_public_parameters, rng)?;
-
         let language_public_parameters = committment_of_discrete_log::PublicParameters::new::<
             SCALAR_LIMBS,
             GroupElement::Scalar,
@@ -243,7 +242,7 @@ where
             None,
             &self.protocol_context,
             &language_public_parameters,
-            vec![[self.nonce_share, nonce_share_commitment_randomness].into()],
+            vec![[self.nonce_share, self.nonce_share_commitment_randomness].into()],
             rng,
         )?;
 
@@ -276,7 +275,7 @@ where
             &language_public_parameters,
             vec![[
                 self.nonce_share,
-                nonce_share_commitment_randomness,
+                self.nonce_share_commitment_randomness,
                 nonce_share_by_key_share_commitment_randomness,
             ]
             .into()],
@@ -290,18 +289,17 @@ where
 
         let nonce_x_coordinate = public_nonce.x(); // $r$
 
-        let first_coefficient = nonce_x_coordinate * self.nonce_share * self.secret_key_share
-            + message * self.nonce_share; // $a1$
+        let first_coefficient = (nonce_x_coordinate * self.nonce_share * self.secret_key_share)
+            + (message * self.nonce_share); // $a1$
 
-        let first_coefficient_commitment_randomness = nonce_x_coordinate
-            * nonce_share_by_key_share_commitment_randomness
-            * self.secret_key_share
-            + message * nonce_share_commitment_randomness;
+        let first_coefficient_commitment_randomness = (nonce_x_coordinate
+            * nonce_share_by_key_share_commitment_randomness)
+            + (message * self.nonce_share_commitment_randomness);
 
         let second_coefficient = nonce_x_coordinate * self.nonce_share; // $a2$
 
         let second_coefficient_commitment_randomness =
-            nonce_x_coordinate * nonce_share_commitment_randomness;
+            nonce_x_coordinate * self.nonce_share_commitment_randomness;
 
         let partial_signature_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample(

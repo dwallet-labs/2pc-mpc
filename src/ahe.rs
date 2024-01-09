@@ -289,8 +289,10 @@ pub trait AdditivelyHomomorphicDecryptionKeyShare<
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
 >: Into<EncryptionKey> + Clone + PartialEq
 {
-    type DecryptionShare;
-    type PartialDecryptionProof;
+    type DecryptionShare: Clone + Debug + PartialEq + Eq;
+    type PartialDecryptionProof: Clone + Debug + PartialEq + Eq;
+    // TODO: better name, doc this. Perhaps these are public parameters?
+    type Hint: Clone + Debug + PartialEq + Eq;
 
     // TODO: doc
     fn generate_decryption_share_semi_honest(
@@ -312,21 +314,24 @@ pub trait AdditivelyHomomorphicDecryptionKeyShare<
     // AdjustedLagrangeCoefficientSizedNumber,
     // >,
     fn combine_decryption_shares_semi_honest(
-        &self,
-        encryption_key: EncryptionKey,
         decryption_shares: HashMap<PartyID, Self::DecryptionShare>,
+        encryption_key: &EncryptionKey,
+        hint: Self::Hint,
     ) -> Result<EncryptionKey::PlaintextSpaceGroupElement>;
 
-    fn combine_decryption_shares(
-        &self,
-        encryption_key: EncryptionKey,
-        ciphertexts: Vec<EncryptionKey::CiphertextSpaceGroupElement>,
-        decryption_shares_and_proofs: HashMap<
-            PartyID,
-            (Vec<Self::DecryptionShare>, Self::PartialDecryptionProof),
-        >,
-        rng: &mut impl CryptoRngCore,
-    ) -> Result<Vec<EncryptionKey::PlaintextSpaceGroupElement>>;
+    // TODO: instead of the `combine_decryption_shares()` function, have a trait for `Proof`,
+    // implement it for `PartialDecryptionProof` [and other proofs] and call its verify function
+    // when needed. fn combine_decryption_shares(
+    //     ciphertexts: Vec<EncryptionKey::CiphertextSpaceGroupElement>,
+    //     decryption_shares_and_proofs: HashMap<
+    //         PartyID,
+    //         (Vec<Self::DecryptionShare>, Self::PartialDecryptionProof),
+    //     >,
+    //     encryption_key: &EncryptionKey,
+    //     hint: Self::Hint,
+    //     rng: &mut impl CryptoRngCore,
+    // ) -> Result<Vec<EncryptionKey::PlaintextSpaceGroupElement>>;
+    // TODO: is it even safe to send (`Send + Sync + Clone`) `rng`?
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -594,4 +599,6 @@ mod tests {
             "decryptions of privately evaluated linear combinations should match straightforward ones modulu the evaluation group order"
         );
     }
+
+    // TODO: test decryption key share.
 }

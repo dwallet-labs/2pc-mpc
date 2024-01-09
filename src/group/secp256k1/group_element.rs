@@ -73,6 +73,12 @@ impl ConditionallySelectable for Value {
     }
 }
 
+impl From<Value> for AffinePoint {
+    fn from(value: Value) -> Self {
+        value.0
+    }
+}
+
 impl group::GroupElement for GroupElement {
     type Value = Value;
 
