@@ -51,6 +51,11 @@ pub(crate) mod tests {
         let secp256k1_group_public_parameters =
             secp256k1::group_element::PublicParameters::default();
 
+        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+
+        let paillier_encryption_key =
+            ahe::paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();
+
         let generator = secp256k1::GroupElement::new(
             secp256k1_group_public_parameters.generator,
             &secp256k1_group_public_parameters,
@@ -81,11 +86,33 @@ pub(crate) mod tests {
             randomness_generator.value(),
         );
 
+        let centralized_party_secret_key_share =
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
+
+        let decentralized_party_secret_key_share =
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
+
+        let decentralized_party_public_key_share =
+            decentralized_party_secret_key_share * &generator;
+
+        let plaintext = paillier::PlaintextSpaceGroupElement::new(
+            LargeBiPrimeSizedNumber::from(&U256::from(decentralized_party_secret_key_share)),
+            paillier_public_parameters.plaintext_space_public_parameters(),
+        )
+        .unwrap();
+
+        let (_, encrypted_decentralized_party_secret_key_share) = paillier_encryption_key
+            .encrypt(&plaintext, &paillier_public_parameters, &mut OsRng)
+            .unwrap();
+
         generates_presignatures_internal(
             number_of_parties,
             threshold,
             batch_size,
             commitment_scheme_public_parameters,
+            centralized_party_secret_key_share,
+            decentralized_party_public_key_share,
+            encrypted_decentralized_party_secret_key_share,
         );
     }
 
@@ -100,6 +127,9 @@ pub(crate) mod tests {
             secp256k1::scalar::PublicParameters,
             secp256k1::group_element::PublicParameters,
         >,
+        centralized_party_secret_key_share: secp256k1::Scalar,
+        decentralized_party_public_key_share: secp256k1::GroupElement,
+        encrypted_decentralized_party_secret_key_share: paillier::CiphertextSpaceGroupElement,
     ) -> (
         Vec<
             centralized_party::Presign<
@@ -145,28 +175,9 @@ pub(crate) mod tests {
         )
         .unwrap();
 
-        let centralized_party_secret_key_share =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
-
         let centralized_party_public_key_share = centralized_party_secret_key_share * &generator;
 
-        let decentralized_party_secret_key_share =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
-
-        let decentralized_party_public_key_share =
-            decentralized_party_secret_key_share * &generator;
-
         let public_key = centralized_party_public_key_share + decentralized_party_public_key_share;
-
-        let plaintext = paillier::PlaintextSpaceGroupElement::new(
-            LargeBiPrimeSizedNumber::from(&U256::from(decentralized_party_secret_key_share)),
-            paillier_public_parameters.plaintext_space_public_parameters(),
-        )
-        .unwrap();
-
-        let (_, encrypted_decentralized_party_secret_key_share) = paillier_encryption_key
-            .encrypt(&plaintext, &paillier_public_parameters, &mut OsRng)
-            .unwrap();
 
         let centralized_party_commitment_round_party = centralized_party::commitment_round::Party::<
             { secp256k1::SCALAR_LIMBS },

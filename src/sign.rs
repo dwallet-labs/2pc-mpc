@@ -91,8 +91,12 @@ pub(crate) mod tests {
             _,
         ) = setup();
 
-        let secret_key_share =
-            centralized_party_secret_key_share + decentralized_party_secret_key_share;
+        assert_eq!(
+            decentralized_party_secret_key_share * &generator,
+            decentralized_party_public_key_share
+        );
+
+        let secret_key = centralized_party_secret_key_share + decentralized_party_secret_key_share;
 
         let public_key = centralized_party_public_key_share + decentralized_party_public_key_share;
 
@@ -278,8 +282,8 @@ pub(crate) mod tests {
             centralized_party_nonce_share * decentralized_party_nonce_share.invert().unwrap();
 
         assert_eq!(
-            nonce * ((nonce_x_coordinate * secret_key_share) + m), /* $ s = (k_A * k_B^-1) * (rx
-                                                                    * + m) $ */
+            nonce * ((nonce_x_coordinate * secret_key) + m), /* $ s = (k_A * k_B^-1) * (rx
+                                                              * + m) $ */
             signature_s
         );
 
@@ -445,6 +449,9 @@ pub(crate) mod tests {
                 threshold,
                 1,
                 commitment_scheme_public_parameters.clone(),
+                centralized_party_dkg_output.secret_key_share,
+                decentralized_party_dkg_output.public_key_share,
+                decentralized_party_dkg_output.encrypted_secret_key_share,
             );
 
         let centralized_party_presign = centralized_party_presign.first().unwrap().clone();
