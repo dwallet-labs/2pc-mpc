@@ -36,7 +36,25 @@ pub(crate) mod tests {
     fn generates_distributed_key() {
         let number_of_parties = 4;
         let threshold = 2;
+    }
 
+    pub fn generates_distributed_key_internal(
+        number_of_parties: u16,
+        threshold: u16,
+    ) -> (
+        centralized_party::Output<
+            { secp256k1::SCALAR_LIMBS },
+            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+            secp256k1::GroupElement,
+            paillier::EncryptionKey,
+        >,
+        decentralized_party::Output<
+            { secp256k1::SCALAR_LIMBS },
+            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+            secp256k1::GroupElement,
+            paillier::EncryptionKey,
+        >,
+    ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
@@ -193,6 +211,10 @@ pub(crate) mod tests {
                 })
                 .collect();
 
+        // TODO: check all are same.
+        let decentralized_party_dkg_output =
+            decentralized_party_dkg_outputs.get(&1).unwrap().clone();
+
         assert!(decentralized_party_dkg_outputs
             .into_iter()
             .all(|(_, dkg_output)| {
@@ -212,6 +234,8 @@ pub(crate) mod tests {
                         + &dkg_output.public_key_share
                         == dkg_output.public_key)
             }));
+
+        (centralized_party_dkg_output, decentralized_party_dkg_output)
     }
 }
 

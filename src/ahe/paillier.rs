@@ -301,8 +301,7 @@ impl From<tiresias::DecryptionKeyShare> for DecryptionKeyShare {
 
 impl Into<EncryptionKey> for DecryptionKeyShare {
     fn into(self) -> EncryptionKey {
-        todo!()
-        // EncryptionKey(self.0.encryption_key)
+        EncryptionKey(self.0.encryption_key)
     }
 }
 

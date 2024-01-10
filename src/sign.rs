@@ -37,11 +37,13 @@ pub(crate) mod tests {
             GroupsPublicParametersAccessors,
         },
         commitments::{pedersen, HomomorphicCommitmentScheme, Pedersen},
+        dkg::tests::generates_distributed_key_internal,
         group::{
             direct_product, multiplicative_group_of_integers_modulu_n, ristretto, secp256k1,
             self_product, AffineXCoordinate, CyclicGroupElement, GroupElement as _, Invert,
-            Samplable,
+            KnownOrderGroupElement, Samplable,
         },
+        presign::tests::generates_presignatures_internal,
         proofs::{
             range::{bulletproofs, RangeProof},
             schnorr::{
@@ -51,12 +53,14 @@ pub(crate) mod tests {
             },
         },
         sign::tests::paillier::{tests::BASE, Hint},
+        traits::Reduce as _,
         StatisticalSecuritySizedNumber,
     };
 
     pub fn signs_internal(
         number_of_parties: u16,
         threshold: u16,
+        // TODO: generate pedeseren then not need get this
         commitment_scheme_public_parameters: pedersen::PublicParameters<
             1,
             secp256k1::group_element::Value,
@@ -251,8 +255,13 @@ pub(crate) mod tests {
         )
         .unwrap();
 
+        assert_eq!(
+            decentralized_party_nonce_share * &generator,
+            decentralized_party_nonce_public_share
+        );
+
         let public_nonce = centralized_party_nonce_share.invert().unwrap()
-            * (decentralized_party_nonce_share * &generator); // $R = k_A^-1*k_B*G$
+            * &decentralized_party_nonce_public_share; // $R = k_A^-1*k_B*G$
 
         assert_eq!(
             public_nonce,
@@ -405,6 +414,117 @@ pub(crate) mod tests {
             decentralized_party_nonce_share,
             decentralized_party_nonce_public_share,
             nonce_share_commitment_randomness,
+            encrypted_mask,
+            encrypted_masked_key_share,
+            encrypted_masked_nonce_share,
+        );
+    }
+
+    #[test]
+    fn dkg_presign_signs() {
+        let number_of_parties = 4;
+        let threshold = 2;
+
+        let (
+            secp256k1_scalar_public_parameters,
+            secp256k1_group_public_parameters,
+            generator,
+            bulletproofs_public_parameters,
+            paillier_public_parameters,
+            paillier_encryption_key,
+            unbounded_dcom_eval_witness_public_parameters,
+            commitment_scheme_public_parameters,
+        ) = setup();
+
+        let (centralized_party_dkg_output, decentralized_party_dkg_output) =
+            generates_distributed_key_internal(number_of_parties, threshold);
+
+        let (centralized_party_presign, encrypted_nonce, decentralized_party_presign) =
+            generates_presignatures_internal(
+                number_of_parties,
+                threshold,
+                1,
+                commitment_scheme_public_parameters.clone(),
+            );
+
+        let centralized_party_presign = centralized_party_presign.first().unwrap().clone();
+        let decentralized_party_presign = decentralized_party_presign.first().unwrap().clone();
+
+        let centralized_party_nonce_share_commitment = secp256k1::GroupElement::new(
+            decentralized_party_presign.centralized_party_nonce_share_commitment,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
+
+        let decentralized_party_nonce_public_share = secp256k1::GroupElement::new(
+            decentralized_party_presign.nonce_public_share,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
+
+        let encrypted_mask = paillier::CiphertextSpaceGroupElement::new(
+            centralized_party_presign.encrypted_mask,
+            paillier_public_parameters.ciphertext_space_public_parameters(),
+        )
+        .unwrap();
+
+        let encrypted_masked_key_share = paillier::CiphertextSpaceGroupElement::new(
+            centralized_party_presign.encrypted_masked_key_share,
+            paillier_public_parameters.ciphertext_space_public_parameters(),
+        )
+        .unwrap();
+
+        let encrypted_masked_nonce_share = paillier::CiphertextSpaceGroupElement::new(
+            decentralized_party_presign.encrypted_masked_nonce_share,
+            paillier_public_parameters.ciphertext_space_public_parameters(),
+        )
+        .unwrap();
+
+        let paillier_decryption_key =
+            ahe::paillier::DecryptionKey::new(&paillier_public_parameters, SECRET_KEY).unwrap();
+
+        let group_order =
+            secp256k1::Scalar::order_from_public_parameters(&secp256k1_scalar_public_parameters);
+
+        let group_order = Option::<_>::from(NonZero::new(group_order)).unwrap();
+
+        let decentralized_party_secret_key_share = paillier_decryption_key
+            .decrypt(&decentralized_party_dkg_output.encrypted_secret_key_share);
+
+        let decentralized_party_secret_key_share = secp256k1::Scalar::new(
+            decentralized_party_secret_key_share
+                .value()
+                .reduce(&group_order)
+                .into(),
+            &secp256k1_scalar_public_parameters,
+        )
+        .unwrap();
+
+        let decentralized_party_nonce_share =
+            paillier_decryption_key.decrypt(encrypted_nonce.first().unwrap());
+
+        let decentralized_party_nonce_share = secp256k1::Scalar::new(
+            decentralized_party_nonce_share
+                .value()
+                .reduce(&group_order)
+                .into(),
+            &secp256k1_scalar_public_parameters,
+        )
+        .unwrap();
+
+        signs_internal(
+            number_of_parties,
+            threshold,
+            commitment_scheme_public_parameters,
+            centralized_party_dkg_output.secret_key_share,
+            centralized_party_dkg_output.public_key_share,
+            decentralized_party_secret_key_share,
+            decentralized_party_dkg_output.public_key_share,
+            centralized_party_presign.nonce_share,
+            centralized_party_nonce_share_commitment,
+            decentralized_party_nonce_share,
+            decentralized_party_nonce_public_share,
+            centralized_party_presign.commitment_randomness,
             encrypted_mask,
             encrypted_masked_key_share,
             encrypted_masked_nonce_share,

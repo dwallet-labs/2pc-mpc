@@ -279,10 +279,11 @@ where
 
 #[derive(PartialEq, Serialize, Deserialize, Clone)]
 pub struct Presign<GroupElementValue, CiphertextValue> {
+    pub(crate) centralized_party_nonce_share_commitment: GroupElementValue,
     pub(crate) nonce_public_share: GroupElementValue,
     pub(crate) encrypted_mask: CiphertextValue,
     pub(crate) encrypted_masked_key_share: CiphertextValue,
-    pub(crate) encrypted_masked_nonce: CiphertextValue,
+    pub(crate) encrypted_masked_nonce_share: CiphertextValue,
 }
 
 impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextValue> {
@@ -292,6 +293,7 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     >(
+        centralized_party_nonce_share_commitment: GroupElement,
         mask_and_encrypted_masked_key_share: encryption_of_tuple::StatementSpaceGroupElement<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
@@ -303,7 +305,7 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
             GroupElement,
             EncryptionKey,
         >,
-        encrypted_masked_nonce: encryption_of_tuple::StatementSpaceGroupElement<
+        encrypted_masked_nonce_share: encryption_of_tuple::StatementSpaceGroupElement<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
             EncryptionKey,
@@ -325,16 +327,18 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
             .base_by_discrete_log()
             .value();
 
-        let encrypted_masked_nonce = encrypted_masked_nonce.encrypted_product().value();
+        let encrypted_masked_nonce_share = encrypted_masked_nonce_share.encrypted_product().value();
 
         // TODO: I don't need to match encrypted nonce E(k) from both the previous round
         // aggregation and the current one right?
 
         Presign {
+            centralized_party_nonce_share_commitment: centralized_party_nonce_share_commitment
+                .value(),
             nonce_public_share,
             encrypted_mask,
             encrypted_masked_key_share,
-            encrypted_masked_nonce,
+            encrypted_masked_nonce_share,
         }
     }
 }

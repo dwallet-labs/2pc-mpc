@@ -34,6 +34,7 @@ pub(crate) mod tests {
             schnorr::{
                 aggregation::tests::{aggregates_internal, aggregates_internal_multiple},
                 enhanced::{tests::RANGE_CLAIMS_PER_SCALAR, EnhancedLanguageStatementAccessors},
+                language::encryption_of_discrete_log::StatementAccessors,
             },
         },
     };
@@ -45,13 +46,60 @@ pub(crate) mod tests {
         let number_of_parties = 4;
         let threshold = 2;
 
-        generates_presignatures_internal(number_of_parties, threshold, batch_size);
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
+
+        let generator = secp256k1::GroupElement::new(
+            secp256k1_group_public_parameters.generator,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
+
+        let message_generators = array::from_fn(|_| {
+            let generator =
+                secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
+                    * generator;
+
+            generator.value()
+        });
+
+        let randomness_generator =
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
+                * generator;
+
+        // TODO: this is not safe; we need a proper way to derive generators
+        let commitment_scheme_public_parameters = pedersen::PublicParameters::new::<
+            { secp256k1::SCALAR_LIMBS },
+            secp256k1::Scalar,
+            secp256k1::GroupElement,
+        >(
+            secp256k1_scalar_public_parameters.clone(),
+            secp256k1_group_public_parameters.clone(),
+            message_generators,
+            randomness_generator.value(),
+        );
+
+        generates_presignatures_internal(
+            number_of_parties,
+            threshold,
+            batch_size,
+            commitment_scheme_public_parameters,
+        );
     }
 
     pub fn generates_presignatures_internal(
         number_of_parties: u16,
         threshold: u16,
         batch_size: usize,
+        // TODO: generate pedeseren then not need get this
+        commitment_scheme_public_parameters: pedersen::PublicParameters<
+            1,
+            secp256k1::group_element::Value,
+            secp256k1::scalar::PublicParameters,
+            secp256k1::group_element::PublicParameters,
+        >,
     ) -> (
         Vec<
             centralized_party::Presign<
@@ -60,6 +108,7 @@ pub(crate) mod tests {
                 multiplicative_group_of_integers_modulu_n::Value<{ CIPHERTEXT_SPACE_SCALAR_LIMBS }>,
             >,
         >,
+        Vec<paillier::CiphertextSpaceGroupElement>,
         Vec<
             decentralized_party::Presign<
                 secp256k1::group_element::Value,
@@ -77,10 +126,8 @@ pub(crate) mod tests {
 
         let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
 
-        let paillier_decryption_key =
-            ahe::paillier::DecryptionKey::new(&paillier_public_parameters, SECRET_KEY).unwrap();
-
-        let paillier_encryption_key: ahe::paillier::EncryptionKey = paillier_decryption_key.into();
+        let paillier_encryption_key =
+            ahe::paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();
 
         let unbounded_encdl_witness_public_parameters = paillier_public_parameters
             .randomness_space_public_parameters()
@@ -121,30 +168,6 @@ pub(crate) mod tests {
             .encrypt(&plaintext, &paillier_public_parameters, &mut OsRng)
             .unwrap();
 
-        let message_generators = array::from_fn(|_| {
-            let generator =
-                secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                    * generator;
-
-            generator.value()
-        });
-
-        let randomness_generator =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                * generator;
-
-        // TODO: this is not safe; we need a proper way to derive generators
-        let commitment_scheme_public_parameters = pedersen::PublicParameters::new::<
-            { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
-            secp256k1::GroupElement,
-        >(
-            secp256k1_scalar_public_parameters.clone(),
-            secp256k1_group_public_parameters.clone(),
-            message_generators,
-            randomness_generator.value(),
-        );
-
         let centralized_party_commitment_round_party = centralized_party::commitment_round::Party::<
             { secp256k1::SCALAR_LIMBS },
             { ristretto::SCALAR_LIMBS },
@@ -172,7 +195,7 @@ pub(crate) mod tests {
         };
 
         let (
-            commitment_and_proof_to_centralized_party_nonce_share,
+            commitments_and_proof_to_centralized_party_nonce_shares,
             centralized_party_proof_verification_round_party,
         ) = centralized_party_commitment_round_party
             .sample_commit_and_prove_signature_nonce_share(batch_size, &mut OsRng)
@@ -216,7 +239,7 @@ pub(crate) mod tests {
             })
             .collect();
 
-        let (parties, decentralized_party_encrypted_masked_nonces_round_parties): (
+        let (parties, decentralized_party_encrypted_masked_nonce_shares_round_parties): (
             HashMap<_, _>,
             HashMap<_, _>,
         ) = decentralized_party_encrypted_masked_key_share_and_public_nonce_shares_parties
@@ -227,10 +250,10 @@ pub(crate) mod tests {
                         decentralized_party_encrypted_masked_key_share_commitment_round_party,
                         decentralized_party_public_nonce_shares_commitment_round_party,
                     ),
-                    decentralized_party_encrypted_masked_nonces_round_party,
+                    decentralized_party_encrypted_masked_nonce_shares_round_party,
                 ) = party
                     .sample_mask_and_nonce_shares_and_initialize_proof_aggregation(
-                        commitment_and_proof_to_centralized_party_nonce_share.clone(),
+                        commitments_and_proof_to_centralized_party_nonce_shares.clone(),
                         &mut OsRng,
                     )
                     .unwrap();
@@ -244,7 +267,7 @@ pub(crate) mod tests {
                     ),
                     (
                         party_id,
-                        decentralized_party_encrypted_masked_nonces_round_party,
+                        decentralized_party_encrypted_masked_nonce_shares_round_party,
                     ),
                 )
             })
@@ -317,10 +340,16 @@ pub(crate) mod tests {
                 })
                 .collect();
 
-        let decentralized_party_encrypted_masked_nonces_commitment_round_parties: HashMap<
+        let encrypted_nonce_shares = encrypted_nonce_shares_and_public_shares
+            .clone()
+            .into_iter()
+            .map(|statement| statement.encrypted_discrete_log().clone())
+            .collect();
+
+        let decentralized_party_encrypted_masked_nonce_shares_commitment_round_parties: HashMap<
             _,
             Vec<_>,
-        > = decentralized_party_encrypted_masked_nonces_round_parties
+        > = decentralized_party_encrypted_masked_nonce_shares_round_parties
             .into_iter()
             .map(|(party_id, party)| {
                 (
@@ -336,43 +365,53 @@ pub(crate) mod tests {
             })
             .collect();
 
-        let (_, encrypted_masked_nonces): (Vec<_>, Vec<_>) = aggregates_internal_multiple(
-            decentralized_party_encrypted_masked_nonces_commitment_round_parties,
+        let (_, encrypted_masked_nonce_shares): (Vec<_>, Vec<_>) = aggregates_internal_multiple(
+            decentralized_party_encrypted_masked_nonce_shares_commitment_round_parties,
         )
         .into_iter()
         .unzip();
 
-        let encrypted_masked_nonces: Vec<_> = encrypted_masked_nonces
+        let encrypted_masked_nonce_shares: Vec<_> = encrypted_masked_nonce_shares
             .into_iter()
             .flatten()
-            .map(|encrypted_masked_nonce| encrypted_masked_nonce.language_statement().clone())
+            .map(|encrypted_masked_nonce_share| {
+                encrypted_masked_nonce_share.language_statement().clone()
+            })
             .collect();
 
-        let decentralized_party_presigns: Vec<_> = masks_and_encrypted_masked_key_share
-            .into_iter()
-            .zip(
-                encrypted_nonce_shares_and_public_shares
-                    .into_iter()
-                    .zip(encrypted_masked_nonces.into_iter()),
-            )
-            .map(
-                |(
-                    mask_and_encrypted_masked_key_share,
-                    (encrypted_nonce_share_and_public_share, encrypted_masked_nonce),
-                )| {
-                    decentralized_party::Presign::new::<
-                        { secp256k1::SCALAR_LIMBS },
-                        { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-                        secp256k1::GroupElement,
-                        paillier::EncryptionKey,
-                    >(
-                        mask_and_encrypted_masked_key_share,
-                        encrypted_nonce_share_and_public_share,
-                        encrypted_masked_nonce,
-                    )
-                },
-            )
-            .collect();
+        let decentralized_party_presigns: Vec<_> =
+            commitments_and_proof_to_centralized_party_nonce_shares
+                .commitments
+                .into_iter()
+                .zip(
+                    masks_and_encrypted_masked_key_share.into_iter().zip(
+                        encrypted_nonce_shares_and_public_shares
+                            .into_iter()
+                            .zip(encrypted_masked_nonce_shares.into_iter()),
+                    ),
+                )
+                .map(
+                    |(
+                        centralized_party_nonce_share_commitment,
+                        (
+                            mask_and_encrypted_masked_key_share,
+                            (encrypted_nonce_share_and_public_share, encrypted_masked_nonce_share),
+                        ),
+                    )| {
+                        decentralized_party::Presign::new::<
+                            { secp256k1::SCALAR_LIMBS },
+                            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                            secp256k1::GroupElement,
+                            paillier::EncryptionKey,
+                        >(
+                            centralized_party_nonce_share_commitment,
+                            mask_and_encrypted_masked_key_share,
+                            encrypted_nonce_share_and_public_share,
+                            encrypted_masked_nonce_share,
+                        )
+                    },
+                )
+                .collect();
 
         assert!(centralized_party_presigns
             .clone()
@@ -387,7 +426,11 @@ pub(crate) mod tests {
                         == decentralized_party_presign.encrypted_masked_key_share
             }));
 
-        (centralized_party_presigns, decentralized_party_presigns)
+        (
+            centralized_party_presigns,
+            encrypted_nonce_shares,
+            decentralized_party_presigns,
+        )
     }
 }
 
