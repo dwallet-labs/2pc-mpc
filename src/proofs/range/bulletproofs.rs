@@ -378,8 +378,8 @@ impl<const NUM_RANGE_CLAIMS: usize> Default for PublicParameters<NUM_RANGE_CLAIM
 
         let commitment_scheme_public_parameters = commitments::PublicParameters::<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            MultiPedersen<
-                NUM_RANGE_CLAIMS,
+            Pedersen<
+                1,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 ristretto::Scalar,
                 ristretto::GroupElement,
@@ -391,9 +391,10 @@ impl<const NUM_RANGE_CLAIMS: usize> Default for PublicParameters<NUM_RANGE_CLAIM
         >(
             scalar_public_parameters,
             group_public_parameters,
-            ristretto::GroupElement(commitment_generators.B),
+            [ristretto::GroupElement(commitment_generators.B)],
             ristretto::GroupElement(commitment_generators.B_blinding),
-        );
+        )
+        .into();
 
         Self {
             commitment_scheme_public_parameters,

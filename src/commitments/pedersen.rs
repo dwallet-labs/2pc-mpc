@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use core::fmt::Debug;
-use std::{marker::PhantomData, ops::Mul};
+use std::{array, marker::PhantomData, ops::Mul};
 
 use serde::{Deserialize, Serialize};
 
@@ -11,8 +11,11 @@ use crate::{
         GroupsPublicParameters, GroupsPublicParametersAccessors, HomomorphicCommitmentScheme,
     },
     group,
-    group::{self_product, BoundedGroupElement, KnownOrderGroupElement, Samplable},
-    helpers::const_generic_array_serialization,
+    group::{
+        self_product, BoundedGroupElement, HashToGroup, KnownOrderGroupElement, PrimeGroupElement,
+        Samplable,
+    },
+    helpers::{const_generic_array_serialization, flat_map_results},
 };
 // TODO: the message generator should be a random power of the randomness generator, which can be
 // the generator of the group. we actually have a use-case here for a cyclic group without a
@@ -145,13 +148,83 @@ pub struct PublicParameters<
 
 impl<
         const BATCH_SIZE: usize,
-        GroupElementValue,
+        GroupElementValue: Clone,
         ScalarPublicParameters: Clone,
-        GroupPublicParameters,
+        GroupPublicParameters: Clone,
     >
     PublicParameters<BATCH_SIZE, GroupElementValue, ScalarPublicParameters, GroupPublicParameters>
 {
-    // TODO: derive this using hashes or whatever is safe.
+    pub fn default<
+        const SCALAR_LIMBS: usize,
+        GroupElement: PrimeGroupElement<SCALAR_LIMBS> + HashToGroup,
+    >() -> group::Result<Self>
+    where
+        GroupElement::Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
+        GroupElement: group::GroupElement<
+            Value = GroupElementValue,
+            PublicParameters = GroupPublicParameters,
+        >,
+        ScalarPublicParameters: Default,
+        GroupPublicParameters: Default,
+    {
+        Self::derive::<SCALAR_LIMBS, GroupElement>(
+            ScalarPublicParameters::default(),
+            GroupPublicParameters::default(),
+        )
+    }
+
+    pub fn derive<
+        const SCALAR_LIMBS: usize,
+        GroupElement: PrimeGroupElement<SCALAR_LIMBS> + HashToGroup,
+    >(
+        scalar_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+        group_public_parameters: group::PublicParameters<GroupElement>,
+    ) -> group::Result<Self>
+    where
+        GroupElement::Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>,
+        GroupElement: group::GroupElement<
+            Value = GroupElementValue,
+            PublicParameters = GroupPublicParameters,
+        >,
+    {
+        let mut message_generators = flat_map_results(array::from_fn(|i| {
+            GroupElement::hash_to_group(
+                // TODO: add organization name, repo name?
+                format!("commitments/pedersen: message generator #{:?}", i).as_bytes(),
+            )
+        }))?;
+
+        // TODO: we want this for sure?
+        message_generators[0] =
+            GroupElement::generator_from_public_parameters(&group_public_parameters)?;
+
+        let message_generators = message_generators.map(|element| element.value());
+
+        let randomness_generator =
+            GroupElement::hash_to_group("commitments/pedersen: randomness generator".as_bytes())?
+                .value();
+
+        Ok(
+            Self::new::<SCALAR_LIMBS, GroupElement::Scalar, GroupElement>(
+                scalar_public_parameters,
+                group_public_parameters,
+                message_generators,
+                randomness_generator,
+            ),
+        )
+    }
+
+    /// This function allows using custom Pedersen generators, which is extremely unsafe unless you
+    /// know exactly what you're doing.
+    ///
+    /// It should be used, for example, for non-`PrimeGroupElement`
+    /// groups for which security have been proven.
+    ///
+    /// Another use-case is for compatability reason, i.e. when needing to work with
+    /// generators that were derived safely elsewhere.
+    ///
+    /// For any other, and all traditional use-cases such as Pedersen over elliptic curves, use
+    /// [`Self::drive`] or [`Self::default`] instead.
     pub fn new<
         const SCALAR_LIMBS: usize,
         Scalar: group::GroupElement,
@@ -183,6 +256,28 @@ impl<
                 commitment_space_public_parameters: group_public_parameters,
             },
             message_generators,
+            randomness_generator,
+        }
+    }
+
+    pub fn with_altered_message_generators(
+        &self,
+        message_generators: [GroupElementValue; BATCH_SIZE],
+    ) -> Self {
+        Self {
+            groups_public_parameters: self.groups_public_parameters.clone(),
+            message_generators,
+            randomness_generator: self.randomness_generator.clone(),
+        }
+    }
+
+    pub fn with_altered_randomness_generator(
+        &self,
+        randomness_generator: GroupElementValue,
+    ) -> Self {
+        Self {
+            groups_public_parameters: self.groups_public_parameters.clone(),
+            message_generators: self.message_generators.clone(),
             randomness_generator,
         }
     }

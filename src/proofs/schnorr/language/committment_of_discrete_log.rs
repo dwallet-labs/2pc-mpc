@@ -276,32 +276,13 @@ mod tests {
         let secp256k1_group_public_parameters =
             secp256k1::group_element::PublicParameters::default();
 
-        let generator = secp256k1::GroupElement::new(
-            secp256k1_group_public_parameters.generator,
-            &secp256k1_group_public_parameters,
-        )
+        let pedersen_public_parameters = pedersen::PublicParameters::default::<
+            { secp256k1::SCALAR_LIMBS },
+            secp256k1::GroupElement,
+        >()
         .unwrap();
 
-        let message_generator =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                * generator;
-
-        let randomness_generator =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                * generator;
-
-        // TODO: have some Default function for this
-        // TODO: this is not safe; we need a proper way to derive generators
-        let pedersen_public_parameters = pedersen::PublicParameters::new::<
-            { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
-            secp256k1::GroupElement,
-        >(
-            secp256k1_scalar_public_parameters.clone(),
-            secp256k1_group_public_parameters.clone(),
-            [message_generator.value()],
-            randomness_generator.value(),
-        );
+        let generator = secp256k1_group_public_parameters.generator;
 
         PublicParameters::new::<
             { secp256k1::SCALAR_LIMBS },
@@ -312,7 +293,7 @@ mod tests {
             secp256k1_scalar_public_parameters,
             secp256k1_group_public_parameters,
             pedersen_public_parameters,
-            generator.value(),
+            generator,
         )
     }
 

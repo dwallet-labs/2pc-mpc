@@ -716,6 +716,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::{
         ahe::paillier,
+        commitments::pedersen,
         group::{ristretto, secp256k1, self_product, Samplable},
         proofs::schnorr::{aggregation, language},
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
@@ -782,32 +783,15 @@ pub(crate) mod tests {
                     .value()
             });
 
-        // TODO: move this shared logic somewhere e.g. DRY
-        let generator = secp256k1::GroupElement::new(
-            secp256k1_group_public_parameters.generator,
-            &secp256k1_group_public_parameters,
-        )
-        .unwrap();
-
-        let message_generator =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                * generator;
-
-        let randomness_generator =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                * generator;
-
-        // TODO: this is not safe; we need a proper way to derive generators
-        let pedersen_public_parameters = multipedersen::PublicParameters::new::<
+        let pedersen_public_parameters = pedersen::PublicParameters::derive::<
             { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
             secp256k1::GroupElement,
         >(
             secp256k1_scalar_public_parameters.clone(),
             secp256k1_group_public_parameters.clone(),
-            message_generator.value(),
-            randomness_generator.value(),
-        );
+        )
+        .unwrap()
+        .into();
 
         let language_public_parameters = PublicParameters::<
             { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },

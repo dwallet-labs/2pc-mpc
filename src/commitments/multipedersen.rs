@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     commitments::{
-        GroupsPublicParameters, GroupsPublicParametersAccessors, HomomorphicCommitmentScheme,
+        pedersen, GroupsPublicParameters, GroupsPublicParametersAccessors,
+        HomomorphicCommitmentScheme,
     },
     group,
     group::{self_product, BoundedGroupElement, KnownOrderGroupElement, Samplable},
@@ -147,49 +148,54 @@ pub struct PublicParameters<
 
 impl<
         const BATCH_SIZE: usize,
-        GroupElementValue,
+        GroupElementValue: Copy,
         ScalarPublicParameters: Clone,
         GroupPublicParameters,
     >
-    PublicParameters<BATCH_SIZE, GroupElementValue, ScalarPublicParameters, GroupPublicParameters>
-{
-    // TODO: derive this using hashes or whatever is safe.
-    pub fn new<
-        const SCALAR_LIMBS: usize,
-        Scalar: group::GroupElement,
-        GroupElement: group::GroupElement,
-    >(
-        scalar_public_parameters: Scalar::PublicParameters,
-        group_public_parameters: GroupElement::PublicParameters,
-        message_generator: GroupElement::Value,
-        randomness_generator: GroupElement::Value,
-    ) -> Self
-    where
-        Scalar: group::GroupElement<PublicParameters = ScalarPublicParameters>
-            + BoundedGroupElement<SCALAR_LIMBS>
-            + Mul<GroupElement, Output = GroupElement>
-            + for<'r> Mul<&'r GroupElement, Output = GroupElement>
-            + Samplable
-            + Copy,
-        GroupElement: group::GroupElement<
-            Value = GroupElementValue,
-            PublicParameters = GroupPublicParameters,
+    From<
+        pedersen::PublicParameters<
+            1,
+            GroupElementValue,
+            ScalarPublicParameters,
+            GroupPublicParameters,
         >,
-    {
+    >
+    for PublicParameters<
+        BATCH_SIZE,
+        GroupElementValue,
+        ScalarPublicParameters,
+        GroupPublicParameters,
+    >
+{
+    fn from(
+        pedersen_public_parameters: pedersen::PublicParameters<
+            1,
+            GroupElementValue,
+            ScalarPublicParameters,
+            GroupPublicParameters,
+        >,
+    ) -> Self {
         Self {
             groups_public_parameters: GroupsPublicParameters {
                 message_space_public_parameters: self_product::PublicParameters::new(
-                    scalar_public_parameters.clone(),
+                    pedersen_public_parameters
+                        .groups_public_parameters
+                        .randomness_space_public_parameters
+                        .clone(),
                 ),
                 randomness_space_public_parameters: self_product::PublicParameters::new(
-                    scalar_public_parameters,
+                    pedersen_public_parameters
+                        .groups_public_parameters
+                        .randomness_space_public_parameters,
                 ),
                 commitment_space_public_parameters: self_product::PublicParameters::new(
-                    group_public_parameters,
+                    pedersen_public_parameters
+                        .groups_public_parameters
+                        .commitment_space_public_parameters,
                 ),
             },
-            message_generator,
-            randomness_generator,
+            message_generator: pedersen_public_parameters.message_generators[0],
+            randomness_generator: pedersen_public_parameters.randomness_generator,
         }
     }
 }
@@ -226,7 +232,7 @@ mod tests {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::{commitments, group::ristretto};
+    use crate::{commitments, commitments::Pedersen, group::ristretto};
 
     #[test]
     fn commits() {
@@ -238,21 +244,20 @@ mod tests {
 
         let commitment_generators = PedersenGens::default();
 
-        let commitment_scheme_public_parameters =
-            commitments::PublicParameters::<
-                { ristretto::SCALAR_LIMBS },
-                MultiPedersen<
-                    1,
-                    { ristretto::SCALAR_LIMBS },
-                    ristretto::Scalar,
-                    ristretto::GroupElement,
-                >,
-            >::new::<{ ristretto::SCALAR_LIMBS }, ristretto::Scalar, ristretto::GroupElement>(
-                scalar_public_parameters,
-                group_public_parameters,
-                ristretto::GroupElement(commitment_generators.B),
-                ristretto::GroupElement(commitment_generators.B_blinding),
-            );
+        let commitment_scheme_public_parameters = commitments::PublicParameters::<
+            { ristretto::SCALAR_LIMBS },
+            Pedersen<1, { ristretto::SCALAR_LIMBS }, ristretto::Scalar, ristretto::GroupElement>,
+        >::new::<
+            { ristretto::SCALAR_LIMBS },
+            ristretto::Scalar,
+            ristretto::GroupElement,
+        >(
+            scalar_public_parameters,
+            group_public_parameters,
+            [ristretto::GroupElement(commitment_generators.B)],
+            ristretto::GroupElement(commitment_generators.B_blinding),
+        )
+        .into();
 
         let commitment_scheme = MultiPedersen::<
             1,

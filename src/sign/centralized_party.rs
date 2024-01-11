@@ -9,7 +9,7 @@ use crate::{
     ahe,
     ahe::GroupsPublicParametersAccessors,
     commitments,
-    commitments::{MultiPedersen, Pedersen},
+    commitments::{pedersen, MultiPedersen, Pedersen},
     group,
     group::{self_product, AffineXCoordinate, GroupElement, Invert, PrimeGroupElement, Samplable},
     helpers::flat_map_results,
@@ -73,11 +73,6 @@ pub struct Party<
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub group_public_parameters: GroupElement::PublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    // TODO: generate pedersen public parameters instead of getting them
-    pub commitment_scheme_public_parameters: commitments::PublicParameters<
-        SCALAR_LIMBS,
-        Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
-    >,
     pub unbounded_dcom_eval_witness_public_parameters: UnboundedDComEvalWitness::PublicParameters,
     pub range_proof_public_parameters: RangeProof::PublicParameters<NUM_RANGE_CLAIMS>,
     pub secret_key_share: GroupElement::Scalar,
@@ -96,7 +91,7 @@ impl<
         const RANGE_CLAIMS_PER_MASK: usize,
         const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const NUM_RANGE_CLAIMS: usize,
-        GroupElement: PrimeGroupElement<SCALAR_LIMBS> + AffineXCoordinate<SCALAR_LIMBS>,
+        GroupElement: PrimeGroupElement<SCALAR_LIMBS> + AffineXCoordinate<SCALAR_LIMBS> + group::HashToGroup,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         UnboundedDComEvalWitness: group::GroupElement + Samplable,
         RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
@@ -217,6 +212,12 @@ where
         // TODO: name
         let public_nonce = inverted_nonce_share * self.decentralized_party_nonce_public_share; // $R$
 
+        let commitment_scheme_public_parameters =
+            pedersen::PublicParameters::derive::<SCALAR_LIMBS, GroupElement>(
+                self.scalar_group_public_parameters.clone(),
+                self.group_public_parameters.clone(),
+            )?;
+
         let language_public_parameters = committment_of_discrete_log::PublicParameters::new::<
             SCALAR_LIMBS,
             GroupElement::Scalar,
@@ -225,7 +226,7 @@ where
         >(
             self.scalar_group_public_parameters.clone(),
             self.group_public_parameters.clone(),
-            self.commitment_scheme_public_parameters.clone(),
+            commitment_scheme_public_parameters.clone(),
             public_nonce.value(),
         );
 
@@ -257,7 +258,7 @@ where
             >(
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
-                self.commitment_scheme_public_parameters.clone(),
+                commitment_scheme_public_parameters.clone(),
                 self.public_key_share,
             );
 
@@ -355,17 +356,7 @@ where
         )
             .into();
 
-        let commitment_scheme_public_parameters =
-            commitments::PublicParameters::<
-                SCALAR_LIMBS,
-                MultiPedersen<DIMENSION, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
-            >::new::<SCALAR_LIMBS, GroupElement::Scalar, GroupElement>(
-                self.scalar_group_public_parameters.clone(),
-                self.group_public_parameters.clone(),
-                self.commitment_scheme_public_parameters.message_generators[0],
-                self.commitment_scheme_public_parameters
-                    .randomness_generator,
-            );
+        let commitment_scheme_public_parameters = commitment_scheme_public_parameters.into();
 
         let language_public_parameters =
             committed_linear_evaluation::PublicParameters::<

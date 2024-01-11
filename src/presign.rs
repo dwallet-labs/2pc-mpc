@@ -62,30 +62,6 @@ pub(crate) mod tests {
         )
         .unwrap();
 
-        let message_generators = array::from_fn(|_| {
-            let generator =
-                secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                    * generator;
-
-            generator.value()
-        });
-
-        let randomness_generator =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                * generator;
-
-        // TODO: this is not safe; we need a proper way to derive generators
-        let commitment_scheme_public_parameters = pedersen::PublicParameters::new::<
-            { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
-            secp256k1::GroupElement,
-        >(
-            secp256k1_scalar_public_parameters.clone(),
-            secp256k1_group_public_parameters.clone(),
-            message_generators,
-            randomness_generator.value(),
-        );
-
         let centralized_party_secret_key_share =
             secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
 
@@ -109,7 +85,6 @@ pub(crate) mod tests {
             number_of_parties,
             threshold,
             batch_size,
-            commitment_scheme_public_parameters,
             centralized_party_secret_key_share,
             decentralized_party_public_key_share,
             encrypted_decentralized_party_secret_key_share,
@@ -120,13 +95,6 @@ pub(crate) mod tests {
         number_of_parties: u16,
         threshold: u16,
         batch_size: usize,
-        // TODO: generate pedeseren then not need get this
-        commitment_scheme_public_parameters: pedersen::PublicParameters<
-            1,
-            secp256k1::group_element::Value,
-            secp256k1::scalar::PublicParameters,
-            secp256k1::group_element::PublicParameters,
-        >,
         centralized_party_secret_key_share: secp256k1::Scalar,
         decentralized_party_public_key_share: secp256k1::GroupElement,
         encrypted_decentralized_party_secret_key_share: paillier::CiphertextSpaceGroupElement,
@@ -195,7 +163,6 @@ pub(crate) mod tests {
             scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
             group_public_parameters: secp256k1_group_public_parameters.clone(),
             encryption_scheme_public_parameters: paillier_public_parameters.clone(),
-            commitment_scheme_public_parameters: commitment_scheme_public_parameters.clone(),
             unbounded_encdl_witness_public_parameters: unbounded_encdl_witness_public_parameters
                 .clone(),
             unbounded_encdh_witness_public_parameters: unbounded_encdh_witness_public_parameters
@@ -237,7 +204,6 @@ pub(crate) mod tests {
                         scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
                         group_public_parameters: secp256k1_group_public_parameters.clone(),
                         encryption_scheme_public_parameters: paillier_public_parameters.clone(),
-                        commitment_scheme_public_parameters: commitment_scheme_public_parameters.clone(),
                         unbounded_encdl_witness_public_parameters: unbounded_encdl_witness_public_parameters.clone(),
                         unbounded_encdh_witness_public_parameters: unbounded_encdh_witness_public_parameters.clone(),
                         range_proof_public_parameters: bulletproofs_public_parameters.clone(),

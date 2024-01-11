@@ -8,7 +8,7 @@ use crate::{
     ahe,
     ahe::GroupsPublicParametersAccessors,
     commitments,
-    commitments::{GroupsPublicParametersAccessors as _, Pedersen},
+    commitments::{pedersen, GroupsPublicParametersAccessors as _, Pedersen},
     group,
     group::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, GroupElement as _,
@@ -51,10 +51,6 @@ pub struct Party<
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub group_public_parameters: GroupElement::PublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    pub commitment_scheme_public_parameters: commitments::PublicParameters<
-        SCALAR_LIMBS,
-        Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
-    >,
     pub unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
     pub unbounded_encdh_witness_public_parameters: UnboundedEncDHWitness::PublicParameters,
     pub range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
@@ -70,7 +66,7 @@ impl<
         const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const RANGE_CLAIMS_PER_SCALAR: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
+        GroupElement: PrimeGroupElement<SCALAR_LIMBS> + group::HashToGroup,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         UnboundedEncDLWitness: group::GroupElement + Samplable,
         UnboundedEncDHWitness: group::GroupElement + Samplable,
@@ -205,11 +201,17 @@ where
             .commitments
             .len();
 
+        let commitment_scheme_public_parameters =
+            pedersen::PublicParameters::derive::<SCALAR_LIMBS, GroupElement>(
+                self.scalar_group_public_parameters.clone(),
+                self.group_public_parameters.clone(),
+            )?;
+
         let language_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
             { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPETITIONS },
             SCALAR_LIMBS,
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
-        >(self.commitment_scheme_public_parameters.clone());
+        >(commitment_scheme_public_parameters.clone());
 
         centralized_party_nonce_shares_commitments_and_batched_proof
             .proof
@@ -488,7 +490,7 @@ where
             group_public_parameters: self.group_public_parameters,
             scalar_group_public_parameters: self.scalar_group_public_parameters,
             encryption_scheme_public_parameters: self.encryption_scheme_public_parameters,
-            commitment_scheme_public_parameters: self.commitment_scheme_public_parameters,
+            commitment_scheme_public_parameters,
             unbounded_encdh_witness_public_parameters: self
                 .unbounded_encdh_witness_public_parameters,
             range_proof_public_parameters: self.range_proof_public_parameters,

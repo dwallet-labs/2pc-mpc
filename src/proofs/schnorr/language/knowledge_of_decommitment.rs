@@ -265,41 +265,6 @@ mod tests {
         const REPETITIONS: usize,
         const BATCH_SIZE: usize,
     >() -> language::PublicParameters<REPETITIONS, Secp256k1Language<REPETITIONS, BATCH_SIZE>> {
-        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
-
-        let secp256k1_group_public_parameters =
-            secp256k1::group_element::PublicParameters::default();
-
-        let generator = secp256k1::GroupElement::new(
-            secp256k1_group_public_parameters.generator,
-            &secp256k1_group_public_parameters,
-        )
-        .unwrap();
-
-        let message_generators = array::from_fn(|_| {
-            let generator =
-                secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                    * generator;
-
-            generator.value()
-        });
-
-        let randomness_generator =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                * generator;
-
-        // TODO: this is not safe; we need a proper way to derive generators
-        let pedersen_public_parameters = pedersen::PublicParameters::new::<
-            { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
-            secp256k1::GroupElement,
-        >(
-            secp256k1_scalar_public_parameters.clone(),
-            secp256k1_group_public_parameters.clone(),
-            message_generators,
-            randomness_generator.value(),
-        );
-
         PublicParameters::new::<
             REPETITIONS,
             { secp256k1::SCALAR_LIMBS },
@@ -309,7 +274,13 @@ mod tests {
                 secp256k1::Scalar,
                 secp256k1::GroupElement,
             >,
-        >(pedersen_public_parameters)
+        >(
+            pedersen::PublicParameters::default::<
+                { secp256k1::SCALAR_LIMBS },
+                secp256k1::GroupElement,
+            >()
+            .unwrap(),
+        )
     }
 
     #[rstest]

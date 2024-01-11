@@ -70,27 +70,11 @@ where
         // Use $g^x$ as the base for the message of the second commitment, and then the commitment
         // on $m*x$ becomes the commitment on $m$, with the discrete log $x$ now appearing
         // in the message base of the second commitment.
-        // TODO: can we assure somehow that the generators are independent (message from
-        // randomness)?
-        let altered_base_commitment_scheme_public_parameters =
-            pedersen::PublicParameters::new::<SCALAR_LIMBS, Scalar, GroupElement>(
-                language_public_parameters
-                    .witness_space_public_parameters()
-                    .public_parameters
-                    .clone(),
-                language_public_parameters
-                    .statement_space_public_parameters()
-                    .public_parameters
-                    .clone(),
-                [language_public_parameters.base_by_discrete_log],
-                language_public_parameters
-                    .commitment_scheme_public_parameters
-                    .randomness_generator
-                    .clone(),
-            );
-
-        let altered_base_commitment_scheme =
-            Pedersen::new(&altered_base_commitment_scheme_public_parameters)?;
+        let altered_base_commitment_scheme = Pedersen::new(
+            &language_public_parameters
+                .commitment_scheme_public_parameters
+                .with_altered_message_generators([language_public_parameters.base_by_discrete_log]),
+        )?;
 
         Ok([
             commitment_scheme.commit(
@@ -272,25 +256,11 @@ mod tests {
 
         let base_by_discrete_log = discrete_log * generator;
 
-        let message_generator =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                * generator;
-
-        let randomness_generator =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap()
-                * generator;
-
-        // TODO: this is not safe; we need a proper way to derive generators
-        let pedersen_public_parameters = pedersen::PublicParameters::new::<
+        let pedersen_public_parameters = pedersen::PublicParameters::default::<
             { secp256k1::SCALAR_LIMBS },
-            secp256k1::Scalar,
             secp256k1::GroupElement,
-        >(
-            secp256k1_scalar_public_parameters.clone(),
-            secp256k1_group_public_parameters.clone(),
-            [message_generator.value()],
-            randomness_generator.value(),
-        );
+        >()
+        .unwrap();
 
         PublicParameters::new::<
             { secp256k1::SCALAR_LIMBS },

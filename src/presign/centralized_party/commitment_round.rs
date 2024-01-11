@@ -34,10 +34,6 @@ pub struct Party<
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub group_public_parameters: GroupElement::PublicParameters,
     pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    pub commitment_scheme_public_parameters: commitments::PublicParameters<
-        SCALAR_LIMBS,
-        Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
-    >,
     pub unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
     pub unbounded_encdh_witness_public_parameters: UnboundedEncDHWitness::PublicParameters,
     pub range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
@@ -67,7 +63,7 @@ impl<
         const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
         const RANGE_CLAIMS_PER_SCALAR: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
+        GroupElement: PrimeGroupElement<SCALAR_LIMBS> + group::HashToGroup,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         UnboundedEncDLWitness: group::GroupElement + Samplable,
         UnboundedEncDHWitness: group::GroupElement + Samplable,
@@ -125,11 +121,17 @@ impl<
             .map(|(nonce_share, commitment_randomness)| [nonce_share, commitment_randomness].into())
             .collect();
 
+        let commitment_scheme_public_parameters =
+            pedersen::PublicParameters::derive::<SCALAR_LIMBS, GroupElement>(
+                self.scalar_group_public_parameters.clone(),
+                self.group_public_parameters.clone(),
+            )?;
+
         let language_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
             { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPETITIONS },
             SCALAR_LIMBS,
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
-        >(self.commitment_scheme_public_parameters.clone());
+        >(commitment_scheme_public_parameters.clone());
 
         let (proof, commitments) = schnorr::Proof::<
             { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPETITIONS },
