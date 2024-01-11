@@ -300,7 +300,7 @@ impl<
         //     ) >= language::enhanced::RangeProofCommitmentSchemeMessageSpaceGroupElement::<
         //       COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, NUM_RANGE_CLAIMS,
         //         Language,
-        //     >::scalar_lower_bound_from_public_parameters(
+        //     >::lower_bound_from_public_parameters(
         //         &range_proof_public_parameters
         //             .as_ref()
         //             .as_ref()

@@ -191,21 +191,16 @@ pub type Value<G> = <G as GroupElement>::Value;
 
 pub type PublicParameters<G> = <G as GroupElement>::PublicParameters;
 
-// TODO: think about working with associated types for the scalar value instead of working with
-// const-generics for Uint. This could reduce massively the bloat of number of generics, as well as
-// the `Encoding` requirements.
-
 /// An element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in additive
 /// notation.
 pub trait BoundedGroupElement<const SCALAR_LIMBS: usize>: GroupElement {
-    // TODO: remove `scalar` from the name?
     /// Returns a (tight) lower-bound on the scalar group
-    fn scalar_lower_bound(&self) -> Uint<SCALAR_LIMBS> {
-        Self::scalar_lower_bound_from_public_parameters(&self.public_parameters())
+    fn lower_bound(&self) -> Uint<SCALAR_LIMBS> {
+        Self::lower_bound_from_public_parameters(&self.public_parameters())
     }
 
     /// Returns a (tight) lower-bound on the scalar group
-    fn scalar_lower_bound_from_public_parameters(
+    fn lower_bound_from_public_parameters(
         public_parameters: &Self::PublicParameters,
     ) -> Uint<SCALAR_LIMBS>;
 }
@@ -265,8 +260,6 @@ pub trait MulByGenerator<T> {
 pub trait CyclicGroupElement: GroupElement {
     /// Returns the generator of the group
     fn generator(&self) -> Self;
-
-    // TODO: generator value from public parameters
 
     /// Returns the value of generator of the group
     fn generator_value_from_public_parameters(

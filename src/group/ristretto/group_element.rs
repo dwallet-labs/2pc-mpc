@@ -194,11 +194,11 @@ impl CyclicGroupElement for GroupElement {
 }
 
 impl BoundedGroupElement<SCALAR_LIMBS> for GroupElement {
-    fn scalar_lower_bound(&self) -> Uint<SCALAR_LIMBS> {
+    fn lower_bound(&self) -> Uint<SCALAR_LIMBS> {
         self.order()
     }
 
-    fn scalar_lower_bound_from_public_parameters(
+    fn lower_bound_from_public_parameters(
         public_parameters: &Self::PublicParameters,
     ) -> Uint<SCALAR_LIMBS> {
         Self::order_from_public_parameters(public_parameters)

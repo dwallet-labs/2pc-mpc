@@ -276,10 +276,10 @@ impl<const N: usize, G: group::GroupElement> From<[G; N]> for GroupElement<N, G>
 impl<const N: usize, const SCALAR_LIMBS: usize, G: BoundedGroupElement<SCALAR_LIMBS>>
     BoundedGroupElement<SCALAR_LIMBS> for GroupElement<N, G>
 {
-    fn scalar_lower_bound_from_public_parameters(
+    fn lower_bound_from_public_parameters(
         public_parameters: &Self::PublicParameters,
     ) -> Uint<SCALAR_LIMBS> {
-        G::scalar_lower_bound_from_public_parameters(&public_parameters.public_parameters)
+        G::lower_bound_from_public_parameters(&public_parameters.public_parameters)
     }
 }
 
@@ -298,14 +298,8 @@ impl<
     }
 }
 
-impl<
-        'r,
-        const N: usize,
-        const SCALAR_LIMBS: usize,
-        // TODO: why doesn't Rust understand that it implements Mul?
-        S: KnownOrderScalar<SCALAR_LIMBS> + Mul<G, Output = G>,
-        G: KnownOrderGroupElement<SCALAR_LIMBS, Scalar = S>,
-    > Mul<&'r GroupElement<N, G>> for Scalar<SCALAR_LIMBS, group::Scalar<SCALAR_LIMBS, G>>
+impl<'r, const N: usize, const SCALAR_LIMBS: usize, G: KnownOrderGroupElement<SCALAR_LIMBS>>
+    Mul<&'r GroupElement<N, G>> for Scalar<SCALAR_LIMBS, G::Scalar>
 {
     type Output = GroupElement<N, G>;
 

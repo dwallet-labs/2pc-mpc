@@ -10,14 +10,11 @@ use sha2::Sha512;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use super::{GroupElement, SCALAR_LIMBS};
-use crate::group::{GroupElement as _, HashToGroup, Invert};
-// TODO: use original dalek repos.
-// TODO: ct_eq
 use crate::{
     group,
     group::{
-        BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement, KnownOrderScalar,
-        MulByGenerator, PrimeGroupElement, Samplable,
+        BoundedGroupElement, CyclicGroupElement, GroupElement as _, HashToGroup, Invert,
+        KnownOrderGroupElement, KnownOrderScalar, MulByGenerator, PrimeGroupElement, Samplable,
     },
     traits::Reduce,
 };
@@ -108,11 +105,11 @@ impl From<Scalar> for PublicParameters {
 }
 
 impl BoundedGroupElement<SCALAR_LIMBS> for Scalar {
-    fn scalar_lower_bound(&self) -> Uint<SCALAR_LIMBS> {
+    fn lower_bound(&self) -> Uint<SCALAR_LIMBS> {
         self.order()
     }
 
-    fn scalar_lower_bound_from_public_parameters(
+    fn lower_bound_from_public_parameters(
         public_parameters: &Self::PublicParameters,
     ) -> Uint<SCALAR_LIMBS> {
         Self::order_from_public_parameters(public_parameters)
