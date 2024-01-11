@@ -11,7 +11,10 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
 };
 
-pub fn serialize<S: Serializer, T: Serialize, const N: usize>(data: &[T; N], ser: S) -> Result<S::Ok, S::Error> {
+pub fn serialize<S: Serializer, T: Serialize, const N: usize>(
+    data: &[T; N],
+    ser: S,
+) -> Result<S::Ok, S::Error> {
     let mut s = ser.serialize_tuple(N)?;
     for item in data {
         s.serialize_element(item)?;

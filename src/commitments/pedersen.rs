@@ -17,10 +17,6 @@ use crate::{
     },
     helpers::{const_generic_array_serialization, flat_map_results},
 };
-// TODO: the message generator should be a random power of the randomness generator, which can be
-// the generator of the group. we actually have a use-case here for a cyclic group without a
-// generator. Maybe I can just drop the cyclic group requirement. actually we need also the
-// randomness to be a different group than the message not sure we can use hashes to derive this
 
 // TODO: scalar_mul_bounded
 
@@ -124,9 +120,6 @@ pub type RandomnessSpacePublicParameters<Scalar> =
 pub type CommitmentSpaceGroupElement<GroupElement> = GroupElement;
 pub type CommitmentSpacePublicParameters<GroupElement> =
     group::PublicParameters<CommitmentSpaceGroupElement<GroupElement>>;
-
-// TODO: generate pedersen parameters from hash or what Avichay approves of, and don't allow any
-// other instantiation.
 
 /// The Public Parameters of a Pedersen Commitment
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

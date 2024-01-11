@@ -535,8 +535,6 @@ mod tests {
         )
         .unwrap();
 
-        // TODO: refactor like committed linear evaluation.
-
         let (_, encrypted_two) = encryption_key
             .encrypt(&two, &public_parameters, &mut OsRng)
             .unwrap();

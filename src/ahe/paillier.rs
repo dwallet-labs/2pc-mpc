@@ -104,9 +104,6 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
     ) -> CiphertextSpaceGroupElement {
         // safe to `unwrap()` here, as encryption always returns a valid element in the
         // ciphertext group
-
-        // TODO: maybe have encrypt_with_randomness
-
         let ciphertext = self.0.encrypt_with_randomness_inner(
             &(&<&PlaintextSpaceGroupElement as Into<Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>>>::into(
                 plaintext,
@@ -198,7 +195,6 @@ impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, Encryption
         )))
     }
 
-    // todo: new()
     fn decrypt(&self, ciphertext: &CiphertextSpaceGroupElement) -> PlaintextSpaceGroupElement {
         PlaintextSpaceGroupElement::new(
             self.0.decrypt_inner(ciphertext.into()),
