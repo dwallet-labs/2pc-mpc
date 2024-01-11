@@ -7,8 +7,14 @@ use crypto_bigint::{Uint, U256};
 use elliptic_curve::point::AffineCoordinates;
 use k256::{
     elliptic_curve,
-    elliptic_curve::{group::prime::PrimeCurveAffine, ops::Reduce, Group},
-    AffinePoint, ProjectivePoint,
+    elliptic_curve::{
+        group::prime::PrimeCurveAffine,
+        hash2curve::{ExpandMsgXmd, GroupDigest},
+        ops::Reduce,
+        Group,
+    },
+    sha2::Sha256,
+    AffinePoint, ProjectivePoint, Secp256k1,
 };
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
@@ -18,8 +24,8 @@ use crate::{
     group,
     group::{
         secp256k1::{scalar::Scalar, CURVE_EQUATION_A, CURVE_EQUATION_B, MODULUS, ORDER},
-        AffineXCoordinate, BoundedGroupElement, CyclicGroupElement, KnownOrderGroupElement,
-        MulByGenerator, PrimeGroupElement,
+        AffineXCoordinate, BoundedGroupElement, CyclicGroupElement, HashToGroup,
+        KnownOrderGroupElement, MulByGenerator, PrimeGroupElement,
     },
 };
 
@@ -265,5 +271,19 @@ impl AffineXCoordinate<SCALAR_LIMBS> for GroupElement {
         Scalar(<k256::Scalar as Reduce<U256>>::reduce_bytes(
             &self.0.to_affine().x(),
         ))
+    }
+}
+
+impl HashToGroup for GroupElement {
+    fn hash_to_group(bytes: &[u8]) -> group::Result<Self> {
+        // TODO: what hash to use here? fixed or extendable?
+        // TODO: what is the second parameter, what to put there?
+
+        Secp256k1::hash_from_bytes::<ExpandMsgXmd<Sha256>>(
+            &[bytes],
+            &[b"CURVE_XMD:SHA-256_SSWU_RO_"],
+        )
+        .map_err(|_| group::Error::HashToGroup)
+        .map(Self)
     }
 }
