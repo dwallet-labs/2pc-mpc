@@ -43,16 +43,16 @@ pub struct Party<
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
 > {
-    pub(super) party_id: PartyID,
-    pub(super) threshold: PartyID,
-    pub(super) number_of_parties: PartyID,
-    pub(super) protocol_context: ProtocolContext,
-    pub(super) group_public_parameters: GroupElement::PublicParameters,
-    pub(super) scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
-    pub(super) commitment_to_centralized_party_secret_key_share: Commitment,
-    pub(super) share_of_decentralized_party_secret_key_share: GroupElement::Scalar,
+    pub party_id: PartyID,
+    pub threshold: PartyID,
+    pub number_of_parties: PartyID,
+    pub protocol_context: ProtocolContext,
+    pub group_public_parameters: GroupElement::PublicParameters,
+    pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+    pub commitment_to_centralized_party_secret_key_share: Commitment,
+    pub share_of_decentralized_party_secret_key_share: GroupElement::Scalar,
 
-    pub(super) _encryption_key_choice: PhantomData<EncryptionKey>,
+    pub _encryption_key_choice: PhantomData<EncryptionKey>,
 }
 
 impl<
