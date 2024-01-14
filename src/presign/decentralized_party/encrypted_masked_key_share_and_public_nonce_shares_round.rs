@@ -46,7 +46,6 @@ pub struct Party<
     pub party_id: PartyID,
     pub threshold: PartyID,
     pub number_of_parties: PartyID,
-    // TODO: should we get this like that?
     pub protocol_context: ProtocolContext,
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub group_public_parameters: GroupElement::PublicParameters,
@@ -54,11 +53,7 @@ pub struct Party<
     pub unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
     pub unbounded_encdh_witness_public_parameters: UnboundedEncDHWitness::PublicParameters,
     pub range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
-    // TODO: why do we need all the following? think we can delete them.
-    pub public_key_share: GroupElement,
-    pub public_key: GroupElement,
     pub encrypted_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
-    pub centralized_party_public_key_share: GroupElement,
 }
 
 impl<
@@ -86,8 +81,6 @@ impl<
         ProtocolContext,
     >
 where
-    // TODO: I'd love to solve this huge restriction, which seems completely useless to me and is
-    // required because Rust.
     encryption_of_discrete_log::Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
@@ -304,7 +297,6 @@ where
             language_public_parameters,
         );
 
-        // TODO: maybe make this a named function in Accessors?
         let witnesses = mask_shares_witnesses
             .clone()
             .into_iter()
@@ -494,10 +486,7 @@ where
             unbounded_encdh_witness_public_parameters: self
                 .unbounded_encdh_witness_public_parameters,
             range_proof_public_parameters: self.range_proof_public_parameters,
-            public_key_share: self.public_key_share,
-            public_key: self.public_key,
             encrypted_secret_key_share: self.encrypted_secret_key_share,
-            centralized_party_public_key_share: self.centralized_party_public_key_share,
             centralized_party_nonce_shares_commitments:
                 centralized_party_nonce_shares_commitments_and_batched_proof.commitments,
             shares_of_signature_nonce_shares_witnesses,

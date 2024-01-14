@@ -45,7 +45,6 @@ pub struct Party<
     pub party_id: PartyID,
     pub threshold: PartyID,
     pub number_of_parties: PartyID,
-    // TODO: should we get this like that?
     pub protocol_context: ProtocolContext,
     pub group_public_parameters: GroupElement::PublicParameters,
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
@@ -77,8 +76,6 @@ impl<
         ProtocolContext,
     >
 where
-    // TODO: I'd love to solve this huge restriction, which seems completely useless to me and is
-    // required because Rust.
     encryption_of_discrete_log::Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
@@ -218,7 +215,6 @@ where
             >,
         >::generate_witness(
             (
-                // TODO: DRY
                 EncryptionKey::PlaintextSpaceGroupElement::new(
                     Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(
                         &share_of_decentralized_party_secret_key_share_value,

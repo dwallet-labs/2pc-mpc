@@ -37,8 +37,6 @@ pub struct Party<
     RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
 > {
-    // TODO: should we get this like that? is it the same for both the centralized & decentralized
-    // party (and all their parties?)
     pub(super) protocol_context: ProtocolContext,
     pub(super) scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub(super) group_public_parameters: GroupElement::PublicParameters,
@@ -77,8 +75,6 @@ impl<
         ProtocolContext,
     >
 where
-    // TODO: I'd love to solve this huge restriction, which seems completely useless to me and is
-    // required because Rust.
     encryption_of_discrete_log::Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,

@@ -207,10 +207,7 @@ pub(crate) mod tests {
                         unbounded_encdl_witness_public_parameters: unbounded_encdl_witness_public_parameters.clone(),
                         unbounded_encdh_witness_public_parameters: unbounded_encdh_witness_public_parameters.clone(),
                         range_proof_public_parameters: bulletproofs_public_parameters.clone(),
-                        public_key_share: decentralized_party_public_key_share.clone(),
-                        public_key: public_key.clone(),
                         encrypted_secret_key_share: encrypted_decentralized_party_secret_key_share.clone(),
-                        centralized_party_public_key_share: centralized_party_public_key_share.clone(),
                     },
                 )
             })

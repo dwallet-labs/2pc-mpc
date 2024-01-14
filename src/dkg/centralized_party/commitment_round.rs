@@ -34,8 +34,6 @@ pub struct Party<
     RangeProof: proofs::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
 > {
-    // TODO: should we get this like that? is it the same for both the centralized & decentralized
-    // party (and all their parties?)
     pub protocol_context: ProtocolContext,
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub group_public_parameters: GroupElement::PublicParameters,

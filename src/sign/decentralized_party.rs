@@ -55,8 +55,6 @@ pub struct Party<
     ProtocolContext: Clone + Serialize,
 > {
     pub decryption_key_share: DecryptionKeyShare,
-    // TODO: should we get this like that? is it the same for both the centralized & decentralized
-    // party (and all their parties?)
     pub protocol_context: ProtocolContext,
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub group_public_parameters: GroupElement::PublicParameters,
@@ -101,8 +99,6 @@ impl<
         ProtocolContext,
     >
 where
-    // TODO: I'd love to solve this huge restriction, which seems completely useless to me and is
-    // required because Rust.
     committed_linear_evaluation::Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
@@ -342,8 +338,6 @@ where
         public_nonce_encrypted_partial_signature_and_proof
             .encrypted_partial_signature_proof
             .verify(
-                // TODO: there actually are `n` parties, but we don't know how many, so what to do
-                // here?
                 None,
                 &self.protocol_context,
                 &language_public_parameters,
@@ -400,7 +394,6 @@ where
             )?
             .into();
 
-        // TODO: perhaps have it as a method of NumbersGroupElement, i.e. `value_from_uint()`
         let group_order =
             GroupElement::Scalar::order_from_public_parameters(&scalar_group_public_parameters);
 
@@ -444,7 +437,7 @@ where
         // TODO: have the signature verification party for both decentralized & centralized party?
         // if so, should I put the malicious detection logic in this party?
 
-        // TODO: wha tabout malleability?
+        // TODO: what about malleability?
 
         Ok(inverted_masked_nonce.unwrap() * partial_signature)
     }

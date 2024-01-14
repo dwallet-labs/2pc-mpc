@@ -66,8 +66,6 @@ impl<
         >,
     >
 where
-    // TODO: I'd love to solve this huge restriction, which seems completely useless to me and is
-    // required because Rust.
     encryption_of_discrete_log::Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
@@ -98,8 +96,6 @@ where
             UnboundedEncDLWitness,
         >,
 {
-    // TODO: how's it possible that this compiles, but when I try to do the same thing for the
-    // Public Parameters it doesn't?
     pub fn new(
         encryption_of_secret_share: enhanced::StatementSpaceGroupElement<
             { encryption_of_discrete_log::REPETITIONS },

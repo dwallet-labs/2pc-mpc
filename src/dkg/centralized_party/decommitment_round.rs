@@ -64,8 +64,6 @@ pub struct Party<
     pub(super) encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
     pub(super) unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
     pub(super) range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
-    // TODO: should we get this like that? is it the same for both the centralized & decentralized
-    // party (and all their parties?)
     pub(super) protocol_context: ProtocolContext,
     pub(super) secret_key_share: GroupElement::Scalar,
     pub(super) public_key_share: GroupElement,
@@ -97,8 +95,6 @@ impl<
         ProtocolContext,
     >
 where
-    // TODO: I'd love to solve this huge restriction, which seems completely useless to me and is
-    // required because Rust.
     encryption_of_discrete_log::Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
