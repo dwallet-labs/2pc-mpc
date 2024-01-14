@@ -180,7 +180,6 @@ impl<
         language_public_parameters: &Self::PublicParameters,
         range_claim_bits: usize,
     ) -> proofs::Result<Self::WitnessSpaceGroupElement> {
-        // TODO: perhaps this was the bug, that I'm saying this is scalar here.
         let multiplicand = <paillier::PlaintextSpaceGroupElement as DecomposableWitness<
             RANGE_CLAIMS_PER_SCALAR,
             SCALAR_LIMBS,
@@ -558,8 +557,6 @@ pub(crate) mod tests {
         .take(batch_size)
         .collect()
     }
-
-    // TODO: does it makes sense that this code passed before?
 
     #[rstest]
     #[case(1)]

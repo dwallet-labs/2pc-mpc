@@ -4,10 +4,6 @@ use core::fmt::Debug;
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
-// todo
-// pub use enhanced::{
-//     committed_linear_evaluation, encryption_of_discrete_log, encryption_of_tuple,
-// EnhancedLanguage, };
 use proofs::Result;
 use serde::{Deserialize, Serialize};
 
@@ -17,8 +13,8 @@ use crate::{
     proofs,
 };
 
-pub mod committment_of_discrete_log;
 pub mod committed_linear_evaluation;
+pub mod committment_of_discrete_log;
 pub mod discrete_log_ratio_of_committed_values;
 pub mod encryption_of_discrete_log;
 pub mod encryption_of_tuple;
@@ -26,10 +22,6 @@ pub mod knowledge_of_decommitment;
 pub mod knowledge_of_discrete_log;
 
 pub(super) mod enhanced;
-
-// TODO: add + Serialize + for<'a> Deserialize<'a> to the trait ?!? why can't I
-
-// TODO: take REPETITIONS, add bits
 
 /// A Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`.
@@ -238,9 +230,6 @@ pub(crate) mod tests {
         );
     }
 
-    // TODO: why is this considered as dead code, if its being called from a test in other modules?
-
-    #[allow(dead_code)]
     pub(crate) fn invalid_proof_fails_verification<
         const REPETITIONS: usize,
         Lang: Language<REPETITIONS>,

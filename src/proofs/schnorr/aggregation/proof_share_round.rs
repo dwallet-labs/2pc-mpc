@@ -71,12 +71,6 @@ impl<
         decommitments: HashMap<PartyID, Self::Decommitment>,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(Self::ProofShare, Self::ProofAggregationRoundParty)> {
-        // TODO: now we are using the same protocol context for us and for decommitments, this is
-        // faulty and is a security issue. Instead, we must somehow construct the protocol
-        // context from our own, but given their party id (and anyother information which we might
-        // need.) Otherwise, we can't assure that we're putting the party id to the
-        // transcript.
-
         let previous_round_party_ids: HashSet<PartyID> =
             self.commitments.keys().map(|k| *k).collect();
         // First remove parties that didn't participate in the previous round, as they shouldn't be
@@ -103,7 +97,6 @@ impl<
         let reconstructed_commitments: proofs::Result<HashMap<PartyID, Commitment>> = decommitments
             .iter()
             .map(|(party_id, decommitment)| {
-                // TODO: this can be optimized by doing the initial transcript once for all
                 Proof::<REPETITIONS, Language, ProtocolContext>::setup_transcript(
                     // TODO: insert the party id of the other party somehow, and maybe other
                     // things.
@@ -217,8 +210,6 @@ impl<
             .collect();
 
         let responses = Proof::<REPETITIONS, Language, ProtocolContext>::prove_inner(
-            // TODO: we don't need to pass any party id here. Maybe we should seperate these
-            // types.
             number_of_parties,
             &self.protocol_context,
             &self.language_public_parameters,

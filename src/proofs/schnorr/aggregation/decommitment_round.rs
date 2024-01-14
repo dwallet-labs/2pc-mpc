@@ -33,8 +33,6 @@ pub struct Party<
     // Number of times this proof should be repeated to achieve sufficient security
     const REPETITIONS: usize,
     // The language we are proving
-    // TODO: lets have some consistency. Somewhere this is called Lang, and then no 'language::` is
-    // necessairy. Here it's Language. Please just lets be consistent.
     Language: language::Language<REPETITIONS>,
     // A struct used by the protocol using this proof,
     // used to provide extra necessary context that will parameterize the proof (and thus verifier

@@ -120,8 +120,6 @@ impl<CommitmentSchemeMessageSpaceGroupElement, CommitmentSchemeRandomnessSpaceGr
     }
 }
 
-// TODO: export just the zero-knowledge language here?
-
 /// The Public Parameters of the Knowledge of Decommitment Schnorr Language.
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<

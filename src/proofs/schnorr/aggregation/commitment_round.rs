@@ -72,7 +72,6 @@ impl<
 
         let commitment_randomness = ComputationalSecuritySizedNumber::random(rng);
 
-        // TODO: put them all into the transcript
         let mut transcript = Proof::<REPETITIONS, Language, ProtocolContext>::setup_transcript(
             &self.protocol_context,
             &self.language_public_parameters,
@@ -85,8 +84,6 @@ impl<
                 .clone()
                 .map(|statement_mask| statement_mask.value()),
         )?;
-
-        // TODO: party id?
 
         let commitment = Commitment::commit_transcript(&mut transcript, &commitment_randomness);
 

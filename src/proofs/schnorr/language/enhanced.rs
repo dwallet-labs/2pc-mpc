@@ -41,7 +41,6 @@ use crate::{
     ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
 };
 
-// TODO: don't even expose this, just the proof.
 /// An Enhanced Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.
 /// As defined in Appendix B. Schnorr Protocols in the paper.
@@ -59,8 +58,6 @@ pub struct EnhancedLanguage<
     _range_proof_choice: PhantomData<RangeProof>,
 }
 
-// TODO: use this code in protocols. Or maybe the other compose/decompose.
-// TODO: get rid of the Language restriction and see if it helps
 pub trait EnhanceableLanguage<
     const REPETITIONS: usize,
     const NUM_RANGE_CLAIMS: usize,
@@ -761,7 +758,6 @@ pub(crate) mod tests {
     pub const RANGE_CLAIMS_PER_SCALAR: usize =
         { Uint::<{ secp256k1::SCALAR_LIMBS }>::BITS / range::bulletproofs::RANGE_CLAIM_BITS };
 
-    // TODO: support both bp & lightning
     pub(super) type EnhancedLang<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,

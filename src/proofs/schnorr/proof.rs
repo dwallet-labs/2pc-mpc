@@ -372,9 +372,6 @@ impl<
     ) -> proofs::Result<Transcript> {
         let mut transcript = Transcript::new(Language::NAME.as_bytes());
 
-        // TODO: replace `Serialize` with `Into<Vec<u8>>` and comment this back in, this is slower
-        // than originally imagined.
-
         transcript.serialize_to_transcript_as_json(b"protocol context", protocol_context)?;
 
         transcript.serialize_to_transcript_as_json(

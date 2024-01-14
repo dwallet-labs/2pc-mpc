@@ -172,8 +172,6 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
             .map(|randomness| randomness.0)
             .collect();
 
-        // TODO: above operation keeps order right?
-
         let padded_witnesses_length = witnesses.len().next_power_of_two();
         let mut iter = witnesses.into_iter();
         let witnesses: Vec<u64> = iter::repeat_with(|| iter.next().unwrap_or_else(|| 0u64))

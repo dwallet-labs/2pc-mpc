@@ -44,7 +44,7 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-// TODO: for the enhacned proofs, the randomizers should be sampled differently, and there should be
+// TODO: for the enhacned proofs, and there should be
 // range checks and the verfication should be the enhanced one and many many things!
 
 /// The Commitment Round Party of a Proof Aggregation Protocol.
@@ -401,7 +401,6 @@ mod benches {
         extra_description: Option<String>,
         c: &mut Criterion,
     ) {
-        // TODO: DRY with `aggregates_internal`
         let mut g = c.benchmark_group(format!(
             "{:?} {:?} aggregation over {batch_size} statements with {:?} repetitions",
             Lang::NAME,
