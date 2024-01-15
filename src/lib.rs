@@ -15,6 +15,7 @@ pub mod group;
 pub(crate) mod helpers;
 pub mod presign;
 pub mod proofs;
+mod protocol_context;
 pub mod sign;
 mod traits;
 

@@ -117,8 +117,10 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
             return Err(Error::ZeroDimension);
         }
 
+        let neutral = ciphertexts[0].neutral();
+
         Ok(coefficients.iter().zip(ciphertexts.iter()).fold(
-            ciphertexts[0].neutral(),
+            neutral,
             |curr, (coefficient, ciphertext)| {
                 curr + ciphertext.scalar_mul(&coefficient.value().into())
             },
@@ -145,25 +147,12 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
     ///
     ///    While the decryption modulo $q$ will remain correct,
     ///    assuming that the mask was "big enough", it will be statistically indistinguishable from
-    ///    random.    
+    ///    random.
     ///
-    ///    "Big enough" here means bigger by the statistical security parameter than the size of the
-    ///    evaluation.
+    ///   We do not perform any security checks to gaurantee soundness or even correctness, and
+    ///  "big enough" should be checked outside this function in the context of the broader protocol
+    ///   for which security was proven.
     ///
-    ///    Assuming a bound $B$ on both the coefficients and the (encrypted) messages, the
-    ///    evaluation is bounded by the number of coefficients $l$ by $B^2$.
-    ///
-    ///    In order to mask that, we need to add a mask that is bigger by the statistical security
-    ///    parameter. Since we multiply our mask by $q$, we need our mask to be of size $(l*B^2 / q)
-    ///    + s$.
-    ///
-    ///   Note that (unless we trust the encryptor) it is important to assure these bounds on
-    ///   the ciphertexts by verifying appropriate zero-knowledge proofs.
-    ///
-    ///    TODO: I wanted to say the coefficients are bounded to $q$ because we create them, but in
-    ///    fact when we prove in zero-knowledge that they are, we're going to have a gap here
-    ///    too right? and so the verifier should check we didn't go through modulation using
-    ///    that bound and not q.)
     /// 3. No modulations. The size of our evaluation $l*B^2$ should be smaller than the order of
     ///    the encryption plaintext group $N$ in order to assure it does not go through modulation
     ///    in the plaintext space.
@@ -181,19 +170,11 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
         mask: &Self::PlaintextSpaceGroupElement,
         randomness: &Self::RandomnessSpaceGroupElement,
     ) -> Result<Self::CiphertextSpaceGroupElement> {
-        // TODO: if no MASK_LIMBS, we are unable to perform the appropriate checks,
-        // It's still safe as there are range proofs, but this function couldn't gurantee safety.
-        // Or check somehow that we aren't going through moudlation in a different way
-        // IN any case we should just defer this decision to later
         if DIMENSION == 0 {
             return Err(Error::ZeroDimension);
         }
 
         let plaintext_order: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> = coefficients[0].order();
-
-        if PLAINTEXT_SPACE_SCALAR_LIMBS != MODULUS_LIMBS || plaintext_order != modulus.into() {
-            // TODO: do checks here, BOUND_LIMBS?
-        }
 
         let linear_combination = Self::evaluate_linear_combination(coefficients, ciphertexts)?;
 
@@ -220,6 +201,7 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
     /// This is the probabilistic linear combination algorithm which samples `mask` and `randomness`
     /// from `rng` and calls [`Self::linear_combination_with_randomness()`].
     // TODO: remove MODULUS_LIMBS, MASK_LIMBS, and just use PLAINTEXT_LIMBS?
+    // TODO: delete this function
     fn evaluate_circuit_private_linear_combination<
         const DIMENSION: usize,
         const MODULUS_LIMBS: usize,
@@ -289,49 +271,36 @@ pub trait AdditivelyHomomorphicDecryptionKeyShare<
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
 >: Into<EncryptionKey> + Clone + PartialEq
 {
+    /// A decryption share of a ciphertext in the process of Threshold Decryption.
     type DecryptionShare: Clone + Debug + PartialEq + Eq;
+    /// A proof that a decryption share was correctly computed on a ciphertext using the decryption
+    /// key share `Self`.
     type PartialDecryptionProof: Clone + Debug + PartialEq + Eq;
-    // TODO: better name, doc this. Perhaps these are public parameters?
-    type Hint: Clone + Debug + PartialEq + Eq;
+    /// Precomputed values used for Threshold Decryption.
+    type PrecomputedValues: Clone + Debug + PartialEq + Eq;
 
-    // TODO: doc
+    /// The Semi-honest variant of Partial Decryption, returns the decryption share without proving
+    /// correctness.
     fn generate_decryption_share_semi_honest(
         &self,
         ciphertext: &EncryptionKey::CiphertextSpaceGroupElement,
     ) -> Result<Self::DecryptionShare>;
 
-    // TODO: doc
+    /// Performs the Maliciously-secure Partial Decryption in which decryption shares are computed
+    /// and proven correct.
     fn generate_decryption_shares(
         &self,
         ciphertexts: Vec<EncryptionKey::CiphertextSpaceGroupElement>,
         rng: &mut impl CryptoRngCore,
     ) -> Result<(Vec<Self::DecryptionShare>, Self::PartialDecryptionProof)>;
 
-    // TODO: what will we do with these? it's a problem to compute them again & again..
-    // precomputed_values: PrecomputedValues,
-    // absolute_adjusted_lagrange_coefficients: HashMap<
-    // u16,
-    // AdjustedLagrangeCoefficientSizedNumber,
-    // >,
+    /// Finalizes the Threshold Decryption protocol by combining decryption shares. This is the
+    /// Semi-Honest variant in which no proofs are verified.
     fn combine_decryption_shares_semi_honest(
         decryption_shares: HashMap<PartyID, Self::DecryptionShare>,
         encryption_key: &EncryptionKey,
-        hint: Self::Hint,
+        hint: Self::PrecomputedValues,
     ) -> Result<EncryptionKey::PlaintextSpaceGroupElement>;
-
-    // TODO: instead of the `combine_decryption_shares()` function, have a trait for `Proof`,
-    // implement it for `PartialDecryptionProof` [and other proofs] and call its verify function
-    // when needed. fn combine_decryption_shares(
-    //     ciphertexts: Vec<EncryptionKey::CiphertextSpaceGroupElement>,
-    //     decryption_shares_and_proofs: HashMap<
-    //         PartyID,
-    //         (Vec<Self::DecryptionShare>, Self::PartialDecryptionProof),
-    //     >,
-    //     encryption_key: &EncryptionKey,
-    //     hint: Self::Hint,
-    //     rng: &mut impl CryptoRngCore,
-    // ) -> Result<Vec<EncryptionKey::PlaintextSpaceGroupElement>>;
-    // TODO: is it even safe to send (`Send + Sync + Clone`) `rng`?
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

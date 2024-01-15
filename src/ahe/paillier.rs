@@ -53,48 +53,12 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
     type PublicParameters = PublicParameters;
 
     fn new(encryption_scheme_public_parameters: &Self::PublicParameters) -> super::Result<Self> {
-        // todo: checck modulus
-        // TODO: this actually now should always succeed and the check should be in evaluate()
+        // todo: verify zk-proof that the modulus was correctly generated?
         Ok(Self(tiresias::EncryptionKey::new(
             *encryption_scheme_public_parameters
                 .plaintext_space_public_parameters()
                 .modulus,
         )))
-        // // In order to assure circuit-privacy, the computation in
-        // // [`Self::evaluate_linear_combination_with_randomness()`] must not overflow the Paillier
-        // // message space modulus.
-        // //
-        // // This computation is $\Enc(pk, \omega q; \eta) \bigoplus_{i=1}^\ell \left(  a_i \odot
-        // // \ct_i \right)$, where $\omega$ is uniformly chosen from $[0,\ellq 2^s)$.
-        // //
-        // // Thus, with the bound on $q$ being `PLAINTEXT_SPACE_SCALAR_LIMBS`,
-        // // on the dimension $\ell$ being U64::LIMBS (as `DIMENSION` is of type `usize`),
-        // // the bound on $\omega$ is therefore `(PLAINTEXT_SPACE_SCALAR_LIMBS +
-        // // StatisticalSecuritySizedNumber::LIMBS + U64::LIMBS)`.
-        // //
-        // // Multiplying $\omega$ by $q$ thus adds an additional `PLAINTEXT_SPACE_SCALAR_LIMBS` to
-        // the // bound on $\omega$ (hence the multiplication by 2).
-        // //
-        // // Now, we have $\ell$ more additions,
-        // // each bounded to $q^2$ (as both the coefficients and the encrypted messaged of the
-        // // ciphertexts are bounded by $q$) which at most adds $log(\ell)$ bits, which we can
-        // bound // again by a `U64`.
-        // //
-        // // All of this must be `< LargeBiPrimeSizedNumber::LIMBS`.
-        // if let Some(evaluation_upper_bound) = PLAINTEXT_SPACE_SCALAR_LIMBS
-        //     .checked_mul(2)
-        //     .and_then(|x| x.checked_add(StatisticalSecuritySizedNumber::LIMBS))
-        //     .and_then(|x| x.checked_add(U64::LIMBS))
-        //     .and_then(|x| x.checked_add(U64::LIMBS))
-        // {
-        //     if evaluation_upper_bound < LargeBiPrimeSizedNumber::LIMBS {
-        //         return Ok(Self(tiresias::EncryptionKey::new(
-        //             *plaintext_group_public_parameters.modulus,
-        //         )));
-        //     }
-        // }
-        // // TODO: this is a wrong computation, we need to check it is smaller than the modulus N.
-        // Err(super::Error::UnsafePublicParameters)
     }
 
     fn encrypt_with_randomness(

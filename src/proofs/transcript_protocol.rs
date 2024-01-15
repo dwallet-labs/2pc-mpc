@@ -27,9 +27,9 @@ impl TranscriptProtocol for Transcript {
         label: &'static [u8],
         message: &T,
     ) -> serde_json::Result<()> {
-        let serialized_message = serde_json::to_vec(message)?;
+        let serialized_message = serde_json::to_string_pretty(message)?;
 
-        self.append_message(label, serialized_message.as_slice());
+        self.append_message(label, serialized_message.as_bytes());
 
         Ok(())
     }

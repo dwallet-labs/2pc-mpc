@@ -138,6 +138,8 @@ impl<
                     })
                 });
 
+        // TODO: this stage should be done seperately for enhanced proofs and the responses need to
+        // be range-checked.
         let aggregated_proof = Proof::new(&self.aggregated_statement_masks, &response?);
         if aggregated_proof
             .verify(
