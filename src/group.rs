@@ -7,8 +7,6 @@ use std::{
     ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign},
 };
 
-#[cfg(feature = "benchmarking")]
-pub(crate) use benches::benchmark_scalar_mul_bounded;
 use crypto_bigint::{rand_core::CryptoRngCore, NonZero, Random, RandomMod, Uint, Zero};
 use serde::{Deserialize, Serialize};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
