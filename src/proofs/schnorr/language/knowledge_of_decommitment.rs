@@ -21,6 +21,7 @@ use crate::{
         schnorr,
         schnorr::{aggregation, language},
     },
+    ComputationalSecuritySizedNumber,
 };
 
 // TODO: name
@@ -65,12 +66,13 @@ where
     fn challenge_bits(number_of_parties: usize, batch_size: usize) -> usize {
         // TODO ...
         if REPETITIONS == 1 {
-            128 // TODO: computational security sized number?
-        } else {
+            super::challenge_bits(batch_size)
+        } else if REPETITIONS == ComputationalSecuritySizedNumber::BITS {
             1
+        } else {
+            todo!()
+            // TODO: return error if its not 1 or 128?
         }
-
-        // TODO: return error if its not 1 or 128?
     }
 
     fn group_homomorphism(

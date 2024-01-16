@@ -133,7 +133,9 @@ pub trait GroupElement:
     }
 
     /// Constant-time Multiplication by (any bounded) natural number (scalar)
-    fn scalar_mul<const LIMBS: usize>(&self, scalar: &Uint<LIMBS>) -> Self;
+    fn scalar_mul<const LIMBS: usize>(&self, scalar: &Uint<LIMBS>) -> Self {
+        self.scalar_mul_bounded(scalar, Uint::<LIMBS>::BITS)
+    }
 
     /// Constant-time Multiplication by (any bounded) natural number (scalar),     
     /// with `scalar_bits` representing the number of (least significant) bits
@@ -144,43 +146,7 @@ pub trait GroupElement:
         &self,
         scalar: &Uint<LIMBS>,
         scalar_bits: usize,
-    ) -> Self {
-        // A bench implementation for groups whose underlying implementation does not expose a
-        // bounded multiplication function, and operates in constant-time. Until such
-        // functionality will be exposed, we shall only optimize for the special case of
-        // `scalar_bits == 1`, which is both of particular interest for our proof system and easily
-        // implemented via a single addition.
-
-        // First take only the `scalar_bits` least significant bits
-        let mask = (Uint::<LIMBS>::ONE << scalar_bits).wrapping_sub(&Uint::<LIMBS>::ONE);
-        let scalar = scalar & mask;
-        // TODO: maybe remove this or at least the if
-
-        // TODO: test
-        if scalar_bits == 1 {
-            // // TODO: calls expensive `.value()` function
-            // let value = Self::Value::conditional_select(
-            //     &self.neutral().value(),
-            //     &self.value(),
-            //     scalar.ct_eq(&Uint::<LIMBS>::ONE),
-            // );
-            //
-            // // Safe to unwrap as the value comes from a valid group element of the same public
-            // // parameters.
-            // Self::new(value, &self.public_parameters()).unwrap()
-
-            if scalar == Uint::<LIMBS>::ONE {
-                self.clone()
-            } else {
-                self.neutral()
-            }
-        } else {
-            // Call the underlying scalar mul function, which now only use the `scalar_bits` least
-            // significant bits, but will still take the same time to compute due to
-            // constant-timeness.
-            self.scalar_mul(&scalar)
-        }
-    }
+    ) -> Self;
 
     /// Double this point in constant-time.
     #[must_use]
@@ -205,12 +171,12 @@ pub trait BoundedGroupElement<const SCALAR_LIMBS: usize>: GroupElement {
     ) -> Uint<SCALAR_LIMBS>;
 }
 
-/// An element of a natural numbers group (TODO: doc).
+/// An element of a natural numbers group.
 /// This trait encapsulates both known and unknown order number groups, by allowing the group value
 /// to be transitional to and from a bounded natural number.
 ///
-/// This way allows us to capture both
-/// elliptic curve scalars (which has their own serialization format captured by their types &
+/// This way allows us to capture both elliptic curve
+/// scalars (which has their own serialization format captured by their types &
 /// standards, and thus cannot have a `Uint<>` as their `Value`) and hidden-order groups like
 /// Paillier's, where we cannot have `T: From<Uint<>>` as we cannot construct a group element
 /// without the modulus which is specified in the public parameters.
@@ -367,138 +333,4 @@ pub trait HashToGroup: GroupElement {
 pub trait AffineXCoordinate<const SCALAR_LIMBS: usize>: PrimeGroupElement<SCALAR_LIMBS> {
     /// Get the affine x-coordinate as a scalar.
     fn x(&self) -> Self::Scalar;
-}
-
-#[cfg(test)]
-mod tests {
-    use crypto_bigint::U64;
-    use rand_core::OsRng;
-
-    use super::*;
-
-    #[test]
-    fn multiplies_bounded_scalar() {
-        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
-        let secp256k1_group_public_parameters =
-            secp256k1::group_element::PublicParameters::default();
-
-        let scalar =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
-
-        let generator = secp256k1::GroupElement::new(
-            secp256k1_group_public_parameters.generator,
-            &secp256k1_group_public_parameters,
-        )
-        .unwrap();
-
-        let point = scalar * generator;
-
-        assert_eq!(
-            scalar.scalar_mul_bounded(&U64::from(0u8), 1),
-            scalar.neutral()
-        );
-
-        assert_eq!(
-            point.scalar_mul_bounded(&U64::from(0u8), 1),
-            point.neutral()
-        );
-
-        assert_eq!(
-            scalar.scalar_mul_bounded(&U64::from(0u8), 1),
-            scalar.scalar_mul(&U64::from(0u8)),
-        );
-
-        assert_eq!(
-            point.scalar_mul_bounded(&U64::from(0u8), 1),
-            point.scalar_mul(&U64::from(0u8)),
-        );
-
-        assert_eq!(scalar.scalar_mul_bounded(&U64::from(1u8), 1), scalar);
-
-        assert_eq!(point.scalar_mul_bounded(&U64::from(1u8), 1), point);
-
-        assert_eq!(
-            scalar.scalar_mul_bounded(&U64::from(1u8), 1),
-            scalar.scalar_mul(&U64::from(1u8)),
-        );
-
-        assert_eq!(
-            point.scalar_mul_bounded(&U64::from(1u8), 1),
-            point.scalar_mul(&U64::from(1u8)),
-        );
-
-        assert_eq!(
-            scalar.scalar_mul_bounded(&U64::from(4u8), 1),
-            scalar.neutral()
-        );
-
-        assert_eq!(
-            point.scalar_mul_bounded(&U64::from(4u8), 1),
-            point.neutral()
-        );
-
-        assert_eq!(
-            scalar.scalar_mul_bounded(&U64::from(3u8), 1),
-            scalar.scalar_mul_bounded(&U64::from(1u8), 1),
-        );
-
-        assert_eq!(
-            point.scalar_mul_bounded(&U64::from(3u8), 1),
-            point.scalar_mul_bounded(&U64::from(1u8), 1),
-        );
-
-        assert_eq!(
-            scalar.scalar_mul_bounded(&U64::from(3u8), 2),
-            scalar.scalar_mul(&U64::from(3u8)),
-        );
-
-        assert_eq!(
-            point.scalar_mul_bounded(&U64::from(3u8), 2),
-            point.scalar_mul(&U64::from(3u8)),
-        );
-    }
-}
-
-#[cfg(feature = "benchmarking")]
-mod benches {
-    use criterion::Criterion;
-    use crypto_bigint::{Random, U256};
-    use rand_core::OsRng;
-
-    use crate::group::{secp256k1, GroupElement as _, Samplable};
-
-    pub(crate) fn benchmark_scalar_mul_bounded(c: &mut Criterion) {
-        let mut g = c.benchmark_group("scalar_mul_bounded()");
-
-        g.sample_size(10);
-
-        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
-        let secp256k1_group_public_parameters =
-            secp256k1::group_element::PublicParameters::default();
-
-        let scalar =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
-
-        let generator = secp256k1::GroupElement::new(
-            secp256k1_group_public_parameters.generator,
-            &secp256k1_group_public_parameters,
-        )
-        .unwrap();
-
-        let point = scalar * generator;
-
-        let exp = U256::random(&mut OsRng);
-
-        for bitsize in [1, 128, 256] {
-            g.bench_function(
-                format!("secp256k1 scalar by {:?}-bit exponent", bitsize),
-                |bench| bench.iter(|| scalar.scalar_mul_bounded(&exp, bitsize)),
-            );
-
-            g.bench_function(
-                format!("secp256k1 point by {:?}-bit exponent", bitsize),
-                |bench| bench.iter(|| point.scalar_mul_bounded(&exp, bitsize)),
-            );
-        }
-    }
 }

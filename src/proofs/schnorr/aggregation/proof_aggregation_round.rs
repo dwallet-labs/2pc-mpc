@@ -151,8 +151,8 @@ impl<
             .is_err()
         {
             // TODO: this should be their own statement mask, not the aggregated one
-            // But the challenges should still remain the same - I don't think so, should ask dolev
-            // again.
+            // But the challenges should still remain the same - need to seperate the verify()
+            // function, and take the challenge from the aggregated proof and pass it there
             let proof_share_cheating_parties: Vec<PartyID> = proof_shares
                 .into_iter()
                 .map(|(party_id, proof_share)| {

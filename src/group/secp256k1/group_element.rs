@@ -111,7 +111,11 @@ impl group::GroupElement for GroupElement {
         Self(ProjectivePoint::IDENTITY)
     }
 
-    fn scalar_mul<const LIMBS: usize>(&self, scalar: &Uint<LIMBS>) -> Self {
+    fn scalar_mul_bounded<const LIMBS: usize>(
+        &self,
+        scalar: &Uint<LIMBS>,
+        _scalar_bits: usize,
+    ) -> Self {
         Scalar::from(scalar) * self
     }
 

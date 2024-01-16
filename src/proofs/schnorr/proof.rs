@@ -7,7 +7,7 @@ pub(super) mod enhanced;
 // pub mod enhanced;
 use std::{array, collections::HashMap, marker::PhantomData};
 
-use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, U64};
+use crypto_bigint::{rand_core::CryptoRngCore, ConcatMixed, U128, U64};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
@@ -28,15 +28,11 @@ use crate::{
     ComputationalSecuritySizedNumber, COMPUTATIONAL_SECURITY_PARAMETERS,
 };
 // For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
-// Setting it to be 64-bit larger than the computational security parameter $\kappa$ allows us to
-// practically use any batch size (Rust does not allow a vector larger than $2^64$ elements,
+// Setting it to be 128-bit larger than the computational security parameter $\kappa$ allows us to
+// use any batch size (Rust does not allow a vector larger than $2^64$ elements,
 // as does 64-bit architectures in which the memory won't even be addressable.)
-
-// TODO: we said we don't need the +64 anymore right?
-// pub(super) type ChallengeSizedNumber =
-//     <ComputationalSecuritySizedNumber as ConcatMixed<U64>>::MixedOutput;
-
-pub(super) type ChallengeSizedNumber = ComputationalSecuritySizedNumber;
+pub(super) type ChallengeSizedNumber =
+    <ComputationalSecuritySizedNumber as ConcatMixed<U128>>::MixedOutput;
 
 /// A Batched Schnorr Zero-Knowledge Proof.
 /// Implements Appendix B. Schnorr Protocols in the paper.

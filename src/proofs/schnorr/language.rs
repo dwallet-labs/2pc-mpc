@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     group,
     group::{GroupElement, Samplable},
-    proofs,
+    proofs, ComputationalSecuritySizedNumber,
 };
 
 pub mod committed_linear_evaluation;
@@ -58,19 +58,25 @@ pub trait Language<
 
     /// The number of bits to use for the challenge
     fn challenge_bits(number_of_parties: usize, batch_size: usize) -> usize {
-        // TODO: what's the formula?
-        128
+        challenge_bits(batch_size)
     }
 
-    // TODO: rename to `homomorphose`, credit Eschel
+    // TODO: rename to `homomorphose`, credit Escher
     /// A group homomorphism $\phi:\HH\to\GG$  from $(\HH_\pp, +)$, the witness space,
     /// to $(\GG_\pp,\cdot)$, the statement space space.
+    /// https://www.digitalcommonwealth.org/search/commonwealth:ww72cb78j
     fn group_homomorphism(
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> Result<Self::StatementSpaceGroupElement>;
 }
 
+pub fn challenge_bits(batch_size: usize) -> usize {
+    // When batching $N_B$ statements, the challenge space $\bE$ is adjusted to be $[0,\BatchSize
+    // \cdot 2^{\kappa+2})$. TODO: delete number of parties
+    // TODO: checked ilog2, check no overflow, return result.
+    2 + usize::try_from(batch_size.ilog2()).unwrap() + 1 + ComputationalSecuritySizedNumber::BITS
+}
 pub type PublicParameters<const REPETITIONS: usize, L> =
     <L as Language<REPETITIONS>>::PublicParameters;
 pub type WitnessSpaceGroupElement<const REPETITIONS: usize, L> =
