@@ -24,7 +24,7 @@ pub(crate) mod tests {
     use tiresias::{
         deal_trusted_decryption_key_shares, secret_sharing::shamir::Polynomial,
         AdjustedLagrangeCoefficientSizedNumber, DecryptionKeyShare, LargeBiPrimeSizedNumber,
-        PaillierModulusSizedNumber, PrecomputedValues, SecretKeyShareSizedNumber,
+        PaillierModulusSizedNumber, SecretKeyShareSizedNumber,
     };
 
     use super::*;
@@ -32,7 +32,10 @@ pub(crate) mod tests {
         ahe,
         ahe::{
             paillier,
-            paillier::tests::{N, SECRET_KEY},
+            paillier::{
+                tests::{N, SECRET_KEY},
+                PrecomputedValues,
+            },
             AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
             GroupsPublicParametersAccessors,
         },
@@ -52,7 +55,7 @@ pub(crate) mod tests {
                 enhanced::{tests::RANGE_CLAIMS_PER_SCALAR, EnhancedLanguageStatementAccessors},
             },
         },
-        sign::tests::paillier::{tests::BASE, Hint},
+        sign::tests::paillier::tests::BASE,
         traits::Reduce as _,
         StatisticalSecuritySizedNumber,
     };
@@ -214,7 +217,7 @@ pub(crate) mod tests {
             })
             .unzip();
 
-        let hint = Hint {
+        let precomputed_values = PrecomputedValues {
             threshold,
             number_of_parties,
             precomputed_values,
@@ -241,7 +244,7 @@ pub(crate) mod tests {
             PhantomData<()>,
         >::decrypt_signature(
             paillier_encryption_key,
-            hint,
+            precomputed_values,
             secp256k1_scalar_public_parameters,
             partial_signature_decryption_shares,
             masked_nonce_decryption_shares,

@@ -11,7 +11,7 @@ pub use group::paillier::{
 use serde::{Deserialize, Serialize};
 use tiresias::{
     proofs::ProofOfEqualityOfDiscreteLogs, AdjustedLagrangeCoefficientSizedNumber,
-    LargeBiPrimeSizedNumber, Message, PaillierModulusSizedNumber, PrecomputedValues,
+    LargeBiPrimeSizedNumber, Message, PaillierModulusSizedNumber,
     ADJUSTED_LAGRANGE_COEFFICIENT_SIZE_UPPER_BOUND,
 };
 
@@ -182,12 +182,12 @@ impl Into<EncryptionKey> for DecryptionKey {
     }
 }
 
-// TODO: name, doc
+/// Precomputed values used for Threshold Decryption in Tiresias.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Hint {
+pub struct PrecomputedValues {
     pub threshold: u16,
     pub number_of_parties: u16,
-    pub precomputed_values: PrecomputedValues,
+    pub precomputed_values: tiresias::PrecomputedValues,
     // The base $g$ for proofs of equality of discrete logs
     pub base: PaillierModulusSizedNumber,
     // The public verification keys ${{v_i}}_i$ for proofs of equality of discrete logs
@@ -201,7 +201,7 @@ impl AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, Encry
 {
     type DecryptionShare = PaillierModulusSizedNumber;
     type PartialDecryptionProof = ProofOfEqualityOfDiscreteLogs;
-    type Hint = Hint;
+    type PrecomputedValues = PrecomputedValues;
 
     fn generate_decryption_share_semi_honest(
         &self,
@@ -228,7 +228,7 @@ impl AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, Encry
     fn combine_decryption_shares_semi_honest(
         decryption_shares: HashMap<PartyID, Self::DecryptionShare>,
         encryption_key: &EncryptionKey,
-        hint: Self::Hint,
+        precomputed_values: Self::PrecomputedValues,
     ) -> ahe::Result<PlaintextSpaceGroupElement> {
         let decryption_shares = decryption_shares
             .into_iter()
@@ -238,8 +238,8 @@ impl AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, Encry
         let plaintext = tiresias::DecryptionKeyShare::combine_decryption_shares_semi_honest(
             encryption_key.0.clone(),
             decryption_shares,
-            hint.precomputed_values.clone(),
-            hint.absolute_adjusted_lagrange_coefficients,
+            precomputed_values.precomputed_values.clone(),
+            precomputed_values.absolute_adjusted_lagrange_coefficients,
         )?;
 
         let plaintext = plaintext.first().ok_or(ahe::Error::InternalError)?;

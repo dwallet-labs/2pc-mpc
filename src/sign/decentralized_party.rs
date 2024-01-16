@@ -381,7 +381,7 @@ where
     pub fn decrypt_signature(
         encryption_key: EncryptionKey,
         // TODO: name
-        hint: DecryptionKeyShare::Hint,
+        precomputed_values: DecryptionKeyShare::PrecomputedValues,
         scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
         partial_signature_decryption_shares: HashMap<PartyID, DecryptionKeyShare::DecryptionShare>,
         masked_nonce_decryption_shares: HashMap<PartyID, DecryptionKeyShare::DecryptionShare>,
@@ -390,7 +390,7 @@ where
             DecryptionKeyShare::combine_decryption_shares_semi_honest(
                 partial_signature_decryption_shares,
                 &encryption_key,
-                hint.clone(),
+                precomputed_values.clone(),
             )?
             .into();
 
@@ -409,7 +409,7 @@ where
             DecryptionKeyShare::combine_decryption_shares_semi_honest(
                 masked_nonce_decryption_shares,
                 &encryption_key,
-                hint,
+                precomputed_values,
             )?
             .into();
 

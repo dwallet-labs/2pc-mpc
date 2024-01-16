@@ -247,6 +247,7 @@ pub trait AdditivelyHomomorphicDecryptionKey<
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
 >: Into<EncryptionKey> + Clone + PartialEq
 {
+    /// The decryption key used for decryption.
     type SecretKey;
 
     /// Instantiate the decryption key from the public parameters of the encryption scheme,
@@ -299,7 +300,7 @@ pub trait AdditivelyHomomorphicDecryptionKeyShare<
     fn combine_decryption_shares_semi_honest(
         decryption_shares: HashMap<PartyID, Self::DecryptionShare>,
         encryption_key: &EncryptionKey,
-        hint: Self::PrecomputedValues,
+        precomputed_values: Self::PrecomputedValues,
     ) -> Result<EncryptionKey::PlaintextSpaceGroupElement>;
 }
 
