@@ -2,7 +2,7 @@
 name = "twopc-mpc"
 version = "0.1.0"
 edition = "2021"
-license = "Apache-2.0"
+license = "BSD-3-Clause-Clear"
 
 [dependencies]
 crypto-bigint = { version = "0.5.5", features = ["rand_core", "serde"], default-features = false }

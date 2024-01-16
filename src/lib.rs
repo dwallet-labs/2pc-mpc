@@ -1,5 +1,5 @@
 // Author: dWallet Labs, LTD.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: BSD-3-Clause-Clear
 pub use ahe::{AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey};
 #[cfg(feature = "benchmarking")]
 use criterion::criterion_group;

@@ -1,8 +1,8 @@
 // Author: dWallet Labs, LTD.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: BSD-3-Clause-Clear
 
 pub use language::{
-    committment_of_discrete_log, committed_linear_evaluation,
+    committed_linear_evaluation, committment_of_discrete_log,
     discrete_log_ratio_of_committed_values, encryption_of_discrete_log, encryption_of_tuple,
     knowledge_of_decommitment, knowledge_of_discrete_log, Language,
 };

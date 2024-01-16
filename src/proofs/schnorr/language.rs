@@ -1,5 +1,5 @@
 // Author: dWallet Labs, LTD.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: BSD-3-Clause-Clear
 use core::fmt::Debug;
 
 #[cfg(feature = "benchmarking")]
@@ -77,6 +77,7 @@ pub fn challenge_bits(batch_size: usize) -> usize {
     // TODO: checked ilog2, check no overflow, return result.
     2 + usize::try_from(batch_size.ilog2()).unwrap() + 1 + ComputationalSecuritySizedNumber::BITS
 }
+
 pub type PublicParameters<const REPETITIONS: usize, L> =
     <L as Language<REPETITIONS>>::PublicParameters;
 pub type WitnessSpaceGroupElement<const REPETITIONS: usize, L> =

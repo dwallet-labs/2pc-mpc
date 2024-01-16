@@ -1,5 +1,5 @@
 // Author: dWallet Labs, LTD.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: BSD-3-Clause-Clear
 
 pub(super) mod enhanced;
 
@@ -27,6 +27,7 @@ use crate::{
     },
     ComputationalSecuritySizedNumber, COMPUTATIONAL_SECURITY_PARAMETERS,
 };
+
 // For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
 // Setting it to be 128-bit larger than the computational security parameter $\kappa$ allows us to
 // use any batch size (Rust does not allow a vector larger than $2^64$ elements,

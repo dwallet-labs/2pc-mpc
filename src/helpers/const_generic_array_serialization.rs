@@ -1,5 +1,5 @@
 // Author: dWallet Labs, LTD.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: BSD-3-Clause-Clear
 
 // Adapted from: https://github.com/serde-rs/serde/issues/1937#issuecomment-812137971
 
@@ -53,6 +53,7 @@ where
         }
     }
 }
+
 pub fn deserialize<'de, D, T, const N: usize>(deserializer: D) -> Result<[T; N], D::Error>
 where
     D: Deserializer<'de>,

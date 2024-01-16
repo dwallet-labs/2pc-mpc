@@ -17,7 +17,7 @@ use crate::{
 };
 
 // Author: dWallet Labs, LTD.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: BSD-3-Clause-Clear
 pub mod decommitment_proof_verification_round;
 pub mod encryption_of_secret_key_share_round;
 

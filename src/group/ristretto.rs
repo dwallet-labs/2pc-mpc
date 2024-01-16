@@ -1,7 +1,7 @@
 use crypto_bigint::U256;
 
 // Author: dWallet Labs, LTD.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: BSD-3-Clause-Clear
 pub mod group_element;
 pub mod scalar;
 
