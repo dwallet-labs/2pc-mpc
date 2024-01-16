@@ -103,21 +103,10 @@ impl From<Scalar> for PublicParameters {
     }
 }
 
-impl BoundedGroupElement<SCALAR_LIMBS> for Scalar {
-    fn lower_bound(&self) -> Uint<SCALAR_LIMBS> {
-        self.order()
-    }
-
-    fn lower_bound_from_public_parameters(
-        public_parameters: &Self::PublicParameters,
-    ) -> Uint<SCALAR_LIMBS> {
-        Self::order_from_public_parameters(public_parameters)
-    }
-}
+impl BoundedGroupElement<SCALAR_LIMBS> for Scalar {}
 
 impl<const LIMBS: usize> From<Uint<LIMBS>> for Scalar {
     fn from(value: Uint<LIMBS>) -> Self {
-        // TODO: can we also optimize for the 256-bit case? by comparing to q.
         let value = if LIMBS < SCALAR_LIMBS {
             (&value).into()
         } else {

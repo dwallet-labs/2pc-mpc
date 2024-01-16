@@ -193,15 +193,9 @@ where
     }
 }
 
-impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS>
-where
-    Uint<LIMBS>: Encoding,
+impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> where
+    Uint<LIMBS>: Encoding
 {
-    fn lower_bound_from_public_parameters(
-        public_parameters: &Self::PublicParameters,
-    ) -> Uint<LIMBS> {
-        *public_parameters.modulus
-    }
 }
 
 impl<const LIMBS: usize> CyclicGroupElement for GroupElement<LIMBS>

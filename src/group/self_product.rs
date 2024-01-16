@@ -276,11 +276,6 @@ impl<const N: usize, G: group::GroupElement> From<[G; N]> for GroupElement<N, G>
 impl<const N: usize, const SCALAR_LIMBS: usize, G: BoundedGroupElement<SCALAR_LIMBS>>
     BoundedGroupElement<SCALAR_LIMBS> for GroupElement<N, G>
 {
-    fn lower_bound_from_public_parameters(
-        public_parameters: &Self::PublicParameters,
-    ) -> Uint<SCALAR_LIMBS> {
-        G::lower_bound_from_public_parameters(&public_parameters.public_parameters)
-    }
 }
 
 impl<

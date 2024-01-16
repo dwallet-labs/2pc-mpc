@@ -201,14 +201,6 @@ impl<const SCALAR_LIMBS: usize, S: GroupElement> From<Scalar<SCALAR_LIMBS, S>> f
 impl<const SCALAR_LIMBS: usize, S: BoundedGroupElement<SCALAR_LIMBS>>
     BoundedGroupElement<SCALAR_LIMBS> for Scalar<SCALAR_LIMBS, S>
 {
-    fn lower_bound(&self) -> Uint<SCALAR_LIMBS> {
-        self.0.lower_bound()
-    }
-    fn lower_bound_from_public_parameters(
-        public_parameters: &Self::PublicParameters,
-    ) -> Uint<SCALAR_LIMBS> {
-        S::lower_bound_from_public_parameters(&public_parameters.0)
-    }
 }
 
 impl<const SCALAR_LIMBS: usize, S: Into<Uint<SCALAR_LIMBS>>> From<Scalar<SCALAR_LIMBS, S>>

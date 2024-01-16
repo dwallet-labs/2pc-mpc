@@ -9,11 +9,10 @@ use k256::{
     elliptic_curve,
     elliptic_curve::{
         group::prime::PrimeCurveAffine,
-        hash2curve::{ExpandMsgXmd, GroupDigest},
+        hash2curve::{ExpandMsgXof, GroupDigest},
         ops::Reduce,
         Group,
     },
-    sha2::Sha256,
     AffinePoint, ProjectivePoint, Secp256k1,
 };
 use serde::{Deserialize, Serialize};
@@ -226,17 +225,7 @@ impl CyclicGroupElement for GroupElement {
     }
 }
 
-impl BoundedGroupElement<SCALAR_LIMBS> for GroupElement {
-    fn lower_bound(&self) -> Uint<SCALAR_LIMBS> {
-        self.order()
-    }
-
-    fn lower_bound_from_public_parameters(
-        public_parameters: &Self::PublicParameters,
-    ) -> Uint<SCALAR_LIMBS> {
-        Self::order_from_public_parameters(public_parameters)
-    }
-}
+impl BoundedGroupElement<SCALAR_LIMBS> for GroupElement {}
 
 impl KnownOrderGroupElement<SCALAR_LIMBS> for GroupElement {
     type Scalar = Scalar;
@@ -280,12 +269,9 @@ impl AffineXCoordinate<SCALAR_LIMBS> for GroupElement {
 
 impl HashToGroup for GroupElement {
     fn hash_to_group(bytes: &[u8]) -> group::Result<Self> {
-        // TODO: what hash to use here? fixed or extendable?
-        // TODO: what is the second parameter, what to put there?
-
-        Secp256k1::hash_from_bytes::<ExpandMsgXmd<Sha256>>(
+        Secp256k1::hash_from_bytes::<ExpandMsgXof<sha3::Shake256>>(
             &[bytes],
-            &[b"CURVE_XMD:SHA-256_SSWU_RO_"],
+            &[b"CURVE_XOF:SHAKE-256_SSWU_RO_"],
         )
         .map_err(|_| group::Error::HashToGroup)
         .map(Self)

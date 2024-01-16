@@ -6,7 +6,7 @@ use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, NonZero, Random, Uint, U256};
 use k256::elliptic_curve::ff::Field;
 use serde::{Deserialize, Serialize};
-use sha2::Sha512;
+use sha3_old::Sha3_512;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use super::{GroupElement, SCALAR_LIMBS};
@@ -108,17 +108,7 @@ impl From<Scalar> for PublicParameters {
     }
 }
 
-impl BoundedGroupElement<SCALAR_LIMBS> for Scalar {
-    fn lower_bound(&self) -> Uint<SCALAR_LIMBS> {
-        self.order()
-    }
-
-    fn lower_bound_from_public_parameters(
-        public_parameters: &Self::PublicParameters,
-    ) -> Uint<SCALAR_LIMBS> {
-        Self::order_from_public_parameters(public_parameters)
-    }
-}
+impl BoundedGroupElement<SCALAR_LIMBS> for Scalar {}
 
 impl<const LIMBS: usize> From<Uint<LIMBS>> for Scalar {
     fn from(value: Uint<LIMBS>) -> Self {
@@ -348,7 +338,7 @@ impl HashToGroup for Scalar {
     fn hash_to_group(bytes: &[u8]) -> group::Result<Self> {
         // TODO: what hash function to use ?
         Ok(Self(curve25519_dalek::scalar::Scalar::hash_from_bytes::<
-            Sha512,
+            Sha3_512,
         >(bytes)))
     }
 }

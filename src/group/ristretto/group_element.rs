@@ -8,7 +8,7 @@ use curve25519_dalek::{
     constants::RISTRETTO_BASEPOINT_POINT, ristretto, ristretto::RistrettoPoint, traits::Identity,
 };
 use serde::{Deserialize, Serialize};
-use sha2::Sha512;
+use sha3_old::Sha3_512;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use super::SCALAR_LIMBS;
@@ -197,17 +197,7 @@ impl CyclicGroupElement for GroupElement {
     }
 }
 
-impl BoundedGroupElement<SCALAR_LIMBS> for GroupElement {
-    fn lower_bound(&self) -> Uint<SCALAR_LIMBS> {
-        self.order()
-    }
-
-    fn lower_bound_from_public_parameters(
-        public_parameters: &Self::PublicParameters,
-    ) -> Uint<SCALAR_LIMBS> {
-        Self::order_from_public_parameters(public_parameters)
-    }
-}
+impl BoundedGroupElement<SCALAR_LIMBS> for GroupElement {}
 
 impl KnownOrderGroupElement<SCALAR_LIMBS> for GroupElement {
     type Scalar = Scalar;
@@ -239,7 +229,6 @@ impl PrimeGroupElement<SCALAR_LIMBS> for GroupElement {}
 
 impl HashToGroup for GroupElement {
     fn hash_to_group(bytes: &[u8]) -> group::Result<Self> {
-        // TODO: what hash function to use ?
-        Ok(Self(RistrettoPoint::hash_from_bytes::<Sha512>(bytes)))
+        Ok(Self(RistrettoPoint::hash_from_bytes::<Sha3_512>(bytes)))
     }
 }

@@ -157,19 +157,9 @@ pub type Value<G> = <G as GroupElement>::Value;
 
 pub type PublicParameters<G> = <G as GroupElement>::PublicParameters;
 
-/// An element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in additive
-/// notation.
-pub trait BoundedGroupElement<const SCALAR_LIMBS: usize>: GroupElement {
-    /// Returns a (tight) lower-bound on the scalar group
-    fn lower_bound(&self) -> Uint<SCALAR_LIMBS> {
-        Self::lower_bound_from_public_parameters(&self.public_parameters())
-    }
-
-    /// Returns a (tight) lower-bound on the scalar group
-    fn lower_bound_from_public_parameters(
-        public_parameters: &Self::PublicParameters,
-    ) -> Uint<SCALAR_LIMBS>;
-}
+/// A marker-trait for  element of an abelian group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order,
+/// in additive notation.
+pub trait BoundedGroupElement<const SCALAR_LIMBS: usize>: GroupElement {}
 
 /// An element of a natural numbers group.
 /// This trait encapsulates both known and unknown order number groups, by allowing the group value
