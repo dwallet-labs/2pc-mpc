@@ -45,11 +45,7 @@ where
     fn neutral(&self) -> Self {
         Self(Wrapping::<Uint<LIMBS>>::ZERO)
     }
-    fn scalar_mul_bounded<const RHS_LIMBS: usize>(
-        &self,
-        scalar: &Uint<RHS_LIMBS>,
-        _scalar_bits: usize,
-    ) -> Self {
+    fn scalar_mul<const RHS_LIMBS: usize>(&self, scalar: &Uint<RHS_LIMBS>) -> Self {
         Self(Wrapping(self.0 .0.wrapping_mul(scalar)))
     }
     fn double(&self) -> Self {

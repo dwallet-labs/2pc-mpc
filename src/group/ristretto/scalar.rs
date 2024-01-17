@@ -89,11 +89,7 @@ impl group::GroupElement for Scalar {
         Self(curve25519_dalek::scalar::Scalar::zero())
     }
 
-    fn scalar_mul_bounded<const LIMBS: usize>(
-        &self,
-        scalar: &Uint<LIMBS>,
-        _scalar_bits: usize,
-    ) -> Self {
+    fn scalar_mul<const LIMBS: usize>(&self, scalar: &Uint<LIMBS>) -> Self {
         self * Self::from(scalar)
     }
 

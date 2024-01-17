@@ -75,11 +75,7 @@ where
         Self(DynResidue::<LIMBS>::zero(*self.0.params()))
     }
 
-    fn scalar_mul_bounded<const RHS_LIMBS: usize>(
-        &self,
-        scalar: &Uint<RHS_LIMBS>,
-        _scalar_bits: usize,
-    ) -> Self {
+    fn scalar_mul<const RHS_LIMBS: usize>(&self, scalar: &Uint<RHS_LIMBS>) -> Self {
         // TODO: this is very inefficient, think about optimizing. E.g. LIMBS = 2048, RHS = 128 for
         // prove. This is a factor 16 useless.
         let scalar = DynResidue::new(

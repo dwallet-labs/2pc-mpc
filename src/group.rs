@@ -131,9 +131,7 @@ pub trait GroupElement:
     }
 
     /// Constant-time Multiplication by (any bounded) natural number (scalar)
-    fn scalar_mul<const LIMBS: usize>(&self, scalar: &Uint<LIMBS>) -> Self {
-        self.scalar_mul_bounded(scalar, Uint::<LIMBS>::BITS)
-    }
+    fn scalar_mul<const LIMBS: usize>(&self, scalar: &Uint<LIMBS>) -> Self;
 
     /// Constant-time Multiplication by (any bounded) natural number (scalar),     
     /// with `scalar_bits` representing the number of (least significant) bits
@@ -144,7 +142,21 @@ pub trait GroupElement:
         &self,
         scalar: &Uint<LIMBS>,
         scalar_bits: usize,
-    ) -> Self;
+    ) -> Self {
+        // A bench implementation for groups whose underlying implementation does not expose a
+        // bounded multiplication function, and operates in constant-time. This implementation
+        // simply assures that the only the required bits out of the multiplied value is taken; this
+        // is a correctness adaptation and not a performance one.
+
+        // First take only the `scalar_bits` least significant bits
+        let mask = (Uint::<LIMBS>::ONE << scalar_bits).wrapping_sub(&Uint::<LIMBS>::ONE);
+        let scalar = scalar & mask;
+
+        // Call the underlying scalar mul function, which now only use the `scalar_bits` least
+        // significant bits, but will still take the same time to compute due to
+        // constant-timeness.
+        self.scalar_mul(&scalar)
+    }
 
     /// Double this point in constant-time.
     #[must_use]
@@ -321,4 +333,94 @@ pub trait HashToGroup: GroupElement {
 pub trait AffineXCoordinate<const SCALAR_LIMBS: usize>: PrimeGroupElement<SCALAR_LIMBS> {
     /// Get the affine x-coordinate as a scalar.
     fn x(&self) -> Self::Scalar;
+}
+
+#[cfg(test)]
+mod tests {
+    use crypto_bigint::U64;
+    use rand_core::OsRng;
+
+    use super::*;
+
+    #[test]
+    fn multiplies_bounded_scalar() {
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
+
+        let scalar =
+            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
+
+        let generator = secp256k1::GroupElement::new(
+            secp256k1_group_public_parameters.generator,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
+
+        let point = scalar * generator;
+
+        assert_eq!(
+            scalar.scalar_mul_bounded(&U64::from(0u8), 1),
+            scalar.neutral()
+        );
+
+        assert_eq!(
+            point.scalar_mul_bounded(&U64::from(0u8), 1),
+            point.neutral()
+        );
+
+        assert_eq!(
+            scalar.scalar_mul_bounded(&U64::from(0u8), 1),
+            scalar.scalar_mul(&U64::from(0u8)),
+        );
+
+        assert_eq!(
+            point.scalar_mul_bounded(&U64::from(0u8), 1),
+            point.scalar_mul(&U64::from(0u8)),
+        );
+
+        assert_eq!(scalar.scalar_mul_bounded(&U64::from(1u8), 1), scalar);
+
+        assert_eq!(point.scalar_mul_bounded(&U64::from(1u8), 1), point);
+
+        assert_eq!(
+            scalar.scalar_mul_bounded(&U64::from(1u8), 1),
+            scalar.scalar_mul(&U64::from(1u8)),
+        );
+
+        assert_eq!(
+            point.scalar_mul_bounded(&U64::from(1u8), 1),
+            point.scalar_mul(&U64::from(1u8)),
+        );
+
+        assert_eq!(
+            scalar.scalar_mul_bounded(&U64::from(4u8), 1),
+            scalar.neutral()
+        );
+
+        assert_eq!(
+            point.scalar_mul_bounded(&U64::from(4u8), 1),
+            point.neutral()
+        );
+
+        assert_eq!(
+            scalar.scalar_mul_bounded(&U64::from(3u8), 1),
+            scalar.scalar_mul_bounded(&U64::from(1u8), 1),
+        );
+
+        assert_eq!(
+            point.scalar_mul_bounded(&U64::from(3u8), 1),
+            point.scalar_mul_bounded(&U64::from(1u8), 1),
+        );
+
+        assert_eq!(
+            scalar.scalar_mul_bounded(&U64::from(3u8), 2),
+            scalar.scalar_mul(&U64::from(3u8)),
+        );
+
+        assert_eq!(
+            point.scalar_mul_bounded(&U64::from(3u8), 2),
+            point.scalar_mul(&U64::from(3u8)),
+        );
+    }
 }

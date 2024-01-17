@@ -90,11 +90,7 @@ impl group::GroupElement for GroupElement {
         Self(RistrettoPoint::identity())
     }
 
-    fn scalar_mul_bounded<const LIMBS: usize>(
-        &self,
-        scalar: &Uint<LIMBS>,
-        _scalar_bits: usize,
-    ) -> Self {
+    fn scalar_mul<const LIMBS: usize>(&self, scalar: &Uint<LIMBS>) -> Self {
         Scalar::from(scalar) * self
     }
 
