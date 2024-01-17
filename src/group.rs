@@ -200,43 +200,6 @@ where
     type ValueExt = Self::Value;
 }
 
-/// Constant-time multiplication by the generator.
-///
-/// May use optimizations (e.g. precomputed tables) when available.
-pub trait MulByGenerator<T> {
-    /// Multiply by the generator of the cyclic group in constant-time.
-    #[must_use]
-    fn mul_by_generator(&self, scalar: T) -> Self;
-}
-
-/// An element of an abelian, cyclic group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in
-/// additive notation.
-pub trait CyclicGroupElement: GroupElement {
-    /// Returns the generator of the group
-    fn generator(&self) -> Self;
-
-    /// Returns the value of generator of the group
-    fn generator_value_from_public_parameters(
-        public_parameters: &Self::PublicParameters,
-    ) -> Self::Value;
-
-    /// Attempts to instantiate the generator of the group
-    fn generator_from_public_parameters(
-        public_parameters: &Self::PublicParameters,
-    ) -> Result<Self> {
-        Self::new(
-            Self::generator_value_from_public_parameters(public_parameters),
-            public_parameters,
-        )
-    }
-}
-
-/// Perform an inversion on a field element (i.e. base field element or scalar)
-pub trait Invert: Sized {
-    /// Invert a field element.
-    fn invert(&self) -> CtOption<Self>;
-}
-
 pub trait KnownOrderScalar<const SCALAR_LIMBS: usize>:
     KnownOrderGroupElement<SCALAR_LIMBS, Scalar = Self>
     + NumbersGroupElement<SCALAR_LIMBS>
@@ -274,6 +237,37 @@ pub type ScalarPublicParameters<const SCALAR_LIMBS: usize, G> =
 pub type ScalarValue<const SCALAR_LIMBS: usize, G> =
     Value<<G as KnownOrderGroupElement<SCALAR_LIMBS>>::Scalar>;
 
+/// Constant-time multiplication by the generator.
+///
+/// May use optimizations (e.g. precomputed tables) when available.
+pub trait MulByGenerator<T> {
+    /// Multiply by the generator of the cyclic group in constant-time.
+    #[must_use]
+    fn mul_by_generator(&self, scalar: T) -> Self;
+}
+
+/// An element of an abelian, cyclic group of bounded (by `Uint<SCALAR_LIMBS>::MAX`) order, in
+/// additive notation.
+pub trait CyclicGroupElement: GroupElement {
+    /// Returns the generator of the group
+    fn generator(&self) -> Self;
+
+    /// Returns the value of generator of the group
+    fn generator_value_from_public_parameters(
+        public_parameters: &Self::PublicParameters,
+    ) -> Self::Value;
+
+    /// Attempts to instantiate the generator of the group
+    fn generator_from_public_parameters(
+        public_parameters: &Self::PublicParameters,
+    ) -> Result<Self> {
+        Self::new(
+            Self::generator_value_from_public_parameters(public_parameters),
+            public_parameters,
+        )
+    }
+}
+
 /// A marker trait for elements of a (known) prime-order group.
 /// Any prime-order group is also cyclic.
 /// In additive notation.
@@ -302,6 +296,12 @@ pub trait Samplable: GroupElement {
             .take(batch_size)
             .collect()
     }
+}
+
+/// Perform an inversion on a field element (i.e. base field element or scalar)
+pub trait Invert: Sized {
+    /// Invert a field element.
+    fn invert(&self) -> CtOption<Self>;
 }
 
 /// Uniform encoding of arbitrary sequences of bytes to group elements.
