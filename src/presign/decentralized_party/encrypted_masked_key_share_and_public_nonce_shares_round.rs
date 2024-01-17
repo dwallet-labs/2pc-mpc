@@ -209,7 +209,6 @@ where
         centralized_party_nonce_shares_commitments_and_batched_proof
             .proof
             .verify(
-                None,
                 &self.protocol_context,
                 &language_public_parameters,
                 centralized_party_nonce_shares_commitments_and_batched_proof

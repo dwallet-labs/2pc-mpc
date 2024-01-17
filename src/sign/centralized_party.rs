@@ -236,7 +236,6 @@ where
             >,
             ProtocolContext,
         >::prove(
-            None,
             &self.protocol_context,
             &language_public_parameters,
             vec![[self.nonce_share, self.nonce_share_commitment_randomness].into()],
@@ -267,7 +266,6 @@ where
             >,
             ProtocolContext,
         >::prove(
-            None,
             &self.protocol_context,
             &language_public_parameters,
             vec![[

@@ -146,7 +146,6 @@ impl<
         let aggregated_proof = Proof::new(&self.aggregated_statement_masks, &response?);
         if aggregated_proof
             .verify(
-                Some(number_of_parties),
                 &self.protocol_context,
                 &self.language_public_parameters,
                 self.aggregated_statements.clone(),
@@ -170,7 +169,6 @@ impl<
                 .filter(|(_, proof)| {
                     proof
                         .verify(
-                            Some(number_of_parties),
                             &self.protocol_context,
                             &self.language_public_parameters,
                             self.aggregated_statements.clone(),

@@ -116,7 +116,6 @@ impl<
             GroupElement,
             ProtocolContext,
         >::prove(
-            None,
             &self.protocol_context,
             &language_public_parameters,
             vec![secret_key_share],

@@ -57,8 +57,20 @@ pub trait Language<
     const NAME: &'static str;
 
     /// The number of bits to use for the challenge
-    fn challenge_bits(number_of_parties: usize, batch_size: usize) -> usize {
-        challenge_bits(batch_size)
+    fn challenge_bits(batch_size: usize) -> proofs::Result<usize> {
+        if REPETITIONS == 1 {
+            // When batching $N_B$ statements, the challenge space $\bE$ is adjusted to be $[0,\BatchSize
+            // \cdot 2^{\kappa+2})$.
+            batch_size
+                .checked_ilog2()
+                .and_then(|batch_bits| usize::try_from(batch_bits).ok())
+                .and_then(|batch_bits| batch_bits.checked_add(1)) // `ilog2` is a lower-bound, we need upper-bound
+                .and_then(|batch_bits| batch_bits.checked_add(ComputationalSecuritySizedNumber::BITS + 2)).ok_or(proofs::Error::InvalidParameters)
+        } else if REPETITIONS == ComputationalSecuritySizedNumber::BITS {
+            Ok(1)
+        } else {
+            Err(proofs::Error::UnsupportedRepetitions)
+        }
     }
 
     // TODO: rename to `homomorphose`, credit Escher
@@ -69,13 +81,6 @@ pub trait Language<
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> Result<Self::StatementSpaceGroupElement>;
-}
-
-pub fn challenge_bits(batch_size: usize) -> usize {
-    // When batching $N_B$ statements, the challenge space $\bE$ is adjusted to be $[0,\BatchSize
-    // \cdot 2^{\kappa+2})$. TODO: delete number of parties
-    // TODO: checked ilog2, check no overflow, return result.
-    2 + usize::try_from(batch_size.ilog2()).unwrap() + 1 + ComputationalSecuritySizedNumber::BITS
 }
 
 pub type PublicParameters<const REPETITIONS: usize, L> =
@@ -191,7 +196,6 @@ pub(crate) mod tests {
         Vec<Lang::StatementSpaceGroupElement>,
     ) {
         Proof::prove(
-            None,
             &PhantomData,
             language_public_parameters,
             witnesses,
@@ -231,7 +235,7 @@ pub(crate) mod tests {
 
         assert!(
             proof
-                .verify(None, &PhantomData, &language_public_parameters, statements)
+                .verify(&PhantomData, &language_public_parameters, statements)
                 .is_ok(),
             "valid proofs should verify"
         );
@@ -264,7 +268,6 @@ pub(crate) mod tests {
             matches!(
                 valid_proof
                     .verify(
-                        None,
                         &PhantomData,
                         &language_public_parameters,
                         statements
@@ -288,7 +291,6 @@ pub(crate) mod tests {
             matches!(
                 invalid_proof
                     .verify(
-                        None,
                         &PhantomData,
                         &language_public_parameters,
                         statements.clone(),
@@ -307,7 +309,6 @@ pub(crate) mod tests {
             matches!(
                 invalid_proof
                     .verify(
-                        None,
                         &PhantomData,
                         &language_public_parameters,
                         statements.clone(),
@@ -326,7 +327,6 @@ pub(crate) mod tests {
             matches!(
                 invalid_proof
                     .verify(
-                        None,
                         &PhantomData,
                         &language_public_parameters,
                         statements.clone(),
@@ -344,7 +344,7 @@ pub(crate) mod tests {
 
             assert!(matches!(
             invalid_proof
-                .verify(None,
+                .verify(
                     &PhantomData,
                     &language_public_parameters,
                     statements.clone(),
@@ -362,7 +362,7 @@ pub(crate) mod tests {
 
             assert!(matches!(
             invalid_proof
-                .verify(None,
+                .verify(
                     &PhantomData,
                     &language_public_parameters,
                     statements.clone(),
@@ -393,7 +393,6 @@ pub(crate) mod tests {
             matches!(
                 proof
                     .verify(
-                        None,
                         &PhantomData,
                         &verifier_language_public_parameters,
                         statements,

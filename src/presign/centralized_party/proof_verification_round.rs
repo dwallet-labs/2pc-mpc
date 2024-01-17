@@ -280,9 +280,6 @@ where
         );
 
         output.masks_and_encrypted_masked_key_share_proof.verify(
-            // TODO: there actually are `n` parties, but we don't know how many, so what to do
-            // here?
-            None,
             &self.protocol_context,
             &language_public_parameters,
             statements,
@@ -387,9 +384,6 @@ where
         output
             .encrypted_nonce_shares_and_public_shares_proof
             .verify(
-                // TODO: there actually are `n` parties, but we don't know how many, so what to do
-                // here?
-                None,
                 &self.protocol_context,
                 &language_public_parameters,
                 statements,

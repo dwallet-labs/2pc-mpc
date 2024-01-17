@@ -307,7 +307,7 @@ pub(crate) mod tests {
 
         assert!(
             proof
-                .verify(None, &PhantomData, &language_public_parameters, statements)
+                .verify(&PhantomData, &language_public_parameters, statements)
                 .is_ok(),
             "valid aggregated proofs should verify"
         );

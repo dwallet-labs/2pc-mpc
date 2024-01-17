@@ -139,7 +139,6 @@ impl<
             >,
             ProtocolContext,
         >::prove(
-            None,
             &self.protocol_context,
             &language_public_parameters,
             signature_nonce_shares_and_commitment_randomnesses

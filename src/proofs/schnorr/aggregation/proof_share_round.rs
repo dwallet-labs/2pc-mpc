@@ -213,7 +213,6 @@ impl<
             .collect();
 
         let responses = Proof::<REPETITIONS, Language, ProtocolContext>::prove_inner(
-            number_of_parties,
             &self.protocol_context,
             &self.language_public_parameters,
             self.witnesses,

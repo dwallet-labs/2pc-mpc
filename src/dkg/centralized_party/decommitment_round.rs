@@ -223,9 +223,6 @@ where
         decentralized_party_secret_key_share_encryption_and_proof
             .encryption_of_secret_key_share_proof
             .verify(
-                // TODO: there actually are `n` parties, but we don't know how many, so what to do
-                // here?
-                None,
                 &self.protocol_context,
                 &encryption_of_discrete_log_enhanced_language_public_parameters,
                 vec![statement],

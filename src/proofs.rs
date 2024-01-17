@@ -20,6 +20,9 @@ pub enum Error {
     #[error("serialization/deserialization error")]
     Serialization(#[from] serde_json::Error),
 
+    #[error("unsupported repetitions: must be either 1 or 128")]
+    UnsupportedRepetitions,
+
     #[error("invalid proof - did not satisfy the verification equation")]
     ProofVerification,
 

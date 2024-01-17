@@ -179,7 +179,6 @@ impl<
         let batch_size = witnesses.len();
 
         let (randomizers, statement_masks) = Self::sample_randomizers_and_statement_masks(
-            0,
             batch_size,
             enhanced_language_public_parameters,
             rng,
@@ -197,7 +196,6 @@ impl<
             >,
             ProtocolContext,
         >::prove_with_randomizers(
-            None,
             protocol_context,
             enhanced_language_public_parameters,
             witnesses,
@@ -217,7 +215,6 @@ impl<
     /// Verify an enhanced batched Schnorr zero-knowledge proof.
     pub fn verify(
         &self,
-        number_of_parties: Option<usize>,
         protocol_context: &ProtocolContext,
         enhanced_language_public_parameters: &EnhancedPublicParameters<
             REPETITIONS,
@@ -257,7 +254,6 @@ impl<
 
         self.schnorr_proof
             .verify(
-                number_of_parties,
                 protocol_context,
                 &enhanced_language_public_parameters,
                 statements,
@@ -314,7 +310,6 @@ impl<
     }
 
     pub(crate) fn sample_randomizers_and_statement_masks(
-        number_of_parties: usize,
         batch_size: usize,
         enhanced_language_public_parameters: &EnhancedPublicParameters<
             REPETITIONS,
@@ -343,34 +338,33 @@ impl<
             Language,
         >; REPETITIONS],
     )> {
+        // TODO
+        // let sampling_bit_size: usize = RangeProof::RANGE_CLAIM_BITS
+        // + ComputationalSecuritySizedNumber::BITS
+        // + StatisticalSecuritySizedNumber::BITS;
+
+        // TODO: check that this is < SCALAR_LIMBS?
+        // TODO: formula + challenge : in lightning its 1, in bp 128
+        let sampling_bit_size: usize = RangeProof::RANGE_CLAIM_BITS
+            + StatisticalSecuritySizedNumber::BITS
+            + EnhancedLanguage::<
+                REPETITIONS,
+                NUM_RANGE_CLAIMS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RangeProof,
+                UnboundedWitnessSpaceGroupElement,
+                Language,
+            >::challenge_bits(batch_size)?;
+
+        // TODO: verify
+        let mask = Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::MAX
+            >> (Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::BITS - sampling_bit_size);
+
         let commitment_messages: [CommitmentSchemeMessageSpaceGroupElement<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RangeProof,
         >; REPETITIONS] = array::from_fn(|_| {
-            // TODO
-            // let sampling_bit_size: usize = RangeProof::RANGE_CLAIM_BITS
-            // + ComputationalSecuritySizedNumber::BITS
-            // + StatisticalSecuritySizedNumber::BITS;
-
-            // TODO: check that this is < SCALAR_LIMBS?
-
-            // TODO: formula + challenge : in lightning its 1, in bp 128
-            let sampling_bit_size: usize = RangeProof::RANGE_CLAIM_BITS
-                + StatisticalSecuritySizedNumber::BITS
-                + EnhancedLanguage::<
-                    REPETITIONS,
-                    NUM_RANGE_CLAIMS,
-                    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                    RangeProof,
-                    UnboundedWitnessSpaceGroupElement,
-                    Language,
-                >::challenge_bits(number_of_parties, batch_size);
-
-            // TODO: verify
-            let mask = Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::MAX
-                >> (Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::BITS - sampling_bit_size);
-
             array::from_fn(|_| {
                 let value = (Uint::<{ COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS }>::random(rng)
                     & mask)
@@ -526,7 +520,6 @@ pub(crate) mod tests {
         assert!(
             proof
                 .verify(
-                    None,
                     &PhantomData,
                     &enhanced_language_public_parameters,
                     statements,
@@ -596,7 +589,6 @@ pub(crate) mod tests {
             matches!(
                 proof
                     .verify(
-                        None,
                         &PhantomData,
                         &enhanced_language_public_parameters,
                         statements,
@@ -698,7 +690,6 @@ pub(crate) mod tests {
         assert!(
             proof
                 .verify(
-                    None,
                     &PhantomData,
                     &enhanced_language_public_parameters,
                     statements,

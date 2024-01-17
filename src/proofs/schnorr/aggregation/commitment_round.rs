@@ -204,10 +204,7 @@ impl<
             Language,
             ProtocolContext,
         >::sample_randomizers_and_statement_masks(
-            number_of_parties.into(),
-            batch_size,
-            &language_public_parameters,
-            rng,
+            batch_size, &language_public_parameters, rng
         )?;
 
         Ok(Self {

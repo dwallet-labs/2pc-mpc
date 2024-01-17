@@ -80,14 +80,11 @@ impl<
     /// Prove a batched Schnorr zero-knowledge claim.
     /// Returns the zero-knowledge proof.
     pub fn prove(
-        number_of_parties: Option<usize>,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         witnesses: Vec<Language::WitnessSpaceGroupElement>,
         rng: &mut impl CryptoRngCore,
     ) -> proofs::Result<(Self, Vec<Language::StatementSpaceGroupElement>)> {
-        let number_of_parties = number_of_parties.unwrap_or(0);
-
         let statements: proofs::Result<Vec<Language::StatementSpaceGroupElement>> = witnesses
             .iter()
             .map(|witness| Language::group_homomorphism(witness, language_public_parameters))
@@ -108,7 +105,6 @@ impl<
         // 7. if we don't use multiplies of LIMB we need to do the range check.
 
         Self::prove_with_statements(
-            number_of_parties,
             protocol_context,
             language_public_parameters,
             witnesses,
@@ -119,15 +115,12 @@ impl<
     }
 
     pub(super) fn prove_with_randomizers(
-        number_of_parties: Option<usize>,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         witnesses: Vec<Language::WitnessSpaceGroupElement>,
         randomizers: [Language::WitnessSpaceGroupElement; REPETITIONS],
         statement_masks: [Language::StatementSpaceGroupElement; REPETITIONS],
     ) -> proofs::Result<(Self, Vec<Language::StatementSpaceGroupElement>)> {
-        let number_of_parties = number_of_parties.unwrap_or(0);
-
         let statements: proofs::Result<Vec<Language::StatementSpaceGroupElement>> = witnesses
             .iter()
             .map(|witness| Language::group_homomorphism(witness, language_public_parameters))
@@ -135,7 +128,6 @@ impl<
         let statements = statements?;
 
         Self::prove_inner(
-            number_of_parties,
             protocol_context,
             language_public_parameters,
             witnesses,
@@ -147,8 +139,6 @@ impl<
     }
 
     pub(super) fn prove_with_statements(
-        // The number of parties participating in aggregation (set to 0 for local proofs)
-        number_of_parties: usize,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         witnesses: Vec<Language::WitnessSpaceGroupElement>,
@@ -159,7 +149,6 @@ impl<
             Self::sample_randomizers_and_statement_masks(language_public_parameters, rng)?;
 
         Self::prove_inner(
-            number_of_parties,
             protocol_context,
             language_public_parameters,
             witnesses,
@@ -170,8 +159,6 @@ impl<
     }
 
     pub(super) fn prove_inner(
-        // The number of parties participating in aggregation (set to 0 for local proofs)
-        number_of_parties: usize,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         witnesses: Vec<Language::WitnessSpaceGroupElement>,
@@ -214,7 +201,7 @@ impl<
 
         // TODO: update comment now that it isn't necessairly 128 bit
 
-        let challenge_bit_size = Language::challenge_bits(number_of_parties, batch_size);
+        let challenge_bit_size = Language::challenge_bits(batch_size)?;
         let responses = randomizers
             .into_iter()
             .zip(challenges)
@@ -253,13 +240,10 @@ impl<
     /// Verify a batched Schnorr zero-knowledge proof.
     pub fn verify(
         &self,
-        number_of_parties: Option<usize>,
         protocol_context: &ProtocolContext,
         language_public_parameters: &Language::PublicParameters,
         statements: Vec<Language::StatementSpaceGroupElement>,
     ) -> proofs::Result<()> {
-        let number_of_parties = number_of_parties.unwrap_or(0);
-
         let batch_size = statements.len();
 
         // TODO: maybe here we can get statements as values already, esp. if we sample them this
@@ -305,7 +289,7 @@ impl<
         //                     .map_or(group_element.clone(), |x| group_element + x)
 
         // TODO: helper function that zips
-        let challenge_bit_size = Language::challenge_bits(number_of_parties, batch_size);
+        let challenge_bit_size = Language::challenge_bits(batch_size)?;
         let reconstructed_response_statements: [Language::StatementSpaceGroupElement; REPETITIONS] =
             statement_masks
                 .into_iter()

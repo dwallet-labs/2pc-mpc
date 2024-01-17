@@ -215,7 +215,6 @@ where
         public_nonce_encrypted_partial_signature_and_proof
             .public_nonce_proof
             .verify(
-                None,
                 &self.protocol_context,
                 &language_public_parameters,
                 vec![[
@@ -245,7 +244,6 @@ where
         public_nonce_encrypted_partial_signature_and_proof
             .nonce_share_by_key_share_proof
             .verify(
-                None,
                 &self.protocol_context,
                 &language_public_parameters,
                 vec![[
@@ -337,7 +335,6 @@ where
         public_nonce_encrypted_partial_signature_and_proof
             .encrypted_partial_signature_proof
             .verify(
-                None,
                 &self.protocol_context,
                 &language_public_parameters,
                 vec![(

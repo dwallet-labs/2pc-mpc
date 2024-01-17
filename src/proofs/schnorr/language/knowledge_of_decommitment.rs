@@ -62,19 +62,6 @@ where
 
     const NAME: &'static str = "Knowledge of Decommitment";
 
-    /// The number of bits to use for the challenge
-    fn challenge_bits(number_of_parties: usize, batch_size: usize) -> usize {
-        // TODO ...
-        if REPETITIONS == 1 {
-            super::challenge_bits(batch_size)
-        } else if REPETITIONS == ComputationalSecuritySizedNumber::BITS {
-            1
-        } else {
-            todo!()
-            // TODO: return error if its not 1 or 128?
-        }
-    }
-
     fn group_homomorphism(
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
