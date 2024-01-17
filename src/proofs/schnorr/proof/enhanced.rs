@@ -14,6 +14,7 @@ use crate::{
     commitments::GroupsPublicParametersAccessors as _,
     group,
     group::{GroupElement as _, Samplable},
+    helpers::FlatMapResults,
     proofs,
     proofs::{
         range,
@@ -32,7 +33,6 @@ use crate::{
                 },
                 GroupsPublicParametersAccessors as _, Language,
             },
-            proof::flat_map_results,
         },
         transcript_protocol::TranscriptProtocol,
     },
@@ -347,7 +347,7 @@ impl<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
             RangeProof,
-        >; REPETITIONS] = flat_map_results(array::from_fn(|_| {
+        >; REPETITIONS] = array::from_fn(|_| {
             // TODO
             // let sampling_bit_size: usize = RangeProof::RANGE_CLAIM_BITS
             // + ComputationalSecuritySizedNumber::BITS
@@ -371,7 +371,7 @@ impl<
             let mask = Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::MAX
                 >> (Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::BITS - sampling_bit_size);
 
-            flat_map_results(array::from_fn(|_| {
+            array::from_fn(|_| {
                 let value = (Uint::<{ COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS }>::random(rng)
                     & mask)
                     .into();
@@ -384,18 +384,21 @@ impl<
                         .message_space_public_parameters()
                         .public_parameters,
                 )
-            }))
+            })
+            .flat_map_results()
             .map(|decomposed_witness| decomposed_witness.into())
-        }))?;
+        })
+        .flat_map_results()?;
 
-        let unbounded_witnesses: [_; REPETITIONS] = flat_map_results(array::from_fn(|_| {
+        let unbounded_witnesses: [_; REPETITIONS] = array::from_fn(|_| {
             UnboundedWitnessSpaceGroupElement::sample(
                 enhanced_language_public_parameters.unbounded_witness_public_parameters(),
                 rng,
             )
-        }))?;
+        })
+        .flat_map_results()?;
 
-        let commitment_randomnesses: [_; REPETITIONS] = flat_map_results(array::from_fn(|_| {
+        let commitment_randomnesses: [_; REPETITIONS] = array::from_fn(|_| {
             CommitmentSchemeRandomnessSpaceGroupElement::<
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 NUM_RANGE_CLAIMS,
@@ -407,7 +410,8 @@ impl<
                     .randomness_space_public_parameters(),
                 rng,
             )
-        }))?;
+        })
+        .flat_map_results()?;
 
         let randomizers: [_; REPETITIONS] = commitment_messages
             .into_iter()
@@ -422,16 +426,21 @@ impl<
             .try_into()
             .map_err(|_| proofs::Error::InternalError)?;
 
-        let statement_masks = flat_map_results(randomizers.clone().map(|randomizer| {
-            EnhancedLanguage::<
-                REPETITIONS,
-                NUM_RANGE_CLAIMS,
-                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                RangeProof,
-                UnboundedWitnessSpaceGroupElement,
-                Language,
-            >::group_homomorphism(&randomizer, enhanced_language_public_parameters)
-        }))?;
+        let statement_masks = randomizers
+            .clone()
+            .map(|randomizer| {
+                EnhancedLanguage::<
+                    REPETITIONS,
+                    NUM_RANGE_CLAIMS,
+                    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                    RangeProof,
+                    UnboundedWitnessSpaceGroupElement,
+                    Language,
+                >::group_homomorphism(
+                    &randomizer, enhanced_language_public_parameters
+                )
+            })
+            .flat_map_results()?;
 
         Ok((randomizers, statement_masks))
     }

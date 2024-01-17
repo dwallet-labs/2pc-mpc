@@ -18,7 +18,7 @@ use crate::{
         AffineXCoordinate, GroupElement, Invert, KnownOrderGroupElement, PrimeGroupElement,
         Samplable,
     },
-    helpers::flat_map_results,
+    helpers::FlatMapResults,
     proofs,
     proofs::{
         range,
@@ -258,13 +258,12 @@ where
         let ciphertexts =
             [self.encrypted_mask, self.encrypted_masked_key_share].map(|ct| ct.value());
 
-        let coefficient_commitments = flat_map_results(
-            [
-                public_nonce_encrypted_partial_signature_and_proof.first_coefficient_commitment,
-                public_nonce_encrypted_partial_signature_and_proof.second_coefficient_commitment,
-            ]
-            .map(|value| GroupElement::new(value, &self.group_public_parameters)),
-        )?;
+        let coefficient_commitments = [
+            public_nonce_encrypted_partial_signature_and_proof.first_coefficient_commitment,
+            public_nonce_encrypted_partial_signature_and_proof.second_coefficient_commitment,
+        ]
+        .map(|value| GroupElement::new(value, &self.group_public_parameters))
+        .flat_map_results()?;
 
         let commitment_scheme_public_parameters = commitment_scheme_public_parameters.into();
 

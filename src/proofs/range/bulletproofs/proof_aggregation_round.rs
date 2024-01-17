@@ -15,12 +15,13 @@ use serde::{Deserialize, Serialize};
 use crate::{
     group,
     group::{ristretto, ristretto::SCALAR_LIMBS},
+    helpers::FlatMapResults,
     proofs,
     proofs::{
         range,
         range::{
             bulletproofs::{
-                commitment_round, decommitment_round, flat_map_results, proof_share_round,
+                commitment_round, decommitment_round, proof_share_round,
                 proof_share_round::ProofShare, COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             },
             Samplable,

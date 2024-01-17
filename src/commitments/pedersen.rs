@@ -15,7 +15,7 @@ use crate::{
         self_product, BoundedGroupElement, HashToGroup, KnownOrderGroupElement, PrimeGroupElement,
         Samplable,
     },
-    helpers::{const_generic_array_serialization, flat_map_results},
+    helpers::{const_generic_array_serialization, FlatMapResults},
 };
 
 // TODO: scalar_mul_bounded
@@ -180,12 +180,13 @@ impl<
             PublicParameters = GroupPublicParameters,
         >,
     {
-        let mut message_generators = flat_map_results(array::from_fn(|i| {
+        let mut message_generators = array::from_fn(|i| {
             GroupElement::hash_to_group(
                 // TODO: add organization name, repo name?
                 format!("commitments/pedersen: message generator #{:?}", i).as_bytes(),
             )
-        }))?;
+        })
+        .flat_map_results()?;
 
         // TODO: we want this for sure?
         message_generators[0] =

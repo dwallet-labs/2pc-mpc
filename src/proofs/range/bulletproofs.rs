@@ -24,7 +24,7 @@ use crate::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, ristretto, self_product,
         self_product::Value,
     },
-    helpers::flat_map_results,
+    helpers::FlatMapResults,
     proofs,
     proofs::{
         range,
@@ -220,11 +220,12 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
             .map(|point| ristretto::GroupElement(point));
 
         let commitments: proofs::Result<Vec<_>> = iter::repeat_with(|| {
-            flat_map_results(array::from_fn(|_| {
+            array::from_fn(|_| {
                 commitments_iter
                     .next()
                     .ok_or(proofs::Error::InvalidParameters)
-            }))
+            })
+            .flat_map_results()
             .map(
                 commitments::CommitmentSpaceGroupElement::<
                     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -485,11 +486,12 @@ impl RangeProof {
         let mut bulletproofs_commitments_iter = self.aggregation_commitments.clone().into_iter();
 
         let bulletproofs_aggregated_commitments = iter::repeat_with(|| {
-            flat_map_results(array::from_fn(|_| {
+            array::from_fn(|_| {
                 bulletproofs_commitments_iter
                     .next()
                     .ok_or(proofs::Error::InternalError)
-            }))
+            })
+            .flat_map_results()
             .map(
                 range::CommitmentSchemeCommitmentSpaceGroupElement::<
                     { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },

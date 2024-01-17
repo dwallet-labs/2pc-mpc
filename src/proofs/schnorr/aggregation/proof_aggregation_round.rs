@@ -9,7 +9,7 @@ use serde::Serialize;
 use crate::{
     group,
     group::GroupElement as _,
-    helpers::flat_map_results,
+    helpers::FlatMapResults,
     proofs,
     proofs::schnorr::{
         aggregation::{proof_share_round::ProofShare, ProofAggregationRoundParty},
@@ -92,14 +92,17 @@ impl<
             .map(|(party_id, proof_share)| {
                 (
                     party_id,
-                    flat_map_results(proof_share.0.map(|value| {
-                        Language::WitnessSpaceGroupElement::new(
-                            value,
-                            &self
-                                .language_public_parameters
-                                .witness_space_public_parameters(),
-                        )
-                    })),
+                    proof_share
+                        .0
+                        .map(|value| {
+                            Language::WitnessSpaceGroupElement::new(
+                                value,
+                                &self
+                                    .language_public_parameters
+                                    .witness_space_public_parameters(),
+                            )
+                        })
+                        .flat_map_results(),
                 )
             })
             .collect();

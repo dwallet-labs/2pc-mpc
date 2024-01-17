@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     group,
     group::{GroupElement, Samplable},
-    helpers::flat_map_results,
+    helpers::FlatMapResults,
     proofs,
     proofs::{
         schnorr::{
@@ -277,24 +277,29 @@ impl<
         let challenges: [Vec<ChallengeSizedNumber>; REPETITIONS] =
             Self::compute_challenges(batch_size, &mut transcript);
 
-        let responses = flat_map_results(self.responses.map(|response| {
-            Language::WitnessSpaceGroupElement::new(
-                response,
-                language_public_parameters.witness_space_public_parameters(),
-            )
-        }))?;
+        let responses = self
+            .responses
+            .map(|response| {
+                Language::WitnessSpaceGroupElement::new(
+                    response,
+                    language_public_parameters.witness_space_public_parameters(),
+                )
+            })
+            .flat_map_results()?;
 
-        let statement_masks = flat_map_results(self.statement_masks.map(|statement_mask| {
-            Language::StatementSpaceGroupElement::new(
-                statement_mask,
-                language_public_parameters.statement_space_public_parameters(),
-            )
-        }))?;
+        let statement_masks = self
+            .statement_masks
+            .map(|statement_mask| {
+                Language::StatementSpaceGroupElement::new(
+                    statement_mask,
+                    language_public_parameters.statement_space_public_parameters(),
+                )
+            })
+            .flat_map_results()?;
 
-        let response_statements: [Language::StatementSpaceGroupElement; REPETITIONS] =
-            flat_map_results(responses.map(|response| {
-                Language::group_homomorphism(&response, language_public_parameters)
-            }))?;
+        let response_statements: [Language::StatementSpaceGroupElement; REPETITIONS] = responses
+            .map(|response| Language::group_homomorphism(&response, language_public_parameters))
+            .flat_map_results()?;
 
         // TODO: filter 0 challenge
         //                     .map_or(group_element.clone(), |x| group_element + x)
@@ -347,16 +352,18 @@ impl<
         [Language::WitnessSpaceGroupElement; REPETITIONS],
         [Language::StatementSpaceGroupElement; REPETITIONS],
     )> {
-        let randomizers = flat_map_results(array::from_fn(|_| {
+        let randomizers = array::from_fn(|_| {
             Language::WitnessSpaceGroupElement::sample(
                 language_public_parameters.witness_space_public_parameters(),
                 rng,
             )
-        }))?;
+        })
+        .flat_map_results()?;
 
-        let statement_masks = flat_map_results(randomizers.clone().map(|randomizer| {
-            Language::group_homomorphism(&randomizer, language_public_parameters)
-        }))?;
+        let statement_masks = randomizers
+            .clone()
+            .map(|randomizer| Language::group_homomorphism(&randomizer, language_public_parameters))
+            .flat_map_results()?;
 
         Ok((randomizers, statement_masks))
     }

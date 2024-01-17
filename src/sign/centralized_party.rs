@@ -12,7 +12,7 @@ use crate::{
     commitments::{pedersen, MultiPedersen, Pedersen},
     group,
     group::{self_product, AffineXCoordinate, GroupElement, Invert, PrimeGroupElement, Samplable},
-    helpers::flat_map_results,
+    helpers::FlatMapResults,
     proofs,
     proofs::{
         range, schnorr,
@@ -328,14 +328,15 @@ where
         let coefficients: [Uint<SCALAR_LIMBS>; DIMENSION] =
             [first_coefficient, second_coefficient].map(|coefficient| coefficient.into());
 
-        let coefficients: self_product::GroupElement<DIMENSION, _> =
-            flat_map_results(coefficients.map(|coefficient| {
+        let coefficients: self_product::GroupElement<DIMENSION, _> = coefficients
+            .map(|coefficient| {
                 EncryptionKey::PlaintextSpaceGroupElement::new(
                     Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::from(&coefficient).into(),
                     self.encryption_scheme_public_parameters
                         .plaintext_space_public_parameters(),
                 )
-            }))?
+            })
+            .flat_map_results()?
             .into();
 
         let commitment_randomness: self_product::GroupElement<DIMENSION, _> = [

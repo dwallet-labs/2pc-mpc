@@ -22,7 +22,7 @@ use crate::{
         additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product, paillier,
         self_product, GroupElement as _, KnownOrderGroupElement,
     },
-    helpers::flat_map_results,
+    helpers::FlatMapResults,
     proofs,
     proofs::{
         range,
@@ -181,14 +181,14 @@ impl<
         let commitment_scheme =
             MultiPedersen::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
-        let ciphertexts = flat_map_results(language_public_parameters.ciphertexts.map(|value| {
+        let ciphertexts = language_public_parameters.ciphertexts.map(|value| {
             ahe::CiphertextSpaceGroupElement::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>::new(
                 value,
                 language_public_parameters
                     .encryption_scheme_public_parameters
                     .ciphertext_space_public_parameters(),
             )
-        }))?;
+        }).flat_map_results()?;
 
         let evaluated_ciphertext = encryption_key
             .evaluate_circuit_private_linear_combination_with_randomness(
@@ -204,15 +204,17 @@ impl<
         let group_order =
             Option::<_>::from(NonZero::new(group_order)).ok_or(proofs::Error::InternalError)?;
 
-        let coefficients = flat_map_results(coefficients.map(|coefficient| {
-            // TODO: here it's ok to go through modulation right?
-            let coefficient = coefficient.value().into().reduce(&group_order).into();
+        let coefficients = coefficients
+            .map(|coefficient| {
+                // TODO: here it's ok to go through modulation right?
+                let coefficient = coefficient.value().into().reduce(&group_order).into();
 
-            GroupElement::Scalar::new(
-                coefficient,
-                language_public_parameters.scalar_group_public_parameters(),
-            )
-        }))?;
+                GroupElement::Scalar::new(
+                    coefficient,
+                    language_public_parameters.scalar_group_public_parameters(),
+                )
+            })
+            .flat_map_results()?;
 
         let commitment =
             commitment_scheme.commit(&coefficients.into(), witness.commitment_randomness());
@@ -264,37 +266,41 @@ impl<
 
         let mut decomposed_witness = decomposed_witness.clone().into_iter();
 
-        let coefficients: [[_; RANGE_CLAIMS_PER_SCALAR]; DIMENSION] =
-            flat_map_results(array::from_fn(|_| {
-                flat_map_results(array::from_fn(|_| {
-                    decomposed_witness
-                        .next()
-                        .ok_or(proofs::Error::InvalidParameters)
-                }))
-            }))?;
+        let coefficients: [[_; RANGE_CLAIMS_PER_SCALAR]; DIMENSION] = array::from_fn(|_| {
+            array::from_fn(|_| {
+                decomposed_witness
+                    .next()
+                    .ok_or(proofs::Error::InvalidParameters)
+            })
+            .flat_map_results()
+        })
+        .flat_map_results()?;
 
-        let coefficients = flat_map_results(coefficients.map(|coefficient| {
-            <paillier::PlaintextSpaceGroupElement as DecomposableWitness<
-                RANGE_CLAIMS_PER_SCALAR,
-                SCALAR_LIMBS,
-                { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-            >>::compose(
-                // TODO: make sure this is safe, e.g. SCALAR_LIMBS >=
-                // COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS
-                &coefficient.map(|range_claim| (&range_claim).into()),
-                language_public_parameters
-                    .encryption_scheme_public_parameters
-                    .plaintext_space_public_parameters(),
-                range_claim_bits,
-            )
-        }))?
-        .into();
+        let coefficients = coefficients
+            .map(|coefficient| {
+                <paillier::PlaintextSpaceGroupElement as DecomposableWitness<
+                    RANGE_CLAIMS_PER_SCALAR,
+                    SCALAR_LIMBS,
+                    { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                >>::compose(
+                    // TODO: make sure this is safe, e.g. SCALAR_LIMBS >=
+                    // COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS
+                    &coefficient.map(|range_claim| (&range_claim).into()),
+                    language_public_parameters
+                        .encryption_scheme_public_parameters
+                        .plaintext_space_public_parameters(),
+                    range_claim_bits,
+                )
+            })
+            .flat_map_results()?
+            .into();
 
-        let mask: [_; RANGE_CLAIMS_PER_MASK] = flat_map_results(array::from_fn(|_| {
+        let mask: [_; RANGE_CLAIMS_PER_MASK] = array::from_fn(|_| {
             decomposed_witness
                 .next()
                 .ok_or(proofs::Error::InvalidParameters)
-        }))?;
+        })
+        .flat_map_results()?;
 
         let mask = <paillier::PlaintextSpaceGroupElement as DecomposableWitness<
             RANGE_CLAIMS_PER_MASK,

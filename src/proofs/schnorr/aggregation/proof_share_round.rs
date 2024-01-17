@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     group,
     group::GroupElement as _,
-    helpers::flat_map_results,
+    helpers::FlatMapResults,
     proofs,
     proofs::{
         schnorr,
@@ -133,14 +133,17 @@ impl<
         > = decommitments
             .values()
             .map(|decommitment| {
-                flat_map_results(decommitment.statement_masks.map(|statement_mask| {
-                    Language::StatementSpaceGroupElement::new(
-                        statement_mask,
-                        &self
-                            .language_public_parameters
-                            .statement_space_public_parameters(),
-                    )
-                }))
+                decommitment
+                    .statement_masks
+                    .map(|statement_mask| {
+                        Language::StatementSpaceGroupElement::new(
+                            statement_mask,
+                            &self
+                                .language_public_parameters
+                                .statement_space_public_parameters(),
+                        )
+                    })
+                    .flat_map_results()
             })
             .collect();
 
@@ -222,14 +225,16 @@ impl<
 
         let proof_share = ProofShare(responses);
 
-        let responses = flat_map_results(responses.map(|value| {
-            Language::WitnessSpaceGroupElement::new(
-                value,
-                &self
-                    .language_public_parameters
-                    .witness_space_public_parameters(),
-            )
-        }))?;
+        let responses = responses
+            .map(|value| {
+                Language::WitnessSpaceGroupElement::new(
+                    value,
+                    &self
+                        .language_public_parameters
+                        .witness_space_public_parameters(),
+                )
+            })
+            .flat_map_results()?;
 
         let proof_aggregation_round_party =
             proof_aggregation_round::Party::<REPETITIONS, Language, ProtocolContext> {

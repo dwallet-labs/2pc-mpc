@@ -20,7 +20,7 @@ use crate::{
         direct_product::ThreeWayPublicParameters, paillier, self_product, BoundedGroupElement,
         GroupElement as _, GroupElement, KnownOrderScalar, Samplable,
     },
-    helpers::flat_map_results,
+    helpers::FlatMapResults,
     proofs,
     proofs::{
         range,
@@ -329,19 +329,18 @@ impl<
             RangeProof::RANGE_CLAIM_BITS,
         )?;
 
-        let range_proof_commitment_message = flat_map_results(
-            decomposed_witness
-                .map(group::Value::<RangeProof::RangeClaimGroupElement>::from)
-                .map(|value| {
-                    RangeProof::RangeClaimGroupElement::new(
-                        value,
-                        enhanced_language_public_parameters
-                            .range_proof_public_parameters
-                            .range_claim_public_parameters(),
-                    )
-                }),
-        )?
-        .into();
+        let range_proof_commitment_message = decomposed_witness
+            .map(group::Value::<RangeProof::RangeClaimGroupElement>::from)
+            .map(|value| {
+                RangeProof::RangeClaimGroupElement::new(
+                    value,
+                    enhanced_language_public_parameters
+                        .range_proof_public_parameters
+                        .range_claim_public_parameters(),
+                )
+            })
+            .flat_map_results()?
+            .into();
 
         let commitment_randomness = CommitmentSchemeRandomnessSpaceGroupElement::<
             { COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS },

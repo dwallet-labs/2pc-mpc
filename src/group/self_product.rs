@@ -16,7 +16,7 @@ use crate::{
         scalar::Scalar, BoundedGroupElement, GroupElement as _, KnownOrderGroupElement,
         KnownOrderScalar, Samplable,
     },
-    helpers::flat_map_results,
+    helpers::FlatMapResults,
 };
 
 /// An element of the Self Product of the Group `G` by Itself.
@@ -37,9 +37,9 @@ where
             return Err(group::Error::InvalidPublicParameters);
         }
 
-        Ok(Self(flat_map_results(array::from_fn(|_| {
-            G::sample(public_parameters, rng)
-        }))?))
+        Ok(Self(
+            array::from_fn(|_| G::sample(public_parameters, rng)).flat_map_results()?,
+        ))
     }
 }
 
@@ -112,9 +112,12 @@ impl<const N: usize, G: group::GroupElement> group::GroupElement for GroupElemen
             return Err(group::Error::InvalidPublicParameters);
         }
 
-        Ok(Self(flat_map_results(
-            value.0.map(|value| G::new(value, public_parameters)),
-        )?))
+        Ok(Self(
+            value
+                .0
+                .map(|value| G::new(value, public_parameters))
+                .flat_map_results()?,
+        ))
     }
 
     fn neutral(&self) -> Self {
