@@ -51,18 +51,29 @@ impl Default for PublicParameters {
     }
 }
 
-// TODO: handle these errors, which arise because the underlying crate of ristretto uses different
-// subtle crate
 impl ConstantTimeEq for GroupElement {
-    fn ct_eq(&self, _other: &Self) -> Choice {
-        todo!()
+    fn ct_eq(&self, other: &Self) -> Choice {
+        // There are two `subtle` crates used in various crares in the Rust crypto ecosystem; the
+        // original `dalek` one and `zkcrypto`'s fork. The former being most widely used was chosen
+        // for the group traits, wheras the latter is used in the working `zkcrypto`
+        // `curve25519-dalek-ng` crate used in this code. Therefore, an adaptation between the two
+        // must occur, which is implemented here via unwrapping and wrapping the `u8` inner value of
+        // `Choice`.
+        <RistrettoPoint as subtle_ng::ConstantTimeEq>::ct_eq(&self.0, &other.0)
+            .unwrap_u8()
+            .into()
     }
 }
 
 impl ConditionallySelectable for GroupElement {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-        todo!()
-        // Self(RistrettoPoint::conditional_select(&a.0, &b.0, choice))
+        Self(
+            <RistrettoPoint as subtle_ng::ConditionallySelectable>::conditional_select(
+                &a.0,
+                &b.0,
+                choice.unwrap_u8().into(),
+            ),
+        )
     }
 }
 
