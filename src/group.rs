@@ -18,7 +18,7 @@ pub mod self_product;
 
 pub mod paillier;
 
-pub mod additive_group_of_integers_modulu_n;
+pub mod additive;
 pub mod ristretto;
 pub mod scalar;
 

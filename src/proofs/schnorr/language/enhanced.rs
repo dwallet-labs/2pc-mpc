@@ -16,9 +16,8 @@ use crate::{
     },
     group,
     group::{
-        additive_group_of_integers_modulu_n::power_of_two_moduli, direct_product,
-        direct_product::ThreeWayPublicParameters, paillier, self_product, BoundedGroupElement,
-        GroupElement as _, GroupElement, KnownOrderScalar, Samplable,
+        direct_product, direct_product::ThreeWayPublicParameters, paillier, self_product,
+        BoundedGroupElement, GroupElement as _, GroupElement, KnownOrderScalar, Samplable,
     },
     helpers::FlatMapResults,
     proofs,

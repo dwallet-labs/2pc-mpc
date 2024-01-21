@@ -12,7 +12,7 @@ use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    group::{additive_group_of_integers_modulu_n::power_of_two_moduli, ristretto, Samplable},
+    group::{ristretto, Samplable},
     proofs,
     proofs::{
         range,

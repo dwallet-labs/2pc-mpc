@@ -10,10 +10,7 @@ use crate::{
     commitments,
     commitments::{pedersen, GroupsPublicParametersAccessors as _, Pedersen},
     group,
-    group::{
-        additive_group_of_integers_modulu_n::power_of_two_moduli, GroupElement as _,
-        PrimeGroupElement, Samplable,
-    },
+    group::{GroupElement as _, PrimeGroupElement, Samplable},
     presign::{
         centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
         decentralized_party::encrypted_masked_nonces_round,

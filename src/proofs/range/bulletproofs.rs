@@ -20,10 +20,7 @@ use crate::{
     commitments,
     commitments::{multipedersen::MultiPedersen, pedersen, GroupsPublicParameters, Pedersen},
     group,
-    group::{
-        additive_group_of_integers_modulu_n::power_of_two_moduli, ristretto, self_product,
-        self_product::Value,
-    },
+    group::{ristretto, self_product, self_product::Value},
     helpers::FlatMapResults,
     proofs,
     proofs::{

@@ -9,10 +9,7 @@ use crate::{
     commitments,
     commitments::{GroupsPublicParametersAccessors as _, Pedersen},
     group,
-    group::{
-        additive_group_of_integers_modulu_n::power_of_two_moduli, GroupElement as _,
-        PrimeGroupElement, Samplable,
-    },
+    group::{GroupElement as _, PrimeGroupElement, Samplable},
     proofs,
     proofs::{
         range, schnorr,

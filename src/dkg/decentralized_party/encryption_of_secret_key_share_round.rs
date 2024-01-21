@@ -14,8 +14,7 @@ use crate::{
     dkg::decentralized_party::decommitment_proof_verification_round,
     group,
     group::{
-        additive_group_of_integers_modulu_n::power_of_two_moduli, GroupElement as _,
-        KnownOrderScalar, NumbersGroupElement, PrimeGroupElement, Samplable,
+        GroupElement as _, KnownOrderScalar, NumbersGroupElement, PrimeGroupElement, Samplable,
     },
     proofs,
     proofs::{

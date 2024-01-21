@@ -19,10 +19,7 @@ use crate::{
     ahe,
     ahe::{AdditivelyHomomorphicDecryptionKeyShare, GroupsPublicParametersAccessors as _},
     group,
-    group::{
-        additive_group_of_integers_modulu_n::odd_moduli, paillier::PlaintextSpacePublicParameters,
-        GroupElement,
-    },
+    group::{additive, paillier::PlaintextSpacePublicParameters, GroupElement},
     AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey, PartyID,
 };
 
@@ -162,7 +159,7 @@ impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, Encryption
     fn decrypt(&self, ciphertext: &CiphertextSpaceGroupElement) -> PlaintextSpaceGroupElement {
         PlaintextSpaceGroupElement::new(
             self.0.decrypt_inner(ciphertext.into()),
-            &odd_moduli::PublicParameters {
+            &additive::PublicParameters {
                 modulus: NonZero::new(self.0.encryption_key.n).unwrap(),
             },
         )
@@ -246,7 +243,7 @@ impl AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, Encry
 
         Ok(PlaintextSpaceGroupElement::new(
             *plaintext,
-            &odd_moduli::PublicParameters {
+            &additive::PublicParameters {
                 modulus: NonZero::new(encryption_key.0.n).unwrap(),
             },
         )?)
