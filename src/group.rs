@@ -19,7 +19,6 @@ pub mod self_product;
 pub mod paillier;
 
 pub mod additive_group_of_integers_modulu_n;
-pub mod multiplicative_group_of_integers_modulu_n;
 pub mod ristretto;
 pub mod scalar;
 

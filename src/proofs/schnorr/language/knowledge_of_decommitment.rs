@@ -233,7 +233,7 @@ mod tests {
     use crate::{
         ahe::paillier::tests::N,
         commitments::{pedersen, Pedersen},
-        group::{multiplicative_group_of_integers_modulu_n, secp256k1, GroupElement, Samplable},
+        group::{secp256k1, GroupElement, Samplable},
         proofs::schnorr::{aggregation, language, language::Language as _},
     };
 

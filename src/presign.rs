@@ -18,17 +18,18 @@ pub(crate) mod tests {
     use crate::{
         ahe,
         ahe::{
-            paillier,
-            paillier::tests::{N, SECRET_KEY},
+            paillier::{
+                tests::{N, SECRET_KEY},
+                EncryptionKey as PaillierEncryptionKey,
+            },
             AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
             GroupsPublicParametersAccessors,
         },
         commitments::pedersen,
         group::{
-            multiplicative_group_of_integers_modulu_n, ristretto, secp256k1, self_product,
+            paillier, paillier::CIPHERTEXT_SPACE_SCALAR_LIMBS, ristretto, secp256k1, self_product,
             CyclicGroupElement, GroupElement as _, Samplable,
         },
-        presign::tests::paillier::CIPHERTEXT_SPACE_SCALAR_LIMBS,
         proofs::{
             range::{bulletproofs, RangeProof},
             schnorr::{
@@ -103,14 +104,14 @@ pub(crate) mod tests {
             centralized_party::Presign<
                 secp256k1::group_element::Value,
                 secp256k1::Scalar,
-                multiplicative_group_of_integers_modulu_n::Value<{ CIPHERTEXT_SPACE_SCALAR_LIMBS }>,
+                paillier::CiphertextSpaceValue,
             >,
         >,
         Vec<paillier::CiphertextSpaceGroupElement>,
         Vec<
             decentralized_party::Presign<
                 secp256k1::group_element::Value,
-                multiplicative_group_of_integers_modulu_n::Value<{ CIPHERTEXT_SPACE_SCALAR_LIMBS }>,
+                paillier::CiphertextSpaceValue,
             >,
         >,
     ) {
@@ -153,7 +154,7 @@ pub(crate) mod tests {
             { RANGE_CLAIMS_PER_SCALAR },
             { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
             secp256k1::GroupElement,
-            paillier::EncryptionKey,
+            PaillierEncryptionKey,
             paillier::RandomnessSpaceGroupElement,
             self_product::GroupElement<2, paillier::RandomnessSpaceGroupElement>,
             bulletproofs::RangeProof,
@@ -191,7 +192,7 @@ pub(crate) mod tests {
                         { RANGE_CLAIMS_PER_SCALAR },
                         { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
                         secp256k1::GroupElement,
-                        paillier::EncryptionKey,
+                        PaillierEncryptionKey,
                         paillier::RandomnessSpaceGroupElement,
                         self_product::GroupElement<2, paillier::RandomnessSpaceGroupElement>,
                         bulletproofs::RangeProof,
@@ -376,7 +377,7 @@ pub(crate) mod tests {
                             { secp256k1::SCALAR_LIMBS },
                             { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
                             secp256k1::GroupElement,
-                            paillier::EncryptionKey,
+                            PaillierEncryptionKey,
                         >(
                             centralized_party_nonce_share_commitment,
                             mask_and_encrypted_masked_key_share,

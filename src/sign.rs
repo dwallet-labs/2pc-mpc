@@ -42,9 +42,8 @@ pub(crate) mod tests {
         commitments::{pedersen, HomomorphicCommitmentScheme, Pedersen},
         dkg::tests::generates_distributed_key_internal,
         group::{
-            direct_product, multiplicative_group_of_integers_modulu_n, ristretto, secp256k1,
-            self_product, AffineXCoordinate, CyclicGroupElement, GroupElement as _, Invert,
-            KnownOrderGroupElement, Samplable,
+            direct_product, ristretto, secp256k1, self_product, AffineXCoordinate,
+            CyclicGroupElement, GroupElement as _, Invert, KnownOrderGroupElement, Samplable,
         },
         presign::tests::generates_presignatures_internal,
         proofs::{
@@ -546,9 +545,7 @@ pub(crate) mod tests {
         paillier::EncryptionKey,
         direct_product::PublicParameters<
             self_product::PublicParameters<2, secp256k1::scalar::PublicParameters>,
-            multiplicative_group_of_integers_modulu_n::PublicParameters<
-                { paillier::RANDOMNESS_SPACE_SCALAR_LIMBS },
-            >,
+            paillier::RandomnessSpacePublicParameters,
         >,
     ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();

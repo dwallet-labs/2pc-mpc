@@ -270,10 +270,7 @@ pub(crate) mod tests {
     use crypto_bigint::{U256, U384};
 
     use super::*;
-    use crate::{
-        ahe,
-        group::{multiplicative_group_of_integers_modulu_n, secp256k1},
-    };
+    use crate::{ahe, group::secp256k1};
 
     // TODO: modulation checks and so forth
     const MASK_LIMBS: usize = U384::LIMBS;
