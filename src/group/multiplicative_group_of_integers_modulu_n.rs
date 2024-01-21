@@ -54,7 +54,6 @@ where
 }
 
 /// The value of a group element of the multiplicative group of integers modulo `n` $\mathbb{Z}_n^*$
-// TODO: is there some attack vector through deserialization of numbers not in montgomery form?
 #[derive(PartialEq, Eq, Clone, Debug, Copy, Serialize, Deserialize)]
 pub struct Value<const LIMBS: usize>(Uint<LIMBS>)
 where
