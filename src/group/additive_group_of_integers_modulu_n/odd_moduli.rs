@@ -35,7 +35,10 @@ where
         public_parameters: &Self::PublicParameters,
         rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
-        GroupElement::<LIMBS>::new(Uint::<LIMBS>::random(rng), public_parameters)
+        GroupElement::<LIMBS>::new(
+            Uint::<LIMBS>::random_mod(rng, &public_parameters.modulus),
+            public_parameters,
+        )
     }
 }
 

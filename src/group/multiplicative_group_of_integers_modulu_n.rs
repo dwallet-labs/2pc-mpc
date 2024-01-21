@@ -1,13 +1,12 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
-
 use core::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 use std::ops::Mul;
 
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
     rand_core::CryptoRngCore,
-    Encoding, Integer, Random, Uint,
+    Encoding, Integer, NonZero, Random, RandomMod, Uint,
 };
 use group::GroupElement as _;
 use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
@@ -32,10 +31,14 @@ where
         public_parameters: &Self::PublicParameters,
         rng: &mut impl CryptoRngCore,
     ) -> group::Result<Self> {
+        // Montgomery form only works for odd modulus, and this is assured in `DynResidue`
+        // instantiation; therefore, the modulus of an instance can never be zero and it is safe to
+        // `unwrap()`.
+        let modulus = NonZero::new(*public_parameters.params.modulus()).unwrap();
+
         // Classic rejection-sampling technique.
-        // TODO: why not use random_mod()?
         loop {
-            let value = Value::new(Uint::<LIMBS>::random(rng), public_parameters)?;
+            let value = Value::new(Uint::<LIMBS>::random_mod(rng, &modulus), public_parameters)?;
 
             match Self::new(value, public_parameters) {
                 Err(group::Error::InvalidGroupElement) => {
