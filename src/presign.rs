@@ -25,7 +25,7 @@ pub(crate) mod tests {
             AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
             GroupsPublicParametersAccessors,
         },
-        commitments::pedersen,
+        commitment::pedersen,
         group::{
             paillier, paillier::CIPHERTEXT_SPACE_SCALAR_LIMBS, ristretto, secp256k1, self_product,
             CyclicGroupElement, GroupElement as _, Samplable,

@@ -7,7 +7,7 @@ use std::{array, marker::PhantomData, ops::Mul};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    commitments::{
+    commitment::{
         GroupsPublicParameters, GroupsPublicParametersAccessors, HomomorphicCommitmentScheme,
     },
     group,
@@ -54,7 +54,7 @@ where
     GroupElement: group::GroupElement,
 {
     // TODO: actually we can use a different randomizer and message spaces, e.g. allowing infinite
-    // range (integer commitments)
+    // range (integer commitment)
     type MessageSpaceGroupElement = self_product::GroupElement<BATCH_SIZE, Scalar>;
     type RandomnessSpaceGroupElement = Scalar;
     type CommitmentSpaceGroupElement = GroupElement;
@@ -316,7 +316,7 @@ mod tests {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::{commitments, group::ristretto};
+    use crate::{commitment, group::ristretto};
 
     #[test]
     fn commits() {
@@ -328,7 +328,7 @@ mod tests {
 
         let commitment_generators = PedersenGens::default();
 
-        let commitment_scheme_public_parameters = commitments::PublicParameters::<
+        let commitment_scheme_public_parameters = commitment::PublicParameters::<
             { ristretto::SCALAR_LIMBS },
             Pedersen<1, { ristretto::SCALAR_LIMBS }, ristretto::Scalar, ristretto::GroupElement>,
         >::new::<

@@ -11,8 +11,8 @@ use super::{centralized_party::PublicNonceEncryptedPartialSignatureAndProof, DIM
 use crate::{
     homomorphic_encryption,
     homomorphic_encryption::{AdditivelyHomomorphicDecryptionKeyShare, GroupsPublicParametersAccessors as _},
-    commitments,
-    commitments::{pedersen, GroupsPublicParametersAccessors as _, MultiPedersen, Pedersen},
+    commitment,
+    commitment::{pedersen, GroupsPublicParametersAccessors as _, MultiPedersen, Pedersen},
     group,
     group::{
         AffineXCoordinate, GroupElement, Invert, KnownOrderGroupElement, PrimeGroupElement,

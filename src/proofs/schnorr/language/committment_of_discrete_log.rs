@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
 use crate::{
-    commitments::HomomorphicCommitmentScheme,
+    commitment::HomomorphicCommitmentScheme,
     group,
     group::{
         self_product, BoundedGroupElement, CyclicGroupElement, GroupElement, Samplable, Value,
@@ -254,7 +254,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        commitments::{pedersen, Pedersen},
+        commitment::{pedersen, Pedersen},
         group,
         group::{secp256k1, GroupElement, Samplable},
         proofs::schnorr::{aggregation, language},
@@ -349,7 +349,7 @@ mod benches {
 
     use super::*;
     use crate::{
-        commitments::Pedersen,
+        commitment::Pedersen,
         group::secp256k1,
         proofs::schnorr::{
             aggregation, language,

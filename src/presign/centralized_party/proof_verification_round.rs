@@ -7,7 +7,7 @@ use serde::Serialize;
 use crate::{
     homomorphic_encryption,
     homomorphic_encryption::GroupsPublicParametersAccessors as _,
-    commitments::GroupsPublicParametersAccessors as _,
+    commitment::GroupsPublicParametersAccessors as _,
     group,
     group::{CyclicGroupElement, GroupElement as _, GroupElement, PrimeGroupElement, Samplable},
     presign::{centralized_party::Presign, decentralized_party},

@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
 use crate::{
-    commitments,
-    commitments::{GroupsPublicParametersAccessors, HomomorphicCommitmentScheme},
+    commitment,
+    commitment::{GroupsPublicParametersAccessors, HomomorphicCommitmentScheme},
     group,
     group::{direct_product, self_product, BoundedGroupElement, Samplable},
     proofs,
@@ -156,7 +156,7 @@ impl<
             PublicParameters = CommitmentSchemePublicParameters,
         >,
         CommitmentSchemePublicParameters: AsRef<
-            commitments::GroupsPublicParameters<
+            commitment::GroupsPublicParameters<
                 MessageSpacePublicParameters,
                 RandomnessSpacePublicParameters,
                 CommitmentSpacePublicParameters,
@@ -229,7 +229,7 @@ mod tests {
     use super::*;
     use crate::{
         homomorphic_encryption::paillier::tests::N,
-        commitments::{pedersen, Pedersen},
+        commitment::{pedersen, Pedersen},
         group::{secp256k1, GroupElement, Samplable},
         proofs::schnorr::{aggregation, language, language::Language as _},
     };

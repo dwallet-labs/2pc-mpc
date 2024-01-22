@@ -39,7 +39,7 @@ pub(crate) mod tests {
             AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
             GroupsPublicParametersAccessors,
         },
-        commitments::{pedersen, HomomorphicCommitmentScheme, Pedersen},
+        commitment::{pedersen, HomomorphicCommitmentScheme, Pedersen},
         dkg::tests::generates_distributed_key_internal,
         group::{
             direct_product, ristretto, secp256k1, self_product, AffineXCoordinate,

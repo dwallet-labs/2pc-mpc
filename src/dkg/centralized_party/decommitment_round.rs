@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     homomorphic_encryption::GroupsPublicParametersAccessors as _,
-    commitments::GroupsPublicParametersAccessors as _,
+    commitment::GroupsPublicParametersAccessors as _,
     dkg::decentralized_party,
     group,
     group::{direct_product, GroupElement as _, PrimeGroupElement, Samplable},

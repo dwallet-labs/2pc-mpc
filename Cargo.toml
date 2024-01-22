@@ -9,8 +9,8 @@ crypto-bigint = { version = "0.5.5", features = ["rand_core", "serde"], default-
 serde = { version = "1.0", features = ["derive"] }
 subtle = { version = "2.5", features = ["const-generics"] }
 subtle-ng = "2.5"
-thiserror = "1.0.47"
-k256 = { version = "0.13.2", features = ["arithmetic", "critical-section", "precomputed-tables", "serde", "ecdsa", "hash2curve"], default-features = false }
+thiserror = "1"
+k256 = { version = "0.13", features = ["arithmetic", "critical-section", "precomputed-tables", "serde", "ecdsa", "hash2curve"], default-features = false }
 merlin = { version = "3.0.0", default-features = false }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 tiresias = { git = "https://github.com/odsy-network/tiresias.git", branch = "test_exports" }

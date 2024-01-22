@@ -8,8 +8,8 @@ use super::DIMENSION;
 use crate::{
     homomorphic_encryption,
     homomorphic_encryption::GroupsPublicParametersAccessors,
-    commitments,
-    commitments::{pedersen, MultiPedersen, Pedersen},
+    commitment,
+    commitment::{pedersen, MultiPedersen, Pedersen},
     group,
     group::{self_product, AffineXCoordinate, GroupElement, Invert, PrimeGroupElement, Samplable},
     helpers::FlatMapResults,

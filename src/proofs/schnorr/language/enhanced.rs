@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 use tiresias::secret_sharing::shamir::Polynomial;
 
 use crate::{
-    homomorphic_encryption, commitments,
-    commitments::{
+    homomorphic_encryption, commitment,
+    commitment::{
         pedersen, GroupsPublicParametersAccessors as _, HomomorphicCommitmentScheme, Pedersen,
     },
     group,
@@ -479,7 +479,7 @@ impl<
             NUM_RANGE_CLAIMS,
             RangeProof,
         >: AsRef<
-            commitments::GroupsPublicParameters<
+            commitment::GroupsPublicParameters<
                 self_product::PublicParameters<NUM_RANGE_CLAIMS, RangeClaimPublicParameters>,
                 RandomnessSpacePublicParameters,
                 CommitmentSpacePublicParameters,

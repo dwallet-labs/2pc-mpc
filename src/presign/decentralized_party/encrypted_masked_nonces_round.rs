@@ -6,8 +6,8 @@ use serde::Serialize;
 use crate::{
     homomorphic_encryption,
     homomorphic_encryption::GroupsPublicParametersAccessors,
-    commitments,
-    commitments::{GroupsPublicParametersAccessors as _, Pedersen},
+    commitment,
+    commitment::{GroupsPublicParametersAccessors as _, Pedersen},
     group,
     group::{GroupElement as _, PrimeGroupElement, Samplable},
     proofs,
@@ -45,7 +45,7 @@ pub struct Party<
     pub(super) group_public_parameters: GroupElement::PublicParameters,
     pub(super) scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub(super) encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    pub(super) commitment_scheme_public_parameters: commitments::PublicParameters<
+    pub(super) commitment_scheme_public_parameters: commitment::PublicParameters<
         SCALAR_LIMBS,
         Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
     >,

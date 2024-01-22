@@ -7,8 +7,8 @@ use serde::Serialize;
 use crate::{
     homomorphic_encryption,
     homomorphic_encryption::GroupsPublicParametersAccessors,
-    commitments,
-    commitments::{pedersen, GroupsPublicParametersAccessors as _, Pedersen},
+    commitment,
+    commitment::{pedersen, GroupsPublicParametersAccessors as _, Pedersen},
     group,
     group::{GroupElement as _, PrimeGroupElement, Samplable},
     presign::{

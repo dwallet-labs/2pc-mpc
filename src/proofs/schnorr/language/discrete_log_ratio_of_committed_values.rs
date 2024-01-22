@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use super::GroupsPublicParameters;
 use crate::{
-    commitments,
-    commitments::{pedersen, HomomorphicCommitmentScheme, Pedersen},
+    commitment,
+    commitment::{pedersen, HomomorphicCommitmentScheme, Pedersen},
     group,
     group::{self_product, CyclicGroupElement, GroupElement, KnownOrderGroupElement, Samplable},
     proofs,
@@ -172,7 +172,7 @@ impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
     >(
         scalar_group_public_parameters: Scalar::PublicParameters,
         group_public_parameters: GroupElement::PublicParameters,
-        commitment_scheme_public_parameters: commitments::PublicParameters<
+        commitment_scheme_public_parameters: commitment::PublicParameters<
             SCALAR_LIMBS,
             Pedersen<1, SCALAR_LIMBS, Scalar, GroupElement>,
         >,
@@ -227,7 +227,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        commitments::pedersen,
+        commitment::pedersen,
         group,
         group::{secp256k1, GroupElement, Samplable},
         proofs::schnorr::{aggregation, language},

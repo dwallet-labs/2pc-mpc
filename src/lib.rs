@@ -9,7 +9,7 @@ use proofs::transcript_protocol::TranscriptProtocol as _;
 use serde::{Deserialize, Serialize};
 
 pub mod homomorphic_encryption;
-pub mod commitments;
+pub mod commitment;
 pub mod dkg;
 pub mod group;
 pub(crate) mod helpers;
@@ -22,9 +22,6 @@ mod traits;
 /// Represents an unsigned integer sized based on the computation security parameter, denoted as
 /// $\kappa$.
 pub type ComputationalSecuritySizedNumber = U128;
-
-// TODO: what value should this be
-pub const COMPUTATIONAL_SECURITY_PARAMETERS: usize = 112;
 
 /// Represents an unsigned integer sized based on the statistical security parameter, denoted as
 /// $s$. Configured for 64-bit statistical security using U64.
@@ -74,7 +71,7 @@ pub enum Error {
     #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]
     WrongDecommitment,
 
-    #[error("the other party maliciously attempted to bypass validity checks by sending commitments whose homomorphic evaluation did not equal expected values")]
+    #[error("the other party maliciously attempted to bypass validity checks by sending commitment whose homomorphic evaluation did not equal expected values")]
     CommitmentsHomomorphicEvaluation,
 }
 

@@ -11,7 +11,7 @@ use serde::Serialize;
 use crate::{
     homomorphic_encryption,
     homomorphic_encryption::{paillier::EncryptionKey as PaillierEncryptionKey, GroupsPublicParametersAccessors},
-    commitments::{HomomorphicCommitmentScheme, Pedersen},
+    commitment::{HomomorphicCommitmentScheme, Pedersen},
     group,
     group::{
         direct_product, paillier, BoundedGroupElement, CyclicGroupElement, GroupElement as _,
@@ -468,7 +468,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::{
         homomorphic_encryption::paillier,
-        commitments::pedersen,
+        commitment::pedersen,
         group::{ristretto, secp256k1, self_product},
         proofs::schnorr::{
             aggregation, language,

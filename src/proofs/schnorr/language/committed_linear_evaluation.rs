@@ -15,8 +15,8 @@ use crate::{
     homomorphic_encryption::{
         CiphertextSpaceGroupElement, GroupsPublicParametersAccessors, RandomnessSpaceGroupElement,
     },
-    commitments,
-    commitments::{multipedersen, HomomorphicCommitmentScheme, MultiPedersen},
+    commitment,
+    commitment::{multipedersen, HomomorphicCommitmentScheme, MultiPedersen},
     group,
     group::{direct_product, paillier, self_product, GroupElement as _, KnownOrderGroupElement},
     helpers::FlatMapResults,
@@ -456,7 +456,7 @@ impl<
         scalar_group_public_parameters: ScalarPublicParameters,
         group_public_parameters: GroupPublicParameters,
         encryption_scheme_public_parameters: EncryptionKeyPublicParameters,
-        commitment_scheme_public_parameters: commitments::PublicParameters<
+        commitment_scheme_public_parameters: commitment::PublicParameters<
             SCALAR_LIMBS,
             MultiPedersen<DIMENSION, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >,
@@ -718,7 +718,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::{
         homomorphic_encryption::paillier,
-        commitments::pedersen,
+        commitment::pedersen,
         group::{ristretto, secp256k1, self_product, Samplable},
         proofs::schnorr::{aggregation, language},
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
@@ -955,7 +955,7 @@ pub(crate) mod tests {
 //     use super::*;
 //     use crate::{
 //         homomorphic_encryption::paillier,
-//         commitments::Pedersen,
+//         commitment::Pedersen,
 //         group::{ristretto, secp256k1},
 //         proofs::{
 //             range,

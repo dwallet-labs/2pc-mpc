@@ -5,7 +5,7 @@ use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    commitments::HomomorphicCommitmentScheme,
+    commitment::HomomorphicCommitmentScheme,
     group::Samplable,
     proofs,
     proofs::{schnorr, schnorr::knowledge_of_decommitment},

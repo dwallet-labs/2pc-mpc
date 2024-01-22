@@ -25,7 +25,7 @@ use crate::{
         },
         Error, TranscriptProtocol,
     },
-    ComputationalSecuritySizedNumber, COMPUTATIONAL_SECURITY_PARAMETERS,
+    ComputationalSecuritySizedNumber,
 };
 
 /// The number of repetitions used for sound Schnorr proofs, i.e. proofs that achieve negligible soundness error.

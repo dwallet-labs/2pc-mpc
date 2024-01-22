@@ -10,8 +10,8 @@ use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    commitments,
-    commitments::GroupsPublicParametersAccessors as _,
+    commitment,
+    commitment::GroupsPublicParametersAccessors as _,
     group,
     group::{GroupElement as _, Samplable},
     helpers::FlatMapResults,
@@ -165,7 +165,7 @@ impl<
             })
             .unzip();
 
-        // TODO: commitments are being computed twice. In order to avoid this, I would need to
+        // TODO: commitment are being computed twice. In order to avoid this, I would need to
         // somehow partially compute the group homomorphism, which is problematic..
         // TODO: perhaps introduce a "prove_inner()" function
         let (range_proof, _) = RangeProof::prove(

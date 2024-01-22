@@ -9,8 +9,8 @@ use serde::Serialize;
 use crate::{
     homomorphic_encryption,
     homomorphic_encryption::GroupsPublicParametersAccessors,
-    commitments,
-    commitments::GroupsPublicParametersAccessors as _,
+    commitment,
+    commitment::GroupsPublicParametersAccessors as _,
     dkg::decentralized_party::decommitment_proof_verification_round,
     group,
     group::{

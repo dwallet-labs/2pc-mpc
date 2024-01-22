@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     homomorphic_encryption,
     homomorphic_encryption::GroupsPublicParametersAccessors as _,
-    commitments::{GroupsPublicParametersAccessors as _, HomomorphicCommitmentScheme},
+    commitment::{GroupsPublicParametersAccessors as _, HomomorphicCommitmentScheme},
     group,
     group::{
         direct_product, direct_product::ThreeWayPublicParameters, paillier, self_product,
@@ -465,7 +465,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::{
         homomorphic_encryption::paillier,
-        commitments::Pedersen,
+        commitment::Pedersen,
         group::{ristretto, secp256k1, self_product},
         proofs::schnorr::{aggregation, language},
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
@@ -479,7 +479,7 @@ pub(crate) mod tests {
     >;
 
     use crate::{
-        commitments::pedersen,
+        commitment::pedersen,
         proofs::schnorr::language::enhanced::tests::{
             enhanced_language_public_parameters, generate_scalar_plaintext, RANGE_CLAIMS_PER_SCALAR,
         },

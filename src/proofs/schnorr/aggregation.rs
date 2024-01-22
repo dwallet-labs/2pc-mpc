@@ -324,7 +324,7 @@ mod benches {
 
     use super::*;
     use crate::{
-        commitments,
+        commitment,
         proofs::schnorr::{
             aggregation::{decommitment_round::Decommitment, proof_share_round::ProofShare},
             Language, Proof,

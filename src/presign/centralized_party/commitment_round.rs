@@ -5,8 +5,8 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    commitments,
-    commitments::{pedersen, Pedersen},
+    commitment,
+    commitment::{pedersen, Pedersen},
     group,
     group::{GroupElement as _, GroupElement, PrimeGroupElement, Samplable},
     presign::centralized_party::proof_verification_round,
