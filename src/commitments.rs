@@ -59,7 +59,15 @@ pub trait HomomorphicCommitmentScheme<const MESSAGE_SPACE_SCALAR_LIMBS: usize>:
     /// public parameters.
     fn new(public_parameters: &Self::PublicParameters) -> group::Result<Self>;
 
-    // TODO: doc
+    /// $\Com_{\pp}$: the commitment function $\calM_{\pp}\times \calR_{\pp} \rightarrow \calC_{\pp}$
+    /// for message space $\calM_{\pp}$, randomness space $\calR_{\pp}$ and commitment space $\calC_{\pp}$.
+    ///
+    /// For a message $\vec{m}\in \calM_{\pp}$, the algorithm draws $\rho \gets R_{\pp}$ uniformly at random,
+    /// and computes commitment $C = \Com_{\pp}(\vec{m};\rho)$.
+    ///
+    /// Since this is a homomorphic commitment scheme, we have that $\calM,\calR$ and $\calC$ are all abelian groups, and for all $\vec{m}_1, \vec{m}_2 \in \calM$, $\rho_1, \rho_2\in \calR$
+    /// we have (in the following, `$+$' is defined differently for each group):
+    /// $$ \Com(\vec{m}_1; \rho_1) + \Com(\vec{m}_2; \rho_2) = \Com(\vec{m}_1 + \vec{m}_2; \rho_1 + \rho_2) $$
     fn commit(
         &self,
         message: &Self::MessageSpaceGroupElement,

@@ -28,14 +28,13 @@ use crate::{
         schnorr::{
             enhanced::{DecomposableWitness, EnhanceableLanguage},
             language,
+            proof::SOUND_PROOFS_REPETITIONS,
             language::GroupsPublicParameters,
         },
     },
     traits::Reduce,
     AdditivelyHomomorphicEncryptionKey,
 };
-
-pub const REPETITIONS: usize = 1;
 
 /// Committed Linear Evaluation Schnorr Language
 ///
@@ -127,7 +126,7 @@ impl<
         const DIMENSION: usize,
         GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    > schnorr::Language<REPETITIONS>
+    > schnorr::Language<SOUND_PROOFS_REPETITIONS>
     for Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
@@ -230,7 +229,7 @@ impl<
         GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
     >
     EnhanceableLanguage<
-        REPETITIONS,
+        SOUND_PROOFS_REPETITIONS,
         NUM_RANGE_CLAIMS,
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         direct_product::GroupElement<
@@ -690,7 +689,7 @@ pub type EnhancedProof<
     RangeProof,
     ProtocolContext,
 > = schnorr::enhanced::Proof<
-    REPETITIONS,
+    SOUND_PROOFS_REPETITIONS,
     NUM_RANGE_CLAIMS,
     MESSAGE_SPACE_SCALAR_LIMBS,
     RangeProof,
@@ -752,7 +751,7 @@ pub(crate) mod tests {
         enhanced_language_public_parameters, generate_scalar_plaintext, RANGE_CLAIMS_PER_SCALAR,
     };
 
-    pub(crate) fn public_parameters() -> language::PublicParameters<REPETITIONS, Lang> {
+    pub(crate) fn public_parameters() -> language::PublicParameters<SOUND_PROOFS_REPETITIONS, Lang> {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
@@ -819,9 +818,9 @@ pub(crate) mod tests {
     }
 
     fn generate_witnesses(
-        language_public_parameters: &language::PublicParameters<REPETITIONS, Lang>,
+        language_public_parameters: &language::PublicParameters<SOUND_PROOFS_REPETITIONS, Lang>,
         batch_size: usize,
-    ) -> Vec<language::WitnessSpaceGroupElement<REPETITIONS, Lang>> {
+    ) -> Vec<language::WitnessSpaceGroupElement<SOUND_PROOFS_REPETITIONS, Lang>> {
         iter::repeat_with(|| {
             let coefficients = array::from_fn(|_| generate_scalar_plaintext()).into();
 
@@ -888,7 +887,7 @@ pub(crate) mod tests {
         );
 
         schnorr::proof::enhanced::tests::valid_proof_verifies::<
-            REPETITIONS,
+            SOUND_PROOFS_REPETITIONS,
             NUM_RANGE_CLAIMS,
             direct_product::GroupElement<
                 self_product::GroupElement<DIMENSION, secp256k1::Scalar>,
@@ -930,7 +929,7 @@ pub(crate) mod tests {
         );
 
         schnorr::proof::enhanced::tests::aggregates::<
-            REPETITIONS,
+            SOUND_PROOFS_REPETITIONS,
             NUM_RANGE_CLAIMS,
             direct_product::GroupElement<
                 self_product::GroupElement<DIMENSION, secp256k1::Scalar>,

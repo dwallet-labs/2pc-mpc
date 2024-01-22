@@ -15,6 +15,14 @@ use crate::{
 // TODO: should this be dependent on some variables?
 const REPETITIONS: usize = 128;
 
+// TODO
+// 4. range check - no need to check response is smaller than upper bound if we set the
+//    witness size to a group of the specific size that we prove the range for.
+// gap is for the prover not the verifier i.e. the verifier know that the witness is of
+// witness size, i.e. response size, but prover had to have the witness even smaller than
+// that
+// 7. if we don't use multiplies of LIMB we need to do the range check.
+
 pub type WitnessSpaceGroupElement<const MESSAGE_SPACE_SCALAR_LIMBS: usize, CommitmentScheme> =
     schnorr::language::WitnessSpaceGroupElement<
         REPETITIONS,

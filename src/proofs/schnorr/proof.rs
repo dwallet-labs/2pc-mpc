@@ -28,6 +28,12 @@ use crate::{
     ComputationalSecuritySizedNumber, COMPUTATIONAL_SECURITY_PARAMETERS,
 };
 
+/// The number of repetitions used for sound Schnorr proofs, i.e. proofs that achieve negligible soundness error.
+pub const SOUND_PROOFS_REPETITIONS: usize = 1;
+
+/// The number of repetitions used for Schnorr proofs that achieve 1/2 soundness error.
+pub const BIT_SOUNDNESS_PROOFS_REPETITIONS: usize = ComputationalSecuritySizedNumber::BITS;
+
 // For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
 // Setting it to be 128-bit larger than the computational security parameter $\kappa$ allows us to
 // use any batch size (Rust does not allow a vector larger than $2^64$ elements,
@@ -90,19 +96,6 @@ impl<
             .map(|witness| Language::group_homomorphism(witness, language_public_parameters))
             .collect();
         let statements = statements?;
-
-        // TODO
-        // 4. range check - no need to check response is smaller than upper bound if we set the
-        //    witness size to a group of the specific size that we prove the range for.
-        // gap is for the prover not the verifier i.e. the verifier know that the witness is of
-        // witness size, i.e. response size, but prover had to have the witness even smaller than
-        // that
-        // 6. randomizer should be bigger than the witness max size by 128-bit + challenge size.
-        //    witness max size should be defined in the public paramters, and then randomizer size
-        //    is bigger than that using above formula and is also dynamic. so the sampling should be
-        //    bounded. And then it doesn't need to be the phi(n) bullshit, we just need to have the
-        //    witness group be of size range claim upper bound + 128 + challenge size.
-        // 7. if we don't use multiplies of LIMB we need to do the range check.
 
         Self::prove_with_statements(
             protocol_context,
@@ -190,17 +183,6 @@ impl<
         let challenges: [Vec<ChallengeSizedNumber>; REPETITIONS] =
             Self::compute_challenges(batch_size, &mut transcript);
 
-        // Another: TODO: these don't go through modulation and we can do them not in the group
-
-        // Using the "small exponents" method for batching;
-        // the exponents actually need to account for the batch size.
-        // We added 64-bit for that, which is fine for sampling randmoness,
-        // but in practice the exponentiation (i.e. `scalar_mul`) could use
-        // the real bound: `128 + log2(BatchSize)+2 < 192` to increase performance.
-        // We leave that as future work in case this becomes a bottleneck.
-
-        // TODO: update comment now that it isn't necessairly 128 bit
-
         let challenge_bit_size = Language::challenge_bits(batch_size)?;
         let responses = randomizers
             .into_iter()
@@ -212,13 +194,14 @@ impl<
                     .zip(challenges)
                     .filter_map(|(witness, challenge)| {
                         if challenge_bit_size == 1 {
-                            // A special case that needs special caring
+                            // A special case that needs special caring.
                             if challenge == ChallengeSizedNumber::ZERO {
                                 None
                             } else {
                                 Some(witness)
                             }
                         } else {
+                            // Using the "small exponents" method for batching.
                             Some(witness.scalar_mul_bounded(&challenge, challenge_bit_size))
                         }
                     })

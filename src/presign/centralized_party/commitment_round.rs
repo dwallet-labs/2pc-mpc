@@ -46,9 +46,9 @@ pub struct SignatureNonceSharesCommitmentsAndBatchedProof<
 > {
     pub(in crate::presign) commitments: Vec<pedersen::CommitmentSpaceGroupElement<GroupElement>>,
     pub(in crate::presign) proof: schnorr::Proof<
-        { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPETITIONS },
+        { schnorr::proof::SOUND_PROOFS_REPETITIONS },
         knowledge_of_decommitment::Language<
-            { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             SCALAR_LIMBS,
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >,
@@ -125,15 +125,15 @@ impl<
             )?;
 
         let language_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
-            { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             SCALAR_LIMBS,
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >(commitment_scheme_public_parameters.clone());
 
         let (proof, commitments) = schnorr::Proof::<
-            { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             knowledge_of_decommitment::Language<
-                { knowledge_of_decommitment::ZERO_KNOWLEDGE_REPETITIONS },
+                { schnorr::proof::SOUND_PROOFS_REPETITIONS },
                 SCALAR_LIMBS,
                 Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
             >,

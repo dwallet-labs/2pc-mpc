@@ -101,7 +101,7 @@ where
         GroupElement,
         EncryptionKey,
     >: schnorr::Language<
-            { encryption_of_discrete_log::REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 EncryptionKey,
@@ -119,7 +119,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { encryption_of_discrete_log::REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDLWitness,

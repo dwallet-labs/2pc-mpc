@@ -17,10 +17,8 @@ use crate::{
 
 // TODO: scalar_mul_bounded
 
-// TODO: doc, name
-/// A Batched Pedersen Commitment
-/// The public parameters ['PublicParameters'] for this commitment should be carefully constructed.
-/// TODO: Safe for cyclic groups, but doesn't need generator(s). Known order?
+/// A Batched Pedersen Commitment:
+/// $$\Com_\pp(m;\rho):=\Ped.\Com_{\GG,G,H,q}(\vec{m},\vec{\rho})=(m_1\cdot G + \rho_1 \cdot H, \ldots, m_n\cdot G + \rho_n \cdot H)$$
 #[derive(PartialEq, Clone, Debug, Eq)]
 pub struct MultiPedersen<
     const BATCH_SIZE: usize,
@@ -90,6 +88,8 @@ where
         message: &Self::MessageSpaceGroupElement,
         randomness: &Self::RandomnessSpaceGroupElement,
     ) -> Self::CommitmentSpaceGroupElement {
+        // $$\Com_\pp(m;\rho):=\Ped.\Com_{\GG,G,H,q}(\vec{m},\vec{\rho})=(m_1\cdot G + \rho_1 \cdot H, \ldots, m_n\cdot G + \rho_n \cdot H)$$
+        // TODO: wrap `Pedersen` and use its `commit` logic
         let messages: [_; BATCH_SIZE] = (*message).into();
         let randomnesses: [_; BATCH_SIZE] = (*randomness).into();
 
@@ -119,7 +119,7 @@ type CommitmentSpaceGroupElement<GroupElement> = GroupElement;
 type CommitmentSpacePublicParameters<GroupElement> =
     group::PublicParameters<CommitmentSpaceGroupElement<GroupElement>>;
 
-/// The Public Parameters of a Pedersen Commitment
+/// The Public Parameters of a Pedersen Commitment.
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct PublicParameters<
     const BATCH_SIZE: usize,

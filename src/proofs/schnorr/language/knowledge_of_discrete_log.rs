@@ -14,11 +14,10 @@ use crate::{
     proofs,
     proofs::{
         schnorr,
-        schnorr::{aggregation, language},
+        schnorr::{proof::SOUND_PROOFS_REPETITIONS, aggregation, language},
     },
 };
 
-pub(crate) const REPETITIONS: usize = 1;
 
 /// Knowledge of Discrete Log Schnorr Language.
 ///
@@ -44,7 +43,7 @@ impl<
             + for<'r> Mul<&'r GroupElement, Output = GroupElement>
             + Copy,
         GroupElement: group::GroupElement,
-    > schnorr::Language<REPETITIONS> for Language<Scalar, GroupElement>
+    > schnorr::Language<SOUND_PROOFS_REPETITIONS> for Language<Scalar, GroupElement>
 {
     type WitnessSpaceGroupElement = Scalar;
     type StatementSpaceGroupElement = GroupElement;
@@ -122,7 +121,7 @@ impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
 }
 
 pub type Proof<Scalar, GroupElement, ProtocolContext> =
-    schnorr::Proof<{ REPETITIONS }, Language<Scalar, GroupElement>, ProtocolContext>;
+    schnorr::Proof<{ SOUND_PROOFS_REPETITIONS }, Language<Scalar, GroupElement>, ProtocolContext>;
 
 #[cfg(any(test, feature = "benchmarking"))]
 mod tests {
@@ -136,7 +135,7 @@ mod tests {
 
     pub(crate) type Lang = Language<secp256k1::Scalar, secp256k1::GroupElement>;
 
-    pub(crate) fn language_public_parameters() -> language::PublicParameters<REPETITIONS, Lang> {
+    pub(crate) fn language_public_parameters() -> language::PublicParameters<SOUND_PROOFS_REPETITIONS, Lang> {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
@@ -155,7 +154,7 @@ mod tests {
     fn valid_proof_verifies(#[case] batch_size: usize) {
         let language_public_parameters = language_public_parameters();
 
-        language::tests::valid_proof_verifies::<REPETITIONS, Lang>(
+        language::tests::valid_proof_verifies::<SOUND_PROOFS_REPETITIONS, Lang>(
             language_public_parameters,
             batch_size,
         )
@@ -169,13 +168,13 @@ mod tests {
     #[case(5, 2)]
     fn aggregates(#[case] number_of_parties: usize, #[case] batch_size: usize) {
         let language_public_parameters = language_public_parameters();
-        let witnesses = language::tests::generate_witnesses_for_aggregation::<REPETITIONS, Lang>(
+        let witnesses = language::tests::generate_witnesses_for_aggregation::<SOUND_PROOFS_REPETITIONS, Lang>(
             &language_public_parameters,
             number_of_parties,
             batch_size,
         );
 
-        aggregation::tests::aggregates::<REPETITIONS, Lang>(&language_public_parameters, witnesses)
+        aggregation::tests::aggregates::<SOUND_PROOFS_REPETITIONS, Lang>(&language_public_parameters, witnesses)
     }
 
     #[rstest]
@@ -188,7 +187,7 @@ mod tests {
         // No invalid values as secp256k1 statically defines group,
         // `k256::AffinePoint` assures deserialized values are on curve,
         // and `Value` can only be instantiated through deserialization
-        language::tests::invalid_proof_fails_verification::<REPETITIONS, Lang>(
+        language::tests::invalid_proof_fails_verification::<SOUND_PROOFS_REPETITIONS, Lang>(
             None,
             None,
             language_public_parameters,
@@ -213,8 +212,8 @@ mod benches {
     pub(crate) fn benchmark(c: &mut Criterion) {
         let language_public_parameters = language_public_parameters();
 
-        language::benchmark::<REPETITIONS, Lang>(language_public_parameters.clone(), None, c);
+        language::benchmark::<SOUND_PROOFS_REPETITIONS, Lang>(language_public_parameters.clone(), None, c);
 
-        aggregation::benchmark::<REPETITIONS, Lang>(language_public_parameters, None, c);
+        aggregation::benchmark::<SOUND_PROOFS_REPETITIONS, Lang>(language_public_parameters, None, c);
     }
 }

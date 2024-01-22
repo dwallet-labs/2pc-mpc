@@ -20,9 +20,13 @@ use crate::{
 
 // TODO: scalar_mul_bounded
 
-/// A Batched Pedersen Commitment
-/// The public parameters ['PublicParameters'] for this commitment should be carefully constructed.
-/// TODO: Safe for cyclic groups, but doesn't need generator(s). Known order?
+/// A Batched Pedersen Commitment:
+/// $$\Com_\pp(m;\rho):=\Ped.\Com_{\GG,G,H,q}(\vec{m},\rho)=m_1\cdot G_1 + \ldots + m_n\cdot G_n + \rho \cdot H$$
+///
+/// The public parameters ['PublicParameters'] for pedersen commitment should be carefully constructed,
+/// as wrong choice of generators can break the commitment's binding and/or hiding propert(ies).
+/// We offer a safe instantiation for prime-order groups with ['PublicParameters::derive'].
+/// Otherwise, it is on the responsibility of the caller to assure their group and generator instantiation is sound.
 #[derive(PartialEq, Clone, Debug, Eq)]
 pub struct Pedersen<
     const BATCH_SIZE: usize,
@@ -99,6 +103,7 @@ where
         message: &self_product::GroupElement<BATCH_SIZE, Scalar>,
         randomness: &Scalar,
     ) -> GroupElement {
+        // $$\Com_\pp(m;\rho):=\Ped.\Com_{\GG,G,H,q}(\vec{m},\rho)=m_1\cdot G_1 + \ldots + m_n\cdot G_n + \rho \cdot H$$
         self.message_generators
             .iter()
             .zip::<&[Scalar; BATCH_SIZE]>(message.into())
@@ -121,7 +126,11 @@ pub type CommitmentSpaceGroupElement<GroupElement> = GroupElement;
 pub type CommitmentSpacePublicParameters<GroupElement> =
     group::PublicParameters<CommitmentSpaceGroupElement<GroupElement>>;
 
-/// The Public Parameters of a Pedersen Commitment
+/// The Public Parameters of a Pedersen Commitment.
+/// This struct should be carefully instantiated,
+/// as wrong choice of generators can break the commitment's binding and/or hiding propert(ies).
+/// We offer a safe instantiation for prime-order groups with ['PublicParameters::derive'].
+/// Otherwise, it is on the responsibility of the caller to assure their group and generator instantiation is sound.
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct PublicParameters<
     const BATCH_SIZE: usize,
@@ -180,22 +189,20 @@ impl<
             PublicParameters = GroupPublicParameters,
         >,
     {
-        let mut message_generators = array::from_fn(|i| {
-            GroupElement::hash_to_group(
-                // TODO: add organization name, repo name?
-                format!("commitments/pedersen: message generator #{:?}", i).as_bytes(),
-            )
+        let message_generators = array::from_fn(|i| {
+            if i == 0 {
+                GroupElement::generator_from_public_parameters(&group_public_parameters)
+            } else {GroupElement::hash_to_group(
+                format!("commitment/pedersen: message generator #{:?}", i).as_bytes(),
+            )}
+
         })
         .flat_map_results()?;
-
-        // TODO: we want this for sure?
-        message_generators[0] =
-            GroupElement::generator_from_public_parameters(&group_public_parameters)?;
 
         let message_generators = message_generators.map(|element| element.value());
 
         let randomness_generator =
-            GroupElement::hash_to_group("commitments/pedersen: randomness generator".as_bytes())?
+            GroupElement::hash_to_group("commitment/pedersen: randomness generator".as_bytes())?
                 .value();
 
         Ok(

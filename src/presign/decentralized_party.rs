@@ -94,7 +94,7 @@ where
         GroupElement,
         EncryptionKey,
     >: schnorr::Language<
-            { encryption_of_discrete_log::REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 EncryptionKey,
@@ -112,7 +112,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { encryption_of_discrete_log::REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDLWitness,
@@ -123,7 +123,7 @@ where
         GroupElement,
         EncryptionKey,
     >: schnorr::Language<
-            { encryption_of_tuple::REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             WitnessSpaceGroupElement = encryption_of_tuple::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 EncryptionKey,
@@ -140,7 +140,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { encryption_of_tuple::REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDHWitness,
@@ -149,7 +149,7 @@ where
     pub fn new(
         masks_and_encrypted_masked_key_share: Vec<
             enhanced::StatementSpaceGroupElement<
-                { encryption_of_tuple::REPETITIONS },
+                { schnorr::proof::SOUND_PROOFS_REPETITIONS },
                 RANGE_CLAIMS_PER_SCALAR,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RangeProof,
@@ -175,7 +175,7 @@ where
         >,
         encrypted_nonce_shares_and_public_shares: Vec<
             enhanced::StatementSpaceGroupElement<
-                { encryption_of_tuple::REPETITIONS },
+                { schnorr::proof::SOUND_PROOFS_REPETITIONS },
                 RANGE_CLAIMS_PER_SCALAR,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RangeProof,

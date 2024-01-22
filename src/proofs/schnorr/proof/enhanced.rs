@@ -343,6 +343,12 @@ impl<
         // + ComputationalSecuritySizedNumber::BITS
         // + StatisticalSecuritySizedNumber::BITS;
 
+        // 6. randomizer should be bigger than the witness max size by 128-bit + challenge size.
+        //    witness max size should be defined in the public paramters, and then randomizer size
+        //    is bigger than that using above formula and is also dynamic. so the sampling should be
+        //    bounded. And then it doesn't need to be the phi(n) bullshit, we just need to have the
+        //    witness group be of size range claim upper bound + 128 + challenge size.
+
         // TODO: check that this is < SCALAR_LIMBS?
         // TODO: formula + challenge : in lightning its 1, in bp 128
         let sampling_bit_size: usize = RangeProof::RANGE_CLAIM_BITS

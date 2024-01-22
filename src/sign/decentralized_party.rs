@@ -108,7 +108,7 @@ where
         GroupElement,
         EncryptionKey,
     >: schnorr::Language<
-            { committed_linear_evaluation::REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             WitnessSpaceGroupElement = committed_linear_evaluation::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 SCALAR_LIMBS,
@@ -131,7 +131,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { committed_linear_evaluation::REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             NUM_RANGE_CLAIMS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedDComEvalWitness,
@@ -149,7 +149,7 @@ where
             >,
             ahe::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
             schnorr::Proof<
-                { committment_of_discrete_log::REPETITIONS },
+                { schnorr::proof::SOUND_PROOFS_REPETITIONS },
                 committment_of_discrete_log::Language<
                     SCALAR_LIMBS,
                     GroupElement::Scalar,
@@ -159,7 +159,7 @@ where
                 ProtocolContext,
             >,
             schnorr::Proof<
-                { discrete_log_ratio_of_committed_values::REPETITIONS },
+                { schnorr::proof::SOUND_PROOFS_REPETITIONS },
                 discrete_log_ratio_of_committed_values::Language<
                     SCALAR_LIMBS,
                     GroupElement::Scalar,
@@ -281,7 +281,7 @@ where
             );
 
         let language_public_parameters = EnhancedPublicParameters::<
-            { committed_linear_evaluation::REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             NUM_RANGE_CLAIMS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,

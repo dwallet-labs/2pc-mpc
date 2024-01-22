@@ -24,14 +24,12 @@ use crate::{
         schnorr,
         schnorr::{
             enhanced::{DecomposableWitness, EnhanceableLanguage},
-            language,
+            language, proof::SOUND_PROOFS_REPETITIONS,
             language::GroupsPublicParameters,
         },
     },
     AdditivelyHomomorphicEncryptionKey,
 };
-
-pub const REPETITIONS: usize = 1;
 
 // TODO: doc that this is a language just for class groups, otherwise we need the enhanced version.
 /// Encryption of Discrete Log Schnorr Language
@@ -97,7 +95,7 @@ impl<
         const SCALAR_LIMBS: usize,
         GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    > schnorr::Language<REPETITIONS>
+    > schnorr::Language<SOUND_PROOFS_REPETITIONS>
     for Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>
 {
     type WitnessSpaceGroupElement =
@@ -143,7 +141,7 @@ impl<
         GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
     >
     EnhanceableLanguage<
-        REPETITIONS,
+        SOUND_PROOFS_REPETITIONS,
         RANGE_CLAIMS_PER_SCALAR,
         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
         paillier::RandomnessSpaceGroupElement,
@@ -449,7 +447,7 @@ pub type EnhancedProof<
     RangeProof,
     ProtocolContext,
 > = schnorr::enhanced::Proof<
-    REPETITIONS,
+    SOUND_PROOFS_REPETITIONS,
     NUM_RANGE_CLAIMS,
     MESSAGE_SPACE_SCALAR_LIMBS,
     RangeProof,
@@ -489,7 +487,7 @@ pub(crate) mod tests {
         paillier::EncryptionKey,
     >;
 
-    pub(crate) fn public_parameters() -> language::PublicParameters<REPETITIONS, Lang> {
+    pub(crate) fn public_parameters() -> language::PublicParameters<SOUND_PROOFS_REPETITIONS, Lang> {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
@@ -517,9 +515,9 @@ pub(crate) mod tests {
     }
 
     fn generate_witnesses(
-        language_public_parameters: &language::PublicParameters<REPETITIONS, Lang>,
+        language_public_parameters: &language::PublicParameters<SOUND_PROOFS_REPETITIONS, Lang>,
         batch_size: usize,
-    ) -> Vec<language::WitnessSpaceGroupElement<REPETITIONS, Lang>> {
+    ) -> Vec<language::WitnessSpaceGroupElement<SOUND_PROOFS_REPETITIONS, Lang>> {
         iter::repeat_with(|| {
             let discrete_log = generate_scalar_plaintext();
 
@@ -551,7 +549,7 @@ pub(crate) mod tests {
             .clone();
 
         schnorr::proof::enhanced::tests::valid_proof_verifies::<
-            REPETITIONS,
+            SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             paillier::RandomnessSpaceGroupElement,
             Lang,
@@ -582,7 +580,7 @@ pub(crate) mod tests {
             .clone();
 
         schnorr::proof::enhanced::tests::aggregates::<
-            REPETITIONS,
+            SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             paillier::RandomnessSpaceGroupElement,
             Lang,
@@ -602,7 +600,7 @@ pub(crate) mod tests {
     //     let (language_public_parameters, range_proof_public_parameters) = public_parameters();
     //
     //     language::enhanced::tests::proof_with_out_of_range_witness_fails::<
-    //         REPETITIONS,
+    //         SOUND_PROOFS_REPETITIONS,
     //         { ristretto::SCALAR_LIMBS },
     //         RANGE_CLAIMS_PER_SCALAR,
     //         { range::bulletproofs::RANGE_CLAIM_LIMBS },
@@ -629,7 +627,7 @@ pub(crate) mod tests {
     //     // No invalid values as secp256k1 statically defines group,
     //     // `k256::AffinePoint` assures deserialized values are on curve,
     //     // and `Value` can only be instantiated through deserialization
-    //     language::tests::invalid_proof_fails_verification::<REPETITIONS, Lang>(
+    //     language::tests::invalid_proof_fails_verification::<SOUND_PROOFS_REPETITIONS, Lang>(
     //         None,
     //         None,
     //         language_public_parameters,
@@ -659,10 +657,10 @@ pub(crate) mod tests {
 //     pub(crate) fn benchmark(c: &mut Criterion) {
 //         let (language_public_parameters, range_proof_public_parameters) = public_parameters();
 //
-//         language::benchmark::<REPETITIONS, Lang>(language_public_parameters.clone(), None, c);
+//         language::benchmark::<SOUND_PROOFS_REPETITIONS, Lang>(language_public_parameters.clone(), None, c);
 //
 //         range::benchmark::<
-//             REPETITIONS,
+//             SOUND_PROOFS_REPETITIONS,
 //             { ristretto::SCALAR_LIMBS },
 //             { RANGE_CLAIMS_PER_SCALAR },
 //             { range::bulletproofs::RANGE_CLAIM_LIMBS },
@@ -675,7 +673,7 @@ pub(crate) mod tests {
 //         );
 //
 //         aggregation::benchmark_enhanced::<
-//             REPETITIONS,
+//             SOUND_PROOFS_REPETITIONS,
 //             { ristretto::SCALAR_LIMBS },
 //             { RANGE_CLAIMS_PER_SCALAR },
 //             { range::bulletproofs::RANGE_CLAIM_LIMBS },

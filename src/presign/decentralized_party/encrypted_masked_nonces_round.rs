@@ -90,7 +90,7 @@ where
         GroupElement,
         EncryptionKey,
     >: schnorr::Language<
-            { encryption_of_tuple::REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             WitnessSpaceGroupElement = encryption_of_tuple::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 EncryptionKey,
@@ -107,7 +107,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { encryption_of_tuple::REPETITIONS },
+            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDHWitness,
@@ -134,7 +134,7 @@ where
     ) -> proofs::Result<
         Vec<
             range::CommitmentRoundParty<
-                { encryption_of_tuple::REPETITIONS },
+                { schnorr::proof::SOUND_PROOFS_REPETITIONS },
                 RANGE_CLAIMS_PER_SCALAR,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 UnboundedEncDHWitness,
@@ -202,7 +202,7 @@ where
                     );
 
                     let language_public_parameters = EnhancedPublicParameters::<
-                        { encryption_of_tuple::REPETITIONS },
+                        { schnorr::proof::SOUND_PROOFS_REPETITIONS },
                         RANGE_CLAIMS_PER_SCALAR,
                         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                         RangeProof,
@@ -229,7 +229,7 @@ where
                     );
 
                     EnhancedLanguage::<
-                        { encryption_of_tuple::REPETITIONS },
+                        { schnorr::proof::SOUND_PROOFS_REPETITIONS },
                         RANGE_CLAIMS_PER_SCALAR,
                         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                         RangeProof,
@@ -252,7 +252,7 @@ where
                     )
                     .map(|witness| {
                         RangeProof::new_enhanced_session::<
-                            { encryption_of_tuple::REPETITIONS },
+                            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
                             RANGE_CLAIMS_PER_SCALAR,
                             UnboundedEncDHWitness,
                             encryption_of_tuple::Language<
