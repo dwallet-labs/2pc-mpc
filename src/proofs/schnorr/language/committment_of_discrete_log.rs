@@ -122,7 +122,6 @@ impl<Scalar: group::GroupElement> WitnessAccessors<Scalar>
 pub trait StatementAccessors<GroupElement: group::GroupElement> {
     fn committment_of_discrete_log(&self) -> &GroupElement;
 
-    // TODO: name
     fn base_by_discrete_log(&self) -> &GroupElement;
 }
 
