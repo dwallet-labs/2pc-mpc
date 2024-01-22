@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use super::DIMENSION;
 use crate::{
-    ahe,
-    ahe::GroupsPublicParametersAccessors,
+    homomorphic_encryption,
+    homomorphic_encryption::GroupsPublicParametersAccessors,
     commitments,
     commitments::{pedersen, MultiPedersen, Pedersen},
     group,
@@ -159,7 +159,7 @@ where
                 NUM_RANGE_CLAIMS,
                 RangeProof,
             >,
-            ahe::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+            homomorphic_encryption::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
             schnorr::Proof<
                 { schnorr::proof::SOUND_PROOFS_REPETITIONS },
                 committment_of_discrete_log::Language<

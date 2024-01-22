@@ -5,8 +5,8 @@ use crypto_bigint::rand_core::CryptoRngCore;
 use serde::Serialize;
 
 use crate::{
-    ahe,
-    ahe::GroupsPublicParametersAccessors as _,
+    homomorphic_encryption,
+    homomorphic_encryption::GroupsPublicParametersAccessors as _,
     commitments::GroupsPublicParametersAccessors as _,
     group,
     group::{CyclicGroupElement, GroupElement as _, GroupElement, PrimeGroupElement, Samplable},
@@ -142,7 +142,7 @@ where
                 RANGE_CLAIMS_PER_SCALAR,
                 RangeProof,
             >,
-            ahe::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+            homomorphic_encryption::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
             encryption_of_tuple::EnhancedProof<
                 RANGE_CLAIMS_PER_SCALAR,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -172,7 +172,7 @@ where
             Presign<
                 GroupElement::Value,
                 group::Value<GroupElement::Scalar>,
-                ahe::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+                homomorphic_encryption::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
             >,
         >,
     > {

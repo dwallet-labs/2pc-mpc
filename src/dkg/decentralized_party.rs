@@ -2,7 +2,7 @@ pub use decommitment_proof_verification_round::Output;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ahe, group,
+    homomorphic_encryption, group,
     group::{GroupElement as _, PrimeGroupElement, Samplable},
     proofs,
     proofs::{
@@ -52,7 +52,7 @@ impl<
             RANGE_CLAIMS_PER_SCALAR,
             RangeProof,
         >,
-        ahe::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+        homomorphic_encryption::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
         encryption_of_discrete_log::EnhancedProof<
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,

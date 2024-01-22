@@ -16,8 +16,8 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::{
-        ahe,
-        ahe::{
+        homomorphic_encryption,
+        homomorphic_encryption::{
             paillier::{
                 tests::{N, SECRET_KEY},
                 EncryptionKey as PaillierEncryptionKey,
@@ -52,10 +52,10 @@ pub(crate) mod tests {
         let secp256k1_group_public_parameters =
             secp256k1::group_element::PublicParameters::default();
 
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+        let paillier_public_parameters = homomorphic_encryption::paillier::PublicParameters::new(N).unwrap();
 
         let paillier_encryption_key =
-            ahe::paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();
+            homomorphic_encryption::paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();
 
         let generator = secp256k1::GroupElement::new(
             secp256k1_group_public_parameters.generator,
@@ -123,10 +123,10 @@ pub(crate) mod tests {
         let bulletproofs_public_parameters =
             bulletproofs::PublicParameters::<{ RANGE_CLAIMS_PER_SCALAR }>::default();
 
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+        let paillier_public_parameters = homomorphic_encryption::paillier::PublicParameters::new(N).unwrap();
 
         let paillier_encryption_key =
-            ahe::paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();
+            homomorphic_encryption::paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();
 
         let unbounded_encdl_witness_public_parameters = paillier_public_parameters
             .randomness_space_public_parameters()

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use tiresias::secret_sharing::shamir::Polynomial;
 
 use crate::{
-    ahe, commitments,
+    homomorphic_encryption, commitments,
     commitments::{
         pedersen, GroupsPublicParametersAccessors as _, HomomorphicCommitmentScheme, Pedersen,
     },
@@ -740,13 +740,13 @@ pub type StatementSpaceGroupElement<
 
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
-    use ahe::paillier::tests::N;
+    use homomorphic_encryption::paillier::tests::N;
     use crypto_bigint::U256;
     use rand_core::OsRng;
 
     use super::*;
     use crate::{
-        ahe::GroupsPublicParametersAccessors,
+        homomorphic_encryption::GroupsPublicParametersAccessors,
         group::secp256k1,
         proofs::range::{
             bulletproofs::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RangeClaimGroupElement,
@@ -776,7 +776,7 @@ pub(crate) mod tests {
         let scalar =
             secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
 
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+        let paillier_public_parameters = homomorphic_encryption::paillier::PublicParameters::new(N).unwrap();
 
         paillier::PlaintextSpaceGroupElement::new(
             Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from(&U256::from(scalar.value())),

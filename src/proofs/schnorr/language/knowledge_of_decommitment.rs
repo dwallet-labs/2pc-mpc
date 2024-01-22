@@ -228,7 +228,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        ahe::paillier::tests::N,
+        homomorphic_encryption::paillier::tests::N,
         commitments::{pedersen, Pedersen},
         group::{secp256k1, GroupElement, Samplable},
         proofs::schnorr::{aggregation, language, language::Language as _},

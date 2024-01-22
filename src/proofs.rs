@@ -7,7 +7,7 @@ pub(crate) mod transcript_protocol;
 pub use range::{bulletproofs, lightningproofs, RangeProof};
 use transcript_protocol::TranscriptProtocol;
 
-use crate::{ahe, group};
+use crate::{homomorphic_encryption, group};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -30,7 +30,7 @@ pub enum Error {
     GroupInstantiation(#[from] group::Error),
 
     #[error("additively homomorphic encryption scheme error")]
-    AdditivelyHomomorphicEncryptionScheme(#[from] ahe::Error),
+    AdditivelyHomomorphicEncryptionScheme(#[from] homomorphic_encryption::Error),
 
     #[error("schnorr proof aggregation protocol error")]
     AggregationProtocol(#[from] schnorr::aggregation::Error),

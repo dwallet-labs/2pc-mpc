@@ -9,8 +9,8 @@ use serde::Serialize;
 
 use super::{centralized_party::PublicNonceEncryptedPartialSignatureAndProof, DIMENSION};
 use crate::{
-    ahe,
-    ahe::{AdditivelyHomomorphicDecryptionKeyShare, GroupsPublicParametersAccessors as _},
+    homomorphic_encryption,
+    homomorphic_encryption::{AdditivelyHomomorphicDecryptionKeyShare, GroupsPublicParametersAccessors as _},
     commitments,
     commitments::{pedersen, GroupsPublicParametersAccessors as _, MultiPedersen, Pedersen},
     group,
@@ -147,7 +147,7 @@ where
                 NUM_RANGE_CLAIMS,
                 RangeProof,
             >,
-            ahe::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+            homomorphic_encryption::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
             schnorr::Proof<
                 { schnorr::proof::SOUND_PROOFS_REPETITIONS },
                 committment_of_discrete_log::Language<

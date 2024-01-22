@@ -1,6 +1,6 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
-pub use ahe::{AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey};
+pub use homomorphic_encryption::{AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey};
 #[cfg(feature = "benchmarking")]
 use criterion::criterion_group;
 use crypto_bigint::{Concat, U128, U64};
@@ -8,7 +8,7 @@ use merlin::Transcript;
 use proofs::transcript_protocol::TranscriptProtocol as _;
 use serde::{Deserialize, Serialize};
 
-pub mod ahe;
+pub mod homomorphic_encryption;
 pub mod commitments;
 pub mod dkg;
 pub mod group;
@@ -69,7 +69,7 @@ pub enum Error {
     Proofs(#[from] proofs::Error),
 
     #[error("error in homomorphic encryption related operations")]
-    HomomorphicEncryption(#[from] ahe::Error),
+    HomomorphicEncryption(#[from] homomorphic_encryption::Error),
 
     #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]
     WrongDecommitment,

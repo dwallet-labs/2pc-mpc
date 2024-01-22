@@ -7,7 +7,7 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ahe::GroupsPublicParametersAccessors as _,
+    homomorphic_encryption::GroupsPublicParametersAccessors as _,
     commitments::GroupsPublicParametersAccessors as _,
     dkg::decentralized_party,
     group,

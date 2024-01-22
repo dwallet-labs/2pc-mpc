@@ -9,8 +9,8 @@ use crypto_bigint::{Encoding, Uint};
 use serde::Serialize;
 
 use crate::{
-    ahe,
-    ahe::{paillier::EncryptionKey as PaillierEncryptionKey, GroupsPublicParametersAccessors},
+    homomorphic_encryption,
+    homomorphic_encryption::{paillier::EncryptionKey as PaillierEncryptionKey, GroupsPublicParametersAccessors},
     commitments::{HomomorphicCommitmentScheme, Pedersen},
     group,
     group::{
@@ -150,7 +150,7 @@ impl<
         { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
         SCALAR_LIMBS,
         GroupElement,
-        ahe::paillier::EncryptionKey,
+        homomorphic_encryption::paillier::EncryptionKey,
     >
 {
     fn compose_witness(
@@ -280,7 +280,7 @@ impl<
         RandomnessSpacePublicParameters: Clone,
         CiphertextSpacePublicParameters: Clone,
         EncryptionKeyPublicParameters: AsRef<
-            ahe::GroupsPublicParameters<
+            homomorphic_encryption::GroupsPublicParameters<
                 PlaintextSpacePublicParameters,
                 RandomnessSpacePublicParameters,
                 CiphertextSpacePublicParameters,
@@ -467,7 +467,7 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::{
-        ahe::paillier,
+        homomorphic_encryption::paillier,
         commitments::pedersen,
         group::{ristretto, secp256k1, self_product},
         proofs::schnorr::{
@@ -493,7 +493,7 @@ pub(crate) mod tests {
         let secp256k1_group_public_parameters =
             secp256k1::group_element::PublicParameters::default();
 
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+        let paillier_public_parameters = homomorphic_encryption::paillier::PublicParameters::new(N).unwrap();
 
         let language_public_parameters = PublicParameters::<
             { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
@@ -642,7 +642,7 @@ pub(crate) mod tests {
 //
 //     use super::*;
 //     use crate::{
-//         ahe::paillier,
+//         homomorphic_encryption::paillier,
 //         group::{ristretto, secp256k1},
 //         proofs::{
 //             range,

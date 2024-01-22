@@ -11,8 +11,8 @@ use crypto_bigint::{Encoding, NonZero, Uint};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ahe,
-    ahe::{
+    homomorphic_encryption,
+    homomorphic_encryption::{
         CiphertextSpaceGroupElement, GroupsPublicParametersAccessors, RandomnessSpaceGroupElement,
     },
     commitments,
@@ -178,7 +178,7 @@ impl<
             MultiPedersen::new(&language_public_parameters.commitment_scheme_public_parameters)?;
 
         let ciphertexts = language_public_parameters.ciphertexts.map(|value| {
-            ahe::CiphertextSpaceGroupElement::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>::new(
+            homomorphic_encryption::CiphertextSpaceGroupElement::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>::new(
                 value,
                 language_public_parameters
                     .encryption_scheme_public_parameters
@@ -244,7 +244,7 @@ impl<
         RANGE_CLAIMS_PER_MASK,
         DIMENSION,
         GroupElement,
-        ahe::paillier::EncryptionKey,
+        homomorphic_encryption::paillier::EncryptionKey,
     >
 {
     fn compose_witness(
@@ -428,7 +428,7 @@ impl<
         CiphertextSpacePublicParameters: Clone,
         CiphertextSpaceValue: Serialize,
         EncryptionKeyPublicParameters: AsRef<
-            ahe::GroupsPublicParameters<
+            homomorphic_encryption::GroupsPublicParameters<
                 PlaintextSpacePublicParameters,
                 RandomnessSpacePublicParameters,
                 CiphertextSpacePublicParameters,
@@ -460,7 +460,7 @@ impl<
             SCALAR_LIMBS,
             MultiPedersen<DIMENSION, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >,
-        ciphertexts: [ahe::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>;
+        ciphertexts: [homomorphic_encryption::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>;
             DIMENSION],
     ) -> Self
     where
@@ -717,7 +717,7 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::{
-        ahe::paillier,
+        homomorphic_encryption::paillier,
         commitments::pedersen,
         group::{ristretto, secp256k1, self_product, Samplable},
         proofs::schnorr::{aggregation, language},
@@ -757,7 +757,7 @@ pub(crate) mod tests {
         let secp256k1_group_public_parameters =
             secp256k1::group_element::PublicParameters::default();
 
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+        let paillier_public_parameters = homomorphic_encryption::paillier::PublicParameters::new(N).unwrap();
 
         let paillier_encryption_key =
             paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();
@@ -954,7 +954,7 @@ pub(crate) mod tests {
 //
 //     use super::*;
 //     use crate::{
-//         ahe::paillier,
+//         homomorphic_encryption::paillier,
 //         commitments::Pedersen,
 //         group::{ristretto, secp256k1},
 //         proofs::{

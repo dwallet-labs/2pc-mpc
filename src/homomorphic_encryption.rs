@@ -25,7 +25,7 @@ pub enum Error {
 
     #[error("an internal error that should never have happened and signifies a bug")]
     InternalError,
-    // TODO: now we're returning `ahe::Error` in e.g. `DecryptionKeyShare` methods. That means
+    // TODO: now we're returning `homomorphic_encryption::Error` in e.g. `DecryptionKeyShare` methods. That means
     // that this crate must specifically implement the traits for each crate it wishes to work
     // with. However, we wish to migrate so that the implementations would be done in Tiresias. In
     // that case, we should either have the error be external, or import it generically, need to

@@ -15,8 +15,8 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::{
-        ahe,
-        ahe::{
+        homomorphic_encryption,
+        homomorphic_encryption::{
             paillier,
             paillier::tests::{N, SECRET_KEY},
             AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors,
@@ -63,10 +63,10 @@ pub(crate) mod tests {
         let bulletproofs_public_parameters =
             bulletproofs::PublicParameters::<{ RANGE_CLAIMS_PER_SCALAR }>::default();
 
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+        let paillier_public_parameters = homomorphic_encryption::paillier::PublicParameters::new(N).unwrap();
 
         let paillier_decryption_key =
-            ahe::paillier::DecryptionKey::new(&paillier_public_parameters, SECRET_KEY).unwrap();
+            homomorphic_encryption::paillier::DecryptionKey::new(&paillier_public_parameters, SECRET_KEY).unwrap();
 
         let centralized_party_commitment_round_party = centralized_party::commitment_round::Party::<
             { secp256k1::SCALAR_LIMBS },

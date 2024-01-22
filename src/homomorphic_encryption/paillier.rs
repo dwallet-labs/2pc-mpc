@@ -16,8 +16,8 @@ use tiresias::{
 };
 
 use crate::{
-    ahe,
-    ahe::{AdditivelyHomomorphicDecryptionKeyShare, GroupsPublicParametersAccessors as _},
+    homomorphic_encryption,
+    homomorphic_encryption::{AdditivelyHomomorphicDecryptionKeyShare, GroupsPublicParametersAccessors as _},
     group,
     group::{additive, paillier::PlaintextSpacePublicParameters, GroupElement},
     AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey, PartyID,
@@ -85,7 +85,7 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct PublicParameters(
-    ahe::GroupsPublicParameters<
+    homomorphic_encryption::GroupsPublicParameters<
         PlaintextSpacePublicParameters,
         RandomnessSpacePublicParameters,
         CiphertextSpacePublicParameters,
@@ -96,7 +96,7 @@ impl PublicParameters {
     pub fn new(
         paillier_associate_bi_prime: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     ) -> group::Result<Self> {
-        Ok(Self(ahe::GroupsPublicParameters {
+        Ok(Self(homomorphic_encryption::GroupsPublicParameters {
             plaintext_space_public_parameters: PlaintextSpacePublicParameters {
                 modulus: NonZero::new(paillier_associate_bi_prime).unwrap(),
             },
@@ -112,7 +112,7 @@ impl PublicParameters {
 
 impl
     AsRef<
-        ahe::GroupsPublicParameters<
+        homomorphic_encryption::GroupsPublicParameters<
             PlaintextSpacePublicParameters,
             RandomnessSpacePublicParameters,
             CiphertextSpacePublicParameters,
@@ -121,7 +121,7 @@ impl
 {
     fn as_ref(
         &self,
-    ) -> &ahe::GroupsPublicParameters<
+    ) -> &homomorphic_encryption::GroupsPublicParameters<
         PlaintextSpacePublicParameters,
         RandomnessSpacePublicParameters,
         CiphertextSpacePublicParameters,
@@ -142,7 +142,7 @@ impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, Encryption
     type SecretKey = PaillierModulusSizedNumber;
 
     fn new(
-        encryption_scheme_public_parameters: &ahe::PublicParameters<
+        encryption_scheme_public_parameters: &homomorphic_encryption::PublicParameters<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             EncryptionKey,
         >,
@@ -203,11 +203,11 @@ impl AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, Encry
     fn generate_decryption_share_semi_honest(
         &self,
         ciphertext: &CiphertextSpaceGroupElement,
-    ) -> ahe::Result<Self::DecryptionShare> {
+    ) -> homomorphic_encryption::Result<Self::DecryptionShare> {
         self.0
             .generate_decryption_shares_semi_honest(vec![ciphertext.into()])?
             .first()
-            .ok_or(ahe::Error::InternalError)
+            .ok_or(homomorphic_encryption::Error::InternalError)
             .copied()
     }
 
@@ -215,7 +215,7 @@ impl AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, Encry
         &self,
         ciphertexts: Vec<CiphertextSpaceGroupElement>,
         rng: &mut impl CryptoRngCore,
-    ) -> ahe::Result<(Vec<Self::DecryptionShare>, Self::PartialDecryptionProof)> {
+    ) -> homomorphic_encryption::Result<(Vec<Self::DecryptionShare>, Self::PartialDecryptionProof)> {
         let ciphertexts = ciphertexts.into_iter().map(|ct| ct.into()).collect();
         let message = self.0.generate_decryption_shares(ciphertexts, rng)?;
 
@@ -226,7 +226,7 @@ impl AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, Encry
         decryption_shares: HashMap<PartyID, Self::DecryptionShare>,
         encryption_key: &EncryptionKey,
         precomputed_values: Self::PrecomputedValues,
-    ) -> ahe::Result<PlaintextSpaceGroupElement> {
+    ) -> homomorphic_encryption::Result<PlaintextSpaceGroupElement> {
         let decryption_shares = decryption_shares
             .into_iter()
             .map(|(party_id, decryption_share)| (party_id, vec![decryption_share]))
@@ -239,7 +239,7 @@ impl AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, Encry
             precomputed_values.absolute_adjusted_lagrange_coefficients,
         )?;
 
-        let plaintext = plaintext.first().ok_or(ahe::Error::InternalError)?;
+        let plaintext = plaintext.first().ok_or(homomorphic_encryption::Error::InternalError)?;
 
         Ok(PlaintextSpaceGroupElement::new(
             *plaintext,
@@ -267,7 +267,7 @@ pub(crate) mod tests {
     use crypto_bigint::{U256, U384};
 
     use super::*;
-    use crate::{ahe, group::secp256k1};
+    use crate::{homomorphic_encryption, group::secp256k1};
 
     // TODO: modulation checks and so forth
     const MASK_LIMBS: usize = U384::LIMBS;
@@ -289,7 +289,7 @@ pub(crate) mod tests {
 
         let public_parameters = PublicParameters::new(N).unwrap();
 
-        ahe::tests::encrypt_decrypts::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey, DecryptionKey>(
+        homomorphic_encryption::tests::encrypt_decrypts::<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey, DecryptionKey>(
             decryption_key,
             public_parameters,
         )
@@ -304,7 +304,7 @@ pub(crate) mod tests {
 
         let public_parameters = PublicParameters::new(N).unwrap();
 
-        ahe::tests::evaluates::<
+        homomorphic_encryption::tests::evaluates::<
             MASK_LIMBS,
             SECP256K1_ORDER_LIMBS,
             PLAINTEXT_SPACE_SCALAR_LIMBS,

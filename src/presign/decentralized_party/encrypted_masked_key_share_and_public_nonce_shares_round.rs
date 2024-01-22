@@ -5,8 +5,8 @@ use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use serde::Serialize;
 
 use crate::{
-    ahe,
-    ahe::GroupsPublicParametersAccessors,
+    homomorphic_encryption,
+    homomorphic_encryption::GroupsPublicParametersAccessors,
     commitments,
     commitments::{pedersen, GroupsPublicParametersAccessors as _, Pedersen},
     group,

@@ -29,8 +29,8 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::{
-        ahe,
-        ahe::{
+        homomorphic_encryption,
+        homomorphic_encryption::{
             paillier,
             paillier::{
                 tests::{N, SECRET_KEY},
@@ -487,7 +487,7 @@ pub(crate) mod tests {
         .unwrap();
 
         let paillier_decryption_key =
-            ahe::paillier::DecryptionKey::new(&paillier_public_parameters, SECRET_KEY).unwrap();
+            homomorphic_encryption::paillier::DecryptionKey::new(&paillier_public_parameters, SECRET_KEY).unwrap();
 
         let group_order =
             secp256k1::Scalar::order_from_public_parameters(&secp256k1_scalar_public_parameters);
@@ -556,10 +556,10 @@ pub(crate) mod tests {
         let bulletproofs_public_parameters =
             bulletproofs::PublicParameters::<{ NUM_RANGE_CLAIMS }>::default();
 
-        let paillier_public_parameters = ahe::paillier::PublicParameters::new(N).unwrap();
+        let paillier_public_parameters = homomorphic_encryption::paillier::PublicParameters::new(N).unwrap();
 
         let paillier_encryption_key =
-            ahe::paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();
+            homomorphic_encryption::paillier::EncryptionKey::new(&paillier_public_parameters).unwrap();
 
         let unbounded_dcom_eval_witness_public_parameters = direct_product::PublicParameters(
             self_product::PublicParameters::new(secp256k1_scalar_public_parameters.clone()),
