@@ -1,4 +1,4 @@
-// Author: dWallet Labs, LTD.
+// Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
@@ -38,7 +38,7 @@ impl TranscriptProtocol for Transcript {
     where
         Uint<LIMBS>: Encoding,
     {
-        self.append_message(label, Uint::<LIMBS>::to_le_bytes(value).as_mut());
+        self.append_message(label, Uint::<LIMBS>::to_le_bytes(value).as_ref());
     }
 
     fn challenge<const LIMBS: usize>(&mut self, label: &'static [u8]) -> Uint<LIMBS> {
