@@ -12,6 +12,7 @@ use crate::{
     group::{GroupElement, Samplable},
     proofs, ComputationalSecuritySizedNumber,
 };
+use crate::proofs::schnorr::proof::{BIT_SOUNDNESS_PROOFS_REPETITIONS, SOUND_PROOFS_REPETITIONS};
 
 pub mod committed_linear_evaluation;
 pub mod committment_of_discrete_log;
@@ -58,7 +59,7 @@ pub trait Language<
 
     /// The number of bits to use for the challenge
     fn challenge_bits(batch_size: usize) -> proofs::Result<usize> {
-        if REPETITIONS == 1 {
+        if REPETITIONS == SOUND_PROOFS_REPETITIONS {
             // When batching $N_B$ statements, the challenge space $\bE$ is adjusted to be $[0,\BatchSize
             // \cdot 2^{\kappa+2})$.
             batch_size
@@ -66,7 +67,7 @@ pub trait Language<
                 .and_then(|batch_bits| usize::try_from(batch_bits).ok())
                 .and_then(|batch_bits| batch_bits.checked_add(1)) // `ilog2` is a lower-bound, we need upper-bound
                 .and_then(|batch_bits| batch_bits.checked_add(ComputationalSecuritySizedNumber::BITS + 2)).ok_or(proofs::Error::InvalidParameters)
-        } else if REPETITIONS == ComputationalSecuritySizedNumber::BITS {
+        } else if REPETITIONS == BIT_SOUNDNESS_PROOFS_REPETITIONS {
             Ok(1)
         } else {
             Err(proofs::Error::UnsupportedRepetitions)
