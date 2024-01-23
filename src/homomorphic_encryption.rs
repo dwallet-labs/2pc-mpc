@@ -39,8 +39,7 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// An Encryption Key of an Additively Homomorphic Encryption scheme.
-pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize>:
-    Into<Self::PublicParameters> + PartialEq + Clone + Debug + Eq
+pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS: usize>: PartialEq + Clone + Debug + Eq
 {
     type PlaintextSpaceGroupElement: KnownOrderScalar<PLAINTEXT_SPACE_SCALAR_LIMBS> + Samplable;
     type RandomnessSpaceGroupElement: GroupElement + Samplable;
@@ -63,11 +62,6 @@ pub trait AdditivelyHomomorphicEncryptionKey<const PLAINTEXT_SPACE_SCALAR_LIMBS:
         + for<'r> Deserialize<'r>
         + Clone
         + PartialEq;
-
-    /// Returns the public parameters of this encryption scheme.
-    fn public_parameters(&self) -> Self::PublicParameters {
-        self.clone().into()
-    }
 
     /// Instantiate the encryption key from the public parameters of the encryption scheme.
     fn new(public_parameters: &Self::PublicParameters) -> Result<Self>;
