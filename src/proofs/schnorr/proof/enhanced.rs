@@ -436,7 +436,7 @@ impl<
                     RangeProof,
                     UnboundedWitnessSpaceGroupElement,
                     Language,
-                >::group_homomorphism(
+                >::homomorphose(
                     &randomizer, enhanced_language_public_parameters
                 )
             })

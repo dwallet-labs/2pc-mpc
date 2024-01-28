@@ -93,7 +93,7 @@ impl<
     ) -> proofs::Result<(Self, Vec<Language::StatementSpaceGroupElement>)> {
         let statements: proofs::Result<Vec<Language::StatementSpaceGroupElement>> = witnesses
             .iter()
-            .map(|witness| Language::group_homomorphism(witness, language_public_parameters))
+            .map(|witness| Language::homomorphose(witness, language_public_parameters))
             .collect();
         let statements = statements?;
 
@@ -116,7 +116,7 @@ impl<
     ) -> proofs::Result<(Self, Vec<Language::StatementSpaceGroupElement>)> {
         let statements: proofs::Result<Vec<Language::StatementSpaceGroupElement>> = witnesses
             .iter()
-            .map(|witness| Language::group_homomorphism(witness, language_public_parameters))
+            .map(|witness| Language::homomorphose(witness, language_public_parameters))
             .collect();
         let statements = statements?;
 
@@ -265,7 +265,7 @@ impl<
             .flat_map_results()?;
 
         let response_statements: [Language::StatementSpaceGroupElement; REPETITIONS] = responses
-            .map(|response| Language::group_homomorphism(&response, language_public_parameters))
+            .map(|response| Language::homomorphose(&response, language_public_parameters))
             .flat_map_results()?;
 
         // TODO: filter 0 challenge
@@ -329,7 +329,7 @@ impl<
 
         let statement_masks = randomizers
             .clone()
-            .map(|randomizer| Language::group_homomorphism(&randomizer, language_public_parameters))
+            .map(|randomizer| Language::homomorphose(&randomizer, language_public_parameters))
             .flat_map_results()?;
 
         Ok((randomizers, statement_masks))

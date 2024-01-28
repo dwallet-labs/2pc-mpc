@@ -66,7 +66,7 @@ impl<
         let statements: proofs::Result<Vec<Language::StatementSpaceGroupElement>> = self
             .witnesses
             .iter()
-            .map(|witness| Language::group_homomorphism(witness, &self.language_public_parameters))
+            .map(|witness| Language::homomorphose(witness, &self.language_public_parameters))
             .collect();
         let statements = statements?;
 

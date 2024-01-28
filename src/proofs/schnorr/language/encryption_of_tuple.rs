@@ -113,7 +113,7 @@ impl<
 
     const NAME: &'static str = "Encryption of a Tuple";
 
-    fn group_homomorphism(
+    fn homomorphose(
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<Self::StatementSpaceGroupElement> {

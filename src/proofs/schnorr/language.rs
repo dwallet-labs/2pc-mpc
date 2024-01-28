@@ -78,7 +78,7 @@ pub trait Language<
     /// A group homomorphism $\phi:\HH\to\GG$  from $(\HH_\pp, +)$, the witness space,
     /// to $(\GG_\pp,\cdot)$, the statement space space.
     /// https://www.digitalcommonwealth.org/search/commonwealth:ww72cb78j
-    fn group_homomorphism(
+    fn homomorphose(
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> Result<Self::StatementSpaceGroupElement>;
@@ -263,7 +263,7 @@ pub(crate) mod tests {
             generate_witness::<REPETITIONS, Lang>(None, &language_public_parameters);
 
         let wrong_statement =
-            Lang::group_homomorphism(&wrong_witness, &language_public_parameters).unwrap();
+            Lang::homomorphose(&wrong_witness, &language_public_parameters).unwrap();
 
         assert!(
             matches!(
@@ -437,7 +437,7 @@ mod benches {
 
             let statements: proofs::Result<Vec<Lang::StatementSpaceGroupElement>> = witnesses
                 .iter()
-                .map(|witness| Lang::group_homomorphism(witness, &language_public_parameters))
+                .map(|witness| Lang::homomorphose(witness, &language_public_parameters))
                 .collect();
             let statements = statements.unwrap();
 

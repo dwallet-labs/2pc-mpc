@@ -71,7 +71,7 @@ impl<
 
     const NAME: &'static str = "Commitment of Discrete Log";
 
-    fn group_homomorphism(
+    fn homomorphose(
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<Self::StatementSpaceGroupElement> {

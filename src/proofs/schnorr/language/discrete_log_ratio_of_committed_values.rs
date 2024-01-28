@@ -57,7 +57,7 @@ where
     >;
     const NAME: &'static str = "Ratio Between Committed Values is the Discrete Log";
 
-    fn group_homomorphism(
+    fn homomorphose(
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> proofs::Result<Self::StatementSpaceGroupElement> {

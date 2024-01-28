@@ -141,7 +141,7 @@ impl<
 
     const NAME: &'static str = Language::NAME;
 
-    fn group_homomorphism(
+    fn homomorphose(
         witness: &Self::WitnessSpaceGroupElement,
         enhanced_language_public_parameters: &Self::PublicParameters,
     ) -> crate::proofs::Result<Self::StatementSpaceGroupElement> {
@@ -158,7 +158,7 @@ impl<
             RangeProof::RANGE_CLAIM_BITS,
         )?;
 
-        let language_statement = Language::group_homomorphism(
+        let language_statement = Language::homomorphose(
             &language_witness,
             &enhanced_language_public_parameters.language_public_parameters,
         )?;

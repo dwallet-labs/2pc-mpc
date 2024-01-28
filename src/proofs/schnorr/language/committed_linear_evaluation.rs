@@ -163,7 +163,7 @@ impl<
 
     const NAME: &'static str = "Committed Linear Evaluation";
 
-    fn group_homomorphism(
+    fn homomorphose(
         witness: &Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
     ) -> crate::proofs::Result<Self::StatementSpaceGroupElement> {
