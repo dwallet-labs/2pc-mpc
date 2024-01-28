@@ -16,15 +16,15 @@ use crate::{
     },
     proofs,
     proofs::{
-        schnorr,
-        schnorr::{
+        maurer,
+        maurer::{
             aggregation, language, proof::SOUND_PROOFS_REPETITIONS,
             language::{StatementSpacePublicParameters, WitnessSpacePublicParameters},
         },
     },
 };
 
-/// Commitment of Discrete Log Schnorr Language
+/// Commitment of Discrete Log Maurer Language
 ///
 /// SECURITY NOTICE:
 /// Because correctness and zero-knowledge is guaranteed for any group in this language, we choose
@@ -56,7 +56,7 @@ impl<
             RandomnessSpaceGroupElement = Scalar,
             CommitmentSpaceGroupElement = GroupElement,
         >,
-    > schnorr::Language<SOUND_PROOFS_REPETITIONS>
+    > maurer::Language<SOUND_PROOFS_REPETITIONS>
     for Language<SCALAR_LIMBS, Scalar, GroupElement, CommitmentScheme>
 {
     type WitnessSpaceGroupElement = self_product::GroupElement<2, Scalar>;
@@ -141,7 +141,7 @@ impl<GroupElement: group::GroupElement> StatementAccessors<GroupElement>
     }
 }
 
-/// The Public Parameters of the Commitment of Discrete Log Schnorr Language
+/// The Public Parameters of the Commitment of Discrete Log Maurer Language
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
     ScalarPublicParameters,
@@ -257,7 +257,7 @@ mod tests {
         commitment::{pedersen, Pedersen},
         group,
         group::{secp256k1, GroupElement, Samplable},
-        proofs::schnorr::{aggregation, language},
+        proofs::maurer::{aggregation, language},
     };
 
     pub(crate) type Lang = Language<
@@ -351,7 +351,7 @@ mod benches {
     use crate::{
         commitment::Pedersen,
         group::secp256k1,
-        proofs::schnorr::{
+        proofs::maurer::{
             aggregation, language,
             language::committment_of_discrete_log::tests::{language_public_parameters, Lang},
         },

@@ -16,8 +16,8 @@ use crate::{
     proofs::{
         range,
         range::PublicParametersAccessors,
-        schnorr,
-        schnorr::{
+        maurer,
+        maurer::{
             encryption_of_discrete_log, enhanced,
             enhanced::{EnhanceableLanguage, EnhancedPublicParameters},
             knowledge_of_discrete_log, language,
@@ -100,8 +100,8 @@ where
         SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-    >: schnorr::Language<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+    >: maurer::Language<
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 EncryptionKey,
@@ -119,7 +119,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDLWitness,

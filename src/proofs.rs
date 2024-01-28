@@ -1,7 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 pub mod range;
-pub mod schnorr;
+pub mod maurer;
 pub(crate) mod transcript_protocol;
 
 pub use range::{bulletproofs, lightningproofs, RangeProof};
@@ -32,8 +32,8 @@ pub enum Error {
     #[error("additively homomorphic encryption scheme error")]
     AdditivelyHomomorphicEncryptionScheme(#[from] homomorphic_encryption::Error),
 
-    #[error("schnorr proof aggregation protocol error")]
-    AggregationProtocol(#[from] schnorr::aggregation::Error),
+    #[error("maurer proof aggregation protocol error")]
+    AggregationProtocol(#[from] maurer::aggregation::Error),
 
     #[error("range proof error")]
     Range(#[from] range::Error),

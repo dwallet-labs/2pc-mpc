@@ -22,7 +22,7 @@ use crate::{
             CommitmentSchemeMessageSpaceGroupElement, CommitmentSchemeRandomnessSpaceGroupElement,
             PublicParametersAccessors,
         },
-        schnorr::{
+        maurer::{
             enhanced,
             enhanced::{EnhanceableLanguage, EnhancedPublicParameters},
             language,
@@ -39,8 +39,8 @@ use crate::{
     StatisticalSecuritySizedNumber,
 };
 
-/// An Enhanced Batched Schnorr Zero-Knowledge Proof.
-/// Implements Appendix B. Schnorr Protocols in the paper.
+/// An Enhanced Batched Maurer Zero-Knowledge Proof.
+/// Implements Appendix B. Maurer Protocols in the paper.
 pub type Proof<
     // Number of times this proof should be repeated to achieve sufficient security
     const REPETITIONS: usize,
@@ -113,7 +113,7 @@ impl<
         ProtocolContext,
     >
 {
-    /// Prove an enhanced batched Schnorr zero-knowledge claim.
+    /// Prove an enhanced batched Maurer zero-knowledge claim.
     /// Returns the zero-knowledge proof.
     pub fn prove(
         protocol_context: &ProtocolContext,
@@ -212,7 +212,7 @@ impl<
         ))
     }
 
-    /// Verify an enhanced batched Schnorr zero-knowledge proof.
+    /// Verify an enhanced batched Maurer zero-knowledge proof.
     pub fn verify(
         &self,
         protocol_context: &ProtocolContext,
@@ -300,7 +300,7 @@ impl<
         let mut transcript = Transcript::new(Language::NAME.as_bytes());
 
         transcript.append_message(
-            b"range proof used for the enhanced Schnorr proof",
+            b"range proof used for the enhanced Maurer proof",
             RangeProof::NAME.as_bytes(),
         );
 
@@ -461,7 +461,7 @@ pub(crate) mod tests {
         proofs::{
             range,
             range::{bulletproofs::COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, RangeProof},
-            schnorr::{
+            maurer::{
                 aggregation, enhanced, language,
                 language::enhanced::tests::enhanced_language_public_parameters,
             },

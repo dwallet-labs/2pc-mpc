@@ -26,7 +26,7 @@ use crate::{
             },
             Samplable,
         },
-        schnorr::{
+        maurer::{
             aggregation,
             aggregation::{proof_aggregation_round, ProofAggregationRoundParty},
             enhanced,

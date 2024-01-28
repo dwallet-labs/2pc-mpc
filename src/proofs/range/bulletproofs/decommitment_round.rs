@@ -13,7 +13,7 @@ use crate::{
     proofs::{
         range,
         range::bulletproofs::{commitment_round, commitment_round::Commitment, proof_share_round},
-        schnorr::{
+        maurer::{
             aggregation::{decommitment_round, DecommitmentRoundParty},
             enhanced::{EnhanceableLanguage, EnhancedLanguage},
             language,

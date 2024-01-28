@@ -32,7 +32,7 @@ pub(crate) mod tests {
         },
         proofs::{
             range::{bulletproofs, RangeProof},
-            schnorr::{
+            maurer::{
                 aggregation::tests::{aggregates_internal, aggregates_internal_multiple},
                 enhanced::{tests::RANGE_CLAIMS_PER_SCALAR, EnhancedLanguageStatementAccessors},
                 language::encryption_of_discrete_log::StatementAccessors,

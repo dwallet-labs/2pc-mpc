@@ -12,8 +12,8 @@ use crate::{
     helpers::FlatMapResults,
     proofs,
     proofs::{
-        schnorr,
-        schnorr::{
+        maurer,
+        maurer::{
             aggregation::{
                 decommitment_round::Decommitment, proof_aggregation_round, ProofShareRoundParty,
             },
@@ -26,7 +26,7 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct ProofShare<const REPETITIONS: usize, Language: schnorr::Language<REPETITIONS>>(
+pub struct ProofShare<const REPETITIONS: usize, Language: maurer::Language<REPETITIONS>>(
     #[serde(with = "crate::helpers::const_generic_array_serialization")]
     pub(super)  [WitnessSpaceValue<REPETITIONS, Language>; REPETITIONS],
 );

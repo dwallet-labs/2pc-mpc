@@ -15,12 +15,12 @@ use crate::{
     group::{self_product, CyclicGroupElement, GroupElement, KnownOrderGroupElement, Samplable},
     proofs,
     proofs::{
-        schnorr,
-        schnorr::{aggregation, language, proof::SOUND_PROOFS_REPETITIONS, language::GroupsPublicParametersAccessors},
+        maurer,
+        maurer::{aggregation, language, proof::SOUND_PROOFS_REPETITIONS, language::GroupsPublicParametersAccessors},
     },
 };
 
-/// Ratio Between Committed Values is the Discrete Log Schnorr Language.
+/// Ratio Between Committed Values is the Discrete Log Maurer Language.
 ///
 /// SECURITY NOTICE:
 /// Because correctness and zero-knowledge is guaranteed for any group in this language, we choose
@@ -37,7 +37,7 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
     _group_element_choice: PhantomData<GroupElement>,
 }
 
-impl<const SCALAR_LIMBS: usize, Scalar, GroupElement> schnorr::Language<SOUND_PROOFS_REPETITIONS>
+impl<const SCALAR_LIMBS: usize, Scalar, GroupElement> maurer::Language<SOUND_PROOFS_REPETITIONS>
     for Language<SCALAR_LIMBS, Scalar, GroupElement>
 where
     Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
@@ -140,7 +140,7 @@ impl<GroupElement: group::GroupElement> StatementAccessors<GroupElement>
     }
 }
 
-/// The Public Parameters of the Ratio Between Committed Values is the Discrete Log Schnorr
+/// The Public Parameters of the Ratio Between Committed Values is the Discrete Log Maurer
 /// Language.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct PublicParameters<ScalarPublicParameters, GroupPublicParameters, GroupElementValue> {
@@ -230,7 +230,7 @@ mod tests {
         commitment::pedersen,
         group,
         group::{secp256k1, GroupElement, Samplable},
-        proofs::schnorr::{aggregation, language},
+        proofs::maurer::{aggregation, language},
     };
 
     pub(crate) type Lang =
@@ -327,7 +327,7 @@ mod benches {
     use super::*;
     use crate::{
         group::secp256k1,
-        proofs::schnorr::{
+        proofs::maurer::{
             aggregation, language,
             language::discrete_log_ratio_of_commited_values::{
                 tests::{language_public_parameters, Lang},

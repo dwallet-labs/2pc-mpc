@@ -25,7 +25,7 @@ pub(crate) mod tests {
         group::{ristretto, secp256k1, CyclicGroupElement},
         proofs::{
             range::{bulletproofs, RangeProof},
-            schnorr::{
+            maurer::{
                 aggregation::tests::aggregates_internal,
                 enhanced::{tests::RANGE_CLAIMS_PER_SCALAR, EnhancedLanguageStatementAccessors},
             },

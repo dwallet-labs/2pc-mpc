@@ -6,7 +6,7 @@ use std::{marker::PhantomData, ops::Mul};
 // pub(crate) use benches::benchmark;
 use crypto_bigint::{Encoding, Uint};
 use language::GroupsPublicParameters;
-use schnorr::language;
+use maurer::language;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -23,8 +23,8 @@ use crate::{
     proofs::{
         range,
         range::CommitmentSchemeMessageSpaceGroupElement,
-        schnorr,
-        schnorr::{
+        maurer,
+        maurer::{
             aggregation, proof::SOUND_PROOFS_REPETITIONS,
             enhanced::{
                 DecomposableWitness, EnhanceableLanguage, EnhancedLanguageStatementAccessors as _,
@@ -37,7 +37,7 @@ use crate::{
 };
 
 
-/// Encryption of a Tuple Schnorr Language
+/// Encryption of a Tuple Maurer Language
 ///
 /// SECURITY NOTICE:
 /// Because correctness and zero-knowledge is guaranteed for any group and additively homomorphic
@@ -62,7 +62,7 @@ pub struct Language<
     _encryption_key_choice: PhantomData<EncryptionKey>,
 }
 
-/// The Witness Space Group Element of the Encryption of a Tuple Schnorr Language.
+/// The Witness Space Group Element of the Encryption of a Tuple Maurer Language.
 pub type WitnessSpaceGroupElement<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
@@ -72,14 +72,14 @@ pub type WitnessSpaceGroupElement<
     EncryptionKey::RandomnessSpaceGroupElement,
 >;
 
-/// The Statement Space Group Element of the Encryption of a Tuple Schnorr Language.
+/// The Statement Space Group Element of the Encryption of a Tuple Maurer Language.
 pub type StatementSpaceGroupElement<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
 > = self_product::GroupElement<2, EncryptionKey::CiphertextSpaceGroupElement>;
 
-/// The Public Parameters of the Encryption of a Tuple Schnorr Language.
+/// The Public Parameters of the Encryption of a Tuple Maurer Language.
 pub type PublicParameters<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,
@@ -99,7 +99,7 @@ impl<
         const SCALAR_LIMBS: usize,
         GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    > schnorr::Language<SOUND_PROOFS_REPETITIONS>
+    > maurer::Language<SOUND_PROOFS_REPETITIONS>
     for Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>
 {
     type WitnessSpaceGroupElement =
@@ -443,7 +443,7 @@ pub type EnhancedProof<
     UnboundedWitnessSpaceGroupElement,
     RangeProof,
     ProtocolContext,
-> = schnorr::enhanced::Proof<
+> = maurer::enhanced::Proof<
     SOUND_PROOFS_REPETITIONS,
     NUM_RANGE_CLAIMS,
     MESSAGE_SPACE_SCALAR_LIMBS,
@@ -467,7 +467,7 @@ pub(crate) mod tests {
         homomorphic_encryption::paillier,
         commitment::Pedersen,
         group::{ristretto, secp256k1, self_product},
-        proofs::schnorr::{aggregation, language},
+        proofs::maurer::{aggregation, language},
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
 
@@ -480,7 +480,7 @@ pub(crate) mod tests {
 
     use crate::{
         commitment::pedersen,
-        proofs::schnorr::language::enhanced::tests::{
+        proofs::maurer::language::enhanced::tests::{
             enhanced_language_public_parameters, generate_scalar_plaintext, RANGE_CLAIMS_PER_SCALAR,
         },
     };
@@ -572,7 +572,7 @@ pub(crate) mod tests {
                 .clone(),
         );
 
-        schnorr::proof::enhanced::tests::valid_proof_verifies::<
+        maurer::proof::enhanced::tests::valid_proof_verifies::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             self_product::GroupElement<2, paillier::RandomnessSpaceGroupElement>,
@@ -606,7 +606,7 @@ pub(crate) mod tests {
                 .clone(),
         );
 
-        schnorr::proof::enhanced::tests::aggregates::<
+        maurer::proof::enhanced::tests::aggregates::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             self_product::GroupElement<2, paillier::RandomnessSpaceGroupElement>,
@@ -634,7 +634,7 @@ pub(crate) mod tests {
 //         proofs::{
 //             range,
 //             range::bulletproofs,
-//             schnorr::{aggregation, language},
+//             maurer::{aggregation, language},
 //             RangeProof,
 //         },
 //         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
@@ -802,7 +802,7 @@ pub(crate) mod tests {
 //         group::{ristretto, secp256k1},
 //         proofs::{
 //             range,
-//             schnorr::{
+//             maurer::{
 //                 aggregation, language,
 //                 language::encryption_of_tuple::tests::{public_parameters, Lang},
 //             },

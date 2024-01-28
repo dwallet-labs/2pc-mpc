@@ -18,13 +18,13 @@ use crate::{
     group::{direct_product, self_product, BoundedGroupElement, Samplable},
     proofs,
     proofs::{
-        schnorr,
-        schnorr::{aggregation, language},
+        maurer,
+        maurer::{aggregation, language},
     },
     ComputationalSecuritySizedNumber,
 };
 
-/// Knowledge of Decommitment Schnorr Language.
+/// Knowledge of Decommitment Maurer Language.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug, Eq)]
 pub struct Language<
     const REPETITIONS: usize,
@@ -38,7 +38,7 @@ impl<
         const REPETITIONS: usize,
         const MESSAGE_SPACE_SCALAR_LIMBS: usize,
         CommitmentScheme: HomomorphicCommitmentScheme<MESSAGE_SPACE_SCALAR_LIMBS>,
-    > schnorr::Language<REPETITIONS>
+    > maurer::Language<REPETITIONS>
     for Language<REPETITIONS, MESSAGE_SPACE_SCALAR_LIMBS, CommitmentScheme>
 where
     CommitmentScheme::MessageSpaceGroupElement: Samplable,
@@ -106,7 +106,7 @@ impl<CommitmentSchemeMessageSpaceGroupElement, CommitmentSchemeRandomnessSpaceGr
     }
 }
 
-/// The Public Parameters of the Knowledge of Decommitment Schnorr Language.
+/// The Public Parameters of the Knowledge of Decommitment Maurer Language.
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<
     MessageSpacePublicParameters,
@@ -231,7 +231,7 @@ mod tests {
         homomorphic_encryption::paillier::tests::N,
         commitment::{pedersen, Pedersen},
         group::{secp256k1, GroupElement, Samplable},
-        proofs::schnorr::{aggregation, language, language::Language as _},
+        proofs::maurer::{aggregation, language, language::Language as _},
     };
 
     pub(crate) type Secp256k1Language<const REPETITIONS: usize, const BATCH_SIZE: usize> = Language<
@@ -340,7 +340,7 @@ mod benches {
     use super::*;
     use crate::{
         group::secp256k1,
-        proofs::schnorr::{
+        proofs::maurer::{
             aggregation, language,
             language::knowledge_of_decommitment::tests::{
                 secp256k1_language_public_parameters, Secp256k1Language,

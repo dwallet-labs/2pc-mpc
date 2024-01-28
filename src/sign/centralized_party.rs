@@ -15,8 +15,8 @@ use crate::{
     helpers::FlatMapResults,
     proofs,
     proofs::{
-        range, schnorr,
-        schnorr::{
+        range, maurer,
+        maurer::{
             committed_linear_evaluation, committment_of_discrete_log,
             discrete_log_ratio_of_committed_values, enhanced,
             enhanced::{
@@ -28,7 +28,7 @@ use crate::{
             },
         },
     },
-    sign::centralized_party::schnorr::enhanced::EnhancedPublicParameters,
+    sign::centralized_party::maurer::enhanced::EnhancedPublicParameters,
     AdditivelyHomomorphicEncryptionKey, StatisticalSecuritySizedNumber,
 };
 
@@ -117,8 +117,8 @@ where
         DIMENSION,
         GroupElement,
         EncryptionKey,
-    >: schnorr::Language<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+    >: maurer::Language<
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             WitnessSpaceGroupElement = committed_linear_evaluation::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 SCALAR_LIMBS,
@@ -141,7 +141,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             NUM_RANGE_CLAIMS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedDComEvalWitness,
@@ -160,8 +160,8 @@ where
                 RangeProof,
             >,
             homomorphic_encryption::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
-            schnorr::Proof<
-                { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            maurer::Proof<
+                { maurer::proof::SOUND_PROOFS_REPETITIONS },
                 committment_of_discrete_log::Language<
                     SCALAR_LIMBS,
                     GroupElement::Scalar,
@@ -170,8 +170,8 @@ where
                 >,
                 ProtocolContext,
             >,
-            schnorr::Proof<
-                { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            maurer::Proof<
+                { maurer::proof::SOUND_PROOFS_REPETITIONS },
                 discrete_log_ratio_of_committed_values::Language<
                     SCALAR_LIMBS,
                     GroupElement::Scalar,
@@ -226,8 +226,8 @@ where
             public_nonce.value(),
         );
 
-        let (public_nonce_proof, _) = schnorr::Proof::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+        let (public_nonce_proof, _) = maurer::Proof::<
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             committment_of_discrete_log::Language<
                 SCALAR_LIMBS,
                 GroupElement::Scalar,
@@ -257,8 +257,8 @@ where
                 self.public_key_share,
             );
 
-        let (nonce_share_by_key_share_proof, statement) = schnorr::Proof::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+        let (nonce_share_by_key_share_proof, statement) = maurer::Proof::<
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             discrete_log_ratio_of_committed_values::Language<
                 SCALAR_LIMBS,
                 GroupElement::Scalar,
@@ -369,7 +369,7 @@ where
             );
 
         let language_public_parameters = EnhancedPublicParameters::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             NUM_RANGE_CLAIMS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,
@@ -402,7 +402,7 @@ where
         );
 
         let witness = EnhancedLanguage::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             NUM_RANGE_CLAIMS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,
@@ -419,7 +419,7 @@ where
         >::generate_witness(witness, &language_public_parameters, rng)?;
 
         let (encrypted_partial_signature_proof, statement) = enhanced::Proof::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             NUM_RANGE_CLAIMS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,

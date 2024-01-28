@@ -15,7 +15,7 @@ use crate::{
     group,
     group::{self_product, NumbersGroupElement, Samplable},
     proofs::{
-        schnorr::{
+        maurer::{
             aggregation, enhanced,
             enhanced::{EnhanceableLanguage, EnhancedPublicParameters},
         },
@@ -68,7 +68,7 @@ pub trait RangeProof<
     + Clone
     + PartialEq;
 
-    /// The commitment round party of enhanced Schnorr proof aggregation protocol using this range proof.
+    /// The commitment round party of enhanced Maurer proof aggregation protocol using this range proof.
     type AggregationCommitmentRoundParty<
         const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
@@ -91,7 +91,7 @@ pub trait RangeProof<
         rng: &mut impl CryptoRngCore,
     ) -> Result<(Self, Vec<commitment::CommitmentSpaceGroupElement<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, Self::CommitmentScheme<NUM_RANGE_CLAIMS>>>)>;
 
-    /// Starts a new enhanced Schnorr proof aggregation session, by returning its commitment round party instance.
+    /// Starts a new enhanced Maurer proof aggregation session, by returning its commitment round party instance.
     fn new_enhanced_session<const REPETITIONS: usize,
         const NUM_RANGE_CLAIMS: usize,
         UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,

@@ -21,8 +21,8 @@ use crate::{
     proofs::{
         range,
         range::CommitmentSchemeMessageSpaceGroupElement,
-        schnorr,
-        schnorr::{
+        maurer,
+        maurer::{
             enhanced::{DecomposableWitness, EnhanceableLanguage},
             language, proof::SOUND_PROOFS_REPETITIONS,
             language::GroupsPublicParameters,
@@ -32,7 +32,7 @@ use crate::{
 };
 
 // TODO: doc that this is a language just for class groups, otherwise we need the enhanced version.
-/// Encryption of Discrete Log Schnorr Language
+/// Encryption of Discrete Log Maurer Language
 ///
 /// SECURITY NOTICE:
 /// Because correctness and zero-knowledge is guaranteed for any group and additively homomorphic
@@ -57,7 +57,7 @@ pub struct Language<
     _encryption_key_choice: PhantomData<EncryptionKey>,
 }
 
-/// The Witness Space Group Element of the Encryption of Discrete Log Schnorr Language.
+/// The Witness Space Group Element of the Encryption of Discrete Log Maurer Language.
 pub type WitnessSpaceGroupElement<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
@@ -66,7 +66,7 @@ pub type WitnessSpaceGroupElement<
     EncryptionKey::RandomnessSpaceGroupElement,
 >;
 
-/// The Statement Space Group Element of the Encryption of Discrete Log Schnorr Language.
+/// The Statement Space Group Element of the Encryption of Discrete Log Maurer Language.
 pub type StatementSpaceGroupElement<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,
@@ -74,7 +74,7 @@ pub type StatementSpaceGroupElement<
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
 > = direct_product::GroupElement<EncryptionKey::CiphertextSpaceGroupElement, GroupElement>;
 
-/// The Public Parameters of the Encryption of Discrete Log Schnorr Language.
+/// The Public Parameters of the Encryption of Discrete Log Maurer Language.
 pub type PublicParameters<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,
@@ -95,7 +95,7 @@ impl<
         const SCALAR_LIMBS: usize,
         GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    > schnorr::Language<SOUND_PROOFS_REPETITIONS>
+    > maurer::Language<SOUND_PROOFS_REPETITIONS>
     for Language<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>
 {
     type WitnessSpaceGroupElement =
@@ -446,7 +446,7 @@ pub type EnhancedProof<
     UnboundedWitnessSpaceGroupElement,
     RangeProof,
     ProtocolContext,
-> = schnorr::enhanced::Proof<
+> = maurer::enhanced::Proof<
     SOUND_PROOFS_REPETITIONS,
     NUM_RANGE_CLAIMS,
     MESSAGE_SPACE_SCALAR_LIMBS,
@@ -470,7 +470,7 @@ pub(crate) mod tests {
         homomorphic_encryption::paillier,
         commitment::pedersen,
         group::{ristretto, secp256k1, self_product},
-        proofs::schnorr::{
+        proofs::maurer::{
             aggregation, language,
             language::enhanced::tests::{
                 enhanced_language_public_parameters, generate_scalar_plaintext,
@@ -548,7 +548,7 @@ pub(crate) mod tests {
             .randomness_space_public_parameters()
             .clone();
 
-        schnorr::proof::enhanced::tests::valid_proof_verifies::<
+        maurer::proof::enhanced::tests::valid_proof_verifies::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             paillier::RandomnessSpaceGroupElement,
@@ -579,7 +579,7 @@ pub(crate) mod tests {
             .randomness_space_public_parameters()
             .clone();
 
-        schnorr::proof::enhanced::tests::aggregates::<
+        maurer::proof::enhanced::tests::aggregates::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             paillier::RandomnessSpaceGroupElement,
@@ -646,7 +646,7 @@ pub(crate) mod tests {
 //         group::{ristretto, secp256k1},
 //         proofs::{
 //             range,
-//             schnorr::{
+//             maurer::{
 //                 aggregation, language,
 //                 language::encryption_of_discrete_log::tests::{public_parameters, Lang},
 //             },

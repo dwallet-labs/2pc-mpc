@@ -17,8 +17,8 @@ use crate::{
     },
     proofs,
     proofs::{
-        range, schnorr,
-        schnorr::{
+        range, maurer,
+        maurer::{
             encryption_of_discrete_log, encryption_of_tuple,
             enhanced::{EnhanceableLanguage, EnhancedLanguage, EnhancedPublicParameters},
             knowledge_of_decommitment,
@@ -83,8 +83,8 @@ where
         SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-    >: schnorr::Language<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+    >: maurer::Language<
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 EncryptionKey,
@@ -102,7 +102,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDLWitness,
@@ -112,8 +112,8 @@ where
         SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-    >: schnorr::Language<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+    >: maurer::Language<
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             WitnessSpaceGroupElement = encryption_of_tuple::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 EncryptionKey,
@@ -130,7 +130,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDHWitness,
@@ -147,7 +147,7 @@ where
     ) -> crate::Result<(
         (
             range::CommitmentRoundParty<
-                { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+                { maurer::proof::SOUND_PROOFS_REPETITIONS },
                 RANGE_CLAIMS_PER_SCALAR,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 UnboundedEncDHWitness,
@@ -161,7 +161,7 @@ where
                 ProtocolContext,
             >,
             range::CommitmentRoundParty<
-                { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+                { maurer::proof::SOUND_PROOFS_REPETITIONS },
                 RANGE_CLAIMS_PER_SCALAR,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 UnboundedEncDLWitness,
@@ -198,7 +198,7 @@ where
             )?;
 
         let language_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             SCALAR_LIMBS,
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >(commitment_scheme_public_parameters.clone());
@@ -267,7 +267,7 @@ where
             );
 
         let language_public_parameters = EnhancedPublicParameters::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,
@@ -318,7 +318,7 @@ where
             .collect();
 
         let witnesses = EnhancedLanguage::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,
@@ -332,7 +332,7 @@ where
         >::generate_witnesses(witnesses, &language_public_parameters, rng)?;
 
         let key_share_masking_commitment_round_party = RangeProof::new_enhanced_session::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             UnboundedEncDHWitness,
             encryption_of_tuple::Language<
@@ -398,7 +398,7 @@ where
             );
 
         let language_public_parameters = EnhancedPublicParameters::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,
@@ -436,7 +436,7 @@ where
             .collect();
 
         let witnesses = EnhancedLanguage::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,
@@ -451,7 +451,7 @@ where
 
         // TODO: name?
         let nonce_sharing_commitment_round_party = RangeProof::new_enhanced_session::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             UnboundedEncDLWitness,
             encryption_of_discrete_log::Language<

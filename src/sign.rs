@@ -48,7 +48,7 @@ pub(crate) mod tests {
         presign::tests::generates_presignatures_internal,
         proofs::{
             range::{bulletproofs, RangeProof},
-            schnorr::{
+            maurer::{
                 aggregation::tests::aggregates_internal,
                 committed_linear_evaluation::tests::{NUM_RANGE_CLAIMS, RANGE_CLAIMS_PER_MASK},
                 enhanced::{tests::RANGE_CLAIMS_PER_SCALAR, EnhancedLanguageStatementAccessors},

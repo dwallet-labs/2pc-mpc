@@ -13,13 +13,13 @@ use crate::{
     group::{CyclicGroupElement, Samplable},
     proofs,
     proofs::{
-        schnorr,
-        schnorr::{proof::SOUND_PROOFS_REPETITIONS, aggregation, language},
+        maurer,
+        maurer::{proof::SOUND_PROOFS_REPETITIONS, aggregation, language},
     },
 };
 
 
-/// Knowledge of Discrete Log Schnorr Language.
+/// Knowledge of Discrete Log Maurer Language.
 ///
 /// SECURITY NOTICE:
 /// Because correctness and zero-knowledge is guaranteed for any group in this language, we choose
@@ -43,7 +43,7 @@ impl<
             + for<'r> Mul<&'r GroupElement, Output = GroupElement>
             + Copy,
         GroupElement: group::GroupElement,
-    > schnorr::Language<SOUND_PROOFS_REPETITIONS> for Language<Scalar, GroupElement>
+    > maurer::Language<SOUND_PROOFS_REPETITIONS> for Language<Scalar, GroupElement>
 {
     type WitnessSpaceGroupElement = Scalar;
     type StatementSpaceGroupElement = GroupElement;
@@ -71,7 +71,7 @@ impl<
     }
 }
 
-/// The Public Parameters of the Knowledge of Discrete Log Schnorr Language.
+/// The Public Parameters of the Knowledge of Discrete Log Maurer Language.
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct PublicParameters<ScalarPublicParameters, GroupPublicParameters, GroupElementValue> {
     pub groups_public_parameters:
@@ -121,7 +121,7 @@ impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
 }
 
 pub type Proof<Scalar, GroupElement, ProtocolContext> =
-    schnorr::Proof<{ SOUND_PROOFS_REPETITIONS }, Language<Scalar, GroupElement>, ProtocolContext>;
+    maurer::Proof<{ SOUND_PROOFS_REPETITIONS }, Language<Scalar, GroupElement>, ProtocolContext>;
 
 #[cfg(any(test, feature = "benchmarking"))]
 mod tests {
@@ -130,7 +130,7 @@ mod tests {
     use super::*;
     use crate::{
         group::secp256k1,
-        proofs::schnorr::{aggregation, language},
+        proofs::maurer::{aggregation, language},
     };
 
     pub(crate) type Lang = Language<secp256k1::Scalar, secp256k1::GroupElement>;
@@ -203,7 +203,7 @@ mod benches {
     use super::*;
     use crate::{
         group::secp256k1,
-        proofs::schnorr::{
+        proofs::maurer::{
             aggregation, language,
             language::knowledge_of_discrete_log::tests::{language_public_parameters, Lang},
         },

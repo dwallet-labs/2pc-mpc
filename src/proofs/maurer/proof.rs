@@ -17,7 +17,7 @@ use crate::{
     helpers::FlatMapResults,
     proofs,
     proofs::{
-        schnorr::{
+        maurer::{
             language,
             language::{
                 GroupsPublicParametersAccessors as _, StatementSpaceValue, WitnessSpaceValue,
@@ -28,10 +28,10 @@ use crate::{
     ComputationalSecuritySizedNumber,
 };
 
-/// The number of repetitions used for sound Schnorr proofs, i.e. proofs that achieve negligible soundness error.
+/// The number of repetitions used for sound Maurer proofs, i.e. proofs that achieve negligible soundness error.
 pub const SOUND_PROOFS_REPETITIONS: usize = 1;
 
-/// The number of repetitions used for Schnorr proofs that achieve 1/2 soundness error.
+/// The number of repetitions used for Maurer proofs that achieve 1/2 soundness error.
 pub const BIT_SOUNDNESS_PROOFS_REPETITIONS: usize = ComputationalSecuritySizedNumber::BITS;
 
 // For a batch size $N_B$, the challenge space should be $[0,N_B \cdot 2^{\kappa + 2})$.
@@ -41,8 +41,8 @@ pub const BIT_SOUNDNESS_PROOFS_REPETITIONS: usize = ComputationalSecuritySizedNu
 pub(super) type ChallengeSizedNumber =
     <ComputationalSecuritySizedNumber as ConcatMixed<U128>>::MixedOutput;
 
-/// A Batched Schnorr Zero-Knowledge Proof.
-/// Implements Appendix B. Schnorr Protocols in the paper.
+/// A Batched Maurer Zero-Knowledge Proof.
+/// Implements Appendix B. Maurer Protocols in the paper.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Proof<
     // Number of times this proof should be repeated to achieve sufficient security
@@ -83,7 +83,7 @@ impl<
         }
     }
 
-    /// Prove a batched Schnorr zero-knowledge claim.
+    /// Prove a batched Maurer zero-knowledge claim.
     /// Returns the zero-knowledge proof.
     pub fn prove(
         protocol_context: &ProtocolContext,
@@ -220,7 +220,7 @@ impl<
         Ok(Self::new(&statement_masks, &responses))
     }
 
-    /// Verify a batched Schnorr zero-knowledge proof.
+    /// Verify a batched Maurer zero-knowledge proof.
     pub fn verify(
         &self,
         protocol_context: &ProtocolContext,

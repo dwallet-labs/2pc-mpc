@@ -11,7 +11,7 @@ use crate::{
     group,
     group::PrimeGroupElement,
     proofs,
-    proofs::schnorr::{
+    proofs::maurer::{
         encryption_of_discrete_log,
         enhanced::EnhancedLanguageStatementAccessors,
         knowledge_of_discrete_log,

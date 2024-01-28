@@ -12,7 +12,7 @@ use crate::{
     group::{GroupElement, Samplable},
     proofs, ComputationalSecuritySizedNumber,
 };
-use crate::proofs::schnorr::proof::{BIT_SOUNDNESS_PROOFS_REPETITIONS, SOUND_PROOFS_REPETITIONS};
+use crate::proofs::maurer::proof::{BIT_SOUNDNESS_PROOFS_REPETITIONS, SOUND_PROOFS_REPETITIONS};
 
 pub mod committed_linear_evaluation;
 pub mod committment_of_discrete_log;
@@ -24,11 +24,11 @@ pub mod knowledge_of_discrete_log;
 
 pub(super) mod enhanced;
 
-/// A Schnorr Zero-Knowledge Proof Language.
-/// Can be generically used to generate a batched Schnorr zero-knowledge `Proof`.
-/// As defined in Appendix B. Schnorr Protocols in the paper.
+/// A Maurer Zero-Knowledge Proof Language.
+/// Can be generically used to generate a batched Maurer zero-knowledge `Proof`.
+/// As defined in Appendix B. Maurer Protocols in the paper.
 pub trait Language<
-    // Number of times schnorr proofs for this language should be repeated to achieve sufficient security
+    // Number of times maurer proofs for this language should be repeated to achieve sufficient security
     const REPETITIONS: usize,
 >: Clone + PartialEq + Eq + Debug {
     /// An element of the witness space $(\HH_\pp, +)$
@@ -144,7 +144,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::{
         group,
-        proofs::{schnorr::Proof, Error},
+        proofs::{maurer::Proof, Error},
     };
 
     pub(crate) fn generate_witnesses<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
@@ -415,7 +415,7 @@ mod benches {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::proofs::schnorr::{language::tests::generate_witnesses, Proof};
+    use crate::proofs::maurer::{language::tests::generate_witnesses, Proof};
 
     pub(crate) fn benchmark<const REPETITIONS: usize, Lang: Language<REPETITIONS>>(
         language_public_parameters: Lang::PublicParameters,
@@ -448,7 +448,7 @@ mod benches {
             let statements_values: Vec<_> = statements.iter().map(|x| x.value()).collect();
 
             g.bench_function(
-                format!("schnorr::Proof::setup_transcript() over {batch_size} statements"),
+                format!("maurer::Proof::setup_transcript() over {batch_size} statements"),
                 |bench| {
                     bench.iter(|| {
                         Proof::<REPETITIONS, Lang, PhantomData<()>>::setup_transcript(
@@ -464,7 +464,7 @@ mod benches {
             );
 
             g.bench_function(
-                format!("schnorr::Proof::prove_inner() over {batch_size} statements"),
+                format!("maurer::Proof::prove_inner() over {batch_size} statements"),
                 |bench| {
                     bench.iter(|| {
                         Proof::<REPETITIONS, Lang, PhantomData<()>>::prove_with_statements(
@@ -491,7 +491,7 @@ mod benches {
             .unwrap();
 
             g.bench_function(
-                format!("schnorr::Proof::verify() over {batch_size} statements"),
+                format!("maurer::Proof::verify() over {batch_size} statements"),
                 |bench| {
                     bench.iter(|| {
                         proof.verify(

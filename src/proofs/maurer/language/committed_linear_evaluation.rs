@@ -24,8 +24,8 @@ use crate::{
     proofs::{
         range,
         range::CommitmentSchemeMessageSpaceGroupElement,
-        schnorr,
-        schnorr::{
+        maurer,
+        maurer::{
             enhanced::{DecomposableWitness, EnhanceableLanguage},
             language,
             proof::SOUND_PROOFS_REPETITIONS,
@@ -36,7 +36,7 @@ use crate::{
     AdditivelyHomomorphicEncryptionKey,
 };
 
-/// Committed Linear Evaluation Schnorr Language
+/// Committed Linear Evaluation Maurer Language
 ///
 /// This language allows to prove a linear combination have been homomorphically evaluated on a
 /// vector of ciphertexts. If one wishes to prove an affine evaluation instead of a linear one,
@@ -70,7 +70,7 @@ pub struct Language<
     _encryption_key_choice: PhantomData<EncryptionKey>,
 }
 
-/// The Witness Space Group Element of the Committed Linear Evaluation Schnorr Language
+/// The Witness Space Group Element of the Committed Linear Evaluation Maurer Language
 pub type WitnessSpaceGroupElement<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,
@@ -84,7 +84,7 @@ pub type WitnessSpaceGroupElement<
     EncryptionKey::RandomnessSpaceGroupElement,
 >;
 
-/// The Statement Space Group Element Committed Linear Evaluation Schnorr Language.
+/// The Statement Space Group Element Committed Linear Evaluation Maurer Language.
 pub type StatementSpaceGroupElement<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,
@@ -96,7 +96,7 @@ pub type StatementSpaceGroupElement<
     self_product::GroupElement<DIMENSION, GroupElement>,
 >;
 
-/// The Public Parameters of the Committed Linear Evaluation Schnorr Language.
+/// The Public Parameters of the Committed Linear Evaluation Maurer Language.
 ///
 /// In order to prove an affine transformation, set `ciphertexts[0]` to an encryption of one with
 /// randomness zero ($\Enc(1; 0)$).
@@ -126,7 +126,7 @@ impl<
         const DIMENSION: usize,
         GroupElement: KnownOrderGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    > schnorr::Language<SOUND_PROOFS_REPETITIONS>
+    > maurer::Language<SOUND_PROOFS_REPETITIONS>
     for Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
@@ -688,7 +688,7 @@ pub type EnhancedProof<
     UnboundedWitnessSpaceGroupElement,
     RangeProof,
     ProtocolContext,
-> = schnorr::enhanced::Proof<
+> = maurer::enhanced::Proof<
     SOUND_PROOFS_REPETITIONS,
     NUM_RANGE_CLAIMS,
     MESSAGE_SPACE_SCALAR_LIMBS,
@@ -720,7 +720,7 @@ pub(crate) mod tests {
         homomorphic_encryption::paillier,
         commitment::pedersen,
         group::{ristretto, secp256k1, self_product, Samplable},
-        proofs::schnorr::{aggregation, language},
+        proofs::maurer::{aggregation, language},
         ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
     };
 
@@ -747,7 +747,7 @@ pub(crate) mod tests {
         paillier::EncryptionKey,
     >;
 
-    use crate::proofs::schnorr::language::enhanced::tests::{
+    use crate::proofs::maurer::language::enhanced::tests::{
         enhanced_language_public_parameters, generate_scalar_plaintext, RANGE_CLAIMS_PER_SCALAR,
     };
 
@@ -886,7 +886,7 @@ pub(crate) mod tests {
                 .clone(),
         );
 
-        schnorr::proof::enhanced::tests::valid_proof_verifies::<
+        maurer::proof::enhanced::tests::valid_proof_verifies::<
             SOUND_PROOFS_REPETITIONS,
             NUM_RANGE_CLAIMS,
             direct_product::GroupElement<
@@ -928,7 +928,7 @@ pub(crate) mod tests {
                 .clone(),
         );
 
-        schnorr::proof::enhanced::tests::aggregates::<
+        maurer::proof::enhanced::tests::aggregates::<
             SOUND_PROOFS_REPETITIONS,
             NUM_RANGE_CLAIMS,
             direct_product::GroupElement<
@@ -959,7 +959,7 @@ pub(crate) mod tests {
 //         group::{ristretto, secp256k1},
 //         proofs::{
 //             range,
-//             schnorr::{
+//             maurer::{
 //                 aggregation, language,
 //                 language::committed_linear_evaluation::{
 //                     tests::{

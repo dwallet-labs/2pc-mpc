@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     proofs,
-    proofs::schnorr::{aggregation::decommitment_round::Decommitment, language},
+    proofs::maurer::{aggregation::decommitment_round::Decommitment, language},
     PartyID,
 };
 
@@ -103,7 +103,7 @@ pub(crate) mod tests {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::{proofs, proofs::schnorr::Language};
+    use crate::{proofs, proofs::maurer::Language};
 
     #[allow(dead_code)]
     pub(crate) fn aggregates_internal<Output, P: CommitmentRoundParty<Output>>(
@@ -322,7 +322,7 @@ mod benches {
     use super::*;
     use crate::{
         commitment,
-        proofs::schnorr::{
+        proofs::maurer::{
             aggregation::{decommitment_round::Decommitment, proof_share_round::ProofShare},
             Language, Proof,
         },

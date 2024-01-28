@@ -24,16 +24,16 @@ use crate::{homomorphic_encryption, commitment, commitment::{
         CommitmentSchemeRandomnessSpacePublicParameters, PublicParametersAccessors,
         RangeClaimGroupElement,
     },
-    schnorr,
-    schnorr::{
+    maurer,
+    maurer::{
         language,
         language::{GroupsPublicParameters, GroupsPublicParametersAccessors as _},
     },
 }, ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber, Error, PartyID};
 
-/// An Enhanced Schnorr Zero-Knowledge Proof Language.
-/// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.
-/// As defined in Appendix B. Schnorr Protocols in the paper.
+/// An Enhanced Maurer Zero-Knowledge Proof Language.
+/// Can be generically used to generate a batched Maurer zero-knowledge `Proof` with range claims.
+/// As defined in Appendix B. Maurer Protocols in the paper.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct EnhancedLanguage<
     const REPETITIONS: usize,
@@ -53,7 +53,7 @@ pub trait EnhanceableLanguage<
     const NUM_RANGE_CLAIMS: usize,
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
     UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
->: schnorr::Language<REPETITIONS>
+>: maurer::Language<REPETITIONS>
 {
     // TODO: solve all these refs & clones, here and in accessors. Perhaps partial move is ok.
     fn compose_witness(
@@ -85,7 +85,7 @@ impl<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedWitnessSpaceGroupElement,
         >,
-    > schnorr::Language<REPETITIONS>
+    > maurer::Language<REPETITIONS>
     for EnhancedLanguage<
         REPETITIONS,
         NUM_RANGE_CLAIMS,
@@ -803,7 +803,7 @@ pub(crate) mod tests {
         REPETITIONS,
         EnhancedLang<REPETITIONS, NUM_RANGE_CLAIMS, UnboundedWitnessSpaceGroupElement, Lang>,
     > {
-        schnorr::enhanced::PublicParameters::new::<
+        maurer::enhanced::PublicParameters::new::<
             range::bulletproofs::RangeProof,
             UnboundedWitnessSpaceGroupElement,
             Lang,

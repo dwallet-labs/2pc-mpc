@@ -13,8 +13,8 @@ use crate::{
     group::{GroupElement as _, Samplable},
     proofs,
     proofs::{
-        range, schnorr,
-        schnorr::{
+        range, maurer,
+        maurer::{
             aggregation::CommitmentRoundParty,
             enhanced,
             enhanced::{EnhancedLanguage, EnhancedPublicParameters},

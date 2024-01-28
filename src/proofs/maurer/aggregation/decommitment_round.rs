@@ -11,8 +11,8 @@ use crate::{
     group::GroupElement,
     proofs,
     proofs::{
-        schnorr,
-        schnorr::{
+        maurer,
+        maurer::{
             aggregation::{proof_share_round, DecommitmentRoundParty},
             language,
         },

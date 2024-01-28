@@ -8,7 +8,7 @@ use crate::{
     commitment::HomomorphicCommitmentScheme,
     group::Samplable,
     proofs,
-    proofs::{schnorr, schnorr::knowledge_of_decommitment},
+    proofs::{maurer, maurer::knowledge_of_decommitment},
     StatisticalSecuritySizedNumber,
 };
 
@@ -24,7 +24,7 @@ const REPETITIONS: usize = 128;
 // 7. if we don't use multiplies of LIMB we need to do the range check.
 
 pub type WitnessSpaceGroupElement<const MESSAGE_SPACE_SCALAR_LIMBS: usize, CommitmentScheme> =
-    schnorr::language::WitnessSpaceGroupElement<
+    maurer::language::WitnessSpaceGroupElement<
         REPETITIONS,
         knowledge_of_decommitment::Language<
             REPETITIONS,
@@ -43,7 +43,7 @@ pub struct RangeProof<
     CommitmentScheme::MessageSpaceGroupElement: Samplable,
     CommitmentScheme::RandomnessSpaceGroupElement: Samplable,
 {
-    schnorr_proof: schnorr::Proof<
+    schnorr_proof: maurer::Proof<
         REPETITIONS,
         knowledge_of_decommitment::Language<
             REPETITIONS,
@@ -83,7 +83,7 @@ where
     ) -> proofs::Result<()> {
         // TODO: because this is a bit-soundness, number of parties has no implications on params
         // right?
-        // TODO: call schnorr verify and do range check
+        // TODO: call maurer verify and do range check
         todo!()
     }
 }

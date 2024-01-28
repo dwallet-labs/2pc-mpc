@@ -20,7 +20,7 @@ use crate::{
             bulletproofs::{decommitment_round, RANGE_CLAIM_BITS},
             RangeProof,
         },
-        schnorr::{
+        maurer::{
             aggregation::{commitment_round, CommitmentRoundParty},
             enhanced,
             enhanced::{
@@ -57,7 +57,7 @@ pub struct Party<
         UnboundedWitnessSpaceGroupElement,
         Language,
     >,
-    // TODO: should I use the same protocol context for both bp & schnorr?
+    // TODO: should I use the same protocol context for both bp & maurer?
     pub protocol_context: ProtocolContext,
     pub witnesses: Vec<
         enhanced::WitnessSpaceGroupElement<

@@ -11,7 +11,7 @@ use crate::{
     group::GroupElement as _,
     helpers::FlatMapResults,
     proofs,
-    proofs::schnorr::{
+    proofs::maurer::{
         aggregation::{proof_share_round::ProofShare, ProofAggregationRoundParty},
         language,
         language::GroupsPublicParametersAccessors as _,

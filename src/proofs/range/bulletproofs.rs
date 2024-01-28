@@ -29,7 +29,7 @@ use crate::{
             CommitmentSchemeMessageSpaceGroupElement, CommitmentSchemeRandomnessSpaceGroupElement,
             Samplable,
         },
-        schnorr::{
+        maurer::{
             enhanced,
             enhanced::{EnhanceableLanguage, EnhancedPublicParameters},
         },
@@ -43,7 +43,7 @@ pub enum Error {
     AggregatedCommitmentsMismatch,
 
     // TODO: name
-    #[error("parties {:?} maliciously attempted to bypass the range proof by proving range on statements that do not match their Schnorr ones", .0)]
+    #[error("parties {:?} maliciously attempted to bypass the range proof by proving range on statements that do not match their Maurer ones", .0)]
     RangeProofSchnorrMismatch(Vec<PartyID>),
 
     #[error("bulletproofs error")]
@@ -64,7 +64,7 @@ pub enum Error {
 /// commitment.
 ///
 /// This allows `RangeProof::verify()` to get the actual aggregated commitment as the parameter
-/// (e.g. from an aggregated `schnorr::enhanced` language) and compare them to the non-aggregated
+/// (e.g. from an aggregated `maurer::enhanced` language) and compare them to the non-aggregated
 /// `aggregation_commitments`, whilst still allowing for the implementation to use the individual
 /// commitment of each of the players in order to verify the proof.
 ///

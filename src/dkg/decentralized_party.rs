@@ -6,8 +6,8 @@ use crate::{
     group::{GroupElement as _, PrimeGroupElement, Samplable},
     proofs,
     proofs::{
-        range, schnorr,
-        schnorr::{
+        range, maurer,
+        maurer::{
             encryption_of_discrete_log, enhanced,
             enhanced::{EnhanceableLanguage, EnhancedLanguageStatementAccessors},
             language::encryption_of_discrete_log::StatementAccessors,
@@ -71,8 +71,8 @@ where
         SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-    >: schnorr::Language<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+    >: maurer::Language<
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 EncryptionKey,
@@ -90,7 +90,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDLWitness,
@@ -98,7 +98,7 @@ where
 {
     pub fn new(
         encryption_of_secret_share: enhanced::StatementSpaceGroupElement<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,

@@ -11,7 +11,7 @@ use crate::{
     group::{GroupElement as _, GroupElement, PrimeGroupElement, Samplable},
     presign::centralized_party::proof_verification_round,
     proofs,
-    proofs::{schnorr, schnorr::knowledge_of_decommitment},
+    proofs::{maurer, maurer::knowledge_of_decommitment},
     AdditivelyHomomorphicEncryptionKey,
 };
 
@@ -45,10 +45,10 @@ pub struct SignatureNonceSharesCommitmentsAndBatchedProof<
     ProtocolContext: Clone + Serialize,
 > {
     pub(in crate::presign) commitments: Vec<pedersen::CommitmentSpaceGroupElement<GroupElement>>,
-    pub(in crate::presign) proof: schnorr::Proof<
-        { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+    pub(in crate::presign) proof: maurer::Proof<
+        { maurer::proof::SOUND_PROOFS_REPETITIONS },
         knowledge_of_decommitment::Language<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             SCALAR_LIMBS,
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >,
@@ -125,15 +125,15 @@ impl<
             )?;
 
         let language_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             SCALAR_LIMBS,
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >(commitment_scheme_public_parameters.clone());
 
-        let (proof, commitments) = schnorr::Proof::<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+        let (proof, commitments) = maurer::Proof::<
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             knowledge_of_decommitment::Language<
-                { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+                { maurer::proof::SOUND_PROOFS_REPETITIONS },
                 SCALAR_LIMBS,
                 Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
             >,

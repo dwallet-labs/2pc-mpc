@@ -12,8 +12,8 @@ use crate::{
     group::{GroupElement as _, PrimeGroupElement, Samplable},
     proofs,
     proofs::{
-        range, schnorr,
-        schnorr::{
+        range, maurer,
+        maurer::{
             encryption_of_discrete_log, encryption_of_tuple,
             enhanced::{EnhanceableLanguage, EnhancedLanguage, EnhancedPublicParameters},
             language::{
@@ -89,8 +89,8 @@ where
         SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-    >: schnorr::Language<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+    >: maurer::Language<
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             WitnessSpaceGroupElement = encryption_of_tuple::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 EncryptionKey,
@@ -107,7 +107,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+            { maurer::proof::SOUND_PROOFS_REPETITIONS },
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDHWitness,
@@ -134,7 +134,7 @@ where
     ) -> proofs::Result<
         Vec<
             range::CommitmentRoundParty<
-                { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+                { maurer::proof::SOUND_PROOFS_REPETITIONS },
                 RANGE_CLAIMS_PER_SCALAR,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 UnboundedEncDHWitness,
@@ -202,7 +202,7 @@ where
                     );
 
                     let language_public_parameters = EnhancedPublicParameters::<
-                        { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+                        { maurer::proof::SOUND_PROOFS_REPETITIONS },
                         RANGE_CLAIMS_PER_SCALAR,
                         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                         RangeProof,
@@ -229,7 +229,7 @@ where
                     );
 
                     EnhancedLanguage::<
-                        { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+                        { maurer::proof::SOUND_PROOFS_REPETITIONS },
                         RANGE_CLAIMS_PER_SCALAR,
                         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                         RangeProof,
@@ -252,7 +252,7 @@ where
                     )
                     .map(|witness| {
                         RangeProof::new_enhanced_session::<
-                            { schnorr::proof::SOUND_PROOFS_REPETITIONS },
+                            { maurer::proof::SOUND_PROOFS_REPETITIONS },
                             RANGE_CLAIMS_PER_SCALAR,
                             UnboundedEncDHWitness,
                             encryption_of_tuple::Language<
