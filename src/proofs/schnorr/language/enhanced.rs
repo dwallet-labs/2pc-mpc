@@ -4,41 +4,32 @@
 use core::array;
 use std::{marker::PhantomData, ops::Mul};
 
-use crypto_bigint::{rand_core::CryptoRngCore, Uint, U128};
+use crypto_bigint::{rand_core::CryptoRngCore, Uint, U128, CheckedMul};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 use tiresias::secret_sharing::shamir::Polynomial;
 
-use crate::{
-    homomorphic_encryption, commitment,
-    commitment::{
-        pedersen, GroupsPublicParametersAccessors as _, HomomorphicCommitmentScheme, Pedersen,
+use crate::{homomorphic_encryption, commitment, commitment::{
+    pedersen, GroupsPublicParametersAccessors as _, HomomorphicCommitmentScheme, Pedersen,
+}, group, group::{
+    direct_product, direct_product::ThreeWayPublicParameters, paillier, self_product,
+    BoundedGroupElement, GroupElement as _, GroupElement, KnownOrderScalar, Samplable,
+}, helpers::FlatMapResults, proofs, proofs::{
+    range,
+    range::{
+        CommitmentScheme, CommitmentSchemeCommitmentSpaceGroupElement,
+        CommitmentSchemeCommitmentSpacePublicParameters,
+        CommitmentSchemeMessageSpaceGroupElement, CommitmentSchemeMessageSpacePublicParameters,
+        CommitmentSchemePublicParameters, CommitmentSchemeRandomnessSpaceGroupElement,
+        CommitmentSchemeRandomnessSpacePublicParameters, PublicParametersAccessors,
+        RangeClaimGroupElement,
     },
-    group,
-    group::{
-        direct_product, direct_product::ThreeWayPublicParameters, paillier, self_product,
-        BoundedGroupElement, GroupElement as _, GroupElement, KnownOrderScalar, Samplable,
+    schnorr,
+    schnorr::{
+        language,
+        language::{GroupsPublicParameters, GroupsPublicParametersAccessors as _},
     },
-    helpers::FlatMapResults,
-    proofs,
-    proofs::{
-        range,
-        range::{
-            CommitmentScheme, CommitmentSchemeCommitmentSpaceGroupElement,
-            CommitmentSchemeCommitmentSpacePublicParameters,
-            CommitmentSchemeMessageSpaceGroupElement, CommitmentSchemeMessageSpacePublicParameters,
-            CommitmentSchemePublicParameters, CommitmentSchemeRandomnessSpaceGroupElement,
-            CommitmentSchemeRandomnessSpacePublicParameters, PublicParametersAccessors,
-            RangeClaimGroupElement,
-        },
-        schnorr,
-        schnorr::{
-            language,
-            language::{GroupsPublicParameters, GroupsPublicParametersAccessors as _},
-        },
-    },
-    ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber,
-};
+}, ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber, Error, PartyID};
 
 /// An Enhanced Schnorr Zero-Knowledge Proof Language.
 /// Can be generically used to generate a batched Schnorr zero-knowledge `Proof` with range claims.
@@ -215,11 +206,13 @@ pub trait DecomposableWitness<
         // TODO: sanity checks, return result?
         let witness: Uint<WITNESS_LIMBS> = self.into();
 
+        let mask = (Uint::<WITNESS_LIMBS>::ONE << range_claim_bits)
+            .wrapping_sub(&Uint::<WITNESS_LIMBS>::ONE);
+
         array::from_fn(|i| {
             Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::from(
                 &((witness >> (i * range_claim_bits))
-                    & ((Uint::<WITNESS_LIMBS>::ONE << range_claim_bits)
-                        .wrapping_sub(&Uint::<WITNESS_LIMBS>::ONE))),
+                    & mask),
             )
         })
     }
@@ -228,21 +221,29 @@ pub trait DecomposableWitness<
         decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>;
              RANGE_CLAIMS_PER_SCALAR],
         public_parameters: &Self::PublicParameters,
-        range_claim_bits: usize, // TODO:  ???
+        range_claim_bits: usize,
     ) -> proofs::Result<Self> {
-        // TODO: perform all the checks here, checking add - also check that no modulation occursin
-        // // LIMBS for the entire computation
+        // // TODO: put tests in both functions.
+        // let order = Self::order_from_public_parameters(
+        //     &public_parameters,
+        // );
+        //
+        // let delta: Uint<WITNESS_LIMBS> = Uint::<WITNESS_LIMBS>::ONE << range_claim_bits;
+        // if delta.checked_mul(&Uint::from(PartyID::MAX+1)).map(|bound | order <= bound).unwrap()  {
+        //     // return error, doc
+        //     todo!();
+        // }
 
-        // TODO: COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS < WITNESS_LIMBS
+        // MESSAGE_SPACE_ORDER > 2^RANGE_CLAIM_BITS*(NUM_RANGE_CLAIMS*ComputationalSecuritySizedNumber*ComputationalSecuritySizedNumber + StatisticalSecuritySizedNumber)
+        // TODO: to do this, I need to know commitment scheme. Maybe just get the range proof and be done with it?
+
         let delta: Uint<WITNESS_LIMBS> = Uint::<WITNESS_LIMBS>::ONE << range_claim_bits;
-
         let delta = Self::new(delta.into(), public_parameters)?;
-
-        // TODO: WITNESS_LIMBS < PLAINTEXT_SPACE_SCALAR_LIMBS ?
         let decomposed_witness = decomposed_witness
             .into_iter()
             .map(|witness| {
                 Self::new(
+                    // TODO: need to check this is ok?
                     Uint::<WITNESS_LIMBS>::from(&Uint::<
                         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     >::from(witness))

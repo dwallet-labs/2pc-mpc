@@ -44,9 +44,6 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-// TODO: for the enhacned proofs, and there should be
-// range checks and the verfication should be the enhanced one and many many things!
-
 /// The Commitment Round Party of a Proof Aggregation Protocol.
 pub trait CommitmentRoundParty<Output>: Sized {
     type Commitment: Serialize + for<'a> Deserialize<'a> + Clone;
