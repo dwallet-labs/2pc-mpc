@@ -226,7 +226,7 @@ where
                         self.unbounded_encdh_witness_public_parameters.clone(),
                         self.range_proof_public_parameters.clone(),
                         language_public_parameters,
-                    );
+                    )?;
 
                     EnhancedLanguage::<
                         { maurer::proof::SOUND_PROOFS_REPETITIONS },

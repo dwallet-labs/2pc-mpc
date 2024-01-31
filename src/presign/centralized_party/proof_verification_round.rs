@@ -277,7 +277,7 @@ where
             self.unbounded_encdh_witness_public_parameters.clone(),
             self.range_proof_public_parameters.clone(),
             language_public_parameters,
-        );
+        )?;
 
         output.masks_and_encrypted_masked_key_share_proof.verify(
             &self.protocol_context,
@@ -379,7 +379,7 @@ where
             self.unbounded_encdl_witness_public_parameters.clone(),
             self.range_proof_public_parameters.clone(),
             language_public_parameters,
-        );
+        )?;
 
         output
             .encrypted_nonce_shares_and_public_shares_proof

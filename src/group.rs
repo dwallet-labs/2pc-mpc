@@ -219,6 +219,7 @@ pub trait KnownOrderScalar<const SCALAR_LIMBS: usize>:
     + Invert
     + Samplable
     + Copy
+    + ConditionallySelectable
     + Into<Uint<SCALAR_LIMBS>>
 {
 }

@@ -19,6 +19,7 @@ use crate::{
         maurer::{aggregation, language, proof::SOUND_PROOFS_REPETITIONS, language::GroupsPublicParametersAccessors},
     },
 };
+use crate::group::KnownOrderScalar;
 
 /// Ratio Between Committed Values is the Discrete Log Maurer Language.
 ///
@@ -40,7 +41,7 @@ pub struct Language<const SCALAR_LIMBS: usize, Scalar, GroupElement> {
 impl<const SCALAR_LIMBS: usize, Scalar, GroupElement> maurer::Language<SOUND_PROOFS_REPETITIONS>
     for Language<SCALAR_LIMBS, Scalar, GroupElement>
 where
-    Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
+    Scalar: KnownOrderScalar<SCALAR_LIMBS>
         + Samplable
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
@@ -163,7 +164,7 @@ impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
 {
     pub fn new<
         const SCALAR_LIMBS: usize,
-        Scalar: KnownOrderGroupElement<SCALAR_LIMBS>
+        Scalar: KnownOrderScalar<SCALAR_LIMBS>
             + Samplable
             + Mul<GroupElement, Output = GroupElement>
             + for<'r> Mul<&'r GroupElement, Output = GroupElement>

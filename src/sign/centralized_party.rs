@@ -399,7 +399,7 @@ where
             self.unbounded_dcom_eval_witness_public_parameters.clone(),
             self.range_proof_public_parameters.clone(),
             language_public_parameters,
-        );
+        )?;
 
         let witness = EnhancedLanguage::<
             { maurer::proof::SOUND_PROOFS_REPETITIONS },

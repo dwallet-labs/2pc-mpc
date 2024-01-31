@@ -291,7 +291,7 @@ where
             self.unbounded_encdh_witness_public_parameters.clone(),
             self.range_proof_public_parameters.clone(),
             language_public_parameters,
-        );
+        )?;
 
         let witnesses = mask_shares_witnesses
             .clone()
@@ -422,7 +422,7 @@ where
             self.unbounded_encdl_witness_public_parameters.clone(),
             self.range_proof_public_parameters.clone(),
             language_public_parameters,
-        );
+        )?;
 
         let witnesses: Vec<_> = shares_of_signature_nonce_shares_witnesses
             .clone()

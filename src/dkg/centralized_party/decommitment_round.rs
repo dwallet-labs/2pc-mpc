@@ -217,7 +217,7 @@ where
                 self.unbounded_encdl_witness_public_parameters,
                 self.range_proof_public_parameters.clone(),
                 encryption_of_discrete_log_language_public_parameters,
-            );
+            )?;
 
         // TODO: also we need to verify that the public key was DKG'ed right.
         decentralized_party_secret_key_share_encryption_and_proof

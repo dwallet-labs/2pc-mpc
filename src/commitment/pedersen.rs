@@ -17,6 +17,7 @@ use crate::{
     },
     helpers::{const_generic_array_serialization, FlatMapResults},
 };
+use crate::group::KnownOrderScalar;
 
 // TODO: scalar_mul_bounded
 
@@ -46,7 +47,7 @@ impl<const BATCH_SIZE: usize, const SCALAR_LIMBS: usize, Scalar, GroupElement>
     HomomorphicCommitmentScheme<SCALAR_LIMBS>
     for Pedersen<BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement>
 where
-    Scalar: BoundedGroupElement<SCALAR_LIMBS>
+    Scalar: KnownOrderScalar<SCALAR_LIMBS>
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Samplable

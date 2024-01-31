@@ -312,8 +312,6 @@ impl<
         S: KnownOrderScalar<SCALAR_LIMBS> + Mul<G, Output = G>,
         G: KnownOrderGroupElement<SCALAR_LIMBS, Scalar = S>,
     > KnownOrderGroupElement<SCALAR_LIMBS> for GroupElement<N, G>
-where
-    S: Default + ConditionallySelectable,
 {
     type Scalar = Scalar<SCALAR_LIMBS, S>;
 

@@ -14,6 +14,7 @@ use crate::{
     group::{self_product, BoundedGroupElement, KnownOrderGroupElement, Samplable},
     helpers::const_generic_array_serialization,
 };
+use crate::group::KnownOrderScalar;
 
 // TODO: scalar_mul_bounded
 
@@ -38,7 +39,7 @@ impl<const BATCH_SIZE: usize, const SCALAR_LIMBS: usize, Scalar, GroupElement>
     HomomorphicCommitmentScheme<SCALAR_LIMBS>
     for MultiPedersen<BATCH_SIZE, SCALAR_LIMBS, Scalar, GroupElement>
 where
-    Scalar: BoundedGroupElement<SCALAR_LIMBS>
+    Scalar: KnownOrderScalar<SCALAR_LIMBS>
         + Mul<GroupElement, Output = GroupElement>
         + for<'r> Mul<&'r GroupElement, Output = GroupElement>
         + Samplable

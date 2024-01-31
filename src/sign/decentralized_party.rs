@@ -311,7 +311,7 @@ where
             self.unbounded_dcom_eval_witness_public_parameters.clone(),
             self.range_proof_public_parameters.clone(),
             language_public_parameters,
-        );
+        )?;
 
         let encrypted_partial_signature = EncryptionKey::CiphertextSpaceGroupElement::new(
             public_nonce_encrypted_partial_signature_and_proof.encrypted_partial_signature,

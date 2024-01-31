@@ -11,6 +11,7 @@ use crate::{
     group,
     group::{BoundedGroupElement, GroupElement, Samplable},
 };
+use crate::group::KnownOrderGroupElement;
 
 pub mod multipedersen;
 pub mod pedersen;
@@ -31,7 +32,7 @@ pub trait HomomorphicCommitmentScheme<const MESSAGE_SPACE_SCALAR_LIMBS: usize>:
     PartialEq + Clone + Debug + Eq
 {
     /// The Message space group element of the commitment scheme
-    type MessageSpaceGroupElement: BoundedGroupElement<MESSAGE_SPACE_SCALAR_LIMBS> + Samplable;
+    type MessageSpaceGroupElement: KnownOrderGroupElement<MESSAGE_SPACE_SCALAR_LIMBS> + Samplable;
     /// The Randomness space group element of the commitment scheme
     type RandomnessSpaceGroupElement: GroupElement + Samplable;
     /// The Commitment space group element of the commitment scheme

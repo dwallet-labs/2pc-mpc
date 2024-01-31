@@ -195,7 +195,7 @@ where
             self.unbounded_encdl_witness_public_parameters.clone(),
             self.range_proof_public_parameters.clone(),
             language_public_parameters,
-        );
+        )?;
 
         let share_of_decentralized_party_secret_key_share_value: Uint<SCALAR_LIMBS> =
             share_of_decentralized_party_secret_key_share.into();

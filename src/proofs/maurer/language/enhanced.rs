@@ -4,7 +4,7 @@
 use core::array;
 use std::{marker::PhantomData, ops::Mul};
 
-use crypto_bigint::{rand_core::CryptoRngCore, Uint, U128, CheckedMul};
+use crypto_bigint::{rand_core::CryptoRngCore, Uint, U128, CheckedMul, U64};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 use tiresias::secret_sharing::shamir::Polynomial;
@@ -12,6 +12,7 @@ use tiresias::secret_sharing::shamir::Polynomial;
 use crate::{homomorphic_encryption, commitment, commitment::{
     pedersen, GroupsPublicParametersAccessors as _, HomomorphicCommitmentScheme, Pedersen,
 }, group, group::{
+    KnownOrderGroupElement,
     direct_product, direct_product::ThreeWayPublicParameters, paillier, self_product,
     BoundedGroupElement, GroupElement as _, GroupElement, KnownOrderScalar, Samplable,
 }, helpers::FlatMapResults, proofs, proofs::{
@@ -413,7 +414,7 @@ pub struct PublicParameters<
     LanguageStatementSpacePublicParameters,
     LanguagePublicParameters,
 > {
-    pub groups_public_parameters: GroupsPublicParameters<
+    groups_public_parameters: GroupsPublicParameters<
         direct_product::ThreeWayPublicParameters<
             self_product::PublicParameters<NUM_RANGE_CLAIMS, RangeClaimPublicParameters>,
             RandomnessSpacePublicParameters,
@@ -425,7 +426,7 @@ pub struct PublicParameters<
         >,
     >,
     pub range_proof_public_parameters: RangeProofPublicParameters,
-    pub language_public_parameters: LanguagePublicParameters,
+    language_public_parameters: LanguagePublicParameters,
 }
 
 impl<
@@ -457,7 +458,7 @@ impl<
         unbounded_witness_public_parameters: UnboundedWitnessSpacePublicParameters,
         range_proof_public_parameters: RangeProofPublicParameters,
         language_public_parameters: LanguagePublicParameters,
-    ) -> Self
+    ) -> proofs::Result<Self>
     where
         RangeProof: range::RangeProof<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -503,7 +504,21 @@ impl<
             >,
         >,
     {
-        Self {
+        // We require {\color{blue} $q > \Delta\cdot (d(\ell+1+\omegalen) \cdot 2^{\kappa+s} + 2^{\kappa})$}.
+        let order = CommitmentSchemeMessageSpaceGroupElement::<                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,>::order_from_public_parameters(
+            range_proof_public_parameters.commitment_scheme_public_parameters().message_space_public_parameters(),
+        );
+
+        let delta: Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> = Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::ONE << RangeProof::RANGE_CLAIM_BITS;
+        let number_of_range_claims = U64::from(u64::try_from(2*NUM_RANGE_CLAIMS).map_err(|_| proofs::Error::InvalidParameters)?); // We multiply by two for the + 1
+        let bound = Option::from(delta.checked_mul(&(&number_of_range_claims.into())).and_then(|bound| bound.checked_mul(&(Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::ONE << ComputationalSecuritySizedNumber::BITS))).and_then(|bound| bound.checked_mul(&(Uint::<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>::ONE << StatisticalSecuritySizedNumber::BITS)))).ok_or(proofs::Error::InvalidParameters)?;
+        if order <= bound {
+            return Err(proofs::Error::InvalidParameters);
+        }
+
+        Ok(Self {
             groups_public_parameters: language::GroupsPublicParameters {
                 witness_space_public_parameters: (
                     range_proof_public_parameters
@@ -530,7 +545,7 @@ impl<
             },
             range_proof_public_parameters,
             language_public_parameters,
-        }
+        })
     }
 
     pub fn unbounded_witness_public_parameters(&self) -> &UnboundedWitnessSpacePublicParameters {
@@ -811,6 +826,6 @@ pub(crate) mod tests {
             unbounded_witness_public_parameters,
             range::bulletproofs::PublicParameters::default(),
             language_public_parameters,
-        )
+        ).unwrap()
     }
 }

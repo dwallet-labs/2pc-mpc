@@ -213,27 +213,37 @@ impl<const SCALAR_LIMBS: usize, S: Into<Uint<SCALAR_LIMBS>>> From<Scalar<SCALAR_
 
 impl<const SCALAR_LIMBS: usize, S: KnownOrderScalar<SCALAR_LIMBS>> Invert
     for Scalar<SCALAR_LIMBS, S>
-where
-    S: Default + ConditionallySelectable,
 {
     fn invert(&self) -> CtOption<Self> {
-        self.0.invert().map(Self)
+        let inverted_option = self.0.invert();
+        let inverted  = inverted_option.unwrap_or(self.0);
+
+        CtOption::new(
+            Self(S::conditional_select(
+                &self.0,
+                &inverted,
+                inverted_option.is_some(),
+            )),
+            inverted_option.is_some(),
+        )
+    }
+}
+
+impl<const SCALAR_LIMBS: usize, S: KnownOrderScalar<SCALAR_LIMBS>> ConditionallySelectable
+for Scalar<SCALAR_LIMBS, S>
+{
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self(S::conditional_select(&a.0, &b.0, choice))
     }
 }
 
 impl<const SCALAR_LIMBS: usize, S: KnownOrderScalar<SCALAR_LIMBS>> KnownOrderScalar<SCALAR_LIMBS>
     for Scalar<SCALAR_LIMBS, S>
-where
-    S::Value: From<Uint<SCALAR_LIMBS>> + Into<Uint<SCALAR_LIMBS>>,
-    S: Default + ConditionallySelectable,
 {
 }
 
 impl<const SCALAR_LIMBS: usize, S: KnownOrderScalar<SCALAR_LIMBS>>
     KnownOrderGroupElement<SCALAR_LIMBS> for Scalar<SCALAR_LIMBS, S>
-where
-    S::Value: From<Uint<SCALAR_LIMBS>> + Into<Uint<SCALAR_LIMBS>>,
-    S: Default + ConditionallySelectable,
 {
     type Scalar = Self;
 

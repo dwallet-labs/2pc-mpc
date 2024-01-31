@@ -9,7 +9,7 @@ use crypto_bigint::{
     Encoding, NonZero, Random, RandomMod, Uint,
 };
 use serde::{Deserialize, Serialize};
-use subtle::{ConditionallySelectable, CtOption};
+use subtle::{Choice, ConditionallySelectable, CtOption};
 
 use crate::{
     group,
@@ -309,6 +309,12 @@ where
         let default = self.neutral().0;
 
         CtOption::new(Self(inv.unwrap_or(default)), inv.is_some())
+    }
+}
+
+impl<const LIMBS: usize> ConditionallySelectable for GroupElement<LIMBS> {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self(DynResidue::conditional_select(&a.0, &b.0, choice))
     }
 }
 

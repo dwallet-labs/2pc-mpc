@@ -294,6 +294,12 @@ impl Invert for Scalar {
     }
 }
 
+impl Default for Scalar {
+    fn default() -> Self {
+        Self(k256::Scalar::default())
+    }
+}
+
 impl KnownOrderScalar<SCALAR_LIMBS> for Scalar {}
 
 impl KnownOrderGroupElement<SCALAR_LIMBS> for Scalar {
