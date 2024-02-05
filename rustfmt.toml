@@ -8,7 +8,7 @@ reorder_imports = true
 wrap_comments = true
 comment_width = 120
 
-# Replace strings of _ wildcards by a single .. in tuple patterns
+# Replace strings of _ wildcards by a single. In tuple patterns
 condense_wildcard_suffixes = true
 
 # Error if Rustfmt is unable to get all lines within max_width, except for comments and string literals
