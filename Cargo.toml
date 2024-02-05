@@ -1,0 +1,11 @@
+[package]
+name = "2pc-mpc"
+version = "0.1.0"
+edition = "2021"
+license = "BSD-3-Clause-Clear"
+
+[dependencies]
+
+[dev-dependencies]
+
+[features]
