@@ -56,16 +56,15 @@ pub trait EnhanceableLanguage<
     UnboundedWitnessSpaceGroupElement: group::GroupElement + Samplable,
 >: maurer::Language<REPETITIONS>
 {
-    // TODO: solve all these refs & clones, here and in accessors. Perhaps partial move is ok.
     fn compose_witness(
-        decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
-        unbounded_witness: &UnboundedWitnessSpaceGroupElement,
+        decomposed_witness: [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
+        unbounded_witness: UnboundedWitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
         range_claim_bits: usize,
     ) -> proofs::Result<Self::WitnessSpaceGroupElement>;
 
     fn decompose_witness(
-        witness: &Self::WitnessSpaceGroupElement,
+        witness: Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
         range_claim_bits: usize,
     ) -> proofs::Result<(
@@ -153,8 +152,8 @@ impl<
             .map(Into::<Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>>::into);
 
         let language_witness = Language::compose_witness(
-            &decomposed_witness,
-            witness.unbounded_witness(),
+            decomposed_witness,
+            witness.unbounded_witness().clone(),
             &enhanced_language_public_parameters.language_public_parameters,
             RangeProof::RANGE_CLAIM_BITS,
         )?;
@@ -325,7 +324,7 @@ impl<
         >,
     > {
         let (decomposed_witness, unbounded_element) = Language::decompose_witness(
-            &witness,
+            witness,
             &enhanced_language_public_parameters.language_public_parameters,
             RangeProof::RANGE_CLAIM_BITS,
         )?;

@@ -248,8 +248,8 @@ impl<
     >
 {
     fn compose_witness(
-        decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
-        unbounded_witness: &direct_product::GroupElement<
+        decomposed_witness: [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>; NUM_RANGE_CLAIMS],
+        unbounded_witness: direct_product::GroupElement<
             self_product::GroupElement<DIMENSION, GroupElement::Scalar>,
             paillier::RandomnessSpaceGroupElement,
         >,
@@ -260,7 +260,7 @@ impl<
             return Err(proofs::Error::InvalidParameters);
         }
 
-        let mut decomposed_witness = decomposed_witness.clone().into_iter();
+        let mut decomposed_witness = decomposed_witness.into_iter();
 
         let coefficients: [[_; RANGE_CLAIMS_PER_SCALAR]; DIMENSION] = array::from_fn(|_| {
             array::from_fn(|_| {
@@ -312,7 +312,7 @@ impl<
             range_claim_bits,
         )?;
 
-        let (commitment_randomness, encryption_randomness) = (*unbounded_witness).into();
+        let (commitment_randomness, encryption_randomness) = unbounded_witness.into();
 
         Ok((
             coefficients,
@@ -324,7 +324,7 @@ impl<
     }
 
     fn decompose_witness(
-        witness: &Self::WitnessSpaceGroupElement,
+        witness: Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
         range_claim_bits: usize,
     ) -> proofs::Result<(

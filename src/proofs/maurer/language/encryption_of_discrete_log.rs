@@ -154,9 +154,9 @@ impl<
     >
 {
     fn compose_witness(
-        decomposed_witness: &[Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>;
+        decomposed_witness: [Uint<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>;
              RANGE_CLAIMS_PER_SCALAR],
-        randomness: &paillier::RandomnessSpaceGroupElement,
+        randomness: paillier::RandomnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
         range_claim_bits: usize,
     ) -> proofs::Result<Self::WitnessSpaceGroupElement> {
@@ -174,11 +174,11 @@ impl<
             range_claim_bits,
         )?;
 
-        Ok((discrete_log, *randomness).into())
+        Ok((discrete_log, randomness).into())
     }
 
     fn decompose_witness(
-        witness: &Self::WitnessSpaceGroupElement,
+        witness: Self::WitnessSpaceGroupElement,
         language_public_parameters: &Self::PublicParameters,
         range_claim_bits: usize,
     ) -> proofs::Result<(
