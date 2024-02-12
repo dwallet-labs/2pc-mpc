@@ -225,6 +225,7 @@ impl<
             .map_err(range::bulletproofs::Error::from)
             .map_err(range::Error::from)?;
 
+        // TODO: this assumes party IDs are 1 to n right?
         let (parties_awaiting_bit_challenge, bit_commitments): (Vec<_>, Vec<_>) = parties
             .into_iter()
             .enumerate()

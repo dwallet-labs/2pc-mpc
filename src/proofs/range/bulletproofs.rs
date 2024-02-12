@@ -54,7 +54,7 @@ pub enum Error {
 /// for aggregated range proofs.
 ///
 /// Whilst bulletproofs claim to have a constant-size proof and support
-/// aggregation, these claims are false: the commitment aren't aggregated but are instead
+/// aggregation, these claims are false: the commitments aren't aggregated but are instead
 /// concatenated, so that the commitment for the aggregated proofs is O(n) in the number of parties
 /// and so is the verification time.
 ///
@@ -142,16 +142,23 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
     )> {
         let number_of_witnesses = witnesses.len();
 
+        // As bulletproofs proves a single witness, flatten the witnesses vector
+        // from an entry over `NUM_RANGE_CLAIMS` to a vector of individual range claims.
         let witnesses: Vec<_> = witnesses
             .into_iter()
             .map(|witness| <[_; NUM_RANGE_CLAIMS]>::from(witness))
-            .flatten()
+            .flatten();
+
+        // Buletproofs think of range claims a numbers and not scalars.
+        // Transition, whilst ensuring they are in range.
+        let witnesses: Vec<_> = witnesses
+            .into_iter()
             .map(|witness: ristretto::Scalar| U256::from(witness))
             .collect();
 
         if witnesses
             .iter()
-            .any(|witness| witness > &(&U64::MAX).into())
+            .any(|witness| witness >= &(U256::ONE << RANGE_CLAIM_BITS))
         {
             return Err(range::Error::OutOfRange)?;
         }
@@ -161,6 +168,7 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
             .map(|witness| U64::from(&witness).into())
             .collect();
 
+        // Similarly, flatten commitments randomnesses.
         let commitments_randomness: Vec<_> = commitments_randomness
             .into_iter()
             .flat_map(|multicommitment_randomness| {
@@ -169,6 +177,8 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
             .map(|randomness| randomness.0)
             .collect();
 
+        // Bulletproofs' API supports power-of-two-sized batching exclusively.
+        // To handle that, we pad to the next power-of-two with a witness zero and randomness zero.
         let padded_witnesses_length = witnesses.len().next_power_of_two();
         let mut iter = witnesses.into_iter();
         let witnesses: Vec<u64> = iter::repeat_with(|| iter.next().unwrap_or_else(|| 0u64))
@@ -217,6 +227,8 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
             .map(|point| ristretto::GroupElement(point));
 
         let commitments: proofs::Result<Vec<_>> = iter::repeat_with(|| {
+            // Unflatten individual commitments to a multi-commitment,
+            // to fit the `RangeProof` API which returns a vector of commitments over `NUM_RANGE_CLAIMS` elements.
             array::from_fn(|_| {
                 commitments_iter
                     .next()
