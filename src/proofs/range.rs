@@ -3,7 +3,7 @@
 
 use std::fmt::Debug;
 
-// #[cfg(feature = "benchmarking")]
+// #[cfg(feature = "benchmarking-off")]
 // pub(crate) use benches::benchmark;
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding};
 use merlin::Transcript;

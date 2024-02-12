@@ -1,5 +1,7 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
+#[cfg(feature = "benchmarking")]
+pub(crate) use benches::benchmark;
 
 pub mod centralized_party;
 pub mod decentralized_party;
@@ -11,6 +13,8 @@ pub const DIMENSION: usize = 2;
 pub(crate) mod tests {
     use core::{array, iter, marker::PhantomData};
     use std::collections::HashMap;
+    use std::time::Duration;
+    use criterion::measurement::{Measurement, WallTime};
 
     use crypto_bigint::{CheckedMul, NonZero, RandomMod, Uint, Wrapping, U256};
     use ecdsa::{
@@ -28,36 +32,25 @@ pub(crate) mod tests {
     };
 
     use super::*;
-    use crate::{
-        homomorphic_encryption,
-        homomorphic_encryption::{
-            paillier,
-            paillier::{
-                tests::{N, SECRET_KEY},
-                PrecomputedValues,
-            },
-            AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
-            GroupsPublicParametersAccessors,
+    use crate::{homomorphic_encryption, homomorphic_encryption::{
+        paillier,
+        paillier::{
+            tests::{N, SECRET_KEY},
+            PrecomputedValues,
         },
-        commitment::{pedersen, HomomorphicCommitmentScheme, Pedersen},
-        dkg::tests::generates_distributed_key_internal,
-        group::{
-            direct_product, ristretto, secp256k1, self_product, AffineXCoordinate,
-            CyclicGroupElement, GroupElement as _, Invert, KnownOrderGroupElement, Samplable,
+        AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
+        GroupsPublicParametersAccessors,
+    }, commitment::{pedersen, HomomorphicCommitmentScheme, Pedersen}, dkg::tests::generates_distributed_key_internal, group::{
+        direct_product, ristretto, secp256k1, self_product, AffineXCoordinate,
+        CyclicGroupElement, GroupElement as _, Invert, KnownOrderGroupElement, Samplable,
+    }, presign::tests::generates_presignatures_internal, proofs::{
+        range::{bulletproofs, RangeProof},
+        maurer::{
+            aggregation::tests::aggregates_internal,
+            committed_linear_evaluation::tests::{NUM_RANGE_CLAIMS, RANGE_CLAIMS_PER_MASK},
+            enhanced::{tests::RANGE_CLAIMS_PER_SCALAR, EnhancedLanguageStatementAccessors},
         },
-        presign::tests::generates_presignatures_internal,
-        proofs::{
-            range::{bulletproofs, RangeProof},
-            maurer::{
-                aggregation::tests::aggregates_internal,
-                committed_linear_evaluation::tests::{NUM_RANGE_CLAIMS, RANGE_CLAIMS_PER_MASK},
-                enhanced::{tests::RANGE_CLAIMS_PER_SCALAR, EnhancedLanguageStatementAccessors},
-            },
-        },
-        sign::tests::paillier::tests::BASE,
-        traits::Reduce as _,
-        StatisticalSecuritySizedNumber,
-    };
+    }, sign::tests::paillier::tests::BASE, traits::Reduce as _, StatisticalSecuritySizedNumber, PartyID};
 
     pub fn signs_internal(
         number_of_parties: u16,
@@ -75,6 +68,11 @@ pub(crate) mod tests {
         encrypted_masked_key_share: paillier::CiphertextSpaceGroupElement,
         encrypted_masked_nonce_share: paillier::CiphertextSpaceGroupElement,
     ) {
+        let measurement = WallTime;
+        let mut centralized_party_total_time = Duration::ZERO;
+        let mut decentralized_party_decryption_share_time = Duration::ZERO;
+        let mut decentralized_party_threshold_decryption_time = Duration::ZERO;
+
         let (
             secp256k1_scalar_public_parameters,
             secp256k1_group_public_parameters,
@@ -137,9 +135,11 @@ pub(crate) mod tests {
 
         let m = secp256k1::Scalar(<Scalar<k256::Secp256k1> as Reduce<U256>>::reduce_bytes(&m));
 
+        let now = measurement.start();
         let public_nonce_encrypted_partial_signature_and_proof = centralized_party_sign_round_party
             .evaluate_encrypted_partial_signature(m, &mut OsRng)
             .unwrap();
+        centralized_party_total_time = measurement.add(&centralized_party_total_time, &measurement.end(now));
 
         let (
             encryption_key,
@@ -195,12 +195,14 @@ pub(crate) mod tests {
                     )
                 });
 
+
         let (partial_signature_decryption_shares, masked_nonce_decryption_shares): (
             HashMap<_, _>,
             HashMap<_, _>,
         ) = decentralized_party_sign_round_parties
             .into_iter()
             .map(|(party_id, party)| {
+                let now = measurement.start();
                 let (partial_signature_decryption_share, masked_nonce_decryption_share) = party
                     .partially_decrypt_encrypted_signature_parts(
                         m,
@@ -208,6 +210,7 @@ pub(crate) mod tests {
                         &mut OsRng,
                     )
                     .unwrap();
+                if party_id == 1 {decentralized_party_decryption_share_time = measurement.end(now);};
 
                 (
                     (party_id, partial_signature_decryption_share),
@@ -225,6 +228,7 @@ pub(crate) mod tests {
             absolute_adjusted_lagrange_coefficients,
         };
 
+        let now = measurement.start();
         let signature_s = decentralized_party::Party::<
             { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
             { secp256k1::SCALAR_LIMBS },
@@ -249,6 +253,19 @@ pub(crate) mod tests {
             masked_nonce_decryption_shares,
         )
         .unwrap();
+        decentralized_party_threshold_decryption_time = measurement.end(now);
+
+        println!(
+            "\nProtocol, Number of Parties, Threshold, Batch Size, Centralized Party Total Time (ms), Decentralized Party Decryption Share Time (ms), Decentralized Party Threshold Decryption Time (ms)",
+        );
+
+        // TODO: batch
+        println!(
+            "Sign, {number_of_parties}, {threshold}, 1, {:?}, {:?}, {:?}",
+            centralized_party_total_time.as_millis(),
+            decentralized_party_decryption_share_time.as_millis(),
+            decentralized_party_threshold_decryption_time.as_millis()
+        );
 
         assert_eq!(
             decentralized_party_nonce_share * &generator,
@@ -425,11 +442,13 @@ pub(crate) mod tests {
         );
     }
 
+
     #[test]
     fn dkg_presign_signs() {
-        let number_of_parties = 4;
-        let threshold = 2;
+        dkg_presign_signs_internal(4, 2)
+    }
 
+    pub fn dkg_presign_signs_internal(number_of_parties: PartyID, threshold: PartyID) {
         let (
             secp256k1_scalar_public_parameters,
             secp256k1_group_public_parameters,
@@ -586,4 +605,16 @@ pub(crate) mod tests {
     }
 }
 
-// TODO: bench
+#[cfg(feature = "benchmarking")]
+pub(crate) mod benches {
+    use criterion::Criterion;
+
+    pub(crate) fn benchmark(_c: &mut Criterion) {
+        super::tests::dkg_presign_signs_internal(8, 2);
+        super::tests::dkg_presign_signs_internal(16, 8);
+        super::tests::dkg_presign_signs_internal(32, 16);
+        super::tests::dkg_presign_signs_internal(32, 64);
+        super::tests::dkg_presign_signs_internal(64, 128);
+        super::tests::dkg_presign_signs_internal(256, 128);
+    }
+}

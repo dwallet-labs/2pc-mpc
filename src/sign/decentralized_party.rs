@@ -39,7 +39,7 @@ use crate::{
     AdditivelyHomomorphicEncryptionKey, PartyID,
 };
 
-#[cfg_attr(feature = "benchmarking", derive(Clone))]
+#[cfg_attr(feature = "benchmarking-off", derive(Clone))]
 pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     const SCALAR_LIMBS: usize,

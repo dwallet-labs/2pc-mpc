@@ -1,6 +1,6 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
-#[cfg(feature = "benchmarking")]
+#[cfg(feature = "benchmarking-off")]
 pub(crate) use benches::benchmark;
 use crypto_bigint::{Encoding, Limb, Uint};
 use merlin::Transcript;
@@ -49,7 +49,7 @@ impl TranscriptProtocol for Transcript {
     }
 }
 
-#[cfg(feature = "benchmarking")]
+#[cfg(feature = "benchmarking-off")]
 mod benches {
     use std::{collections::HashMap, iter, marker::PhantomData};
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
 // TODO
-// #[cfg(feature = "benchmarking")]
+// #[cfg(feature = "benchmarking-off")]
 // pub(crate) use benches::benchmark;
 use core::array;
 use std::marker::PhantomData;
@@ -947,7 +947,7 @@ pub(crate) mod tests {
 }
 
 // TODO: benchmarking
-// #[cfg(feature = "benchmarking")]
+// #[cfg(feature = "benchmarking-off")]
 // mod benches {
 //     use criterion::Criterion;
 //     use language::enhanced::tests::{RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS};

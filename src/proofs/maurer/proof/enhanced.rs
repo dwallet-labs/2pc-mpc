@@ -691,7 +691,7 @@ pub(crate) mod tests {
             })
             .collect();
 
-        let (proof, statements) = aggregation::tests::aggregates_internal(commitment_round_parties);
+        let (_, (proof, statements)) = aggregation::tests::aggregates_internal(commitment_round_parties);
 
         assert!(
             proof

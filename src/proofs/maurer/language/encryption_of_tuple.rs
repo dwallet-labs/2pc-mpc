@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 use std::{marker::PhantomData, ops::Mul};
 
-// #[cfg(feature = "benchmarking")]
+// #[cfg(feature = "benchmarking-off")]
 // pub(crate) use benches::benchmark;
 use crypto_bigint::{Encoding, Uint};
 use language::GroupsPublicParameters;
@@ -619,7 +619,7 @@ pub(crate) mod tests {
     }
 }
 
-// #[cfg(any(test, feature = "benchmarking"))]
+// #[cfg(any(test, feature = "benchmarking-off"))]
 // pub(crate) mod tests {
 //     use crypto_bigint::{NonZero, Random};
 //     use language::enhanced::tests::{RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS};
@@ -791,7 +791,7 @@ pub(crate) mod tests {
 //     }
 // }
 //
-// #[cfg(feature = "benchmarking")]
+// #[cfg(feature = "benchmarking-off")]
 // mod benches {
 //     use criterion::Criterion;
 //     use language::enhanced::tests::{RANGE_CLAIMS_PER_SCALAR, WITNESS_MASK_LIMBS};

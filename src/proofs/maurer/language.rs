@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 use core::fmt::Debug;
 
-#[cfg(feature = "benchmarking")]
+#[cfg(feature = "benchmarking-off")]
 pub(crate) use benches::benchmark;
 use proofs::Result;
 use serde::{Deserialize, Serialize};
@@ -135,7 +135,7 @@ impl<
 {
 }
 
-#[cfg(any(test, feature = "benchmarking"))]
+#[cfg(any(test, feature = "benchmarking-off"))]
 pub(crate) mod tests {
     use std::{iter, marker::PhantomData};
 
@@ -407,7 +407,7 @@ pub(crate) mod tests {
     }
 }
 
-#[cfg(feature = "benchmarking")]
+#[cfg(feature = "benchmarking-off")]
 mod benches {
     use std::marker::PhantomData;
 

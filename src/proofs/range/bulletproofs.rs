@@ -147,7 +147,7 @@ impl super::RangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS> for RangePr
         let witnesses: Vec<_> = witnesses
             .into_iter()
             .map(|witness| <[_; NUM_RANGE_CLAIMS]>::from(witness))
-            .flatten();
+            .flatten().collect();
 
         // Buletproofs think of range claims a numbers and not scalars.
         // Transition, whilst ensuring they are in range.

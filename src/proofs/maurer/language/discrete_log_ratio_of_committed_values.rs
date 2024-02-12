@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 use std::{marker::PhantomData, ops::Mul};
 
-#[cfg(feature = "benchmarking")]
+#[cfg(feature = "benchmarking-off")]
 pub(crate) use benches::benchmark;
 // pub use language::aliases::discrete_log_ratio_of_commited_values::*;
 use serde::{Deserialize, Serialize};
@@ -321,7 +321,7 @@ mod tests {
     }
 }
 
-#[cfg(feature = "benchmarking")]
+#[cfg(feature = "benchmarking-off")]
 mod benches {
     use criterion::Criterion;
 

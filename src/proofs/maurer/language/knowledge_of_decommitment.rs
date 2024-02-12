@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 use std::{marker::PhantomData, ops::Mul};
 
-#[cfg(feature = "benchmarking")]
+#[cfg(feature = "benchmarking-off")]
 pub(crate) use benches::{
     benchmark_lightningproofs_dcom_eval, benchmark_lightningproofs_encdl,
     benchmark_lightningproofs_single_message, benchmark_zero_knowledge,
@@ -333,7 +333,7 @@ mod tests {
     }
 }
 
-#[cfg(feature = "benchmarking")]
+#[cfg(feature = "benchmarking-off")]
 mod benches {
     use criterion::Criterion;
 

@@ -3,7 +3,7 @@
 use std::{marker::PhantomData, ops::Mul};
 
 // TODO
-// #[cfg(feature = "benchmarking")]
+// #[cfg(feature = "benchmarking-off")]
 // pub(crate) use benches::benchmark;
 use crypto_bigint::{Encoding, Uint};
 use serde::Serialize;
@@ -636,7 +636,7 @@ pub(crate) mod tests {
     // }
 }
 
-// #[cfg(feature = "benchmarking")]
+// #[cfg(feature = "benchmarking-off")]
 // mod benches {
 //     use criterion::Criterion;
 //

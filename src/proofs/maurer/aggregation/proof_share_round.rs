@@ -31,7 +31,7 @@ pub struct ProofShare<const REPETITIONS: usize, Language: maurer::Language<REPET
     pub(super)  [WitnessSpaceValue<REPETITIONS, Language>; REPETITIONS],
 );
 
-#[cfg_attr(feature = "benchmarking", derive(Clone))]
+#[cfg_attr(feature = "benchmarking-off", derive(Clone))]
 pub struct Party<
     // Number of times this proof should be repeated to achieve sufficient security
     const REPETITIONS: usize,

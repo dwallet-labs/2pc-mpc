@@ -25,7 +25,7 @@ pub type Output<const REPETITIONS: usize, Language, ProtocolContext> = (
     Vec<language::StatementSpaceGroupElement<REPETITIONS, Language>>,
 );
 
-#[cfg_attr(feature = "benchmarking", derive(Clone))]
+#[cfg_attr(feature = "benchmarking-off", derive(Clone))]
 pub struct Party<
     // Number of times this proof should be repeated to achieve sufficient security
     const REPETITIONS: usize,

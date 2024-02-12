@@ -4,7 +4,7 @@
 use core::marker::PhantomData;
 use std::collections::HashMap;
 
-#[cfg(feature = "benchmarking")]
+#[cfg(feature = "benchmarking-off")]
 pub(crate) use benches::benchmark;
 use crypto_bigint::rand_core::CryptoRngCore;
 pub use proof_aggregation_round::Output;
@@ -99,31 +99,39 @@ pub trait ProofAggregationRoundParty<Output>: Sized {
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
     use std::collections::HashMap;
+    use std::time::Duration;
 
     use rand_core::OsRng;
 
     use super::*;
     use crate::{proofs, proofs::maurer::Language};
+    use criterion::measurement::{Measurement, WallTime};
 
     #[allow(dead_code)]
     pub(crate) fn aggregates_internal<Output, P: CommitmentRoundParty<Output>>(
         commitment_round_parties: HashMap<PartyID, P>,
-    ) -> Output {
-        aggregates_internal_multiple(
+    ) -> (Duration, Output) {
+        let (total_time, outputs) = aggregates_internal_multiple(
             commitment_round_parties
                 .into_iter()
                 .map(|(party_id, party)| (party_id, vec![party]))
                 .collect(),
+        );
+
+        (total_time,
+        outputs.into_iter().next().unwrap(),
         )
-        .into_iter()
-        .next()
-        .unwrap()
     }
 
     #[allow(dead_code)]
     pub(crate) fn aggregates_internal_multiple<Output, P: CommitmentRoundParty<Output>>(
         commitment_round_parties: HashMap<PartyID, Vec<P>>,
-    ) -> Vec<Output> {
+    ) -> (        Duration,
+                  Vec<Output>,
+    ) {
+        let measurement = WallTime;
+        let mut total_time = Duration::ZERO;
+
         let batch_size = commitment_round_parties
             .iter()
             .next()
@@ -136,16 +144,20 @@ pub(crate) mod tests {
             commitment_round_parties
                 .into_iter()
                 .map(|(party_id, parties)| {
+                    let now = measurement.start();
+                    let res = parties
+                        .into_iter()
+                        .map(|party| {
+                            party
+                                .commit_statements_and_statement_mask(&mut OsRng)
+                                .unwrap()
+                        })
+                        .collect();
+                    if party_id == 1 {total_time = measurement.add(&total_time, &measurement.end(now));};
+
                     (
                         party_id,
-                        parties
-                            .into_iter()
-                            .map(|party| {
-                                party
-                                    .commit_statements_and_statement_mask(&mut OsRng)
-                                    .unwrap()
-                            })
-                            .collect(),
+                        res,
                     )
                 })
                 .collect();
@@ -173,19 +185,22 @@ pub(crate) mod tests {
             commitments_and_decommitment_round_parties
                 .into_iter()
                 .map(|(party_id, v)| {
+                    let now = measurement.start();
+                    let res = v.into_iter()
+                        .enumerate()
+                        .map(|(i, (_, party))| {
+                            party
+                                .decommit_statements_and_statement_mask(
+                                    commitments[i].clone(),
+                                    &mut OsRng,
+                                )
+                                .unwrap()
+                        })
+                        .collect();
+                    if party_id == 1 {total_time = measurement.add(&total_time, &measurement.end(now));};
                     (
                         party_id,
-                        v.into_iter()
-                            .enumerate()
-                            .map(|(i, (_, party))| {
-                                party
-                                    .decommit_statements_and_statement_mask(
-                                        commitments[i].clone(),
-                                        &mut OsRng,
-                                    )
-                                    .unwrap()
-                            })
-                            .collect(),
+                        res,
                     )
                 })
                 .collect();
@@ -215,16 +230,20 @@ pub(crate) mod tests {
             decommitments_and_proof_share_round_parties
                 .into_iter()
                 .map(|(party_id, v)| {
+                    let now = measurement.start();
+                    let res =  v.into_iter()
+                        .enumerate()
+                        .map(|(i, (_, party))| {
+                            party
+                                .generate_proof_share(decommitments[i].clone(), &mut OsRng)
+                                .unwrap()
+                        })
+                        .collect();
+                    if party_id == 1 {total_time = measurement.add(&total_time, &measurement.end(now));};
+
                     (
                         party_id,
-                        v.into_iter()
-                            .enumerate()
-                            .map(|(i, (_, party))| {
-                                party
-                                    .generate_proof_share(decommitments[i].clone(), &mut OsRng)
-                                    .unwrap()
-                            })
-                            .collect(),
+                      res,
                     )
                 })
                 .collect();
@@ -258,7 +277,8 @@ pub(crate) mod tests {
         let (_, proof_aggregation_round_parties): (Vec<_>, Vec<_>) =
             proof_aggregation_round_parties.into_iter().unzip();
 
-        proof_aggregation_round_parties
+        let now = measurement.start();
+        let res = proof_aggregation_round_parties
             .into_iter()
             .enumerate()
             .map(|(i, proof_aggregation_round_party)| {
@@ -266,7 +286,10 @@ pub(crate) mod tests {
                     .aggregate_proof_shares(proof_shares[i].clone(), &mut OsRng)
                     .unwrap()
             })
-            .collect()
+            .collect();
+        total_time = measurement.add(&total_time, &measurement.end(now));
+
+        (total_time, res)
     }
 
     #[allow(dead_code)]
@@ -300,7 +323,7 @@ pub(crate) mod tests {
             })
             .collect();
 
-        let (proof, statements) = aggregates_internal(commitment_round_parties);
+        let (_, (proof, statements)) = aggregates_internal(commitment_round_parties);
 
         assert!(
             proof
@@ -311,7 +334,7 @@ pub(crate) mod tests {
     }
 }
 
-#[cfg(feature = "benchmarking")]
+#[cfg(feature = "benchmarking-off")]
 mod benches {
     use std::{collections::HashMap, iter, marker::PhantomData};
 

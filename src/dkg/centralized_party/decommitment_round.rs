@@ -47,7 +47,7 @@ pub struct PublicKeyShareDecommitmentAndProof<GroupElementValue, DLProof> {
     pub(in crate::dkg) commitment_randomness: ComputationalSecuritySizedNumber,
 }
 
-#[cfg_attr(feature = "benchmarking", derive(Clone))]
+#[cfg_attr(feature = "benchmarking-off", derive(Clone))]
 pub struct Party<
     const SCALAR_LIMBS: usize,
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,

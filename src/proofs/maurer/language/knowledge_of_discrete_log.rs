@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 use std::{marker::PhantomData, ops::Mul};
 
-#[cfg(feature = "benchmarking")]
+#[cfg(feature = "benchmarking-off")]
 pub(crate) use benches::benchmark;
 // pub use language::aliases::knowledge_of_discrete_log::*;
 use serde::{Deserialize, Serialize};
@@ -123,7 +123,7 @@ impl<ScalarPublicParameters, GroupPublicParameters, GroupElementValue>
 pub type Proof<Scalar, GroupElement, ProtocolContext> =
     maurer::Proof<{ SOUND_PROOFS_REPETITIONS }, Language<Scalar, GroupElement>, ProtocolContext>;
 
-#[cfg(any(test, feature = "benchmarking"))]
+#[cfg(any(test, feature = "benchmarking-off"))]
 mod tests {
     use rstest::rstest;
 
@@ -196,7 +196,7 @@ mod tests {
     }
 }
 
-#[cfg(feature = "benchmarking")]
+#[cfg(feature = "benchmarking-off")]
 mod benches {
     use criterion::Criterion;
 
