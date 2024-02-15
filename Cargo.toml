@@ -1,0 +1,32 @@
+[package]
+name = "twopc_mpc"
+version = "0.1.0"
+edition = "2021"
+license = "BSD-3-Clause-Clear"
+
+[dependencies]
+crypto-bigint = { version = "0.5", features = ["rand_core", "serde"], default-features = false }
+merlin = { version = "3", default-features = false }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+group = { git = "https://github.com/dwallet-labs/group.git" }
+proof = { git = "https://github.com/dwallet-labs/proof.git", branch = "bp-aggregation" }
+homomorphic_encryption = { git = "https://github.com/dwallet-labs/homomorphic-encryption.git" }
+commitment = { git = "https://github.com/dwallet-labs/commitment.git" }
+maurer = { git = "https://github.com/dwallet-labs/maurer.git", branch = "knowledge_of_discerte_log" }
+enhanced_maurer = { git = "https://github.com/dwallet-labs/enhanced-maurer.git", branch = "dcomeval" }
+tiresias = { git = "https://github.com/dwallet-labs/tiresias.git", branch = "he", features = ["test_exports"] }
+thiserror = "1.0"
+
+criterion = { version = "0.5", features = ["html_reports"], optional = true }
+rand_core = { version = "0.6", features = ["std"], optional = true }
+rstest = { version = "0.18", optional = true }
+
+[dev-dependencies]
+rand_core = { version = "0.6", features = ["std"] }
+rstest = { version = "0.18" }
+proof = { git = "https://github.com/dwallet-labs/proof.git", branch = "bp-aggregation", features = ["test_helpers"] }
+maurer = { git = "https://github.com/dwallet-labs/maurer.git", branch = "knowledge_of_discerte_log", features = ["test_helpers"] }
+
+[features]
+benchmarking = ["dep:criterion", "dep:rand_core", "dep:rstest", "proof/test_helpers"]
