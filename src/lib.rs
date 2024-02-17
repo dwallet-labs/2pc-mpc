@@ -1,7 +1,7 @@
-use group::PartyID;
-
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
+
+use group::PartyID;
 pub mod dkg;
 
 /// 2PC-MPC error.
