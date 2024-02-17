@@ -119,6 +119,8 @@ where
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
+            RangeProof,
+            UnboundedEncDLWitness,
             ProtocolContext,
         >,
     )> {
@@ -234,13 +236,17 @@ where
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
+            RangeProof,
+            UnboundedEncDLWitness,
             ProtocolContext,
         > {
             protocol_context: self.protocol_context,
             group_public_parameters: self.group_public_parameters,
             scalar_group_public_parameters: self.scalar_group_public_parameters,
+            encryption_scheme_public_parameters: self.encryption_scheme_public_parameters,
             commitment_to_centralized_party_secret_key_share,
-            _encryption_key_choice: PhantomData,
+            _unbounded_witness_choice: PhantomData,
+            _range_proof_choice: PhantomData,
         };
 
         Ok((

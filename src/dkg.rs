@@ -13,7 +13,6 @@ pub(crate) mod tests {
     };
 
     use criterion::measurement::{Measurement, WallTime};
-    use enhanced_maurer::language::EnhancedLanguageStatementAccessors;
     use group::{ristretto, secp256k1, CyclicGroupElement};
     use homomorphic_encryption::{
         AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors,
@@ -200,7 +199,10 @@ pub(crate) mod tests {
             centralized_party_public_key_share_decommitment_and_proof,
             centralized_party_dkg_output,
         ) = centralized_party_decommitment_round_party
-            .decommit_proof_public_key_share(secret_key_share_encryption_and_proof, &mut OsRng)
+            .decommit_proof_public_key_share(
+                secret_key_share_encryption_and_proof.clone(),
+                &mut OsRng,
+            )
             .unwrap();
         centralized_party_total_time =
             measurement.add(&centralized_party_total_time, &measurement.end(now));
@@ -226,9 +228,7 @@ pub(crate) mod tests {
                     let res = party
                         .verify_decommitment_and_proof_of_centralized_party_public_key_share(
                             centralized_party_public_key_share_decommitment_and_proof.clone(),
-                            encryption_of_decentralized_party_secret_share
-                                .language_statement()
-                                .clone(),
+                            secret_key_share_encryption_and_proof.clone(),
                         )
                         .unwrap();
                     if party_id == 1 {
