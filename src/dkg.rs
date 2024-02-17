@@ -75,7 +75,7 @@ pub(crate) mod tests {
             secp256k1::GroupElement,
             tiresias::EncryptionKey,
             tiresias::RandomnessSpaceGroupElement,
-            bulletproofs::RangeProof,
+            bulletAggregatableRangeProof,
             PhantomData<()>,
         > {
             protocol_context: PhantomData::<()>,
@@ -116,7 +116,7 @@ pub(crate) mod tests {
                         secp256k1::GroupElement,
                         tiresias::EncryptionKey,
                         tiresias::RandomnessSpaceGroupElement,
-                        bulletproofs::RangeProof,
+                        bulletAggregatableRangeProof,
                         PhantomData<()>,
                     > {
                         party_id,

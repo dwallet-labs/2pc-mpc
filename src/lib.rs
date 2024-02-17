@@ -3,6 +3,7 @@
 
 use group::PartyID;
 pub mod dkg;
+pub mod presign;
 
 /// 2PC-MPC error.
 #[derive(thiserror::Error, Debug)]
