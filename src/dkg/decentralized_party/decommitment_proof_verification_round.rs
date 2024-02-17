@@ -1,13 +1,12 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use std::collections::HashSet;
 use std::marker::PhantomData;
 use commitment::Commitment;
 
 use enhanced_maurer::encryption_of_discrete_log;
 use enhanced_maurer::encryption_of_discrete_log::StatementAccessors;
-use group::{PartyID, PrimeGroupElement};
+use group::{PrimeGroupElement};
 use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
 use maurer::knowledge_of_discrete_log;
 use serde::Serialize;
@@ -28,7 +27,7 @@ pub struct Output<
     pub centralized_party_public_key_share: GroupElement,
 }
 
-#[cfg_attr(feature = "benchmarking-off", derive(Clone))]
+#[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
     const SCALAR_LIMBS: usize,
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
@@ -38,13 +37,10 @@ pub struct Party<
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
 > {
-    pub party_id: PartyID,
-    pub parties: HashSet<PartyID>,
     pub protocol_context: ProtocolContext,
     pub group_public_parameters: GroupElement::PublicParameters,
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub commitment_to_centralized_party_secret_key_share: Commitment,
-    pub share_of_decentralized_party_secret_key_share: GroupElement::Scalar,
 
     pub _encryption_key_choice: PhantomData<EncryptionKey>,
 }

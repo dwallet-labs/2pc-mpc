@@ -14,7 +14,7 @@ use enhanced_maurer::language::EnhancedPublicParameters;
 use proof::AggregatableRangeProof;
 use crate::dkg::decentralized_party::decommitment_proof_verification_round;
 
-#[cfg_attr(feature = "benchmarking-off", derive(Clone))]
+#[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
     const SCALAR_LIMBS: usize,
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
@@ -244,13 +244,10 @@ where
             EncryptionKey,
             ProtocolContext,
         > {
-            party_id: self.party_id,
-            parties: self.parties,
             protocol_context: self.protocol_context,
             group_public_parameters: self.group_public_parameters,
             scalar_group_public_parameters: self.scalar_group_public_parameters,
             commitment_to_centralized_party_secret_key_share,
-            share_of_decentralized_party_secret_key_share,
             _encryption_key_choice: PhantomData,
         };
 

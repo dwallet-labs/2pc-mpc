@@ -12,7 +12,7 @@ use serde::{Serialize};
 
 use crate::{CENTRALIZED_PARTY_ID, dkg::centralized_party::decommitment_round};
 
-#[cfg_attr(feature = "benchmarking-off", derive(Clone))]
+#[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
     const SCALAR_LIMBS: usize,
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
