@@ -1,29 +1,20 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use crypto_bigint::rand_core::CryptoRngCore;
+use commitment::GroupsPublicParametersAccessors;
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U256};
+use enhanced_maurer::{
+    encryption_of_discrete_log, encryption_of_tuple, EnhanceableLanguage, EnhancedPublicParameters,
+};
+use group::{GroupElement as _, PrimeGroupElement, Samplable};
+use homomorphic_encryption::{
+    AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors as _,
+};
+use maurer::SOUND_PROOFS_REPETITIONS;
+use proof::{range::PublicParametersAccessors, AggregatableRangeProof};
 use serde::Serialize;
 
-use crate::{
-    homomorphic_encryption,
-    homomorphic_encryption::GroupsPublicParametersAccessors as _,
-    commitment::GroupsPublicParametersAccessors as _,
-    group,
-    group::{CyclicGroupElement, GroupElement as _, GroupElement, PrimeGroupElement, Samplable},
-    presign::{centralized_party::Presign, decentralized_party},
-    proofs,
-    proofs::{
-        range,
-        range::PublicParametersAccessors,
-        maurer,
-        maurer::{
-            encryption_of_discrete_log, encryption_of_tuple,
-            enhanced_maurer::{EnhanceableLanguage, EnhancedPublicParameters},
-        },
-    },
-    AdditivelyHomomorphicEncryptionKey,
-};
-
+use crate::presign::{centralized_party::Presign, decentralized_party};
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
     const SCALAR_LIMBS: usize,
@@ -32,9 +23,9 @@ pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     UnboundedEncDLWitness: group::GroupElement + Samplable,
     UnboundedEncDHWitness: group::GroupElement + Samplable,
-    RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
 > {
     pub(super) protocol_context: ProtocolContext,
@@ -57,9 +48,9 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         UnboundedEncDLWitness: group::GroupElement + Samplable,
         UnboundedEncDHWitness: group::GroupElement + Samplable,
-        RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         ProtocolContext: Clone + Serialize,
     >
     Party<
@@ -69,9 +60,9 @@ impl<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
+        RangeProof,
         UnboundedEncDLWitness,
         UnboundedEncDHWitness,
-        RangeProof,
         ProtocolContext,
     >
 where
@@ -132,17 +123,21 @@ where
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDHWitness,
         >,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
     pub fn verify_presign_output(
         self,
         output: decentralized_party::Output<
             GroupElement::Value,
-            range::CommitmentSchemeCommitmentSpaceValue<
+            proof::range::CommitmentSchemeCommitmentSpaceValue<
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RANGE_CLAIMS_PER_SCALAR,
                 RangeProof,
             >,
-            homomorphic_encryption::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+            homomorphic_encryption::CiphertextSpaceValue<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                EncryptionKey,
+            >,
             encryption_of_tuple::Proof<
                 RANGE_CLAIMS_PER_SCALAR,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -150,8 +145,8 @@ where
                 SCALAR_LIMBS,
                 GroupElement,
                 EncryptionKey,
-                UnboundedEncDHWitness,
                 RangeProof,
+                UnboundedEncDHWitness,
                 ProtocolContext,
             >,
             encryption_of_discrete_log::Proof<
@@ -161,8 +156,8 @@ where
                 SCALAR_LIMBS,
                 GroupElement,
                 EncryptionKey,
-                UnboundedEncDLWitness,
                 RangeProof,
+                UnboundedEncDLWitness,
                 ProtocolContext,
             >,
         >,
@@ -172,7 +167,10 @@ where
             Presign<
                 GroupElement::Value,
                 group::Value<GroupElement::Scalar>,
-                homomorphic_encryption::CiphertextSpaceValue<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+                homomorphic_encryption::CiphertextSpaceValue<
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    EncryptionKey,
+                >,
             >,
         >,
     > {
@@ -208,7 +206,7 @@ where
             .key_share_masking_range_proof_commitments
             .into_iter()
             .map(|key_share_masking_range_proof_commitment| {
-                range::CommitmentSchemeCommitmentSpaceGroupElement::<
+                proof::range::CommitmentSchemeCommitmentSpaceGroupElement::<
                     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     RANGE_CLAIMS_PER_SCALAR,
                     RangeProof,
@@ -240,17 +238,18 @@ where
             )
             .collect();
 
-        let language_public_parameters =
-            encryption_of_tuple::PublicParameters::<
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-                SCALAR_LIMBS,
-                GroupElement,
-                EncryptionKey,
-            >::new::<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>(
-                self.scalar_group_public_parameters.clone(),
-                self.encryption_scheme_public_parameters.clone(),
-                self.encrypted_decentralized_party_secret_key_share.value(),
-            );
+        let language_public_parameters = encryption_of_tuple::PublicParameters::<
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+        >::new::<SCALAR_LIMBS, GroupElement, EncryptionKey>(
+            self.scalar_group_public_parameters.clone(),
+            self.encryption_scheme_public_parameters.clone(),
+            self.encrypted_decentralized_party_secret_key_share.value(),
+            // TODO: upper bound
+            (&U256::MAX).into(),
+        );
 
         let language_public_parameters = EnhancedPublicParameters::<
             SOUND_PROOFS_REPETITIONS,
@@ -313,7 +312,7 @@ where
             .nonce_sharing_range_proof_commitments
             .into_iter()
             .map(|nonce_sharing_range_proof_commitment| {
-                range::CommitmentSchemeCommitmentSpaceGroupElement::<
+                proof::range::CommitmentSchemeCommitmentSpaceGroupElement::<
                     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     RANGE_CLAIMS_PER_SCALAR,
                     RangeProof,
@@ -389,9 +388,6 @@ where
                 statements,
                 rng,
             )?;
-
-        let generator =
-            GroupElement::generator_from_public_parameters(&self.group_public_parameters)?;
 
         // TODO: verify all are the same length, return error otherwise. Do it in the beginning.
         Ok(output

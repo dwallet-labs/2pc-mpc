@@ -2,18 +2,15 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
 use commitment::GroupsPublicParametersAccessors as _;
-use proof::range::PublicParametersAccessors;
-use crypto_bigint::{rand_core::CryptoRngCore};
+use crypto_bigint::rand_core::CryptoRngCore;
 use enhanced_maurer::{encryption_of_discrete_log, EnhanceableLanguage};
 use group::{ComputationalSecuritySizedNumber, GroupElement, PrimeGroupElement, Samplable};
-use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
-use maurer::knowledge_of_discrete_log;
-use proof::{AggregatableRangeProof, range};
+use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
+use maurer::{knowledge_of_discrete_log, SOUND_PROOFS_REPETITIONS};
+use proof::{range, range::PublicParametersAccessors, AggregatableRangeProof};
 use serde::{Deserialize, Serialize};
-use homomorphic_encryption::GroupsPublicParametersAccessors;
-use crate::{
-    dkg::decentralized_party,
-};
+
+use crate::dkg::decentralized_party;
 
 #[derive(Clone)]
 pub struct Output<
@@ -44,8 +41,8 @@ pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    UnboundedEncDLWitness: group::GroupElement + Samplable,
     RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    UnboundedEncDLWitness: group::GroupElement + Samplable,
     ProtocolContext: Clone + Serialize,
 > {
     pub(super) group_public_parameters: GroupElement::PublicParameters,
@@ -68,8 +65,8 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        UnboundedEncDLWitness: group::GroupElement + Samplable,
         RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+        UnboundedEncDLWitness: group::GroupElement + Samplable,
         ProtocolContext: Clone + Serialize,
     >
     Party<
@@ -79,8 +76,8 @@ impl<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-        UnboundedEncDLWitness,
         RangeProof,
+        UnboundedEncDLWitness,
         ProtocolContext,
     >
 where
@@ -90,7 +87,7 @@ where
         GroupElement,
         EncryptionKey,
     >: maurer::Language<
-            { maurer::SOUND_PROOFS_REPETITIONS },
+            SOUND_PROOFS_REPETITIONS,
             WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 EncryptionKey,
@@ -108,7 +105,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { maurer::SOUND_PROOFS_REPETITIONS },
+            SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDLWitness,
@@ -131,8 +128,8 @@ where
                 SCALAR_LIMBS,
                 GroupElement,
                 EncryptionKey,
-                UnboundedEncDLWitness,
                 RangeProof,
+                UnboundedEncDLWitness,
                 ProtocolContext,
             >,
         >,

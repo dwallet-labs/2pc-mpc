@@ -4,14 +4,18 @@
 use core::marker::PhantomData;
 use std::collections::HashSet;
 
-use crypto_bigint::{rand_core::CryptoRngCore,  Uint};
-use serde::Serialize;
+use commitment::Commitment;
+use crypto_bigint::{rand_core::CryptoRngCore, Uint};
+use enhanced_maurer::{
+    encryption_of_discrete_log, language::EnhancedPublicParameters, EnhanceableLanguage,
+    EnhancedLanguage,
+};
 use group::{GroupElement as _, PartyID, PrimeGroupElement, Samplable};
 use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
-use commitment::{Commitment};
-use enhanced_maurer::{encryption_of_discrete_log, EnhanceableLanguage, EnhancedLanguage};
-use enhanced_maurer::language::EnhancedPublicParameters;
+use maurer::SOUND_PROOFS_REPETITIONS;
 use proof::AggregatableRangeProof;
+use serde::Serialize;
+
 use crate::dkg::decentralized_party::decommitment_proof_verification_round;
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -22,8 +26,8 @@ pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    UnboundedEncDLWitness: group::GroupElement + Samplable,
     RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    UnboundedEncDLWitness: group::GroupElement + Samplable,
     ProtocolContext: Clone + Serialize,
 > {
     pub party_id: PartyID,
@@ -43,8 +47,8 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        UnboundedEncDLWitness: group::GroupElement + Samplable,
         RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+        UnboundedEncDLWitness: group::GroupElement + Samplable,
         ProtocolContext: Clone + Serialize,
     >
     Party<
@@ -54,8 +58,8 @@ impl<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-        UnboundedEncDLWitness,
         RangeProof,
+        UnboundedEncDLWitness,
         ProtocolContext,
     >
 where
@@ -65,7 +69,7 @@ where
         GroupElement,
         EncryptionKey,
     >: maurer::Language<
-            { maurer::SOUND_PROOFS_REPETITIONS },
+            SOUND_PROOFS_REPETITIONS,
             WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 EncryptionKey,
@@ -83,7 +87,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { maurer::SOUND_PROOFS_REPETITIONS },
+            SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDLWitness,
@@ -95,7 +99,7 @@ where
         rng: &mut impl CryptoRngCore,
     ) -> crate::Result<(
         enhanced_maurer::aggregation::commitment_round::Party<
-            { maurer::SOUND_PROOFS_REPETITIONS },
+            SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,
@@ -118,7 +122,6 @@ where
             ProtocolContext,
         >,
     )> {
-
         let encryption_randomness = EncryptionKey::RandomnessSpaceGroupElement::sample(
             &self
                 .encryption_scheme_public_parameters
@@ -143,7 +146,7 @@ where
             );
 
         let language_public_parameters = EnhancedPublicParameters::<
-            { maurer::SOUND_PROOFS_REPETITIONS },
+            SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,
@@ -173,7 +176,7 @@ where
             share_of_decentralized_party_secret_key_share.into();
 
         let share_of_decentralized_party_secret_key_share_witness = EnhancedLanguage::<
-            { maurer::SOUND_PROOFS_REPETITIONS },
+            SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,
@@ -201,27 +204,28 @@ where
             rng,
         )?;
 
-        let encryption_of_secret_share_commitment_round_party = enhanced_maurer::aggregation::commitment_round::Party::<
-            { maurer::SOUND_PROOFS_REPETITIONS },
-            RANGE_CLAIMS_PER_SCALAR,
-            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RangeProof,
-            UnboundedEncDLWitness,
-            encryption_of_discrete_log::Language<
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-                SCALAR_LIMBS,
-                GroupElement,
-                EncryptionKey,
-            >,
-            ProtocolContext,
-        >::new_session(
-            self.party_id,
-            self.parties.clone(),
-            language_public_parameters,
-            self.protocol_context.clone(),
-            vec![share_of_decentralized_party_secret_key_share_witness],
-            rng
-        )?;
+        let encryption_of_secret_share_commitment_round_party =
+            enhanced_maurer::aggregation::commitment_round::Party::<
+                SOUND_PROOFS_REPETITIONS,
+                RANGE_CLAIMS_PER_SCALAR,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RangeProof,
+                UnboundedEncDLWitness,
+                encryption_of_discrete_log::Language<
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    SCALAR_LIMBS,
+                    GroupElement,
+                    EncryptionKey,
+                >,
+                ProtocolContext,
+            >::new_session(
+                self.party_id,
+                self.parties.clone(),
+                language_public_parameters,
+                self.protocol_context.clone(),
+                vec![share_of_decentralized_party_secret_key_share_witness],
+                rng,
+            )?;
 
         let decommitment_round_party = decommitment_proof_verification_round::Party::<
             SCALAR_LIMBS,

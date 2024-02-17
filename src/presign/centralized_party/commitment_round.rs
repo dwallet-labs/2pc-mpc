@@ -1,16 +1,15 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
-use serde::{Deserialize, Serialize};
-use     commitment::{pedersen, Pedersen};
-use     group::{GroupElement as _, GroupElement, PrimeGroupElement, Samplable};
+use commitment::{pedersen, Pedersen};
+use crypto_bigint::rand_core::CryptoRngCore;
+use group::{PrimeGroupElement, Samplable};
 use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
+use maurer::{knowledge_of_decommitment, SOUND_PROOFS_REPETITIONS};
 use proof::AggregatableRangeProof;
-use crate::{
-    presign::centralized_party::proof_verification_round,
-};
-use maurer::SOUND_PROOFS_REPETITIONS;
+use serde::{Deserialize, Serialize};
+
+use crate::presign::centralized_party::proof_verification_round;
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
@@ -20,9 +19,9 @@ pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     UnboundedEncDLWitness: group::GroupElement + Samplable,
     UnboundedEncDHWitness: group::GroupElement + Samplable,
-    RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
 > {
     pub protocol_context: ProtocolContext,
@@ -38,10 +37,11 @@ pub struct Party<
 #[derive(PartialEq, Serialize, Deserialize, Clone)]
 pub struct SignatureNonceSharesCommitmentsAndBatchedProof<
     const SCALAR_LIMBS: usize,
-    GroupElementValue,    DcomProof,
+    GroupElementValue,
+    DcomProof,
 > {
     pub(in crate::presign) commitments: Vec<GroupElementValue>,
-    pub(in crate::presign) proof: DcomProof
+    pub(in crate::presign) proof: DcomProof,
 }
 
 impl<
@@ -51,9 +51,9 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS> + group::HashToGroup,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         UnboundedEncDLWitness: group::GroupElement + Samplable,
         UnboundedEncDHWitness: group::GroupElement + Samplable,
-        RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         ProtocolContext: Clone + Serialize,
     >
     Party<
@@ -63,9 +63,9 @@ impl<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
+        RangeProof,
         UnboundedEncDLWitness,
         UnboundedEncDHWitness,
-        RangeProof,
         ProtocolContext,
     >
 {
@@ -74,15 +74,19 @@ impl<
         batch_size: usize,
         rng: &mut impl CryptoRngCore,
     ) -> crate::Result<(
-        SignatureNonceSharesCommitmentsAndBatchedProof<SCALAR_LIMBS, GroupElement::Value, maurer::Proof<
-            SOUND_PROOFS_REPETITIONS,
-            knowledge_of_decommitment::Language<
+        SignatureNonceSharesCommitmentsAndBatchedProof<
+            SCALAR_LIMBS,
+            GroupElement::Value,
+            maurer::Proof<
                 SOUND_PROOFS_REPETITIONS,
-                SCALAR_LIMBS,
-                Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
+                knowledge_of_decommitment::Language<
+                    SOUND_PROOFS_REPETITIONS,
+                    SCALAR_LIMBS,
+                    Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
+                >,
+                ProtocolContext,
             >,
-            ProtocolContext,
-        >,>,
+        >,
         proof_verification_round::Party<
             SCALAR_LIMBS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -90,9 +94,9 @@ impl<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
+            RangeProof,
             UnboundedEncDLWitness,
             UnboundedEncDHWitness,
-            RangeProof,
             ProtocolContext,
         >,
     )> {
@@ -163,7 +167,10 @@ impl<
         };
 
         // TODO: batch normalize
-        let commitments = commitments.into_iter().map(|element| element.value()).collect();
+        let commitments = commitments
+            .into_iter()
+            .map(|element| element.value())
+            .collect();
 
         let signature_nonce_shares_commitments_and_batched_proof =
             SignatureNonceSharesCommitmentsAndBatchedProof { commitments, proof };

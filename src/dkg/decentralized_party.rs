@@ -1,17 +1,16 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use group::GroupElement;
-use enhanced_maurer::{encryption_of_discrete_log, EnhanceableLanguage};
-use enhanced_maurer::language::EnhancedLanguageStatementAccessors;
-use group::{PrimeGroupElement, Samplable};
-use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
-use proof::{AggregatableRangeProof, range};
-use serde::{Deserialize, Serialize};
-use enhanced_maurer::encryption_of_discrete_log::StatementAccessors;
-
 pub use decommitment_proof_verification_round::Output;
-
+use enhanced_maurer::{
+    encryption_of_discrete_log, encryption_of_discrete_log::StatementAccessors,
+    language::EnhancedLanguageStatementAccessors, EnhanceableLanguage,
+};
+use group::{GroupElement, PrimeGroupElement, Samplable};
+use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
+use maurer::SOUND_PROOFS_REPETITIONS;
+use proof::{range, AggregatableRangeProof};
+use serde::{Deserialize, Serialize};
 pub mod decommitment_proof_verification_round;
 pub mod encryption_of_secret_key_share_round;
 
@@ -35,8 +34,8 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        UnboundedEncDLWitness: group::GroupElement + Samplable,
         RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+        UnboundedEncDLWitness: group::GroupElement + Samplable,
         ProtocolContext: Clone + Serialize,
     >
     SecretKeyShareEncryptionAndProof<
@@ -54,8 +53,8 @@ impl<
             SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
-            UnboundedEncDLWitness,
             RangeProof,
+            UnboundedEncDLWitness,
             ProtocolContext,
         >,
     >
@@ -66,7 +65,7 @@ where
         GroupElement,
         EncryptionKey,
     >: maurer::Language<
-            { maurer::SOUND_PROOFS_REPETITIONS },
+            SOUND_PROOFS_REPETITIONS,
             WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 EncryptionKey,
@@ -84,7 +83,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { maurer::SOUND_PROOFS_REPETITIONS },
+            SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDLWitness,
@@ -92,7 +91,7 @@ where
 {
     pub fn new(
         encryption_of_secret_share: enhanced_maurer::StatementSpaceGroupElement<
-            { maurer::SOUND_PROOFS_REPETITIONS },
+            SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,
@@ -111,8 +110,8 @@ where
             SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
-            UnboundedEncDLWitness,
             RangeProof,
+            UnboundedEncDLWitness,
             ProtocolContext,
         >,
     ) -> Self {

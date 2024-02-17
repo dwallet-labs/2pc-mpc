@@ -1,16 +1,17 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use group::GroupElement;
-use enhanced_maurer::{encryption_of_discrete_log, encryption_of_tuple, EnhanceableLanguage};
-use enhanced_maurer::language::EnhancedLanguageStatementAccessors;
-use group::{PrimeGroupElement, Samplable};
+use crypto_bigint::{Encoding, Uint};
+use enhanced_maurer::{
+    encryption_of_discrete_log, encryption_of_discrete_log::StatementAccessors as _,
+    encryption_of_tuple, encryption_of_tuple::StatementAccessors as _,
+    language::EnhancedLanguageStatementAccessors, EnhanceableLanguage,
+};
+use group::{GroupElement, PrimeGroupElement, Samplable};
 use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
-use proof::{AggregatableRangeProof, range};
-use serde::{Deserialize, Serialize};
-use enhanced_maurer::encryption_of_discrete_log::StatementAccessors as _;
-use enhanced_maurer::encryption_of_tuple::StatementAccessors as _;
 use maurer::SOUND_PROOFS_REPETITIONS;
+use proof::{range, AggregatableRangeProof};
+use serde::{Deserialize, Serialize};
 
 pub mod encrypted_masked_key_share_and_public_nonce_shares_round;
 pub mod encrypted_masked_nonces_round;
@@ -42,9 +43,9 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         UnboundedEncDHWitness: group::GroupElement + Samplable,
         UnboundedEncDLWitness: group::GroupElement + Samplable,
-        RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         ProtocolContext: Clone + Serialize,
     >
     Output<
@@ -62,8 +63,8 @@ impl<
             SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
-            UnboundedEncDHWitness,
             RangeProof,
+            UnboundedEncDHWitness,
             ProtocolContext,
         >,
         encryption_of_discrete_log::Proof<
@@ -73,8 +74,8 @@ impl<
             SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
-            UnboundedEncDLWitness,
             RangeProof,
+            UnboundedEncDLWitness,
             ProtocolContext,
         >,
     >
@@ -136,6 +137,7 @@ where
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDHWitness,
         >,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
     pub fn new(
         masks_and_encrypted_masked_key_share: Vec<
@@ -160,8 +162,8 @@ where
             SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
-            UnboundedEncDHWitness,
             RangeProof,
+            UnboundedEncDHWitness,
             ProtocolContext,
         >,
         encrypted_nonce_shares_and_public_shares: Vec<
@@ -186,8 +188,8 @@ where
             SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
-            UnboundedEncDLWitness,
             RangeProof,
+            UnboundedEncDLWitness,
             ProtocolContext,
         >,
     ) -> Self {

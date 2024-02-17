@@ -1,30 +1,23 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
+use std::collections::HashSet;
+
+use commitment::{pedersen, Pedersen};
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U256};
+use enhanced_maurer::{
+    encryption_of_discrete_log, encryption_of_tuple, EnhanceableLanguage, EnhancedLanguage,
+    EnhancedPublicParameters,
+};
+use group::{GroupElement, PartyID, PrimeGroupElement, Samplable};
+use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
+use maurer::{knowledge_of_decommitment, SOUND_PROOFS_REPETITIONS};
+use proof::AggregatableRangeProof;
 use serde::Serialize;
 
-use crate::{
-    homomorphic_encryption,
-    homomorphic_encryption::GroupsPublicParametersAccessors,
-    commitment,
-    commitment::{pedersen, GroupsPublicParametersAccessors as _, Pedersen},
-    group,
-    group::{GroupElement as _, PrimeGroupElement, Samplable},
-    presign::{
-        centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
-        decentralized_party::encrypted_masked_nonces_round,
-    },
-    proofs,
-    proofs::{
-        range, maurer,
-        maurer::{
-            encryption_of_discrete_log, encryption_of_tuple,
-            enhanced_maurer::{EnhanceableLanguage, EnhancedLanguage, EnhancedPublicParameters},
-            knowledge_of_decommitment,
-        },
-    },
-    AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
+use crate::presign::{
+    centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
+    decentralized_party::encrypted_masked_nonces_round,
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -35,14 +28,13 @@ pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     UnboundedEncDLWitness: group::GroupElement + Samplable,
     UnboundedEncDHWitness: group::GroupElement + Samplable,
-    RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
     ProtocolContext: Clone + Serialize,
 > {
     pub party_id: PartyID,
-    pub threshold: PartyID,
-    pub number_of_parties: PartyID,
+    pub parties: HashSet<PartyID>,
     pub protocol_context: ProtocolContext,
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub group_public_parameters: GroupElement::PublicParameters,
@@ -60,9 +52,9 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS> + group::HashToGroup,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         UnboundedEncDLWitness: group::GroupElement + Samplable,
         UnboundedEncDHWitness: group::GroupElement + Samplable,
-        RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
         ProtocolContext: Clone + Serialize,
     >
     Party<
@@ -72,9 +64,9 @@ impl<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
+        RangeProof,
         UnboundedEncDLWitness,
         UnboundedEncDHWitness,
-        RangeProof,
         ProtocolContext,
     >
 where
@@ -135,6 +127,7 @@ where
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDHWitness,
         >,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
     pub fn sample_mask_and_nonce_shares_and_initialize_proof_aggregation(
         self,
@@ -150,12 +143,12 @@ where
         rng: &mut impl CryptoRngCore,
     ) -> crate::Result<(
         (
-            range::CommitmentRoundParty<
+            enhanced_maurer::aggregation::commitment_round::Party<
                 SOUND_PROOFS_REPETITIONS,
                 RANGE_CLAIMS_PER_SCALAR,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                UnboundedEncDHWitness,
                 RangeProof,
+                UnboundedEncDHWitness,
                 encryption_of_tuple::Language<
                     PLAINTEXT_SPACE_SCALAR_LIMBS,
                     SCALAR_LIMBS,
@@ -164,12 +157,12 @@ where
                 >,
                 ProtocolContext,
             >,
-            range::CommitmentRoundParty<
+            enhanced_maurer::aggregation::commitment_round::Party<
                 SOUND_PROOFS_REPETITIONS,
                 RANGE_CLAIMS_PER_SCALAR,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                UnboundedEncDLWitness,
                 RangeProof,
+                UnboundedEncDLWitness,
                 encryption_of_discrete_log::Language<
                     PLAINTEXT_SPACE_SCALAR_LIMBS,
                     SCALAR_LIMBS,
@@ -186,8 +179,8 @@ where
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
-            UnboundedEncDHWitness,
             RangeProof,
+            UnboundedEncDHWitness,
             ProtocolContext,
         >,
     )> {
@@ -207,9 +200,12 @@ where
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >(commitment_scheme_public_parameters.clone());
 
-        let centralized_party_nonce_shares_commitments = centralized_party_nonce_shares_commitments_and_batched_proof
-            .commitments
-            .into_iter().map(|value| GroupElement::new(value, &self.group_public_parameters)).collect::<group::Result<Vec<_>>>()?;
+        let centralized_party_nonce_shares_commitments =
+            centralized_party_nonce_shares_commitments_and_batched_proof
+                .commitments
+                .into_iter()
+                .map(|value| GroupElement::new(value, &self.group_public_parameters))
+                .collect::<group::Result<Vec<_>>>()?;
 
         centralized_party_nonce_shares_commitments_and_batched_proof
             .proof
@@ -260,17 +256,18 @@ where
                 rng,
             )?;
 
-        let language_public_parameters =
-            encryption_of_tuple::PublicParameters::<
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-                SCALAR_LIMBS,
-                GroupElement,
-                EncryptionKey,
-            >::new::<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>(
-                self.scalar_group_public_parameters.clone(),
-                self.encryption_scheme_public_parameters.clone(),
-                self.encrypted_secret_key_share.value(),
-            );
+        let language_public_parameters = encryption_of_tuple::PublicParameters::<
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+        >::new::<SCALAR_LIMBS, GroupElement, EncryptionKey>(
+            self.scalar_group_public_parameters.clone(),
+            self.encryption_scheme_public_parameters.clone(),
+            self.encrypted_secret_key_share.value(),
+            // TODO: upper bound
+            (&U256::MAX).into(),
+        );
 
         let language_public_parameters = EnhancedPublicParameters::<
             SOUND_PROOFS_REPETITIONS,
@@ -337,31 +334,28 @@ where
             >,
         >::generate_witnesses(witnesses, &language_public_parameters, rng)?;
 
-        let key_share_masking_commitment_round_party = RangeProof::new_enhanced_session::<
-            SOUND_PROOFS_REPETITIONS,
-            RANGE_CLAIMS_PER_SCALAR,
-            UnboundedEncDHWitness,
-            encryption_of_tuple::Language<
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-                SCALAR_LIMBS,
-                GroupElement,
-                EncryptionKey,
-            >,
-            ProtocolContext,
-        >(
-            self.party_id,
-            self.threshold,
-            self.number_of_parties,
-            language_public_parameters,
-            self.protocol_context.clone(),
-            witnesses,
-        );
-
-        let shares_of_signature_nonce_shares = GroupElement::Scalar::sample_batch(
-            &self.scalar_group_public_parameters,
-            batch_size,
-            rng,
-        )?;
+        let key_share_masking_commitment_round_party =
+            enhanced_maurer::aggregation::commitment_round::Party::<
+                SOUND_PROOFS_REPETITIONS,
+                RANGE_CLAIMS_PER_SCALAR,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RangeProof,
+                UnboundedEncDHWitness,
+                encryption_of_tuple::Language<
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    SCALAR_LIMBS,
+                    GroupElement,
+                    EncryptionKey,
+                >,
+                ProtocolContext,
+            >::new_session(
+                self.party_id,
+                self.parties.clone(),
+                language_public_parameters,
+                self.protocol_context.clone(),
+                witnesses,
+                rng,
+            )?;
 
         let shares_of_signature_nonce_shares_witnesses = masks_shares
             .clone()
@@ -455,41 +449,38 @@ where
             >,
         >::generate_witnesses(witnesses, &language_public_parameters, rng)?;
 
-        // TODO: name?
-        let nonce_sharing_commitment_round_party = RangeProof::new_enhanced_session::<
-            SOUND_PROOFS_REPETITIONS,
-            RANGE_CLAIMS_PER_SCALAR,
-            UnboundedEncDLWitness,
-            encryption_of_discrete_log::Language<
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-                SCALAR_LIMBS,
-                GroupElement,
-                EncryptionKey,
-            >,
-            ProtocolContext,
-        >(
-            self.party_id,
-            self.threshold,
-            self.number_of_parties,
-            language_public_parameters,
-            self.protocol_context.clone(),
-            witnesses,
-        );
+        let nonce_sharing_commitment_round_party =
+            enhanced_maurer::aggregation::commitment_round::Party::<
+                SOUND_PROOFS_REPETITIONS,
+                RANGE_CLAIMS_PER_SCALAR,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RangeProof,
+                UnboundedEncDLWitness,
+                encryption_of_discrete_log::Language<
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    SCALAR_LIMBS,
+                    GroupElement,
+                    EncryptionKey,
+                >,
+                ProtocolContext,
+            >::new_session(
+                self.party_id,
+                self.parties.clone(),
+                language_public_parameters,
+                self.protocol_context.clone(),
+                witnesses,
+                rng,
+            )?;
 
         let party = encrypted_masked_nonces_round::Party {
             party_id: self.party_id,
-            threshold: self.threshold,
-            number_of_parties: self.number_of_parties,
+            parties: self.parties,
             protocol_context: self.protocol_context,
-            group_public_parameters: self.group_public_parameters,
             scalar_group_public_parameters: self.scalar_group_public_parameters,
             encryption_scheme_public_parameters: self.encryption_scheme_public_parameters,
-            commitment_scheme_public_parameters,
             unbounded_encdh_witness_public_parameters: self
                 .unbounded_encdh_witness_public_parameters,
             range_proof_public_parameters: self.range_proof_public_parameters,
-            encrypted_secret_key_share: self.encrypted_secret_key_share,
-            centralized_party_nonce_shares_commitments,
             shares_of_signature_nonce_shares_witnesses,
             shares_of_signature_nonce_shares_encryption_randomness,
         };

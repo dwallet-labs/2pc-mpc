@@ -1,29 +1,20 @@
-use std::collections::HashMap;
+// Author: dWallet Labs, LTD.
+// SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
+use std::collections::HashSet;
+
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U256};
+use enhanced_maurer::{
+    encryption_of_discrete_log, encryption_of_tuple, encryption_of_tuple::StatementAccessors,
+    EnhanceableLanguage, EnhancedLanguage, EnhancedPublicParameters,
+};
+use group::{GroupElement as _, PartyID, PrimeGroupElement, Samplable};
+use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
+use maurer::SOUND_PROOFS_REPETITIONS;
+use proof::AggregatableRangeProof;
 use serde::Serialize;
 
-use crate::{
-    homomorphic_encryption,
-    homomorphic_encryption::GroupsPublicParametersAccessors,
-    commitment,
-    commitment::{GroupsPublicParametersAccessors as _, Pedersen},
-    group,
-    group::{GroupElement as _, PrimeGroupElement, Samplable},
-    proofs,
-    proofs::{
-        range, maurer,
-        maurer::{
-            encryption_of_discrete_log, encryption_of_tuple,
-            enhanced_maurer::{EnhanceableLanguage, EnhancedLanguage, EnhancedPublicParameters},
-            language::{
-                encryption_of_discrete_log::StatementAccessors as _,
-                encryption_of_tuple::StatementAccessors as _,
-            },
-        },
-    },
-    AdditivelyHomomorphicEncryptionKey, Commitment, PartyID,
-};
+use crate::{Error, Result};
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
@@ -33,26 +24,18 @@ pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    UnboundedEncDHWitness: group::GroupElement + Samplable,
     RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    UnboundedEncDHWitness: group::GroupElement + Samplable,
     ProtocolContext: Clone + Serialize,
 > {
     pub(super) party_id: PartyID,
-    pub(super) threshold: PartyID,
-    pub(super) number_of_parties: PartyID,
+    pub parties: HashSet<PartyID>,
     // TODO: should we get this like that?
     pub(super) protocol_context: ProtocolContext,
-    pub(super) group_public_parameters: GroupElement::PublicParameters,
     pub(super) scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub(super) encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    pub(super) commitment_scheme_public_parameters: commitment::PublicParameters<
-        SCALAR_LIMBS,
-        Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
-    >,
     pub(super) unbounded_encdh_witness_public_parameters: UnboundedEncDHWitness::PublicParameters,
     pub(super) range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
-    pub(super) encrypted_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
-    pub(super) centralized_party_nonce_shares_commitments: Vec<GroupElement>,
     pub(super) shares_of_signature_nonce_shares_witnesses:
         Vec<EncryptionKey::PlaintextSpaceGroupElement>,
     pub(super) shares_of_signature_nonce_shares_encryption_randomness:
@@ -66,8 +49,8 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        UnboundedEncDHWitness: group::GroupElement + Samplable,
         RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+        UnboundedEncDHWitness: group::GroupElement + Samplable,
         ProtocolContext: Clone + Serialize,
     >
     Party<
@@ -77,8 +60,8 @@ impl<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-        UnboundedEncDHWitness,
         RangeProof,
+        UnboundedEncDHWitness,
         ProtocolContext,
     >
 where
@@ -112,6 +95,7 @@ where
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDHWitness,
         >,
+    Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
     pub fn initialize_proof_aggregation(
         self,
@@ -131,14 +115,14 @@ where
             >,
         >,
         rng: &mut impl CryptoRngCore,
-    ) -> proofs::Result<
+    ) -> Result<
         Vec<
-            range::CommitmentRoundParty<
+            enhanced_maurer::aggregation::commitment_round::Party<
                 SOUND_PROOFS_REPETITIONS,
                 RANGE_CLAIMS_PER_SCALAR,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-                UnboundedEncDHWitness,
                 RangeProof,
+                UnboundedEncDHWitness,
                 encryption_of_tuple::Language<
                     PLAINTEXT_SPACE_SCALAR_LIMBS,
                     SCALAR_LIMBS,
@@ -190,15 +174,12 @@ where
                         SCALAR_LIMBS,
                         GroupElement,
                         EncryptionKey,
-                    >::new::<
-                        PLAINTEXT_SPACE_SCALAR_LIMBS,
-                        SCALAR_LIMBS,
-                        GroupElement,
-                        EncryptionKey,
-                    >(
+                    >::new::<SCALAR_LIMBS, GroupElement, EncryptionKey>(
                         self.scalar_group_public_parameters.clone(),
                         self.encryption_scheme_public_parameters.clone(),
                         encrypted_mask.value(),
+                        // TODO: upper bound
+                        (&U256::MAX).into(),
                     );
 
                     let language_public_parameters = EnhancedPublicParameters::<
@@ -250,10 +231,13 @@ where
                         &language_public_parameters,
                         rng,
                     )
-                    .map(|witness| {
-                        RangeProof::new_enhanced_session::<
+                    .map_err(Error::from)
+                    .and_then(|witness| {
+                        enhanced_maurer::aggregation::commitment_round::Party::<
                             SOUND_PROOFS_REPETITIONS,
                             RANGE_CLAIMS_PER_SCALAR,
+                            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                            RangeProof,
                             UnboundedEncDHWitness,
                             encryption_of_tuple::Language<
                                 PLAINTEXT_SPACE_SCALAR_LIMBS,
@@ -262,14 +246,15 @@ where
                                 EncryptionKey,
                             >,
                             ProtocolContext,
-                        >(
+                        >::new_session(
                             self.party_id,
-                            self.threshold,
-                            self.number_of_parties,
+                            self.parties.clone(),
                             language_public_parameters,
                             self.protocol_context.clone(),
                             vec![witness],
+                            rng,
                         )
+                        .map_err(Error::from)
                     })
                 },
             )

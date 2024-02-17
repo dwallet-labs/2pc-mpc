@@ -7,22 +7,28 @@ pub mod decentralized_party;
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
     use core::marker::PhantomData;
-    use std::collections::{HashMap, HashSet};
-    use std::time::Duration;
-    use criterion::measurement::{Measurement, WallTime};
+    use std::{
+        collections::{HashMap, HashSet},
+        time::Duration,
+    };
 
+    use criterion::measurement::{Measurement, WallTime};
     use enhanced_maurer::language::EnhancedLanguageStatementAccessors;
-    use group::{CyclicGroupElement, ristretto, secp256k1};
-    use homomorphic_encryption::{AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors};
-    use proof::aggregation::test_helpers::aggregates;
-    use proof::range::bulletproofs;
+    use group::{ristretto, secp256k1, CyclicGroupElement};
+    use homomorphic_encryption::{
+        AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors,
+    };
+    use proof::{aggregation::test_helpers::aggregates, range::bulletproofs};
     use rand_core::OsRng;
-    use tiresias::LargeBiPrimeSizedNumber;
-    use tiresias::test_exports::{N, SECRET_KEY};
-    use crate::dkg::decentralized_party::SecretKeyShareEncryptionAndProof;
-    use crate::tests::RANGE_CLAIMS_PER_SCALAR;
+    use tiresias::{
+        test_exports::{N, SECRET_KEY},
+        LargeBiPrimeSizedNumber,
+    };
 
     use super::*;
+    use crate::{
+        dkg::decentralized_party::SecretKeyShareEncryptionAndProof, tests::RANGE_CLAIMS_PER_SCALAR,
+    };
 
     #[test]
     fn generates_distributed_key() {
@@ -62,10 +68,11 @@ pub(crate) mod tests {
         let bulletproofs_public_parameters =
             bulletproofs::PublicParameters::<{ RANGE_CLAIMS_PER_SCALAR }>::default();
 
-        let paillier_public_parameters = tiresias::encryption_key::PublicParameters::new(N).unwrap();
+        let paillier_public_parameters =
+            tiresias::encryption_key::PublicParameters::new(N).unwrap();
 
         let paillier_decryption_key =
-            tiresias::DecryptionKey::new( SECRET_KEY, &paillier_public_parameters,).unwrap();
+            tiresias::DecryptionKey::new(SECRET_KEY, &paillier_public_parameters).unwrap();
 
         let centralized_party_commitment_round_party = centralized_party::commitment_round::Party::<
             { secp256k1::SCALAR_LIMBS },
@@ -74,8 +81,8 @@ pub(crate) mod tests {
             { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
             secp256k1::GroupElement,
             tiresias::EncryptionKey,
+            bulletproofs::RangeProof,
             tiresias::RandomnessSpaceGroupElement,
-            bulletAggregatableRangeProof,
             PhantomData<()>,
         > {
             protocol_context: PhantomData::<()>,
@@ -95,8 +102,10 @@ pub(crate) mod tests {
         ) = centralized_party_commitment_round_party
             .sample_commit_and_prove_secret_key_share(&mut OsRng)
             .unwrap();
-        centralized_party_total_time = measurement.add(&centralized_party_total_time, &measurement.end(now));
+        centralized_party_total_time =
+            measurement.add(&centralized_party_total_time, &measurement.end(now));
 
+        // TODO: do it with threshold
         let mut parties = HashSet::new();
         (1..=number_of_parties).for_each(|i| {
             parties.insert(i);
@@ -115,8 +124,8 @@ pub(crate) mod tests {
                         { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
                         secp256k1::GroupElement,
                         tiresias::EncryptionKey,
+                        bulletproofs::RangeProof,
                         tiresias::RandomnessSpaceGroupElement,
-                        bulletAggregatableRangeProof,
                         PhantomData<()>,
                     > {
                         party_id,
@@ -151,7 +160,10 @@ pub(crate) mod tests {
                             &mut OsRng,
                         )
                         .unwrap();
-                    if party_id == 1 {decentralized_party_total_time = measurement.add(&decentralized_party_total_time, &measurement.end(now));};
+                    if party_id == 1 {
+                        decentralized_party_total_time =
+                            measurement.add(&decentralized_party_total_time, &measurement.end(now));
+                    };
 
                     (
                         (
@@ -163,12 +175,14 @@ pub(crate) mod tests {
                 })
                 .unzip();
 
-        let (.., encryption_of_decentralized_party_secret_share_time, (
-            encryption_of_decentralized_party_secret_share_proof,
-            encryption_of_decentralized_party_secret_share,
-        )) = aggregates(
-            decentralized_party_encryption_of_secret_key_share_commitment_round_parties,
-        );
+        let (
+            ..,
+            encryption_of_decentralized_party_secret_share_time,
+            (
+                encryption_of_decentralized_party_secret_share_proof,
+                encryption_of_decentralized_party_secret_share,
+            ),
+        ) = aggregates(decentralized_party_encryption_of_secret_key_share_commitment_round_parties);
 
         let encryption_of_decentralized_party_secret_share =
             encryption_of_decentralized_party_secret_share
@@ -188,7 +202,8 @@ pub(crate) mod tests {
         ) = centralized_party_decommitment_round_party
             .decommit_proof_public_key_share(secret_key_share_encryption_and_proof, &mut OsRng)
             .unwrap();
-        centralized_party_total_time = measurement.add(&centralized_party_total_time, &measurement.end(now));
+        centralized_party_total_time =
+            measurement.add(&centralized_party_total_time, &measurement.end(now));
 
         assert_eq!(
             centralized_party_dkg_output.decentralized_party_public_key_share
@@ -216,12 +231,12 @@ pub(crate) mod tests {
                                 .clone(),
                         )
                         .unwrap();
-                    if party_id == 1 {decentralized_party_total_time = measurement.add(&decentralized_party_total_time, &measurement.end(now));};
+                    if party_id == 1 {
+                        decentralized_party_total_time =
+                            measurement.add(&decentralized_party_total_time, &measurement.end(now));
+                    };
 
-                    (
-                        party_id,
-                        res,
-                    )
+                    (party_id, res)
                 })
                 .collect();
 
@@ -234,7 +249,10 @@ pub(crate) mod tests {
             .all(|(_, dkg_output)| {
                 let decentralized_party_secret_key_share_decryption: LargeBiPrimeSizedNumber =
                     paillier_decryption_key
-                        .decrypt(&dkg_output.encrypted_secret_key_share, &paillier_public_parameters)
+                        .decrypt(
+                            &dkg_output.encrypted_secret_key_share,
+                            &paillier_public_parameters,
+                        )
                         .unwrap()
                         .into();
 
@@ -250,7 +268,10 @@ pub(crate) mod tests {
                         == dkg_output.public_key)
             }));
 
-        decentralized_party_total_time = measurement.add(&decentralized_party_total_time, &encryption_of_decentralized_party_secret_share_time);
+        decentralized_party_total_time = measurement.add(
+            &decentralized_party_total_time,
+            &encryption_of_decentralized_party_secret_share_time,
+        );
 
         println!(
             "\nProtocol, Number of Parties, Threshold, Centralized Party Total Time (ms), Decentralized Party Total Time (ms)",

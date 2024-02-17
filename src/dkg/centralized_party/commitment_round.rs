@@ -1,16 +1,16 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+use commitment::Commitment;
 use crypto_bigint::{rand_core::CryptoRngCore, Random};
 use group::{ComputationalSecuritySizedNumber, PartyID, PrimeGroupElement, Samplable};
 use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
 use maurer::knowledge_of_discrete_log;
 use merlin::Transcript;
 use proof::{AggregatableRangeProof, TranscriptProtocol};
-use commitment::Commitment;
-use serde::{Serialize};
+use serde::Serialize;
 
-use crate::{CENTRALIZED_PARTY_ID, dkg::centralized_party::decommitment_round};
+use crate::{dkg::centralized_party::decommitment_round, CENTRALIZED_PARTY_ID};
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
@@ -20,8 +20,8 @@ pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    UnboundedEncDLWitness: group::GroupElement + Samplable,
     RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    UnboundedEncDLWitness: group::GroupElement + Samplable,
     ProtocolContext: Clone + Serialize,
 > {
     pub protocol_context: ProtocolContext,
@@ -59,8 +59,8 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        UnboundedEncDLWitness: group::GroupElement + Samplable,
         RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+        UnboundedEncDLWitness: group::GroupElement + Samplable,
         ProtocolContext: Clone + Serialize,
     >
     Party<
@@ -70,8 +70,8 @@ impl<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-        UnboundedEncDLWitness,
         RangeProof,
+        UnboundedEncDLWitness,
         ProtocolContext,
     >
 {
@@ -87,8 +87,8 @@ impl<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,
-            UnboundedEncDLWitness,
             RangeProof,
+            UnboundedEncDLWitness,
             ProtocolContext,
         >,
     )> {
@@ -99,7 +99,7 @@ impl<
             knowledge_of_discrete_log::PublicParameters::new::<GroupElement::Scalar, GroupElement>(
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
-                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters)
+                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
 
         let (knowledge_of_discrete_log_proof, public_key_share) = knowledge_of_discrete_log::Proof::<
@@ -120,8 +120,11 @@ impl<
 
         let commitment_randomness = ComputationalSecuritySizedNumber::random(rng);
 
-        let commitment =
-            commit_public_key_share(CENTRALIZED_PARTY_ID, &public_key_share, &commitment_randomness)?;
+        let commitment = commit_public_key_share(
+            CENTRALIZED_PARTY_ID,
+            &public_key_share,
+            &commitment_randomness,
+        )?;
 
         let party = decommitment_round::Party {
             group_public_parameters: self.group_public_parameters,

@@ -9,7 +9,9 @@ pub mod presign;
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("group error")]
-    GroupInstantiation(#[from] group::Error),
+    Group(#[from] group::Error),
+    #[error("commitment error")]
+    Commitment(#[from] commitment::Error),
     #[error("proof error")]
     Proof(#[from] ::proof::Error),
     #[error("maurer error")]
