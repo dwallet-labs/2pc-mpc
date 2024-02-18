@@ -15,7 +15,10 @@ use maurer::SOUND_PROOFS_REPETITIONS;
 use proof::{range::PublicParametersAccessors, AggregatableRangeProof};
 use serde::Serialize;
 
-use crate::presign::{centralized_party::Presign, decentralized_party};
+use crate::{
+    presign::{centralized_party::Presign, decentralized_party},
+    Error,
+};
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
     const SCALAR_LIMBS: usize,
@@ -175,6 +178,17 @@ where
             >,
         >,
     > {
+        let batch_size = self
+            .signature_nonce_shares_and_commitment_randomnesses
+            .len();
+
+        if output.encrypted_masked_key_shares.len() != batch_size
+            || output.encrypted_masks.len() != batch_size
+            || output.nonce_public_shares.len() != batch_size
+        {
+            return Err(Error::InvalidParameters);
+        }
+
         let encrypted_masks = output
             .encrypted_masks
             .clone()
@@ -396,7 +410,6 @@ where
                 rng,
             )?;
 
-        // TODO: verify all are the same length, return error otherwise. Do it in the beginning.
         Ok(output
             .nonce_public_shares
             .into_iter()

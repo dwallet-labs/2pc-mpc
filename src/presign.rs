@@ -266,7 +266,8 @@ pub(crate) mod tests {
             masks_and_encrypted_masked_key_share_proof,
             encrypted_nonce_shares_and_public_shares.clone(),
             encrypted_nonce_shares_and_public_shares_proof,
-        );
+        )
+        .unwrap();
 
         let centralized_party_presigns = centralized_party_proof_verification_round_party
             .verify_presign_output(output, &mut OsRng)

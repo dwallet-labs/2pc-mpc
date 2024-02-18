@@ -240,9 +240,13 @@ pub(crate) mod tests {
                 })
                 .collect();
 
-        // TODO: check all are same.
         let decentralized_party_dkg_output =
             decentralized_party_dkg_outputs.get(&1).unwrap().clone();
+
+        assert!(decentralized_party_dkg_outputs
+            .clone()
+            .into_iter()
+            .all(|(_, output)| decentralized_party_dkg_output == output));
 
         assert!(decentralized_party_dkg_outputs
             .into_iter()
@@ -286,5 +290,3 @@ pub(crate) mod tests {
         (centralized_party_dkg_output, decentralized_party_dkg_output)
     }
 }
-
-// TODO: bench

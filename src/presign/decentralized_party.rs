@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     presign::centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
-    Result,
+    Error, Result,
 };
 
 pub mod encrypted_masked_key_share_and_public_nonce_shares_round;
@@ -198,8 +198,12 @@ where
             UnboundedEncDLWitness,
             ProtocolContext,
         >,
-    ) -> Self {
-        // TODO: check sizes match?
+    ) -> Result<Self> {
+        if masks_and_encrypted_masked_key_share.len()
+            != encrypted_nonce_shares_and_public_shares.len()
+        {
+            return Err(Error::InvalidParameters);
+        }
 
         let encrypted_masks: Vec<_> = masks_and_encrypted_masked_key_share
             .iter()
@@ -261,7 +265,7 @@ where
                 })
                 .collect();
 
-        Self {
+        Ok(Self {
             encrypted_masks,
             encrypted_masked_key_shares,
             key_share_masking_range_proof_commitments,
@@ -270,7 +274,7 @@ where
             nonce_public_shares,
             nonce_sharing_range_proof_commitments,
             encrypted_nonce_shares_and_public_shares_proof,
-        }
+        })
     }
 }
 

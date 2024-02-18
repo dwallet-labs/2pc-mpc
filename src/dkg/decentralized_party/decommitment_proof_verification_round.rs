@@ -19,7 +19,7 @@ use crate::{
     CENTRALIZED_PARTY_ID,
 };
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Output<
     const SCALAR_LIMBS: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,

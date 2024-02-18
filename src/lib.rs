@@ -22,6 +22,8 @@ pub enum Error {
     Serialization(#[from] serde_json::Error),
     #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]
     WrongDecommitment,
+    #[error("invalid parameters")]
+    InvalidParameters,
     #[error("an internal error that should never have happened and signifies a bug")]
     InternalError,
 }
