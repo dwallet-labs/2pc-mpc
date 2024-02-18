@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 pub mod commitment_round;
 pub mod proof_verification_round;
 
-#[derive(PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Presign<GroupElementValue, ScalarValue, CiphertextValue> {
     pub(crate) nonce_share: ScalarValue,
     pub(crate) decentralized_party_nonce_public_share: GroupElementValue,

@@ -34,7 +34,7 @@ pub struct Party<
     pub encrypted_decentralized_party_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
 }
 
-#[derive(PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SignatureNonceSharesCommitmentsAndBatchedProof<
     const SCALAR_LIMBS: usize,
     GroupElementValue,

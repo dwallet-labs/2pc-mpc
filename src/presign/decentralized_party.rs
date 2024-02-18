@@ -268,7 +268,7 @@ where
     }
 }
 
-#[derive(PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Presign<GroupElementValue, CiphertextValue> {
     pub(crate) centralized_party_nonce_share_commitment: GroupElementValue,
     pub(crate) nonce_public_share: GroupElementValue,
