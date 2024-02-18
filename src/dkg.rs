@@ -109,6 +109,7 @@ pub(crate) mod tests {
         (1..=number_of_parties).for_each(|i| {
             parties.insert(i);
         });
+        let evaluation_party_id = *parties.iter().next().unwrap();
 
         let decentralized_party_encryption_of_secret_key_share_parties: HashMap<_, _> = (1
             ..=number_of_parties)
@@ -159,7 +160,7 @@ pub(crate) mod tests {
                             &mut OsRng,
                         )
                         .unwrap();
-                    if party_id == 1 {
+                    if party_id == evaluation_party_id {
                         decentralized_party_total_time =
                             measurement.add(&decentralized_party_total_time, &measurement.end(now));
                     };
@@ -231,7 +232,7 @@ pub(crate) mod tests {
                             secret_key_share_encryption_and_proof.clone(),
                         )
                         .unwrap();
-                    if party_id == 1 {
+                    if party_id == evaluation_party_id {
                         decentralized_party_total_time =
                             measurement.add(&decentralized_party_total_time, &measurement.end(now));
                     };
