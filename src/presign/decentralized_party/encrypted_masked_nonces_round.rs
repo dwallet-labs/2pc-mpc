@@ -3,10 +3,11 @@
 
 use std::collections::HashSet;
 
-use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint, U256};
+use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use enhanced_maurer::{
     encryption_of_discrete_log, encryption_of_tuple, encryption_of_tuple::StatementAccessors,
-    EnhanceableLanguage, EnhancedLanguage, EnhancedPublicParameters,
+    language::composed_witness_upper_bound, EnhanceableLanguage, EnhancedLanguage,
+    EnhancedPublicParameters,
 };
 use group::{GroupElement as _, PartyID, PrimeGroupElement, Samplable};
 use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
@@ -169,6 +170,13 @@ where
                     encrypted_mask,
                     (nonce, (nonces_encryption_randomness, masked_nonces_encryption_randomness)),
                 )| {
+                    let encrypted_mask_upper_bound = composed_witness_upper_bound::<
+                        RANGE_CLAIMS_PER_SCALAR,
+                        PLAINTEXT_SPACE_SCALAR_LIMBS,
+                        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                        RangeProof,
+                    >()?;
+
                     let language_public_parameters = encryption_of_tuple::PublicParameters::<
                         PLAINTEXT_SPACE_SCALAR_LIMBS,
                         SCALAR_LIMBS,
@@ -178,8 +186,7 @@ where
                         self.scalar_group_public_parameters.clone(),
                         self.encryption_scheme_public_parameters.clone(),
                         encrypted_mask.value(),
-                        // TODO: upper bound
-                        (&U256::MAX).into(),
+                        encrypted_mask_upper_bound,
                     );
 
                     let language_public_parameters = EnhancedPublicParameters::<
