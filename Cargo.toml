@@ -27,6 +27,12 @@ rand_core = { version = "0.6", features = ["std"] }
 rstest = { version = "0.18" }
 proof = { git = "https://github.com/dwallet-labs/proof.git", branch = "bp-aggregation", features = ["test_helpers"] }
 maurer = { git = "https://github.com/dwallet-labs/maurer.git", features = ["test_helpers"] }
+ecdsa = { version = "0.16.9", features = ["verifying"] }
+k256 = { git = 'https://github.com/ycscaly/elliptic-curves.git', branch = "13.3-fixed", features = ["arithmetic", "critical-section", "precomputed-tables", "serde", "ecdsa", "hash2curve", "alloc"], default-features = false }
 
 [features]
 benchmarking = ["dep:criterion", "dep:rand_core", "dep:rstest", "proof/test_helpers"]
+
+[[bench]]
+name = "benches"
+harness = false
