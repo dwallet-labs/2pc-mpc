@@ -141,7 +141,7 @@ pub(crate) mod tests {
         };
 
         let (
-            commitments_and_proof_to_centralized_party_nonce_shares,
+            centralized_party_nonce_shares_commitments_and_batched_proof,
             centralized_party_proof_verification_round_party,
         ) = centralized_party_commitment_round_party
             .sample_commit_and_prove_signature_nonce_share(batch_size, &mut OsRng)
@@ -200,7 +200,7 @@ pub(crate) mod tests {
                     decentralized_party_encrypted_masked_nonce_shares_round_party,
                 ) = party
                     .sample_mask_and_nonce_shares_and_initialize_proof_aggregation(
-                        commitments_and_proof_to_centralized_party_nonce_shares.clone(),
+                        centralized_party_nonce_shares_commitments_and_batched_proof.clone(),
                         &mut OsRng,
                     )
                     .unwrap();
@@ -330,44 +330,20 @@ pub(crate) mod tests {
             })
             .collect();
 
-        let centralized_party_nonce_shares_commitments =
-            commitments_and_proof_to_centralized_party_nonce_shares
-                .commitments
-                .into_iter()
-                .map(|value| {
-                    secp256k1::GroupElement::new(value, &secp256k1_group_public_parameters).unwrap()
-                });
-
-        let decentralized_party_presigns: Vec<_> = centralized_party_nonce_shares_commitments
-            .zip(
-                masks_and_encrypted_masked_key_share.into_iter().zip(
-                    encrypted_nonce_shares_and_public_shares
-                        .into_iter()
-                        .zip(encrypted_masked_nonce_shares.into_iter()),
-                ),
-            )
-            .map(
-                |(
-                    centralized_party_nonce_share_commitment,
-                    (
-                        mask_and_encrypted_masked_key_share,
-                        (encrypted_nonce_share_and_public_share, encrypted_masked_nonce_share),
-                    ),
-                )| {
-                    decentralized_party::Presign::new::<
-                        { secp256k1::SCALAR_LIMBS },
-                        { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
-                        secp256k1::GroupElement,
-                        tiresias::EncryptionKey,
-                    >(
-                        centralized_party_nonce_share_commitment,
-                        mask_and_encrypted_masked_key_share,
-                        encrypted_nonce_share_and_public_share,
-                        encrypted_masked_nonce_share,
-                    )
-                },
-            )
-            .collect();
+        let decentralized_party_presigns = decentralized_party::Presign::new_batch::<
+            { secp256k1::SCALAR_LIMBS },
+            { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
+            secp256k1::GroupElement,
+            tiresias::EncryptionKey,
+            PhantomData<()>,
+        >(
+            centralized_party_nonce_shares_commitments_and_batched_proof,
+            masks_and_encrypted_masked_key_share,
+            encrypted_nonce_shares_and_public_shares,
+            encrypted_masked_nonce_shares,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
 
         assert!(centralized_party_presigns
             .clone()

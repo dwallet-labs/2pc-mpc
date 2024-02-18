@@ -131,7 +131,8 @@ where
 {
     pub fn sample_mask_and_nonce_shares_and_initialize_proof_aggregation(
         self,
-        centralized_party_nonce_shares_commitments_and_batched_proof:         SignatureNonceSharesCommitmentsAndBatchedProof<SCALAR_LIMBS, GroupElement::Value, maurer::Proof<
+        centralized_party_nonce_shares_commitments_and_batched_proof:
+            SignatureNonceSharesCommitmentsAndBatchedProof<SCALAR_LIMBS, GroupElement::Value, maurer::Proof<
             SOUND_PROOFS_REPETITIONS,
             knowledge_of_decommitment::Language<
                 SOUND_PROOFS_REPETITIONS,

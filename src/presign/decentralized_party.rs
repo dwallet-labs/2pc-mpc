@@ -1,17 +1,23 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+use commitment::Pedersen;
 use crypto_bigint::{Encoding, Uint};
 use enhanced_maurer::{
     encryption_of_discrete_log, encryption_of_discrete_log::StatementAccessors as _,
     encryption_of_tuple, encryption_of_tuple::StatementAccessors as _,
     language::EnhancedLanguageStatementAccessors, EnhanceableLanguage,
 };
-use group::{GroupElement, PrimeGroupElement, Samplable};
+use group::{GroupElement as _, PrimeGroupElement, Samplable};
 use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
-use maurer::SOUND_PROOFS_REPETITIONS;
+use maurer::{knowledge_of_decommitment, SOUND_PROOFS_REPETITIONS};
 use proof::{range, AggregatableRangeProof};
 use serde::{Deserialize, Serialize};
+
+use crate::{
+    presign::centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
+    Result,
+};
 
 pub mod encrypted_masked_key_share_and_public_nonce_shares_round;
 pub mod encrypted_masked_nonces_round;
@@ -331,5 +337,92 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
             encrypted_masked_key_share,
             encrypted_masked_nonce_share,
         }
+    }
+
+    pub fn new_batch<
+        const SCALAR_LIMBS: usize,
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
+        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        ProtocolContext: Clone + Serialize,
+    >(
+        centralized_party_nonce_shares_commitments_and_batched_proof:
+        SignatureNonceSharesCommitmentsAndBatchedProof<SCALAR_LIMBS, GroupElement::Value, maurer::Proof<
+        SOUND_PROOFS_REPETITIONS,
+        knowledge_of_decommitment::Language<
+        SOUND_PROOFS_REPETITIONS,
+        SCALAR_LIMBS,
+        Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
+        >,
+        ProtocolContext,
+        >,>,
+        masks_and_encrypted_masked_key_share: Vec<
+            encryption_of_tuple::StatementSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                EncryptionKey,
+            >,
+        >,
+        encrypted_nonce_shares_and_public_shares: Vec<
+            encryption_of_discrete_log::StatementSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+        >,
+        encrypted_masked_nonce_shares: Vec<
+            encryption_of_tuple::StatementSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                EncryptionKey,
+            >,
+        >,
+        group_public_parameters: &GroupElement::PublicParameters,
+    ) -> Result<Vec<Self>>
+    where
+        GroupElement: group::GroupElement<Value = GroupElementValue>,
+        EncryptionKey::CiphertextSpaceGroupElement: group::GroupElement<Value = CiphertextValue>,
+    {
+        let centralized_party_nonce_shares_commitments =
+            centralized_party_nonce_shares_commitments_and_batched_proof
+                .commitments
+                .into_iter()
+                .map(|value| GroupElement::new(value, group_public_parameters))
+                .collect::<group::Result<Vec<_>>>()?;
+
+        let presigns: Vec<_> = centralized_party_nonce_shares_commitments
+            .into_iter()
+            .zip(
+                masks_and_encrypted_masked_key_share.into_iter().zip(
+                    encrypted_nonce_shares_and_public_shares
+                        .into_iter()
+                        .zip(encrypted_masked_nonce_shares.into_iter()),
+                ),
+            )
+            .map(
+                |(
+                    centralized_party_nonce_share_commitment,
+                    (
+                        mask_and_encrypted_masked_key_share,
+                        (encrypted_nonce_share_and_public_share, encrypted_masked_nonce_share),
+                    ),
+                )| {
+                    Self::new::<
+                        SCALAR_LIMBS,
+                        PLAINTEXT_SPACE_SCALAR_LIMBS,
+                        GroupElement,
+                        EncryptionKey,
+                    >(
+                        centralized_party_nonce_share_commitment,
+                        mask_and_encrypted_masked_key_share,
+                        encrypted_nonce_share_and_public_share,
+                        encrypted_masked_nonce_share,
+                    )
+                },
+            )
+            .collect();
+
+        Ok(presigns)
     }
 }
