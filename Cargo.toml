@@ -21,6 +21,8 @@ thiserror = "1.0"
 criterion = { version = "0.5", features = ["html_reports"], optional = true }
 rand_core = { version = "0.6", features = ["std"], optional = true }
 rstest = { version = "0.18", optional = true }
+ecdsa = { version = "0.16.9", features = ["verifying"], optional = true }
+k256 = { git = 'https://github.com/ycscaly/elliptic-curves.git', branch = "13.3-fixed", features = ["arithmetic", "critical-section", "precomputed-tables", "serde", "ecdsa", "hash2curve", "alloc"], default-features = false, optional = true }
 
 [dev-dependencies]
 rand_core = { version = "0.6", features = ["std"] }
@@ -31,7 +33,7 @@ ecdsa = { version = "0.16.9", features = ["verifying"] }
 k256 = { git = 'https://github.com/ycscaly/elliptic-curves.git', branch = "13.3-fixed", features = ["arithmetic", "critical-section", "precomputed-tables", "serde", "ecdsa", "hash2curve", "alloc"], default-features = false }
 
 [features]
-benchmarking = ["dep:criterion", "dep:rand_core", "dep:rstest", "proof/test_helpers"]
+benchmarking = ["dep:criterion", "dep:rand_core", "dep:rstest", "dep:ecdsa", "dep:k256", "proof/test_helpers"]
 
 [[bench]]
 name = "benches"

@@ -10,57 +10,53 @@ pub mod decentralized_party;
 pub const DIMENSION: usize = 2;
 
 #[cfg(any(test, feature = "benchmarking"))]
+#[allow(unused_imports)]
 pub(crate) mod tests {
-    use core::{array, iter, marker::PhantomData};
+    use commitment::{pedersen, Pedersen};
+    use core::marker::PhantomData;
     use std::{collections::HashMap, time::Duration};
 
+    use super::*;
+    use crate::{
+        dkg::tests::generates_distributed_key_internal,
+        presign::tests::generates_presignatures_internal, tests::RANGE_CLAIMS_PER_SCALAR,
+    };
+    use commitment::HomomorphicCommitmentScheme;
     use criterion::measurement::{Measurement, WallTime};
-    use crypto_bigint::{CheckedMul, NonZero, RandomMod, Uint, Wrapping, U256};
+    use crypto_bigint::{NonZero, Uint, U256, U64};
     use ecdsa::{
-        elliptic_curve::{ops::Reduce, Scalar, ScalarPrimitive},
+        elliptic_curve::{ops::Reduce, Scalar},
         hazmat::{bits2field, DigestPrimitive},
         signature::{digest::Digest, Verifier},
         Signature, VerifyingKey,
     };
+    use group::{
+        direct_product, ristretto, secp256k1, self_product, AffineXCoordinate, GroupElement as _,
+        Invert, KnownOrderGroupElement, PartyID, Reduce as _, Samplable,
+        StatisticalSecuritySizedNumber,
+    };
+    use homomorphic_encryption::{
+        AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicDecryptionKeyShare,
+        AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors,
+    };
     use k256::{elliptic_curve::scalar::IsHigh, sha2::digest::FixedOutput};
+    use proof::range::bulletproofs;
     use rand_core::OsRng;
     use tiresias::{
-        deal_trusted_decryption_key_shares, secret_sharing::shamir::Polynomial,
-        AdjustedLagrangeCoefficientSizedNumber, DecryptionKeyShare, LargeBiPrimeSizedNumber,
-        PaillierModulusSizedNumber, SecretKeyShareSizedNumber,
+        test_exports::{deal_trusted_shares, N, SECRET_KEY},
+        AdjustedLagrangeCoefficientSizedNumber, DecryptionKeyShare,
     };
 
-    use super::*;
-    use crate::{
-        commitment::{pedersen, HomomorphicCommitmentScheme, Pedersen},
-        dkg::tests::generates_distributed_key_internal,
-        group::{
-            direct_product, ristretto, secp256k1, self_product, AffineXCoordinate,
-            CyclicGroupElement, GroupElement as _, Invert, KnownOrderGroupElement, Samplable,
-        },
-        homomorphic_encryption,
-        homomorphic_encryption::{
-            paillier,
-            paillier::{
-                tests::{N, SECRET_KEY},
-                PrecomputedValues,
-            },
-            AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
-            GroupsPublicParametersAccessors,
-        },
-        presign::tests::generates_presignatures_internal,
-        proofs::{
-            maurer::{
-                aggregation::tests::aggregates_internal,
-                committed_linear_evaluation::tests::{NUM_RANGE_CLAIMS, RANGE_CLAIMS_PER_MASK},
-                enhanced::{tests::RANGE_CLAIMS_PER_SCALAR, EnhancedLanguageStatementAccessors},
-            },
-            range::{bulletproofs, RangeProof},
-        },
-        sign::tests::paillier::tests::BASE,
-        traits::Reduce as _,
-        PartyID, StatisticalSecuritySizedNumber,
-    };
+    pub(crate) const MASK_LIMBS: usize =
+        secp256k1::SCALAR_LIMBS + StatisticalSecuritySizedNumber::LIMBS + U64::LIMBS;
+
+    // TODO: it's ok to take next power of two here right
+    // TODO: no MASK_LIMBS. Instead, have some upper bound on the upper bounds
+    pub(crate) const RANGE_CLAIMS_PER_MASK: usize =
+        (Uint::<MASK_LIMBS>::BITS / bulletproofs::RANGE_CLAIM_BITS).next_power_of_two();
+
+    pub(crate) const NUM_RANGE_CLAIMS: usize =
+        DIMENSION * RANGE_CLAIMS_PER_SCALAR + RANGE_CLAIMS_PER_MASK;
 
     pub fn signs_internal(
         number_of_parties: u16,
@@ -74,14 +70,13 @@ pub(crate) mod tests {
         decentralized_party_nonce_share: secp256k1::Scalar,
         decentralized_party_nonce_public_share: secp256k1::GroupElement,
         nonce_share_commitment_randomness: secp256k1::Scalar,
-        encrypted_mask: paillier::CiphertextSpaceGroupElement,
-        encrypted_masked_key_share: paillier::CiphertextSpaceGroupElement,
-        encrypted_masked_nonce_share: paillier::CiphertextSpaceGroupElement,
+        encrypted_mask: tiresias::CiphertextSpaceGroupElement,
+        encrypted_masked_key_share: tiresias::CiphertextSpaceGroupElement,
+        encrypted_masked_nonce_share: tiresias::CiphertextSpaceGroupElement,
     ) {
         let measurement = WallTime;
         let mut centralized_party_total_time = Duration::ZERO;
         let mut decentralized_party_decryption_share_time = Duration::ZERO;
-        let mut decentralized_party_threshold_decryption_time = Duration::ZERO;
 
         let (
             secp256k1_scalar_public_parameters,
@@ -89,7 +84,7 @@ pub(crate) mod tests {
             generator,
             bulletproofs_public_parameters,
             paillier_public_parameters,
-            paillier_encryption_key,
+            _,
             unbounded_dcom_eval_witness_public_parameters,
         ) = setup();
 
@@ -103,19 +98,19 @@ pub(crate) mod tests {
         let public_key = centralized_party_public_key_share + decentralized_party_public_key_share;
 
         let centralized_party_sign_round_party = centralized_party::Party::<
-            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+            { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
             { secp256k1::SCALAR_LIMBS },
             { RANGE_CLAIMS_PER_SCALAR },
             { RANGE_CLAIMS_PER_MASK },
             { ristretto::SCALAR_LIMBS },
             { NUM_RANGE_CLAIMS },
             secp256k1::GroupElement,
-            paillier::EncryptionKey,
+            tiresias::EncryptionKey,
+            bulletproofs::RangeProof,
             direct_product::GroupElement<
                 self_product::GroupElement<DIMENSION, secp256k1::Scalar>,
-                paillier::RandomnessSpaceGroupElement,
+                tiresias::RandomnessSpaceGroupElement,
             >,
-            bulletproofs::RangeProof,
             PhantomData<()>,
         > {
             protocol_context: PhantomData::<()>,
@@ -143,7 +138,8 @@ pub(crate) mod tests {
         )
         .unwrap();
 
-        let m = secp256k1::Scalar(<Scalar<k256::Secp256k1> as Reduce<U256>>::reduce_bytes(&m));
+        let m = <Scalar<k256::Secp256k1> as Reduce<U256>>::reduce_bytes(&m);
+        let m = U256::from(m).into();
 
         let now = measurement.start();
         let public_nonce_encrypted_partial_signature_and_proof = centralized_party_sign_round_party
@@ -152,59 +148,71 @@ pub(crate) mod tests {
         centralized_party_total_time =
             measurement.add(&centralized_party_total_time, &measurement.end(now));
 
-        let (
-            encryption_key,
-            decryption_key_shares,
-            precomputed_values,
-            base,
-            public_verification_keys,
-            absolute_adjusted_lagrange_coefficients,
-        ) = deal_trusted_decryption_key_shares(threshold, number_of_parties);
+        let (decryption_key_share_public_parameters, decryption_key_shares) =
+            deal_trusted_shares(threshold, number_of_parties);
 
-        let decentralized_party_sign_round_parties =
-            decryption_key_shares
+        let decrypters: Vec<_> = decryption_key_shares.clone().into_keys().collect();
+
+        let decentralized_party_sign_round_parties: HashMap<_, _> = decryption_key_shares
+            .into_iter()
+            .map(|(party_id, decryption_key_share)| {
+                (
+                    party_id,
+                    decentralized_party::Party::<
+                        { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                        { secp256k1::SCALAR_LIMBS },
+                        { RANGE_CLAIMS_PER_SCALAR },
+                        { RANGE_CLAIMS_PER_MASK },
+                        { ristretto::SCALAR_LIMBS },
+                        { NUM_RANGE_CLAIMS },
+                        secp256k1::GroupElement,
+                        tiresias::EncryptionKey,
+                        DecryptionKeyShare,
+                        bulletproofs::RangeProof,
+                        direct_product::GroupElement<
+                            self_product::GroupElement<DIMENSION, secp256k1::Scalar>,
+                            tiresias::RandomnessSpaceGroupElement,
+                        >,
+                        PhantomData<()>,
+                    > {
+                        decryption_key_share,
+                        decryption_key_share_public_parameters:
+                            decryption_key_share_public_parameters.clone(),
+                        protocol_context: PhantomData::<()>,
+                        scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
+                        group_public_parameters: secp256k1_group_public_parameters.clone(),
+                        encryption_scheme_public_parameters: paillier_public_parameters.clone(),
+                        unbounded_dcom_eval_witness_public_parameters:
+                            unbounded_dcom_eval_witness_public_parameters.clone(),
+                        range_proof_public_parameters: bulletproofs_public_parameters.clone(),
+                        public_key_share: decentralized_party_public_key_share,
+                        nonce_public_share: decentralized_party_nonce_public_share,
+                        encrypted_mask,
+                        encrypted_masked_key_share,
+                        encrypted_masked_nonce_share,
+                        centralized_party_public_key_share,
+                        centralized_party_nonce_share_commitment,
+                    },
+                )
+            })
+            .collect();
+
+        let lagrange_coefficients: HashMap<PartyID, AdjustedLagrangeCoefficientSizedNumber> =
+            decrypters
+                .clone()
                 .into_iter()
-                .map(|(party_id, decryption_key_share)| {
+                .map(|j| {
                     (
-                        party_id,
-                        decentralized_party::Party::<
-                            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
-                            { secp256k1::SCALAR_LIMBS },
-                            { RANGE_CLAIMS_PER_SCALAR },
-                            { RANGE_CLAIMS_PER_MASK },
-                            { ristretto::SCALAR_LIMBS },
-                            { NUM_RANGE_CLAIMS },
-                            secp256k1::GroupElement,
-                            paillier::EncryptionKey,
-                            paillier::DecryptionKeyShare,
-                            direct_product::GroupElement<
-                                self_product::GroupElement<DIMENSION, secp256k1::Scalar>,
-                                paillier::RandomnessSpaceGroupElement,
-                            >,
-                            bulletproofs::RangeProof,
-                            PhantomData<()>,
-                        > {
-                            decryption_key_share: paillier::DecryptionKeyShare(
-                                decryption_key_share,
-                            ),
-                            protocol_context: PhantomData::<()>,
-                            scalar_group_public_parameters: secp256k1_scalar_public_parameters
-                                .clone(),
-                            group_public_parameters: secp256k1_group_public_parameters.clone(),
-                            encryption_scheme_public_parameters: paillier_public_parameters.clone(),
-                            unbounded_dcom_eval_witness_public_parameters:
-                                unbounded_dcom_eval_witness_public_parameters.clone(),
-                            range_proof_public_parameters: bulletproofs_public_parameters.clone(),
-                            public_key_share: decentralized_party_public_key_share,
-                            nonce_public_share: decentralized_party_nonce_public_share,
-                            encrypted_mask,
-                            encrypted_masked_key_share,
-                            encrypted_masked_nonce_share,
-                            centralized_party_public_key_share,
-                            centralized_party_nonce_share_commitment,
-                        },
+                        j,
+                        DecryptionKeyShare::compute_lagrange_coefficient(
+                            j,
+                            number_of_parties,
+                            decrypters.clone(),
+                            &decryption_key_share_public_parameters,
+                        ),
                     )
-                });
+                })
+                .collect();
 
         let (partial_signature_decryption_shares, masked_nonce_decryption_shares): (
             HashMap<_, _>,
@@ -231,41 +239,32 @@ pub(crate) mod tests {
             })
             .unzip();
 
-        let precomputed_values = PrecomputedValues {
-            threshold,
-            number_of_parties,
-            precomputed_values,
-            base,
-            public_verification_keys,
-            absolute_adjusted_lagrange_coefficients,
-        };
-
         let now = measurement.start();
         let signature_s = decentralized_party::Party::<
-            { paillier::PLAINTEXT_SPACE_SCALAR_LIMBS },
+            { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
             { secp256k1::SCALAR_LIMBS },
             { RANGE_CLAIMS_PER_SCALAR },
             { RANGE_CLAIMS_PER_MASK },
             { ristretto::SCALAR_LIMBS },
             { NUM_RANGE_CLAIMS },
             secp256k1::GroupElement,
-            paillier::EncryptionKey,
-            paillier::DecryptionKeyShare,
+            tiresias::EncryptionKey,
+            DecryptionKeyShare,
+            bulletproofs::RangeProof,
             direct_product::GroupElement<
                 self_product::GroupElement<DIMENSION, secp256k1::Scalar>,
-                paillier::RandomnessSpaceGroupElement,
+                tiresias::RandomnessSpaceGroupElement,
             >,
-            bulletproofs::RangeProof,
             PhantomData<()>,
         >::decrypt_signature(
-            paillier_encryption_key,
-            precomputed_values,
+            lagrange_coefficients,
+            &decryption_key_share_public_parameters,
             secp256k1_scalar_public_parameters,
             partial_signature_decryption_shares,
             masked_nonce_decryption_shares,
         )
         .unwrap();
-        decentralized_party_threshold_decryption_time = measurement.end(now);
+        let decentralized_party_threshold_decryption_time = measurement.end(now);
 
         println!(
             "\nProtocol, Number of Parties, Threshold, Batch Size, Centralized Party Total Time (ms), Decentralized Party Decryption Share Time (ms), Decentralized Party Threshold Decryption Time (ms)",
@@ -307,10 +306,13 @@ pub(crate) mod tests {
             signature_s
         );
 
-        let signature = Signature::from_scalars(nonce_x_coordinate.0, signature_s.0).unwrap();
+        let signature_s: k256::Scalar = signature_s.into();
+
+        let signature =
+            Signature::from_scalars(k256::Scalar::from(nonce_x_coordinate), signature_s).unwrap();
 
         // Attend to maliablity. TODO: is this what Bitcoin does? all blockchains? should we even?
-        let signature = if signature_s.0.is_high().into() {
+        let signature = if signature_s.is_high().into() {
             signature.normalize_s().unwrap()
         } else {
             signature
@@ -335,15 +337,15 @@ pub(crate) mod tests {
 
         let (
             secp256k1_scalar_public_parameters,
-            secp256k1_group_public_parameters,
+            _,
             generator,
-            bulletproofs_public_parameters,
+            _,
             paillier_public_parameters,
             paillier_encryption_key,
-            unbounded_dcom_eval_witness_public_parameters,
+            _,
         ) = setup();
 
-        let commitment_scheme_public_parameters = pedersen::PublicParameters::default::<
+        let commitment_scheme_public_parameters = pedersen::PublicParameters::derive_default::<
             { secp256k1::SCALAR_LIMBS },
             secp256k1::GroupElement,
         >()
@@ -379,9 +381,6 @@ pub(crate) mod tests {
             &nonce_share_commitment_randomness,
         );
 
-        let centralized_party_nonce_public_share =
-            centralized_party_nonce_share.invert().unwrap() * &generator;
-
         let decentralized_party_nonce_share =
             secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
 
@@ -392,8 +391,8 @@ pub(crate) mod tests {
 
         let (_, encrypted_mask) = paillier_encryption_key
             .encrypt(
-                &paillier::PlaintextSpaceGroupElement::new(
-                    Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from(&U256::from(
+                &tiresias::PlaintextSpaceGroupElement::new(
+                    Uint::<{ tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from(&U256::from(
                         mask.value(),
                     )),
                     paillier_public_parameters.plaintext_space_public_parameters(),
@@ -408,8 +407,8 @@ pub(crate) mod tests {
 
         let (_, encrypted_masked_key_share) = paillier_encryption_key
             .encrypt(
-                &paillier::PlaintextSpaceGroupElement::new(
-                    Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from(&U256::from(
+                &tiresias::PlaintextSpaceGroupElement::new(
+                    Uint::<{ tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from(&U256::from(
                         masked_key_share.value(),
                     )),
                     paillier_public_parameters.plaintext_space_public_parameters(),
@@ -424,8 +423,8 @@ pub(crate) mod tests {
 
         let (_, encrypted_masked_nonce_share) = paillier_encryption_key
             .encrypt(
-                &paillier::PlaintextSpaceGroupElement::new(
-                    Uint::<{ paillier::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from(&U256::from(
+                &tiresias::PlaintextSpaceGroupElement::new(
+                    Uint::<{ tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS }>::from(&U256::from(
                         masked_nonce_share.value(),
                     )),
                     paillier_public_parameters.plaintext_space_public_parameters(),
@@ -463,11 +462,11 @@ pub(crate) mod tests {
         let (
             secp256k1_scalar_public_parameters,
             secp256k1_group_public_parameters,
-            generator,
-            bulletproofs_public_parameters,
+            _,
+            _,
             paillier_public_parameters,
-            paillier_encryption_key,
-            unbounded_dcom_eval_witness_public_parameters,
+            _,
+            _,
         ) = setup();
 
         let (centralized_party_dkg_output, decentralized_party_dkg_output) =
@@ -478,8 +477,6 @@ pub(crate) mod tests {
                 number_of_parties,
                 threshold,
                 1,
-                centralized_party_dkg_output.secret_key_share,
-                decentralized_party_dkg_output.public_key_share,
                 decentralized_party_dkg_output.encrypted_secret_key_share,
             );
 
@@ -498,29 +495,26 @@ pub(crate) mod tests {
         )
         .unwrap();
 
-        let encrypted_mask = paillier::CiphertextSpaceGroupElement::new(
+        let encrypted_mask = tiresias::CiphertextSpaceGroupElement::new(
             centralized_party_presign.encrypted_mask,
             paillier_public_parameters.ciphertext_space_public_parameters(),
         )
         .unwrap();
 
-        let encrypted_masked_key_share = paillier::CiphertextSpaceGroupElement::new(
+        let encrypted_masked_key_share = tiresias::CiphertextSpaceGroupElement::new(
             centralized_party_presign.encrypted_masked_key_share,
             paillier_public_parameters.ciphertext_space_public_parameters(),
         )
         .unwrap();
 
-        let encrypted_masked_nonce_share = paillier::CiphertextSpaceGroupElement::new(
+        let encrypted_masked_nonce_share = tiresias::CiphertextSpaceGroupElement::new(
             decentralized_party_presign.encrypted_masked_nonce_share,
             paillier_public_parameters.ciphertext_space_public_parameters(),
         )
         .unwrap();
 
-        let paillier_decryption_key = homomorphic_encryption::paillier::DecryptionKey::new(
-            &paillier_public_parameters,
-            SECRET_KEY,
-        )
-        .unwrap();
+        let paillier_decryption_key =
+            tiresias::DecryptionKey::new(SECRET_KEY, &paillier_public_parameters).unwrap();
 
         let group_order =
             secp256k1::Scalar::order_from_public_parameters(&secp256k1_scalar_public_parameters);
@@ -528,7 +522,11 @@ pub(crate) mod tests {
         let group_order = Option::<_>::from(NonZero::new(group_order)).unwrap();
 
         let decentralized_party_secret_key_share = paillier_decryption_key
-            .decrypt(&decentralized_party_dkg_output.encrypted_secret_key_share);
+            .decrypt(
+                &decentralized_party_dkg_output.encrypted_secret_key_share,
+                &paillier_public_parameters,
+            )
+            .unwrap();
 
         let decentralized_party_secret_key_share = secp256k1::Scalar::new(
             decentralized_party_secret_key_share
@@ -539,8 +537,12 @@ pub(crate) mod tests {
         )
         .unwrap();
 
-        let decentralized_party_nonce_share =
-            paillier_decryption_key.decrypt(encrypted_nonce.first().unwrap());
+        let decentralized_party_nonce_share = paillier_decryption_key
+            .decrypt(
+                encrypted_nonce.first().unwrap(),
+                &paillier_public_parameters,
+            )
+            .unwrap();
 
         let decentralized_party_nonce_share = secp256k1::Scalar::new(
             decentralized_party_nonce_share
@@ -574,11 +576,11 @@ pub(crate) mod tests {
         secp256k1::group_element::PublicParameters,
         secp256k1::GroupElement,
         bulletproofs::PublicParameters<{ NUM_RANGE_CLAIMS }>,
-        paillier::PublicParameters,
-        paillier::EncryptionKey,
+        tiresias::encryption_key::PublicParameters,
+        tiresias::EncryptionKey,
         direct_product::PublicParameters<
             self_product::PublicParameters<2, secp256k1::scalar::PublicParameters>,
-            paillier::RandomnessSpacePublicParameters,
+            tiresias::RandomnessSpacePublicParameters,
         >,
     ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
@@ -590,11 +592,10 @@ pub(crate) mod tests {
             bulletproofs::PublicParameters::<{ NUM_RANGE_CLAIMS }>::default();
 
         let paillier_public_parameters =
-            homomorphic_encryption::paillier::PublicParameters::new(N).unwrap();
+            tiresias::encryption_key::PublicParameters::new(N).unwrap();
 
         let paillier_encryption_key =
-            homomorphic_encryption::paillier::EncryptionKey::new(&paillier_public_parameters)
-                .unwrap();
+            tiresias::EncryptionKey::new(&paillier_public_parameters).unwrap();
 
         let unbounded_dcom_eval_witness_public_parameters = direct_product::PublicParameters(
             self_product::PublicParameters::new(secp256k1_scalar_public_parameters.clone()),

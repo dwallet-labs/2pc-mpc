@@ -19,6 +19,8 @@ pub enum Error {
     Maurer(#[from] maurer::Error),
     #[error("enhanced maurer error")]
     EnhancedMaurer(#[from] enhanced_maurer::Error),
+    #[error("tiresias error")]
+    Tiresias(#[from] tiresias::Error),
     #[error("serialization/deserialization error")]
     Serialization(#[from] serde_json::Error),
     #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]

@@ -41,7 +41,7 @@ pub struct Party<
     ProtocolContext: Clone + Serialize,
 > {
     pub decryption_key_share: DecryptionKeyShare,
-    decryption_key_share_public_parameters: DecryptionKeyShare::PublicParameters,
+    pub decryption_key_share_public_parameters: DecryptionKeyShare::PublicParameters,
     pub protocol_context: ProtocolContext,
     pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub group_public_parameters: GroupElement::PublicParameters,
