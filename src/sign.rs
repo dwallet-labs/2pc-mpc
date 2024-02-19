@@ -159,12 +159,12 @@ pub(crate) mod tests {
                 (
                     party_id,
                     decentralized_party::Party::<
-                        { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
                         { secp256k1::SCALAR_LIMBS },
+                        { ristretto::SCALAR_LIMBS },
                         { RANGE_CLAIMS_PER_SCALAR },
                         { RANGE_CLAIMS_PER_MASK },
-                        { ristretto::SCALAR_LIMBS },
                         { NUM_RANGE_CLAIMS },
+                        { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
                         secp256k1::GroupElement,
                         tiresias::EncryptionKey,
                         DecryptionKeyShare,
@@ -241,12 +241,12 @@ pub(crate) mod tests {
 
         let now = measurement.start();
         let signature_s = decentralized_party::Party::<
-            { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
             { secp256k1::SCALAR_LIMBS },
+            { ristretto::SCALAR_LIMBS },
             { RANGE_CLAIMS_PER_SCALAR },
             { RANGE_CLAIMS_PER_MASK },
-            { ristretto::SCALAR_LIMBS },
             { NUM_RANGE_CLAIMS },
+            { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
             secp256k1::GroupElement,
             tiresias::EncryptionKey,
             DecryptionKeyShare,
