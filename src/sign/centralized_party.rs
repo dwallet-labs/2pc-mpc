@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
 use commitment::{pedersen, Pedersen};
-use crypto_bigint::{rand_core::CryptoRngCore, CheckedMul, Encoding, Random, Uint};
+use crypto_bigint::{rand_core::CryptoRngCore, CheckedMul, Encoding, Uint};
 use enhanced_maurer::{
     committed_linear_evaluation,
     committed_linear_evaluation::StatementAccessors as _,
@@ -11,7 +11,7 @@ use enhanced_maurer::{
 };
 use group::{
     helpers::FlatMapResults, self_product, AffineXCoordinate, GroupElement, Invert,
-    PrimeGroupElement, Samplable, StatisticalSecuritySizedNumber,
+    PrimeGroupElement, Samplable,
 };
 use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
 use maurer::{
@@ -322,24 +322,16 @@ where
                 self.encrypted_masked_key_share,
                 encrypted_masked_key_share_upper_bound.ok_or(Error::InvalidPublicParameters)?,
             ),
-        ]
-        .map(|(ct, upper_bound)| (ct.value(), upper_bound));
+        ];
 
-        // TODO: 1 is for l as DIMENSION = 2; perhaps compute this through log.
-        // Uint::<SCALAR_LIMBS>::BITS is an upper bound.
-        // This is correct?
-        let sampling_bit_size: usize =
-            Uint::<SCALAR_LIMBS>::BITS + 1 + StatisticalSecuritySizedNumber::BITS;
-
-        // TODO: verify
-        let mask = Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::MAX
-            >> (Uint::<PLAINTEXT_SPACE_SCALAR_LIMBS>::BITS - sampling_bit_size);
-
-        let mask = EncryptionKey::PlaintextSpaceGroupElement::new(
-            (Uint::<{ PLAINTEXT_SPACE_SCALAR_LIMBS }>::random(rng) & mask).into(),
-            self.encryption_scheme_public_parameters
-                .plaintext_space_public_parameters(),
+        let mask = EncryptionKey::sample_mask_for_secure_function_evaluation(
+            &ciphertexts_and_upper_bounds,
+            &self.encryption_scheme_public_parameters,
+            rng,
         )?;
+
+        let ciphertexts_and_upper_bounds =
+            ciphertexts_and_upper_bounds.map(|(ct, upper_bound)| (ct.value(), upper_bound));
 
         let coefficients: [Uint<SCALAR_LIMBS>; DIMENSION] =
             [first_coefficient, second_coefficient].map(|coefficient| coefficient.into());

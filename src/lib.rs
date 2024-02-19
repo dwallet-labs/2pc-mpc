@@ -13,6 +13,8 @@ pub enum Error {
     Group(#[from] group::Error),
     #[error("commitment error")]
     Commitment(#[from] commitment::Error),
+    #[error("homomorphic encryption error")]
+    HomomorphicEncryption(#[from] homomorphic_encryption::Error),
     #[error("proof error")]
     Proof(#[from] ::proof::Error),
     #[error("maurer error")]
