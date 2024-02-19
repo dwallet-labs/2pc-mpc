@@ -9,8 +9,8 @@ use enhanced_maurer::{
     EnhancedPublicParameters,
 };
 use group::{
-    helpers::FlatMapResults, AffineXCoordinate, GroupElement, Invert, KnownOrderGroupElement,
-    PartyID, PrimeGroupElement, Reduce, Samplable,
+    AffineXCoordinate, GroupElement, Invert, KnownOrderGroupElement, PartyID, PrimeGroupElement,
+    Reduce, Samplable,
 };
 use homomorphic_encryption::{
     AdditivelyHomomorphicDecryptionKeyShare, AdditivelyHomomorphicEncryptionKey,
@@ -266,15 +266,6 @@ where
             ),
         ]
         .map(|(ct, upper_bound)| (ct.value(), upper_bound));
-
-        // TODO: I probably should use this and check they match some other commitments, or use in
-        // the statements.
-        let coefficient_commitments = [
-            public_nonce_encrypted_partial_signature_and_proof.first_coefficient_commitment,
-            public_nonce_encrypted_partial_signature_and_proof.second_coefficient_commitment,
-        ]
-        .map(|value| GroupElement::new(value, &self.group_public_parameters))
-        .flat_map_results()?;
 
         let commitment_scheme_public_parameters = commitment_scheme_public_parameters.into();
 
