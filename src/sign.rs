@@ -78,15 +78,29 @@ pub(crate) mod tests {
         let mut centralized_party_total_time = Duration::ZERO;
         let mut decentralized_party_decryption_share_time = Duration::ZERO;
 
-        let (
-            secp256k1_scalar_public_parameters,
-            secp256k1_group_public_parameters,
-            generator,
-            bulletproofs_public_parameters,
-            paillier_public_parameters,
-            _,
-            unbounded_dcom_eval_witness_public_parameters,
-        ) = setup();
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
+
+        let bulletproofs_public_parameters =
+            bulletproofs::PublicParameters::<{ NUM_RANGE_CLAIMS }>::default();
+
+        let paillier_public_parameters =
+            tiresias::encryption_key::PublicParameters::new(N).unwrap();
+
+        let unbounded_dcom_eval_witness_public_parameters = direct_product::PublicParameters(
+            self_product::PublicParameters::new(secp256k1_scalar_public_parameters.clone()),
+            paillier_public_parameters
+                .randomness_space_public_parameters()
+                .clone(),
+        );
+
+        let generator = secp256k1::GroupElement::new(
+            secp256k1_group_public_parameters.generator,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
 
         assert_eq!(
             decentralized_party_secret_key_share * &generator,
@@ -335,15 +349,22 @@ pub(crate) mod tests {
         let number_of_parties = 4;
         let threshold = 3;
 
-        let (
-            secp256k1_scalar_public_parameters,
-            _,
-            generator,
-            _,
-            paillier_public_parameters,
-            paillier_encryption_key,
-            _,
-        ) = setup();
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
+
+        let paillier_public_parameters =
+            tiresias::encryption_key::PublicParameters::new(N).unwrap();
+
+        let paillier_encryption_key =
+            tiresias::EncryptionKey::new(&paillier_public_parameters).unwrap();
+
+        let generator = secp256k1::GroupElement::new(
+            secp256k1_group_public_parameters.generator,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
 
         let commitment_scheme_public_parameters = pedersen::PublicParameters::derive_default::<
             { secp256k1::SCALAR_LIMBS },
@@ -459,15 +480,13 @@ pub(crate) mod tests {
     }
 
     pub fn dkg_presign_signs_internal(number_of_parties: PartyID, threshold: PartyID) {
-        let (
-            secp256k1_scalar_public_parameters,
-            secp256k1_group_public_parameters,
-            _,
-            _,
-            paillier_public_parameters,
-            _,
-            _,
-        ) = setup();
+        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+
+        let secp256k1_group_public_parameters =
+            secp256k1::group_element::PublicParameters::default();
+
+        let paillier_public_parameters =
+            tiresias::encryption_key::PublicParameters::new(N).unwrap();
 
         let (centralized_party_dkg_output, decentralized_party_dkg_output) =
             generates_distributed_key_internal(number_of_parties, threshold);
@@ -569,56 +588,6 @@ pub(crate) mod tests {
             encrypted_masked_key_share,
             encrypted_masked_nonce_share,
         );
-    }
-
-    fn setup() -> (
-        secp256k1::scalar::PublicParameters,
-        secp256k1::group_element::PublicParameters,
-        secp256k1::GroupElement,
-        bulletproofs::PublicParameters<{ NUM_RANGE_CLAIMS }>,
-        tiresias::encryption_key::PublicParameters,
-        tiresias::EncryptionKey,
-        direct_product::PublicParameters<
-            self_product::PublicParameters<2, secp256k1::scalar::PublicParameters>,
-            tiresias::RandomnessSpacePublicParameters,
-        >,
-    ) {
-        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
-
-        let secp256k1_group_public_parameters =
-            secp256k1::group_element::PublicParameters::default();
-
-        let bulletproofs_public_parameters =
-            bulletproofs::PublicParameters::<{ NUM_RANGE_CLAIMS }>::default();
-
-        let paillier_public_parameters =
-            tiresias::encryption_key::PublicParameters::new(N).unwrap();
-
-        let paillier_encryption_key =
-            tiresias::EncryptionKey::new(&paillier_public_parameters).unwrap();
-
-        let unbounded_dcom_eval_witness_public_parameters = direct_product::PublicParameters(
-            self_product::PublicParameters::new(secp256k1_scalar_public_parameters.clone()),
-            paillier_public_parameters
-                .randomness_space_public_parameters()
-                .clone(),
-        );
-
-        let generator = secp256k1::GroupElement::new(
-            secp256k1_group_public_parameters.generator,
-            &secp256k1_group_public_parameters,
-        )
-        .unwrap();
-
-        (
-            secp256k1_scalar_public_parameters,
-            secp256k1_group_public_parameters,
-            generator,
-            bulletproofs_public_parameters,
-            paillier_public_parameters,
-            paillier_encryption_key,
-            unbounded_dcom_eval_witness_public_parameters,
-        )
     }
 }
 
