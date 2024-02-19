@@ -10,7 +10,7 @@ use enhanced_maurer::{
     EnhanceableLanguage, EnhancedLanguage, EnhancedPublicParameters,
 };
 use group::{
-    helpers::FlatMapResults, self_product, AffineXCoordinate, GroupElement, Invert,
+    helpers::FlatMapResults, self_product, AffineXCoordinate, GroupElement as _, Invert,
     PrimeGroupElement, Samplable,
 };
 use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
@@ -22,7 +22,7 @@ use proof::AggregatableRangeProof;
 use serde::{Deserialize, Serialize};
 
 use super::DIMENSION;
-use crate::Error;
+use crate::{dkg, presign, Error};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct PublicNonceEncryptedPartialSignatureAndProof<
@@ -59,19 +59,20 @@ pub struct Party<
     UnboundedDComEvalWitness: group::GroupElement + Samplable,
     ProtocolContext: Clone + Serialize,
 > {
-    pub protocol_context: ProtocolContext,
-    pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
-    pub group_public_parameters: GroupElement::PublicParameters,
-    pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    pub unbounded_dcom_eval_witness_public_parameters: UnboundedDComEvalWitness::PublicParameters,
-    pub range_proof_public_parameters: RangeProof::PublicParameters<NUM_RANGE_CLAIMS>,
-    pub secret_key_share: GroupElement::Scalar,
-    pub public_key_share: GroupElement,
-    pub nonce_share_commitment_randomness: GroupElement::Scalar,
-    pub nonce_share: GroupElement::Scalar,
-    pub decentralized_party_nonce_public_share: GroupElement,
-    pub encrypted_mask: EncryptionKey::CiphertextSpaceGroupElement,
-    pub encrypted_masked_key_share: EncryptionKey::CiphertextSpaceGroupElement,
+    pub(super) protocol_context: ProtocolContext,
+    pub(super) scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+    pub(super) group_public_parameters: GroupElement::PublicParameters,
+    pub(super) encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
+    pub(super) unbounded_dcom_eval_witness_public_parameters:
+        UnboundedDComEvalWitness::PublicParameters,
+    pub(super) range_proof_public_parameters: RangeProof::PublicParameters<NUM_RANGE_CLAIMS>,
+    pub(super) secret_key_share: GroupElement::Scalar,
+    pub(super) public_key_share: GroupElement,
+    pub(super) nonce_share_commitment_randomness: GroupElement::Scalar,
+    pub(super) nonce_share: GroupElement::Scalar,
+    pub(super) decentralized_party_nonce_public_share: GroupElement,
+    pub(super) encrypted_mask: EncryptionKey::CiphertextSpaceGroupElement,
+    pub(super) encrypted_masked_key_share: EncryptionKey::CiphertextSpaceGroupElement,
 }
 
 impl<
@@ -467,6 +468,72 @@ where
             encrypted_partial_signature_range_proof_commitment:
                 encrypted_partial_signature_range_proof_commitment.value(),
             encrypted_partial_signature_proof,
+        })
+    }
+
+    pub fn new(
+        protocol_context: ProtocolContext,
+        scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+        group_public_parameters: GroupElement::PublicParameters,
+        encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
+        unbounded_dcom_eval_witness_public_parameters: UnboundedDComEvalWitness::PublicParameters,
+        range_proof_public_parameters: RangeProof::PublicParameters<NUM_RANGE_CLAIMS>,
+        dkg_output: dkg::centralized_party::Output<
+            GroupElement::Value,
+            group::Value<GroupElement::Scalar>,
+            group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
+        >,
+        presign: presign::centralized_party::Presign<
+            GroupElement::Value,
+            group::Value<GroupElement::Scalar>,
+            group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
+        >,
+    ) -> crate::Result<Self> {
+        let secret_key_share = GroupElement::Scalar::new(
+            dkg_output.secret_key_share,
+            &scalar_group_public_parameters,
+        )?;
+
+        let public_key_share =
+            GroupElement::new(dkg_output.public_key_share, &group_public_parameters)?;
+
+        let nonce_share_commitment_randomness = GroupElement::Scalar::new(
+            presign.commitment_randomness,
+            &scalar_group_public_parameters,
+        )?;
+
+        let nonce_share =
+            GroupElement::Scalar::new(presign.nonce_share, &scalar_group_public_parameters)?;
+
+        let decentralized_party_nonce_public_share = GroupElement::new(
+            presign.decentralized_party_nonce_public_share,
+            &group_public_parameters,
+        )?;
+
+        let encrypted_mask = EncryptionKey::CiphertextSpaceGroupElement::new(
+            presign.encrypted_mask,
+            encryption_scheme_public_parameters.ciphertext_space_public_parameters(),
+        )?;
+
+        let encrypted_masked_key_share = EncryptionKey::CiphertextSpaceGroupElement::new(
+            presign.encrypted_masked_key_share,
+            encryption_scheme_public_parameters.ciphertext_space_public_parameters(),
+        )?;
+
+        Ok(Self {
+            protocol_context,
+            scalar_group_public_parameters,
+            group_public_parameters,
+            encryption_scheme_public_parameters,
+            unbounded_dcom_eval_witness_public_parameters,
+            range_proof_public_parameters,
+            secret_key_share,
+            public_key_share,
+            nonce_share_commitment_randomness,
+            nonce_share,
+            decentralized_party_nonce_public_share,
+            encrypted_mask,
+            encrypted_masked_key_share,
         })
     }
 }

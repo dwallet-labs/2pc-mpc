@@ -23,7 +23,9 @@ use std::collections::HashMap;
 use std::ops::Neg;
 
 use super::DIMENSION;
-use crate::{sign::centralized_party::PublicNonceEncryptedPartialSignatureAndProof, Error};
+use crate::{
+    dkg, presign, sign::centralized_party::PublicNonceEncryptedPartialSignatureAndProof, Error,
+};
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
@@ -40,21 +42,21 @@ pub struct Party<
     UnboundedDComEvalWitness: group::GroupElement + Samplable,
     ProtocolContext: Clone + Serialize,
 > {
-    pub decryption_key_share: DecryptionKeyShare,
-    pub decryption_key_share_public_parameters: DecryptionKeyShare::PublicParameters,
-    pub protocol_context: ProtocolContext,
-    pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
-    pub group_public_parameters: GroupElement::PublicParameters,
-    pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    pub unbounded_dcom_eval_witness_public_parameters: UnboundedDComEvalWitness::PublicParameters,
-    pub range_proof_public_parameters: RangeProof::PublicParameters<NUM_RANGE_CLAIMS>,
-    pub public_key_share: GroupElement,
-    pub nonce_public_share: GroupElement,
-    pub encrypted_mask: EncryptionKey::CiphertextSpaceGroupElement,
-    pub encrypted_masked_key_share: EncryptionKey::CiphertextSpaceGroupElement,
-    pub encrypted_masked_nonce_share: EncryptionKey::CiphertextSpaceGroupElement,
-    pub centralized_party_public_key_share: GroupElement,
-    pub centralized_party_nonce_share_commitment: GroupElement,
+    pub(super) decryption_key_share: DecryptionKeyShare,
+    pub(super) decryption_key_share_public_parameters: DecryptionKeyShare::PublicParameters,
+    pub(super) protocol_context: ProtocolContext,
+    pub(super) scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+    pub(super) group_public_parameters: GroupElement::PublicParameters,
+    pub(super) encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
+    pub(super) unbounded_dcom_eval_witness_public_parameters:
+        UnboundedDComEvalWitness::PublicParameters,
+    pub(super) range_proof_public_parameters: RangeProof::PublicParameters<NUM_RANGE_CLAIMS>,
+    pub(super) nonce_public_share: GroupElement,
+    pub(super) encrypted_mask: EncryptionKey::CiphertextSpaceGroupElement,
+    pub(super) encrypted_masked_key_share: EncryptionKey::CiphertextSpaceGroupElement,
+    pub(super) encrypted_masked_nonce_share: EncryptionKey::CiphertextSpaceGroupElement,
+    pub(super) centralized_party_public_key_share: GroupElement,
+    pub(super) centralized_party_nonce_share_commitment: GroupElement,
 }
 
 impl<
@@ -446,7 +448,7 @@ where
         let signature_s = inverted_masked_nonce.unwrap() * partial_signature;
         let negated_signature_s = signature_s.neg();
 
-        // Attend to maliablity.
+        // Attend to malleability.
         let signature_s = if negated_signature_s.value() < signature_s.value() {
             negated_signature_s
         } else {
@@ -456,6 +458,70 @@ where
         // TODO: verify signature
 
         Ok(signature_s)
+    }
+
+    pub fn new(
+        decryption_key_share: DecryptionKeyShare,
+        decryption_key_share_public_parameters: DecryptionKeyShare::PublicParameters,
+        protocol_context: ProtocolContext,
+        scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+        group_public_parameters: GroupElement::PublicParameters,
+        encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
+        unbounded_dcom_eval_witness_public_parameters: UnboundedDComEvalWitness::PublicParameters,
+        range_proof_public_parameters: RangeProof::PublicParameters<NUM_RANGE_CLAIMS>,
+        dkg_output: dkg::decentralized_party::Output<
+            GroupElement::Value,
+            group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
+        >,
+        presign: presign::decentralized_party::Presign<
+            GroupElement::Value,
+            group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
+        >,
+    ) -> crate::Result<Self> {
+        let centralized_party_public_key_share = GroupElement::new(
+            dkg_output.centralized_party_public_key_share,
+            &group_public_parameters,
+        )?;
+
+        let centralized_party_nonce_share_commitment = GroupElement::new(
+            presign.centralized_party_nonce_share_commitment,
+            &group_public_parameters,
+        )?;
+
+        let nonce_public_share =
+            GroupElement::new(presign.nonce_public_share, &group_public_parameters)?;
+
+        let encrypted_mask = EncryptionKey::CiphertextSpaceGroupElement::new(
+            presign.encrypted_mask,
+            encryption_scheme_public_parameters.ciphertext_space_public_parameters(),
+        )?;
+
+        let encrypted_masked_key_share = EncryptionKey::CiphertextSpaceGroupElement::new(
+            presign.encrypted_masked_key_share,
+            encryption_scheme_public_parameters.ciphertext_space_public_parameters(),
+        )?;
+
+        let encrypted_masked_nonce_share = EncryptionKey::CiphertextSpaceGroupElement::new(
+            presign.encrypted_masked_nonce_share,
+            encryption_scheme_public_parameters.ciphertext_space_public_parameters(),
+        )?;
+
+        Ok(Self {
+            decryption_key_share,
+            decryption_key_share_public_parameters,
+            protocol_context,
+            scalar_group_public_parameters,
+            group_public_parameters,
+            encryption_scheme_public_parameters,
+            unbounded_dcom_eval_witness_public_parameters,
+            range_proof_public_parameters,
+            nonce_public_share,
+            encrypted_mask,
+            encrypted_masked_key_share,
+            encrypted_masked_nonce_share,
+            centralized_party_public_key_share,
+            centralized_party_nonce_share_commitment,
+        })
     }
 
     // TODO: add verify signature function for advancing the party for all lazy parties.

@@ -12,18 +12,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::dkg::decentralized_party;
 
-#[derive(Clone)]
-pub struct Output<
-    const SCALAR_LIMBS: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
-    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-> {
-    pub secret_key_share: GroupElement::Scalar,
-    pub public_key_share: GroupElement,
-    pub public_key: GroupElement,
-    pub encrypted_decentralized_party_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
-    pub decentralized_party_public_key_share: GroupElement,
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Output<GroupElementValue, ScalarValue, CiphertextSpaceValue> {
+    pub(crate) secret_key_share: ScalarValue,
+    pub(crate) public_key_share: GroupElementValue,
+    pub public_key: GroupElementValue,
+    pub encrypted_decentralized_party_secret_key_share: CiphertextSpaceValue,
+    pub(in crate::dkg) decentralized_party_public_key_share: GroupElementValue,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -139,7 +134,11 @@ where
             GroupElement::Value,
             knowledge_of_discrete_log::Proof<GroupElement::Scalar, GroupElement, ProtocolContext>,
         >,
-        Output<SCALAR_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, GroupElement, EncryptionKey>,
+        Output<
+            GroupElement::Value,
+            group::Value<GroupElement::Scalar>,
+            group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
+        >,
     )> {
         let encrypted_decentralized_party_secret_key_share =
             EncryptionKey::CiphertextSpaceGroupElement::new(
@@ -216,23 +215,26 @@ where
                 rng,
             )?;
 
+        let public_key = self.public_key_share.clone() + &decentralized_party_public_key_share;
+
+        let public_key_share = self.public_key_share.value();
         let public_key_share_decommitment_proof = PublicKeyShareDecommitmentAndProof::<
             GroupElement::Value,
             knowledge_of_discrete_log::Proof<GroupElement::Scalar, GroupElement, ProtocolContext>,
         > {
             proof: self.knowledge_of_discrete_log_proof,
-            public_key_share: self.public_key_share.value(),
+            public_key_share,
             commitment_randomness: self.commitment_randomness,
         };
 
-        let public_key = self.public_key_share.clone() + &decentralized_party_public_key_share;
-
         let output = Output {
-            secret_key_share: self.secret_key_share,
-            public_key_share: self.public_key_share,
-            public_key,
-            encrypted_decentralized_party_secret_key_share,
-            decentralized_party_public_key_share,
+            secret_key_share: self.secret_key_share.value(),
+            public_key_share,
+            public_key: public_key.value(),
+            encrypted_decentralized_party_secret_key_share:
+                decentralized_party_secret_key_share_encryption_and_proof.encrypted_secret_key_share,
+            decentralized_party_public_key_share:
+                decentralized_party_secret_key_share_encryption_and_proof.public_key_share,
         };
 
         Ok((public_key_share_decommitment_proof, output))
