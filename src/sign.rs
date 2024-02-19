@@ -14,6 +14,7 @@ pub const DIMENSION: usize = 2;
 pub(crate) mod tests {
     use commitment::{pedersen, Pedersen};
     use core::marker::PhantomData;
+    use std::ops::Neg;
     use std::{collections::HashMap, time::Duration};
 
     use super::*;
@@ -42,6 +43,7 @@ pub(crate) mod tests {
     use k256::{elliptic_curve::scalar::IsHigh, sha2::digest::FixedOutput};
     use proof::range::bulletproofs;
     use rand_core::OsRng;
+    use tiresias::test_exports::BASE;
     use tiresias::{
         test_exports::{deal_trusted_shares, N, SECRET_KEY},
         AdjustedLagrangeCoefficientSizedNumber, DecryptionKeyShare,
@@ -163,7 +165,21 @@ pub(crate) mod tests {
             measurement.add(&centralized_party_total_time, &measurement.end(now));
 
         let (decryption_key_share_public_parameters, decryption_key_shares) =
-            deal_trusted_shares(threshold, number_of_parties);
+            deal_trusted_shares(threshold, number_of_parties, N, SECRET_KEY, BASE);
+        let decryption_key_shares: HashMap<_, _> = decryption_key_shares
+            .into_iter()
+            .map(|(party_id, share)| {
+                (
+                    party_id,
+                    DecryptionKeyShare::new(
+                        party_id,
+                        share,
+                        &decryption_key_share_public_parameters,
+                    )
+                    .unwrap(),
+                )
+            })
+            .collect();
 
         let decrypters: Vec<_> = decryption_key_shares.clone().into_keys().collect();
 
@@ -314,23 +330,22 @@ pub(crate) mod tests {
         let nonce =
             centralized_party_nonce_share * decentralized_party_nonce_share.invert().unwrap();
 
-        assert_eq!(
-            nonce * ((nonce_x_coordinate * secret_key) + m), /* $ s = (k_A * k_B^-1) * (rx
-                                                              * + m) $ */
-            signature_s
-        );
+        // $ s = (k_A * k_B^-1) * (rx * + m) $
+        let expected_signature_s = nonce * ((nonce_x_coordinate * secret_key) + m);
+
+        let expected_signature_s =
+            if U256::from(expected_signature_s.neg()) < U256::from(expected_signature_s.value()) {
+                expected_signature_s.neg()
+            } else {
+                expected_signature_s
+            };
+
+        assert_eq!(expected_signature_s, signature_s);
 
         let signature_s: k256::Scalar = signature_s.into();
 
         let signature =
             Signature::from_scalars(k256::Scalar::from(nonce_x_coordinate), signature_s).unwrap();
-
-        // Attend to maliablity. TODO: is this what Bitcoin does? all blockchains? should we even?
-        let signature = if signature_s.is_high().into() {
-            signature.normalize_s().unwrap()
-        } else {
-            signature
-        };
 
         let verifying_key =
             VerifyingKey::<k256::Secp256k1>::from_affine(public_key.value().into()).unwrap();

@@ -22,7 +22,6 @@ use crate::{
 pub mod encrypted_masked_key_share_and_public_nonce_shares_round;
 pub mod encrypted_masked_nonces_round;
 
-// TODO: name this?
 #[derive(PartialEq, Serialize, Deserialize, Clone)]
 pub struct Output<
     GroupElementValue,

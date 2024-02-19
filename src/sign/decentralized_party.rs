@@ -1,7 +1,5 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
-use std::collections::HashMap;
-
 use commitment::{pedersen, GroupsPublicParametersAccessors as _, Pedersen};
 use crypto_bigint::{rand_core::CryptoRngCore, CheckedMul, Encoding, NonZero, Uint};
 use enhanced_maurer::{
@@ -21,6 +19,8 @@ use maurer::{
 };
 use proof::{range::PublicParametersAccessors, AggregatableRangeProof};
 use serde::Serialize;
+use std::collections::HashMap;
+use std::ops::Neg;
 
 use super::DIMENSION;
 use crate::{sign::centralized_party::PublicNonceEncryptedPartialSignatureAndProof, Error};
@@ -357,11 +357,6 @@ where
                 rng,
             )?;
 
-        // TODO: "verifies that the values used in the proofs are consistent with values obtained
-        // previously" - did I cover this already by taking values from the party struct, or do I
-        // need to do it explicitly as stated in the paper, where you seek "records" holding more
-        // info?
-
         // TODO: what am I suppose to do here in the case of failure in decryption?
         let partial_signature_decryption_share = Option::from(
             self.decryption_key_share
@@ -430,7 +425,7 @@ where
         let inverted_masked_nonce = masked_nonce.invert();
 
         if inverted_masked_nonce.is_none().into() {
-            // TODO: what error to output here?
+            // TODO: in this case I should report invalid signature, and everyone should send their proven decrypted share.
             todo!();
         }
 
@@ -448,7 +443,19 @@ where
 
         // TODO: what about malleability?
 
-        Ok(inverted_masked_nonce.unwrap() * partial_signature)
+        let signature_s = inverted_masked_nonce.unwrap() * partial_signature;
+        let negated_signature_s = signature_s.neg();
+
+        // Attend to maliablity.
+        let signature_s = if negated_signature_s.value() < signature_s.value() {
+            negated_signature_s
+        } else {
+            signature_s
+        };
+
+        // TODO: verify signature
+
+        Ok(signature_s)
     }
 
     // TODO: add verify signature function for advancing the party for all lazy parties.

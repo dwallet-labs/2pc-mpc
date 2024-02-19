@@ -194,8 +194,7 @@ where
         let inverted_nonce_share = self.nonce_share.invert();
 
         if inverted_nonce_share.is_none().into() {
-            // TODO: should we do rejection sampling to ensure this never happens, or are we ok with
-            // just saying this is negligible?
+            // This has negligible probability of failing.
             return Err(crate::Error::InternalError);
         }
 
