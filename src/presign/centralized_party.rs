@@ -8,9 +8,9 @@ pub mod proof_verification_round;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Presign<GroupElementValue, ScalarValue, CiphertextValue> {
-    pub(crate) nonce_share: ScalarValue,
-    pub(crate) decentralized_party_nonce_public_share: GroupElementValue,
-    pub(crate) encrypted_mask: CiphertextValue,
-    pub(crate) encrypted_masked_key_share: CiphertextValue,
-    pub(crate) commitment_randomness: ScalarValue,
+    pub(crate) nonce_share: ScalarValue, // $k_A$
+    pub(crate) decentralized_party_nonce_public_share: GroupElementValue, // $K_A$
+    pub(crate) encrypted_mask: CiphertextValue, // $\ct_1$
+    pub(crate) encrypted_masked_key_share: CiphertextValue, // $\ct_2$
+    pub(crate) commitment_randomness: ScalarValue, // $\rho$
 }
