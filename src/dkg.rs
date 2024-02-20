@@ -13,12 +13,14 @@ pub(crate) mod tests {
     };
 
     use criterion::measurement::{Measurement, WallTime};
-    use group::{ristretto, secp256k1, CyclicGroupElement, GroupElement};
+    use group::{ristretto, secp256k1, CyclicGroupElement, GroupElement, PartyID};
     use homomorphic_encryption::{
         AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors,
     };
     use proof::{aggregation::test_helpers::aggregates, range::bulletproofs};
+    use rand::seq::IteratorRandom;
     use rand_core::OsRng;
+    use rstest::rstest;
     use tiresias::{
         test_exports::{N, SECRET_KEY},
         LargeBiPrimeSizedNumber,
@@ -29,18 +31,18 @@ pub(crate) mod tests {
         dkg::decentralized_party::SecretKeyShareEncryptionAndProof, tests::RANGE_CLAIMS_PER_SCALAR,
     };
 
-    #[test]
-    fn generates_distributed_key() {
-        let number_of_parties = 4;
-        let threshold = 2;
-
+    #[rstest]
+    #[case(2, 2)]
+    #[case(2, 4)]
+    #[case(6, 9)]
+    fn generates_distributed_key(#[case] number_of_parties: PartyID, #[case] threshold: PartyID) {
         generates_distributed_key_internal(number_of_parties, threshold);
     }
 
     #[allow(dead_code)]
     pub fn generates_distributed_key_internal(
-        number_of_parties: u16,
-        threshold: u16,
+        number_of_parties: PartyID,
+        threshold: PartyID,
     ) -> (
         centralized_party::Output<
             secp256k1::group_element::Value,
@@ -101,15 +103,18 @@ pub(crate) mod tests {
         centralized_party_total_time =
             measurement.add(&centralized_party_total_time, &measurement.end(now));
 
-        // TODO: do it with threshold
         let mut parties = HashSet::new();
-        (1..=number_of_parties).for_each(|i| {
-            parties.insert(i);
-        });
+        (1..=number_of_parties)
+            .choose_multiple(&mut OsRng, threshold.into())
+            .into_iter()
+            .for_each(|party_id| {
+                parties.insert(party_id);
+            });
         let evaluation_party_id = *parties.iter().next().unwrap();
 
-        let decentralized_party_encryption_of_secret_key_share_parties: HashMap<_, _> = (1
-            ..=number_of_parties)
+        let decentralized_party_encryption_of_secret_key_share_parties: HashMap<_, _> = parties
+            .clone()
+            .into_iter()
             .map(|party_id| {
                 (
                     party_id,
