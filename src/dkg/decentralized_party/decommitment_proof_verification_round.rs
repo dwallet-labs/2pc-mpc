@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 use std::marker::PhantomData;
 
 use commitment::Commitment;

@@ -1,5 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
+
+#![allow(clippy::type_complexity)]
+
 use commitment::{pedersen, GroupsPublicParametersAccessors as _, Pedersen};
 use crypto_bigint::{rand_core::CryptoRngCore, CheckedMul, Encoding, NonZero, Uint};
 use enhanced_maurer::{
@@ -331,8 +334,7 @@ where
         >::new(
             public_nonce_encrypted_partial_signature_and_proof
                 .encrypted_partial_signature_range_proof_commitment,
-            &self
-                .range_proof_public_parameters
+            self.range_proof_public_parameters
                 .commitment_scheme_public_parameters()
                 .commitment_space_public_parameters(),
         )?;
@@ -460,6 +462,7 @@ where
         Ok(signature_s)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         decryption_key_share: DecryptionKeyShare,
         decryption_key_share_public_parameters: DecryptionKeyShare::PublicParameters,

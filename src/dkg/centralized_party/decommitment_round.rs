@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 use commitment::GroupsPublicParametersAccessors as _;
 use crypto_bigint::rand_core::CryptoRngCore;
 use enhanced_maurer::{encryption_of_discrete_log, EnhanceableLanguage};
@@ -144,8 +146,7 @@ where
             EncryptionKey::CiphertextSpaceGroupElement::new(
                 decentralized_party_secret_key_share_encryption_and_proof
                     .encrypted_secret_key_share,
-                &self
-                    .encryption_scheme_public_parameters
+                self.encryption_scheme_public_parameters
                     .ciphertext_space_public_parameters(),
             )?;
 
@@ -160,8 +161,7 @@ where
             RangeProof,
         >::new(
             decentralized_party_secret_key_share_encryption_and_proof.range_proof_commitment,
-            &self
-                .range_proof_public_parameters
+            self.range_proof_public_parameters
                 .commitment_scheme_public_parameters()
                 .commitment_space_public_parameters(),
         )?;

@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 pub mod centralized_party;
 pub mod decentralized_party;
 
@@ -19,7 +21,7 @@ pub(crate) mod tests {
         encryption_of_discrete_log::StatementAccessors,
         language::EnhancedLanguageStatementAccessors,
     };
-    use group::{ristretto, secp256k1, self_product, GroupElement as _, Samplable};
+    use group::{ristretto, secp256k1, self_product, GroupElement as _, PartyID, Samplable};
     use homomorphic_encryption::{
         AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
         GroupsPublicParametersAccessors,
@@ -28,6 +30,7 @@ pub(crate) mod tests {
         aggregation::test_helpers::{aggregates, aggregates_multiple},
         range::bulletproofs,
     };
+    use rand::prelude::IteratorRandom;
     use rand_core::OsRng;
     use rstest::rstest;
     use tiresias::{
@@ -41,12 +44,14 @@ pub(crate) mod tests {
     };
 
     #[rstest]
-    #[case(1)]
-    #[case(2)]
-    fn generates_presignatures(#[case] batch_size: usize) {
-        let number_of_parties = 4;
-        let threshold = 2;
-
+    #[case(2, 2, 1)]
+    #[case(2, 4, 4)]
+    #[case(6, 9, 2)]
+    fn generates_presignatures(
+        #[case] threshold: PartyID,
+        #[case] number_of_parties: PartyID,
+        #[case] batch_size: usize,
+    ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let paillier_public_parameters =
@@ -69,8 +74,8 @@ pub(crate) mod tests {
             .unwrap();
 
         generates_presignatures_internal(
-            number_of_parties,
             threshold,
+            number_of_parties,
             batch_size,
             encrypted_decentralized_party_secret_key_share,
         );
@@ -78,8 +83,8 @@ pub(crate) mod tests {
 
     #[allow(dead_code)]
     pub fn generates_presignatures_internal(
-        number_of_parties: u16,
         threshold: u16,
+        number_of_parties: u16,
         batch_size: usize,
         encrypted_decentralized_party_secret_key_share: tiresias::CiphertextSpaceGroupElement,
     ) -> (
@@ -144,8 +149,7 @@ pub(crate) mod tests {
             unbounded_encdh_witness_public_parameters: unbounded_encdh_witness_public_parameters
                 .clone(),
             range_proof_public_parameters: bulletproofs_public_parameters.clone(),
-            encrypted_decentralized_party_secret_key_share:
-                encrypted_decentralized_party_secret_key_share.clone(),
+            encrypted_decentralized_party_secret_key_share,
         };
 
         let now = measurement.start();
@@ -158,17 +162,17 @@ pub(crate) mod tests {
         centralized_party_total_time =
             measurement.add(&centralized_party_total_time, &measurement.end(now));
 
-        // TODO: do it with threshold
         let mut parties = HashSet::new();
-        (1..=number_of_parties).for_each(|i| {
-            parties.insert(i);
-        });
+        (1..=number_of_parties)
+            .choose_multiple(&mut OsRng, threshold.into())
+            .into_iter()
+            .for_each(|party_id| {
+                parties.insert(party_id);
+            });
         let evaluation_party_id = *parties.iter().next().unwrap();
 
-        let decentralized_party_encrypted_masked_key_share_and_public_nonce_shares_parties: HashMap<_, _> = (1
-            ..=number_of_parties)
+        let decentralized_party_encrypted_masked_key_share_and_public_nonce_shares_parties: HashMap<_, _> = parties.clone().into_iter()
             .map(|party_id| {
-                let party_id: u16 = party_id.try_into().unwrap();
                 (
                     party_id,
                     decentralized_party::encrypted_masked_key_share_and_public_nonce_shares_round::Party::<
@@ -192,7 +196,7 @@ pub(crate) mod tests {
                         unbounded_encdl_witness_public_parameters: unbounded_encdl_witness_public_parameters.clone(),
                         unbounded_encdh_witness_public_parameters: unbounded_encdh_witness_public_parameters.clone(),
                         range_proof_public_parameters: bulletproofs_public_parameters.clone(),
-                        encrypted_secret_key_share: encrypted_decentralized_party_secret_key_share.clone(),
+                        encrypted_secret_key_share: encrypted_decentralized_party_secret_key_share,
                     },
                 )
             })
@@ -217,7 +221,7 @@ pub(crate) mod tests {
                         &mut OsRng,
                     )
                     .unwrap();
-                // TODO: evaluation_party_id
+
                 if party_id == evaluation_party_id {
                     decentralized_party_total_time =
                         measurement.add(&decentralized_party_total_time, &measurement.end(now));
@@ -299,9 +303,7 @@ pub(crate) mod tests {
         let masks_and_encrypted_masked_key_share: Vec<_> = masks_and_encrypted_masked_key_share
             .into_iter()
             .map(|mask_and_encrypted_masked_key_share| {
-                mask_and_encrypted_masked_key_share
-                    .language_statement()
-                    .clone()
+                *mask_and_encrypted_masked_key_share.language_statement()
             })
             .collect();
 
@@ -309,16 +311,14 @@ pub(crate) mod tests {
             encrypted_nonce_shares_and_public_shares
                 .into_iter()
                 .map(|encrypted_nonce_share_and_public_share| {
-                    encrypted_nonce_share_and_public_share
-                        .language_statement()
-                        .clone()
+                    *encrypted_nonce_share_and_public_share.language_statement()
                 })
                 .collect();
 
         let encrypted_nonce_shares = encrypted_nonce_shares_and_public_shares
             .clone()
             .into_iter()
-            .map(|statement| statement.encrypted_discrete_log().clone())
+            .map(|statement| *statement.encrypted_discrete_log())
             .collect();
 
         let decentralized_party_encrypted_masked_nonce_shares_commitment_round_parties: HashMap<
@@ -354,9 +354,7 @@ pub(crate) mod tests {
         let encrypted_masked_nonce_shares: Vec<_> = encrypted_masked_nonce_shares
             .into_iter()
             .flatten()
-            .map(|encrypted_masked_nonce_share| {
-                encrypted_masked_nonce_share.language_statement().clone()
-            })
+            .map(|encrypted_masked_nonce_share| *encrypted_masked_nonce_share.language_statement())
             .collect();
 
         let decentralized_party_presigns = decentralized_party::Presign::new_batch::<

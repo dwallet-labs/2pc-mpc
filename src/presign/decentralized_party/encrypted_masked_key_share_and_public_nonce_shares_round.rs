@@ -1,9 +1,10 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 use std::collections::HashSet;
 
-use crate::dkg;
 use commitment::{pedersen, Pedersen};
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use enhanced_maurer::{
@@ -16,9 +17,12 @@ use maurer::{knowledge_of_decommitment, SOUND_PROOFS_REPETITIONS};
 use proof::AggregatableRangeProof;
 use serde::Serialize;
 
-use crate::presign::{
-    centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
-    decentralized_party::encrypted_masked_nonces_round,
+use crate::{
+    dkg,
+    presign::{
+        centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
+        decentralized_party::encrypted_masked_nonces_round,
+    },
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -246,8 +250,7 @@ where
             .collect::<group::Result<Vec<_>>>()?;
 
         let masks_encryption_randomness = EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
-            &self
-                .encryption_scheme_public_parameters
+            self.encryption_scheme_public_parameters
                 .randomness_space_public_parameters(),
             batch_size,
             rng,
@@ -255,8 +258,7 @@ where
 
         let masked_key_share_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
-                &self
-                    .encryption_scheme_public_parameters
+                self.encryption_scheme_public_parameters
                     .randomness_space_public_parameters(),
                 batch_size,
                 rng,
@@ -443,11 +445,7 @@ where
         let witnesses: Vec<_> = shares_of_signature_nonce_shares_witnesses
             .clone()
             .into_iter()
-            .zip(
-                shares_of_signature_nonce_shares_encryption_randomness
-                    .clone()
-                    .into_iter(),
-            )
+            .zip(shares_of_signature_nonce_shares_encryption_randomness.clone())
             .map(|(nonce_share, encryption_randomness)| (nonce_share, encryption_randomness).into())
             .collect();
 
@@ -510,6 +508,7 @@ where
         ))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         party_id: PartyID,
         parties: HashSet<PartyID>,

@@ -42,7 +42,9 @@ pub(crate) mod tests {
     };
     use k256::{elliptic_curve::scalar::IsHigh, sha2::digest::FixedOutput};
     use proof::range::bulletproofs;
+    use rand::prelude::IteratorRandom;
     use rand_core::OsRng;
+    use rstest::rstest;
     use tiresias::test_exports::BASE;
     use tiresias::{
         test_exports::{deal_trusted_shares, N, SECRET_KEY},
@@ -60,9 +62,10 @@ pub(crate) mod tests {
     pub(crate) const NUM_RANGE_CLAIMS: usize =
         DIMENSION * RANGE_CLAIMS_PER_SCALAR + RANGE_CLAIMS_PER_MASK;
 
+    #[allow(clippy::too_many_arguments)]
     pub fn signs_internal(
-        number_of_parties: u16,
         threshold: u16,
+        number_of_parties: u16,
         centralized_party_secret_key_share: secp256k1::Scalar,
         centralized_party_public_key_share: secp256k1::GroupElement,
         decentralized_party_secret_key_share: secp256k1::Scalar,
@@ -105,7 +108,7 @@ pub(crate) mod tests {
         .unwrap();
 
         assert_eq!(
-            decentralized_party_secret_key_share * &generator,
+            decentralized_party_secret_key_share * generator,
             decentralized_party_public_key_share
         );
 
@@ -179,6 +182,11 @@ pub(crate) mod tests {
                     .unwrap(),
                 )
             })
+            .collect();
+        let decryption_key_shares: HashMap<_, _> = decryption_key_shares
+            .into_iter()
+            .choose_multiple(&mut OsRng, usize::from(threshold))
+            .into_iter()
             .collect();
 
         let decrypters: Vec<_> = decryption_key_shares.clone().into_keys().collect();
@@ -308,12 +316,12 @@ pub(crate) mod tests {
         );
 
         assert_eq!(
-            decentralized_party_nonce_share * &generator,
+            decentralized_party_nonce_share * generator,
             decentralized_party_nonce_public_share
         );
 
         let public_nonce = centralized_party_nonce_share.invert().unwrap()
-            * &decentralized_party_nonce_public_share; // $R = k_A^-1*k_B*G$
+            * decentralized_party_nonce_public_share; // $R = k_A^-1*k_B*G$
 
         assert_eq!(
             public_nonce,
@@ -358,11 +366,11 @@ pub(crate) mod tests {
         assert!(res.is_ok(), "generated signatures should be valid");
     }
 
-    #[test]
-    fn signs() {
-        let number_of_parties = 6;
-        let threshold = 4;
-
+    #[rstest]
+    #[case(2, 2)]
+    #[case(2, 4)]
+    #[case(6, 9)]
+    fn signs(#[case] threshold: PartyID, #[case] number_of_parties: PartyID) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
@@ -397,13 +405,12 @@ pub(crate) mod tests {
         let centralized_party_secret_key_share =
             secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
 
-        let centralized_party_public_key_share = centralized_party_secret_key_share * &generator;
+        let centralized_party_public_key_share = centralized_party_secret_key_share * generator;
 
         let decentralized_party_secret_key_share =
             secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
 
-        let decentralized_party_public_key_share =
-            decentralized_party_secret_key_share * &generator;
+        let decentralized_party_public_key_share = decentralized_party_secret_key_share * generator;
 
         let nonce_share_commitment_randomness =
             secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
@@ -419,7 +426,7 @@ pub(crate) mod tests {
         let decentralized_party_nonce_share =
             secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
 
-        let decentralized_party_nonce_public_share = decentralized_party_nonce_share * &generator;
+        let decentralized_party_nonce_public_share = decentralized_party_nonce_share * generator;
 
         let mask =
             secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
@@ -471,8 +478,8 @@ pub(crate) mod tests {
             .unwrap();
 
         signs_internal(
-            number_of_parties,
             threshold,
+            number_of_parties,
             centralized_party_secret_key_share,
             centralized_party_public_key_share,
             decentralized_party_secret_key_share,
@@ -488,12 +495,23 @@ pub(crate) mod tests {
         );
     }
 
-    #[test]
-    fn dkg_presign_signs() {
-        dkg_presign_signs_internal(4, 2)
+    #[rstest]
+    #[case(2, 2, 1)]
+    #[case(2, 4, 4)]
+    #[case(6, 9, 1)]
+    fn dkg_presign_signs(
+        #[case] threshold: PartyID,
+        #[case] number_of_parties: PartyID,
+        #[case] batch_size: usize,
+    ) {
+        dkg_presign_signs_internal(threshold, number_of_parties, batch_size)
     }
 
-    pub fn dkg_presign_signs_internal(number_of_parties: PartyID, threshold: PartyID) {
+    pub fn dkg_presign_signs_internal(
+        threshold: PartyID,
+        number_of_parties: PartyID,
+        batch_size: usize,
+    ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
@@ -503,7 +521,7 @@ pub(crate) mod tests {
             tiresias::encryption_key::PublicParameters::new(N).unwrap();
 
         let (centralized_party_dkg_output, decentralized_party_dkg_output) =
-            generates_distributed_key_internal(number_of_parties, threshold);
+            generates_distributed_key_internal(threshold, number_of_parties);
 
         let encrypted_secret_key_share = tiresias::CiphertextSpaceGroupElement::new(
             decentralized_party_dkg_output.encrypted_secret_key_share,
@@ -513,9 +531,9 @@ pub(crate) mod tests {
 
         let (centralized_party_presign, encrypted_nonce, decentralized_party_presign) =
             generates_presignatures_internal(
-                number_of_parties,
                 threshold,
-                1,
+                number_of_parties,
+                batch_size,
                 encrypted_secret_key_share,
             );
 
@@ -608,8 +626,8 @@ pub(crate) mod tests {
         .unwrap();
 
         signs_internal(
-            number_of_parties,
             threshold,
+            number_of_parties,
             secret_key_share,
             public_key_share,
             decentralized_party_secret_key_share,
@@ -632,11 +650,11 @@ pub(crate) mod benches {
 
     pub(crate) fn benchmark(_c: &mut Criterion) {
         // TODO: for loops
-        super::tests::dkg_presign_signs_internal(8, 2);
-        super::tests::dkg_presign_signs_internal(16, 8);
-        super::tests::dkg_presign_signs_internal(32, 16);
-        super::tests::dkg_presign_signs_internal(32, 64);
-        super::tests::dkg_presign_signs_internal(64, 128);
-        super::tests::dkg_presign_signs_internal(256, 128);
+        super::tests::dkg_presign_signs_internal(8, 2, 1);
+        super::tests::dkg_presign_signs_internal(16, 8, 1);
+        super::tests::dkg_presign_signs_internal(32, 16, 1);
+        super::tests::dkg_presign_signs_internal(32, 64, 1);
+        super::tests::dkg_presign_signs_internal(64, 128, 1);
+        super::tests::dkg_presign_signs_internal(256, 128, 1);
     }
 }

@@ -30,7 +30,6 @@ pub struct Output<
     EncDHProof,
     EncDLProof,
 > {
-    // TODO: make sure the vectors are of the same length?
     pub(super) encrypted_masks: Vec<CiphertextValue>,
     pub(super) encrypted_masked_key_shares: Vec<CiphertextValue>,
     pub(super) key_share_masking_range_proof_commitments: Vec<RangeProofCommitmentValue>,
@@ -279,11 +278,11 @@ where
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Presign<GroupElementValue, CiphertextValue> {
-    pub(crate) centralized_party_nonce_share_commitment: GroupElementValue,
-    pub(crate) nonce_public_share: GroupElementValue,
-    pub(crate) encrypted_mask: CiphertextValue,
-    pub(crate) encrypted_masked_key_share: CiphertextValue,
-    pub(crate) encrypted_masked_nonce_share: CiphertextValue,
+    pub(crate) centralized_party_nonce_share_commitment: GroupElementValue, // K_A
+    pub(crate) nonce_public_share: GroupElementValue,                       // R_B
+    pub(crate) encrypted_mask: CiphertextValue,                             // \ct_1
+    pub(crate) encrypted_masked_key_share: CiphertextValue,                 // \ct_2
+    pub(crate) encrypted_masked_nonce_share: CiphertextValue,               // \ct_4
 }
 
 impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextValue> {
@@ -329,8 +328,8 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
 
         let encrypted_masked_nonce_share = encrypted_masked_nonce_share.encrypted_product().value();
 
-        // TODO: I don't need to match encrypted nonce E(k) from both the previous round
-        // aggregation and the current one right?
+        // TODO: match encrypted nonce E(k) from both the previous round
+        // aggregation and the current one, and IA.
 
         Presign {
             centralized_party_nonce_share_commitment: centralized_party_nonce_share_commitment
@@ -400,7 +399,7 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
                 masks_and_encrypted_masked_key_share.into_iter().zip(
                     encrypted_nonce_shares_and_public_shares
                         .into_iter()
-                        .zip(encrypted_masked_nonce_shares.into_iter()),
+                        .zip(encrypted_masked_nonce_shares),
                 ),
             )
             .map(

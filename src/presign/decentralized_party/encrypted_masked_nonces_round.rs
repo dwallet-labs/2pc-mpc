@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 use std::collections::HashSet;
 
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
@@ -31,7 +33,6 @@ pub struct Party<
 > {
     pub(super) party_id: PartyID,
     pub parties: HashSet<PartyID>,
-    // TODO: should we get this like that?
     pub(super) protocol_context: ProtocolContext,
     pub(super) scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
     pub(super) encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
@@ -66,8 +67,6 @@ impl<
         ProtocolContext,
     >
 where
-    // TODO: I'd love to solve this huge restriction, which seems completely useless to me and is
-    // required because Rust.
     encryption_of_tuple::Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
@@ -134,21 +133,20 @@ where
             >,
         >,
     > {
-        // TODO: do we need to make sure the vectors are same size?
         let batch_size = encrypted_nonce_shares_and_public_shares.len();
+
+        if masks_and_encrypted_masked_key_share.len() != batch_size {
+            return Err(Error::InvalidParameters);
+        }
 
         let encrypted_masks: Vec<_> = masks_and_encrypted_masked_key_share
             .iter()
             .map(|statement| statement.encrypted_multiplicand().clone())
             .collect();
 
-        // TODO: we're not sampling new encryption randomness here for the encryption of the nonce
-        // share, this is intended, just making sure.
-
         let masked_nonce_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
-                &self
-                    .encryption_scheme_public_parameters
+                self.encryption_scheme_public_parameters
                     .randomness_space_public_parameters(),
                 batch_size,
                 rng,
@@ -162,7 +160,7 @@ where
                     .zip(
                         self.shares_of_signature_nonce_shares_encryption_randomness
                             .into_iter()
-                            .zip(masked_nonce_encryption_randomness.clone().into_iter()),
+                            .zip(masked_nonce_encryption_randomness.clone()),
                     ),
             )
             .map(

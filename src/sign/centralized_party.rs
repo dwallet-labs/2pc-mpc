@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 use commitment::{pedersen, Pedersen};
 use crypto_bigint::{rand_core::CryptoRngCore, CheckedMul, Encoding, Uint};
 use enhanced_maurer::{
@@ -294,8 +296,7 @@ where
 
         let partial_signature_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample(
-                &self
-                    .encryption_scheme_public_parameters
+                self.encryption_scheme_public_parameters
                     .randomness_space_public_parameters(),
                 rng,
             )?;
@@ -471,6 +472,7 @@ where
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         protocol_context: ProtocolContext,
         scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,

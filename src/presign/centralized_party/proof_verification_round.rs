@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 use commitment::GroupsPublicParametersAccessors;
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use enhanced_maurer::{
@@ -196,8 +198,7 @@ where
             .map(|encrypted_mask| {
                 EncryptionKey::CiphertextSpaceGroupElement::new(
                     encrypted_mask,
-                    &self
-                        .encryption_scheme_public_parameters
+                    self.encryption_scheme_public_parameters
                         .ciphertext_space_public_parameters(),
                 )
             })
@@ -210,8 +211,7 @@ where
             .map(|encrypted_masked_key_share| {
                 EncryptionKey::CiphertextSpaceGroupElement::new(
                     encrypted_masked_key_share,
-                    &self
-                        .encryption_scheme_public_parameters
+                    self.encryption_scheme_public_parameters
                         .ciphertext_space_public_parameters(),
                 )
             })
@@ -227,8 +227,7 @@ where
                     RangeProof,
                 >::new(
                     key_share_masking_range_proof_commitment,
-                    &self
-                        .range_proof_public_parameters
+                    self.range_proof_public_parameters
                         .commitment_scheme_public_parameters()
                         .commitment_space_public_parameters(),
                 )
@@ -237,8 +236,8 @@ where
 
         let statements = encrypted_masks
             .into_iter()
-            .zip(encrypted_masked_key_shares.into_iter())
-            .zip(key_share_masking_range_proof_commitments.into_iter())
+            .zip(encrypted_masked_key_shares)
+            .zip(key_share_masking_range_proof_commitments)
             .map(
                 |(
                     (encrypted_mask, encrypted_masked_key_share),
@@ -313,8 +312,7 @@ where
             .map(|encrypted_nonce| {
                 EncryptionKey::CiphertextSpaceGroupElement::new(
                     encrypted_nonce,
-                    &self
-                        .encryption_scheme_public_parameters
+                    self.encryption_scheme_public_parameters
                         .ciphertext_space_public_parameters(),
                 )
             })
@@ -339,8 +337,7 @@ where
                     RangeProof,
                 >::new(
                     nonce_sharing_range_proof_commitment,
-                    &self
-                        .range_proof_public_parameters
+                    self.range_proof_public_parameters
                         .commitment_scheme_public_parameters()
                         .commitment_space_public_parameters(),
                 )
@@ -349,8 +346,8 @@ where
 
         let statements = encrypted_nonces
             .into_iter()
-            .zip(decentralized_party_nonce_public_shares.into_iter())
-            .zip(nonce_sharing_range_proof_commitments.into_iter())
+            .zip(decentralized_party_nonce_public_shares)
+            .zip(nonce_sharing_range_proof_commitments)
             .map(
                 |((encrypted_nonce, nonce_public_share), nonce_sharing_range_proof_commitment)| {
                     (
@@ -416,10 +413,10 @@ where
             .into_iter()
             .zip(
                 output.encrypted_masks.into_iter().zip(
-                    output.encrypted_masked_key_shares.into_iter().zip(
-                        self.signature_nonce_shares_and_commitment_randomnesses
-                            .into_iter(),
-                    ),
+                    output
+                        .encrypted_masked_key_shares
+                        .into_iter()
+                        .zip(self.signature_nonce_shares_and_commitment_randomnesses),
                 ),
             )
             .map(

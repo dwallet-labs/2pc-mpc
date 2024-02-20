@@ -1,17 +1,17 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use crate::dkg;
-use crate::presign::centralized_party::proof_verification_round;
+#![allow(clippy::type_complexity)]
+
 use commitment::{pedersen, Pedersen};
 use crypto_bigint::rand_core::CryptoRngCore;
-use group::GroupElement as _;
-use group::{PrimeGroupElement, Samplable};
-use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
-use homomorphic_encryption::GroupsPublicParametersAccessors;
+use group::{GroupElement as _, PrimeGroupElement, Samplable};
+use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
 use maurer::{knowledge_of_decommitment, SOUND_PROOFS_REPETITIONS};
 use proof::AggregatableRangeProof;
 use serde::{Deserialize, Serialize};
+
+use crate::{dkg, presign::centralized_party::proof_verification_round};
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
@@ -121,7 +121,7 @@ impl<
 
         let signature_nonce_shares_and_commitment_randomnesses: Vec<_> = signature_nonce_shares
             .into_iter()
-            .zip(commitment_randomnesses.into_iter())
+            .zip(commitment_randomnesses)
             .map(|(nonce_share, commitment_randomness)| [nonce_share, commitment_randomness].into())
             .collect();
 
@@ -173,11 +173,7 @@ impl<
                 .encrypted_decentralized_party_secret_key_share,
         };
 
-        // TODO: batch normalize
-        let commitments = commitments
-            .into_iter()
-            .map(|element| element.value())
-            .collect();
+        let commitments = GroupElement::batch_normalize(commitments);
 
         let signature_nonce_shares_commitments_and_batched_proof =
             SignatureNonceSharesCommitmentsAndBatchedProof { commitments, proof };
@@ -185,6 +181,7 @@ impl<
         Ok((signature_nonce_shares_commitments_and_batched_proof, party))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         protocol_context: ProtocolContext,
         scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
