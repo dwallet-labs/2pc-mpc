@@ -221,7 +221,7 @@ pub(crate) mod tests {
                         &mut OsRng,
                     )
                     .unwrap();
-                // TODO: evaluation_party_id
+
                 if party_id == evaluation_party_id {
                     decentralized_party_total_time =
                         measurement.add(&decentralized_party_total_time, &measurement.end(now));

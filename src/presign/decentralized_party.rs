@@ -30,7 +30,6 @@ pub struct Output<
     EncDHProof,
     EncDLProof,
 > {
-    // TODO: make sure the vectors are of the same length?
     pub(super) encrypted_masks: Vec<CiphertextValue>,
     pub(super) encrypted_masked_key_shares: Vec<CiphertextValue>,
     pub(super) key_share_masking_range_proof_commitments: Vec<RangeProofCommitmentValue>,
@@ -329,8 +328,8 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
 
         let encrypted_masked_nonce_share = encrypted_masked_nonce_share.encrypted_product().value();
 
-        // TODO: I don't need to match encrypted nonce E(k) from both the previous round
-        // aggregation and the current one right?
+        // TODO: match encrypted nonce E(k) from both the previous round
+        // aggregation and the current one, and IA.
 
         Presign {
             centralized_party_nonce_share_commitment: centralized_party_nonce_share_commitment

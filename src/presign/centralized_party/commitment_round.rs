@@ -173,11 +173,7 @@ impl<
                 .encrypted_decentralized_party_secret_key_share,
         };
 
-        // TODO: batch normalize
-        let commitments = commitments
-            .into_iter()
-            .map(|element| element.value())
-            .collect();
+        let commitments = GroupElement::batch_normalize(commitments);
 
         let signature_nonce_shares_commitments_and_batched_proof =
             SignatureNonceSharesCommitmentsAndBatchedProof { commitments, proof };
