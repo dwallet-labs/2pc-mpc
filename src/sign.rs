@@ -360,8 +360,8 @@ pub(crate) mod tests {
 
     #[test]
     fn signs() {
-        let number_of_parties = 4;
-        let threshold = 3;
+        let number_of_parties = 6;
+        let threshold = 4;
 
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
