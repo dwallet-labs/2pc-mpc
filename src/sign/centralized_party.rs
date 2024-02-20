@@ -33,7 +33,7 @@ pub struct PublicNonceEncryptedPartialSignatureAndProof<
     ComRatioProof,
     DComEvalProof,
 > {
-    pub(super) public_nonce: GroupElementValue,
+    pub public_nonce: GroupElementValue,
     pub(super) public_nonce_proof: ComDLProof,
     pub(super) nonce_share_by_key_share_commitment: GroupElementValue,
     pub(super) nonce_share_by_key_share_proof: ComRatioProof,
