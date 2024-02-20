@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 pub mod centralized_party;
 pub mod decentralized_party;
 
@@ -144,8 +146,7 @@ pub(crate) mod tests {
             unbounded_encdh_witness_public_parameters: unbounded_encdh_witness_public_parameters
                 .clone(),
             range_proof_public_parameters: bulletproofs_public_parameters.clone(),
-            encrypted_decentralized_party_secret_key_share:
-                encrypted_decentralized_party_secret_key_share.clone(),
+            encrypted_decentralized_party_secret_key_share,
         };
 
         let now = measurement.start();
@@ -168,7 +169,6 @@ pub(crate) mod tests {
         let decentralized_party_encrypted_masked_key_share_and_public_nonce_shares_parties: HashMap<_, _> = (1
             ..=number_of_parties)
             .map(|party_id| {
-                let party_id: u16 = party_id.try_into().unwrap();
                 (
                     party_id,
                     decentralized_party::encrypted_masked_key_share_and_public_nonce_shares_round::Party::<
@@ -192,7 +192,7 @@ pub(crate) mod tests {
                         unbounded_encdl_witness_public_parameters: unbounded_encdl_witness_public_parameters.clone(),
                         unbounded_encdh_witness_public_parameters: unbounded_encdh_witness_public_parameters.clone(),
                         range_proof_public_parameters: bulletproofs_public_parameters.clone(),
-                        encrypted_secret_key_share: encrypted_decentralized_party_secret_key_share.clone(),
+                        encrypted_secret_key_share: encrypted_decentralized_party_secret_key_share,
                     },
                 )
             })
@@ -299,9 +299,7 @@ pub(crate) mod tests {
         let masks_and_encrypted_masked_key_share: Vec<_> = masks_and_encrypted_masked_key_share
             .into_iter()
             .map(|mask_and_encrypted_masked_key_share| {
-                mask_and_encrypted_masked_key_share
-                    .language_statement()
-                    .clone()
+                *mask_and_encrypted_masked_key_share.language_statement()
             })
             .collect();
 
@@ -309,16 +307,14 @@ pub(crate) mod tests {
             encrypted_nonce_shares_and_public_shares
                 .into_iter()
                 .map(|encrypted_nonce_share_and_public_share| {
-                    encrypted_nonce_share_and_public_share
-                        .language_statement()
-                        .clone()
+                    *encrypted_nonce_share_and_public_share.language_statement()
                 })
                 .collect();
 
         let encrypted_nonce_shares = encrypted_nonce_shares_and_public_shares
             .clone()
             .into_iter()
-            .map(|statement| statement.encrypted_discrete_log().clone())
+            .map(|statement| *statement.encrypted_discrete_log())
             .collect();
 
         let decentralized_party_encrypted_masked_nonce_shares_commitment_round_parties: HashMap<
@@ -354,9 +350,7 @@ pub(crate) mod tests {
         let encrypted_masked_nonce_shares: Vec<_> = encrypted_masked_nonce_shares
             .into_iter()
             .flatten()
-            .map(|encrypted_masked_nonce_share| {
-                encrypted_masked_nonce_share.language_statement().clone()
-            })
+            .map(|encrypted_masked_nonce_share| *encrypted_masked_nonce_share.language_statement())
             .collect();
 
         let decentralized_party_presigns = decentralized_party::Presign::new_batch::<

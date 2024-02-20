@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 use core::marker::PhantomData;
 use std::collections::HashSet;
 
@@ -145,6 +147,7 @@ where
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
                 self.encryption_scheme_public_parameters.clone(),
+                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
 
         let language_public_parameters = EnhancedPublicParameters::<

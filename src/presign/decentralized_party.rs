@@ -22,7 +22,6 @@ use crate::{
 pub mod encrypted_masked_key_share_and_public_nonce_shares_round;
 pub mod encrypted_masked_nonces_round;
 
-// TODO: name this?
 #[derive(PartialEq, Serialize, Deserialize, Clone)]
 pub struct Output<
     GroupElementValue,
@@ -401,7 +400,7 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
                 masks_and_encrypted_masked_key_share.into_iter().zip(
                     encrypted_nonce_shares_and_public_shares
                         .into_iter()
-                        .zip(encrypted_masked_nonce_shares.into_iter()),
+                        .zip(encrypted_masked_nonce_shares),
                 ),
             )
             .map(

@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 use std::collections::HashSet;
 
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
@@ -147,8 +149,7 @@ where
 
         let masked_nonce_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
-                &self
-                    .encryption_scheme_public_parameters
+                self.encryption_scheme_public_parameters
                     .randomness_space_public_parameters(),
                 batch_size,
                 rng,
@@ -162,7 +163,7 @@ where
                     .zip(
                         self.shares_of_signature_nonce_shares_encryption_randomness
                             .into_iter()
-                            .zip(masked_nonce_encryption_randomness.clone().into_iter()),
+                            .zip(masked_nonce_encryption_randomness.clone()),
                     ),
             )
             .map(

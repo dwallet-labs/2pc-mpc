@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 use commitment::Commitment;
 use crypto_bigint::{rand_core::CryptoRngCore, Random};
 use group::{ComputationalSecuritySizedNumber, PartyID, PrimeGroupElement, Samplable};
@@ -39,7 +41,6 @@ pub fn commit_public_key_share<GroupElement: group::GroupElement>(
 ) -> crate::Result<Commitment> {
     let mut transcript = Transcript::new(b"DKG commitment round of centralized party");
 
-    // TODO: is protocol context the right thing here?
     transcript
         .serialize_to_transcript_as_json(b"public key share", &public_key_share.value())
         .unwrap();
@@ -48,7 +49,7 @@ pub fn commit_public_key_share<GroupElement: group::GroupElement>(
         party_id,
         "DKG commitment round of centralized party".to_string(),
         &mut transcript,
-        &commitment_randomness,
+        commitment_randomness,
     ))
 }
 

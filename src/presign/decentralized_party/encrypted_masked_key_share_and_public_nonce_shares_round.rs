@@ -1,6 +1,8 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 use std::collections::HashSet;
 
 use commitment::{pedersen, Pedersen};
@@ -15,9 +17,12 @@ use maurer::{knowledge_of_decommitment, SOUND_PROOFS_REPETITIONS};
 use proof::AggregatableRangeProof;
 use serde::Serialize;
 
-use crate::presign::{
-    centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
-    decentralized_party::encrypted_masked_nonces_round,
+use crate::{
+    dkg,
+    presign::{
+        centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
+        decentralized_party::encrypted_masked_nonces_round,
+    },
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -33,16 +38,20 @@ pub struct Party<
     UnboundedEncDHWitness: group::GroupElement + Samplable,
     ProtocolContext: Clone + Serialize,
 > {
-    pub party_id: PartyID,
-    pub parties: HashSet<PartyID>,
-    pub protocol_context: ProtocolContext,
-    pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
-    pub group_public_parameters: GroupElement::PublicParameters,
-    pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    pub unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
-    pub unbounded_encdh_witness_public_parameters: UnboundedEncDHWitness::PublicParameters,
-    pub range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
-    pub encrypted_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
+    pub(in crate::presign) party_id: PartyID,
+    pub(in crate::presign) parties: HashSet<PartyID>,
+    pub(in crate::presign) protocol_context: ProtocolContext,
+    pub(in crate::presign) scalar_group_public_parameters:
+        group::PublicParameters<GroupElement::Scalar>,
+    pub(in crate::presign) group_public_parameters: GroupElement::PublicParameters,
+    pub(in crate::presign) encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
+    pub(in crate::presign) unbounded_encdl_witness_public_parameters:
+        UnboundedEncDLWitness::PublicParameters,
+    pub(in crate::presign) unbounded_encdh_witness_public_parameters:
+        UnboundedEncDHWitness::PublicParameters,
+    pub(in crate::presign) range_proof_public_parameters:
+        RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
+    pub(in crate::presign) encrypted_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
 }
 
 impl<
@@ -241,8 +250,7 @@ where
             .collect::<group::Result<Vec<_>>>()?;
 
         let masks_encryption_randomness = EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
-            &self
-                .encryption_scheme_public_parameters
+            self.encryption_scheme_public_parameters
                 .randomness_space_public_parameters(),
             batch_size,
             rng,
@@ -250,8 +258,7 @@ where
 
         let masked_key_share_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
-                &self
-                    .encryption_scheme_public_parameters
+                self.encryption_scheme_public_parameters
                     .randomness_space_public_parameters(),
                 batch_size,
                 rng,
@@ -405,6 +412,7 @@ where
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
                 self.encryption_scheme_public_parameters.clone(),
+                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
 
         let language_public_parameters = EnhancedPublicParameters::<
@@ -437,11 +445,7 @@ where
         let witnesses: Vec<_> = shares_of_signature_nonce_shares_witnesses
             .clone()
             .into_iter()
-            .zip(
-                shares_of_signature_nonce_shares_encryption_randomness
-                    .clone()
-                    .into_iter(),
-            )
+            .zip(shares_of_signature_nonce_shares_encryption_randomness.clone())
             .map(|(nonce_share, encryption_randomness)| (nonce_share, encryption_randomness).into())
             .collect();
 
@@ -502,5 +506,40 @@ where
             ),
             party,
         ))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        party_id: PartyID,
+        parties: HashSet<PartyID>,
+        protocol_context: ProtocolContext,
+        scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+        group_public_parameters: GroupElement::PublicParameters,
+        encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
+        unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
+        unbounded_encdh_witness_public_parameters: UnboundedEncDHWitness::PublicParameters,
+        range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
+        dkg_output: dkg::decentralized_party::Output<
+            GroupElement::Value,
+            group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
+        >,
+    ) -> crate::Result<Self> {
+        let encrypted_secret_key_share = EncryptionKey::CiphertextSpaceGroupElement::new(
+            dkg_output.encrypted_secret_key_share,
+            encryption_scheme_public_parameters.ciphertext_space_public_parameters(),
+        )?;
+
+        Ok(Self {
+            party_id,
+            parties,
+            protocol_context,
+            scalar_group_public_parameters,
+            group_public_parameters,
+            encryption_scheme_public_parameters,
+            unbounded_encdl_witness_public_parameters,
+            unbounded_encdh_witness_public_parameters,
+            range_proof_public_parameters,
+            encrypted_secret_key_share,
+        })
     }
 }

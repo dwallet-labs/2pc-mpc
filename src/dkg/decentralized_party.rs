@@ -115,14 +115,14 @@ where
             ProtocolContext,
         >,
     ) -> Self {
-        let encrypted_secret_key_share = (&encryption_of_secret_share
+        let encrypted_secret_key_share = encryption_of_secret_share
             .language_statement()
-            .encrypted_discrete_log())
+            .encrypted_discrete_log()
             .value();
 
-        let public_key_share = (&encryption_of_secret_share
+        let public_key_share = encryption_of_secret_share
             .language_statement()
-            .base_by_discrete_log())
+            .base_by_discrete_log()
             .value();
 
         let range_proof_commitment = (encryption_of_secret_share.range_proof_commitment()).value();

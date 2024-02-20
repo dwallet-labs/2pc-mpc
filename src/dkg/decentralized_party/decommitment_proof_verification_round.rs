@@ -1,15 +1,17 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 use std::marker::PhantomData;
 
 use commitment::Commitment;
 use enhanced_maurer::{encryption_of_discrete_log, EnhanceableLanguage};
-use group::{GroupElement as _, PrimeGroupElement, Samplable};
-use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
+use group::{PrimeGroupElement, Samplable};
+use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
 use maurer::knowledge_of_discrete_log;
 use proof::{range, AggregatableRangeProof};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     dkg::{
@@ -19,17 +21,12 @@ use crate::{
     CENTRALIZED_PARTY_ID,
 };
 
-#[derive(Clone, PartialEq)]
-pub struct Output<
-    const SCALAR_LIMBS: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
-    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-> {
-    pub public_key_share: GroupElement,
-    pub public_key: GroupElement,
-    pub encrypted_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
-    pub centralized_party_public_key_share: GroupElement,
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Output<GroupElementValue, CiphertextSpaceValue> {
+    pub(crate) public_key_share: GroupElementValue,
+    pub public_key: GroupElementValue,
+    pub encrypted_secret_key_share: CiphertextSpaceValue,
+    pub(crate) centralized_party_public_key_share: GroupElementValue,
 }
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -134,16 +131,11 @@ where
             >,
         >,
     ) -> crate::Result<
-        Output<SCALAR_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, GroupElement, EncryptionKey>,
+        Output<GroupElement::Value, group::Value<EncryptionKey::CiphertextSpaceGroupElement>>,
     > {
         let public_key_share = GroupElement::new(
             secret_key_share_encryption_and_proof.public_key_share,
             &self.group_public_parameters,
-        )?;
-        let encrypted_secret_key_share = EncryptionKey::CiphertextSpaceGroupElement::new(
-            secret_key_share_encryption_and_proof.encrypted_secret_key_share,
-            self.encryption_scheme_public_parameters
-                .ciphertext_space_public_parameters(),
         )?;
 
         let centralized_party_public_key_share = GroupElement::new(
@@ -177,10 +169,11 @@ where
         let public_key = centralized_party_public_key_share.clone() + &public_key_share;
 
         Ok(Output {
-            public_key_share,
-            public_key,
-            encrypted_secret_key_share,
-            centralized_party_public_key_share,
+            public_key_share: secret_key_share_encryption_and_proof.public_key_share,
+            public_key: public_key.value(),
+            encrypted_secret_key_share: secret_key_share_encryption_and_proof
+                .encrypted_secret_key_share,
+            centralized_party_public_key_share: decommitment_and_proof.public_key_share,
         })
     }
 }
