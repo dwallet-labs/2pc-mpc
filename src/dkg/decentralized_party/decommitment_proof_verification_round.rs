@@ -1,31 +1,32 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use std::marker::PhantomData;
-use commitment::Commitment;
+#![allow(clippy::type_complexity)]
 
+use std::marker::PhantomData;
+
+use commitment::Commitment;
 use enhanced_maurer::{encryption_of_discrete_log, EnhanceableLanguage};
-use group::{GroupElement as _, PrimeGroupElement, Samplable};
+use group::{PrimeGroupElement, Samplable};
 use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
 use maurer::knowledge_of_discrete_log;
-use proof::{AggregatableRangeProof, range};
-use serde::Serialize;
-use homomorphic_encryption::GroupsPublicParametersAccessors;
-use crate::{CENTRALIZED_PARTY_ID, dkg::centralized_party};
-use crate::dkg::centralized_party::commitment_round::commit_public_key_share;
-use crate::dkg::decentralized_party;
+use proof::{range, AggregatableRangeProof};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone)]
-pub struct Output<
-    const SCALAR_LIMBS: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
-    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-> {
-    pub public_key_share: GroupElement,
-    pub public_key: GroupElement,
-    pub encrypted_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
-    pub centralized_party_public_key_share: GroupElement,
+use crate::{
+    dkg::{
+        centralized_party, centralized_party::commitment_round::commit_public_key_share,
+        decentralized_party,
+    },
+    CENTRALIZED_PARTY_ID,
+};
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Output<GroupElementValue, CiphertextSpaceValue> {
+    pub(crate) public_key_share: GroupElementValue,
+    pub public_key: GroupElementValue,
+    pub encrypted_secret_key_share: CiphertextSpaceValue,
+    pub(crate) centralized_party_public_key_share: GroupElementValue,
 }
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -36,8 +37,8 @@ pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    UnboundedEncDLWitness: group::GroupElement + Samplable,
     RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    UnboundedEncDLWitness: group::GroupElement + Samplable,
     ProtocolContext: Clone + Serialize,
 > {
     pub protocol_context: ProtocolContext,
@@ -51,15 +52,15 @@ pub struct Party<
 }
 
 impl<
-    const SCALAR_LIMBS: usize,
-    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
-    const RANGE_CLAIMS_PER_SCALAR: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
-    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    UnboundedEncDLWitness: group::GroupElement + Samplable,
-    RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
-    ProtocolContext: Clone + Serialize,
+        const SCALAR_LIMBS: usize,
+        const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+        const RANGE_CLAIMS_PER_SCALAR: usize,
+        const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+        GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
+        EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+        UnboundedEncDLWitness: group::GroupElement + Samplable,
+        RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+        ProtocolContext: Clone + Serialize,
     >
     Party<
         SCALAR_LIMBS,
@@ -68,39 +69,40 @@ impl<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-        UnboundedEncDLWitness,
         RangeProof,
+        UnboundedEncDLWitness,
         ProtocolContext,
-    > where
+    >
+where
     encryption_of_discrete_log::Language<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
     >: maurer::Language<
-        { maurer::SOUND_PROOFS_REPETITIONS },
-        WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            EncryptionKey,
+            { maurer::SOUND_PROOFS_REPETITIONS },
+            WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                EncryptionKey,
+            >,
+            StatementSpaceGroupElement = encryption_of_discrete_log::StatementSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+            PublicParameters = encryption_of_discrete_log::PublicParameters<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
+        > + EnhanceableLanguage<
+            { maurer::SOUND_PROOFS_REPETITIONS },
+            RANGE_CLAIMS_PER_SCALAR,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            UnboundedEncDLWitness,
         >,
-        StatementSpaceGroupElement = encryption_of_discrete_log::StatementSpaceGroupElement<
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            SCALAR_LIMBS,
-            GroupElement,
-            EncryptionKey,
-        >,
-        PublicParameters = encryption_of_discrete_log::PublicParameters<
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-            SCALAR_LIMBS,
-            GroupElement,
-            EncryptionKey,
-        >,
-    > + EnhanceableLanguage<
-        { maurer::SOUND_PROOFS_REPETITIONS },
-        RANGE_CLAIMS_PER_SCALAR,
-        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        UnboundedEncDLWitness,
-    >,
 {
     pub fn verify_decommitment_and_proof_of_centralized_party_public_key_share(
         self,
@@ -123,16 +125,18 @@ impl<
                 SCALAR_LIMBS,
                 GroupElement,
                 EncryptionKey,
-                UnboundedEncDLWitness,
                 RangeProof,
+                UnboundedEncDLWitness,
                 ProtocolContext,
             >,
         >,
     ) -> crate::Result<
-        Output<SCALAR_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, GroupElement, EncryptionKey>,
+        Output<GroupElement::Value, group::Value<EncryptionKey::CiphertextSpaceGroupElement>>,
     > {
-        let public_key_share = GroupElement::new(secret_key_share_encryption_and_proof.public_key_share, &self.group_public_parameters)?;
-        let encrypted_secret_key_share = EncryptionKey::CiphertextSpaceGroupElement::new(secret_key_share_encryption_and_proof.encrypted_secret_key_share, self.encryption_scheme_public_parameters.ciphertext_space_public_parameters())?;
+        let public_key_share = GroupElement::new(
+            secret_key_share_encryption_and_proof.public_key_share,
+            &self.group_public_parameters,
+        )?;
 
         let centralized_party_public_key_share = GroupElement::new(
             decommitment_and_proof.public_key_share,
@@ -153,7 +157,7 @@ impl<
             knowledge_of_discrete_log::PublicParameters::new::<GroupElement::Scalar, GroupElement>(
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
-                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters)
+                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
 
         decommitment_and_proof.proof.verify(
@@ -165,10 +169,11 @@ impl<
         let public_key = centralized_party_public_key_share.clone() + &public_key_share;
 
         Ok(Output {
-            public_key_share,
-            public_key,
-            encrypted_secret_key_share,
-            centralized_party_public_key_share,
+            public_key_share: secret_key_share_encryption_and_proof.public_key_share,
+            public_key: public_key.value(),
+            encrypted_secret_key_share: secret_key_share_encryption_and_proof
+                .encrypted_secret_key_share,
+            centralized_party_public_key_share: decommitment_and_proof.public_key_share,
         })
     }
 }

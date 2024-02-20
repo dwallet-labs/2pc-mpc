@@ -7,21 +7,27 @@ pub mod decentralized_party;
 #[cfg(any(test, feature = "benchmarking"))]
 pub(crate) mod tests {
     use core::marker::PhantomData;
-    use std::collections::{HashMap, HashSet};
-    use std::time::Duration;
-    use criterion::measurement::{Measurement, WallTime};
+    use std::{
+        collections::{HashMap, HashSet},
+        time::Duration,
+    };
 
-    use group::{CyclicGroupElement, ristretto, secp256k1};
-    use homomorphic_encryption::{AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors};
-    use proof::aggregation::test_helpers::aggregates;
-    use proof::range::bulletproofs;
+    use criterion::measurement::{Measurement, WallTime};
+    use group::{ristretto, secp256k1, CyclicGroupElement, GroupElement};
+    use homomorphic_encryption::{
+        AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors,
+    };
+    use proof::{aggregation::test_helpers::aggregates, range::bulletproofs};
     use rand_core::OsRng;
-    use tiresias::LargeBiPrimeSizedNumber;
-    use tiresias::test_exports::{N, SECRET_KEY};
-    use crate::dkg::decentralized_party::SecretKeyShareEncryptionAndProof;
-    use crate::tests::RANGE_CLAIMS_PER_SCALAR;
+    use tiresias::{
+        test_exports::{N, SECRET_KEY},
+        LargeBiPrimeSizedNumber,
+    };
 
     use super::*;
+    use crate::{
+        dkg::decentralized_party::SecretKeyShareEncryptionAndProof, tests::RANGE_CLAIMS_PER_SCALAR,
+    };
 
     #[test]
     fn generates_distributed_key() {
@@ -37,16 +43,13 @@ pub(crate) mod tests {
         threshold: u16,
     ) -> (
         centralized_party::Output<
-            { secp256k1::SCALAR_LIMBS },
-            { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
-            secp256k1::GroupElement,
-            tiresias::EncryptionKey,
+            secp256k1::group_element::Value,
+            secp256k1::Scalar,
+            tiresias::CiphertextSpaceValue,
         >,
         decentralized_party::Output<
-            { secp256k1::SCALAR_LIMBS },
-            { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
-            secp256k1::GroupElement,
-            tiresias::EncryptionKey,
+            secp256k1::group_element::Value,
+            tiresias::CiphertextSpaceValue,
         >,
     ) {
         let measurement = WallTime;
@@ -61,10 +64,11 @@ pub(crate) mod tests {
         let bulletproofs_public_parameters =
             bulletproofs::PublicParameters::<{ RANGE_CLAIMS_PER_SCALAR }>::default();
 
-        let paillier_public_parameters = tiresias::encryption_key::PublicParameters::new(N).unwrap();
+        let paillier_public_parameters =
+            tiresias::encryption_key::PublicParameters::new(N).unwrap();
 
         let paillier_decryption_key =
-            tiresias::DecryptionKey::new( SECRET_KEY, &paillier_public_parameters,).unwrap();
+            tiresias::DecryptionKey::new(SECRET_KEY, &paillier_public_parameters).unwrap();
 
         let centralized_party_commitment_round_party = centralized_party::commitment_round::Party::<
             { secp256k1::SCALAR_LIMBS },
@@ -73,8 +77,8 @@ pub(crate) mod tests {
             { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
             secp256k1::GroupElement,
             tiresias::EncryptionKey,
-            tiresias::RandomnessSpaceGroupElement,
             bulletproofs::RangeProof,
+            tiresias::RandomnessSpaceGroupElement,
             PhantomData<()>,
         > {
             protocol_context: PhantomData::<()>,
@@ -94,17 +98,19 @@ pub(crate) mod tests {
         ) = centralized_party_commitment_round_party
             .sample_commit_and_prove_secret_key_share(&mut OsRng)
             .unwrap();
-        centralized_party_total_time = measurement.add(&centralized_party_total_time, &measurement.end(now));
+        centralized_party_total_time =
+            measurement.add(&centralized_party_total_time, &measurement.end(now));
 
+        // TODO: do it with threshold
         let mut parties = HashSet::new();
         (1..=number_of_parties).for_each(|i| {
             parties.insert(i);
         });
+        let evaluation_party_id = *parties.iter().next().unwrap();
 
         let decentralized_party_encryption_of_secret_key_share_parties: HashMap<_, _> = (1
             ..=number_of_parties)
             .map(|party_id| {
-                let party_id: u16 = party_id.try_into().unwrap();
                 (
                     party_id,
                     decentralized_party::encryption_of_secret_key_share_round::Party::<
@@ -114,8 +120,8 @@ pub(crate) mod tests {
                         { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
                         secp256k1::GroupElement,
                         tiresias::EncryptionKey,
-                        tiresias::RandomnessSpaceGroupElement,
                         bulletproofs::RangeProof,
+                        tiresias::RandomnessSpaceGroupElement,
                         PhantomData<()>,
                     > {
                         party_id,
@@ -150,7 +156,10 @@ pub(crate) mod tests {
                             &mut OsRng,
                         )
                         .unwrap();
-                    if party_id == 1 {decentralized_party_total_time = measurement.add(&decentralized_party_total_time, &measurement.end(now));};
+                    if party_id == evaluation_party_id {
+                        decentralized_party_total_time =
+                            measurement.add(&decentralized_party_total_time, &measurement.end(now));
+                    };
 
                     (
                         (
@@ -162,18 +171,19 @@ pub(crate) mod tests {
                 })
                 .unzip();
 
-        let (.., encryption_of_decentralized_party_secret_share_time, (
-            encryption_of_decentralized_party_secret_share_proof,
-            encryption_of_decentralized_party_secret_share,
-        )) = aggregates(
-            decentralized_party_encryption_of_secret_key_share_commitment_round_parties,
-        );
+        let (
+            ..,
+            encryption_of_decentralized_party_secret_share_time,
+            (
+                encryption_of_decentralized_party_secret_share_proof,
+                encryption_of_decentralized_party_secret_share,
+            ),
+        ) = aggregates(decentralized_party_encryption_of_secret_key_share_commitment_round_parties);
 
         let encryption_of_decentralized_party_secret_share =
-            encryption_of_decentralized_party_secret_share
+            *encryption_of_decentralized_party_secret_share
                 .first()
-                .unwrap()
-                .clone();
+                .unwrap();
 
         let secret_key_share_encryption_and_proof = SecretKeyShareEncryptionAndProof::new(
             encryption_of_decentralized_party_secret_share,
@@ -185,22 +195,46 @@ pub(crate) mod tests {
             centralized_party_public_key_share_decommitment_and_proof,
             centralized_party_dkg_output,
         ) = centralized_party_decommitment_round_party
-            .decommit_proof_public_key_share(secret_key_share_encryption_and_proof.clone(), &mut OsRng)
+            .decommit_proof_public_key_share(
+                secret_key_share_encryption_and_proof.clone(),
+                &mut OsRng,
+            )
             .unwrap();
-        centralized_party_total_time = measurement.add(&centralized_party_total_time, &measurement.end(now));
+        centralized_party_total_time =
+            measurement.add(&centralized_party_total_time, &measurement.end(now));
+
+        let decentralized_party_public_key_share = secp256k1::GroupElement::new(
+            centralized_party_dkg_output.decentralized_party_public_key_share,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
+
+        let secret_key_share = secp256k1::Scalar::new(
+            centralized_party_dkg_output.secret_key_share,
+            &secp256k1_scalar_public_parameters,
+        )
+        .unwrap();
+
+        let public_key_share = secp256k1::GroupElement::new(
+            centralized_party_dkg_output.public_key_share,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
+
+        let public_key = secp256k1::GroupElement::new(
+            centralized_party_dkg_output.public_key,
+            &secp256k1_group_public_parameters,
+        )
+        .unwrap();
 
         assert_eq!(
-            centralized_party_dkg_output.decentralized_party_public_key_share
-                + &centralized_party_dkg_output.public_key_share,
-            centralized_party_dkg_output.public_key
+            decentralized_party_public_key_share + public_key_share,
+            public_key
         );
 
-        let generator = centralized_party_dkg_output.public_key_share.generator();
+        let generator = public_key_share.generator();
 
-        assert_eq!(
-            centralized_party_dkg_output.secret_key_share * &generator,
-            centralized_party_dkg_output.public_key_share
-        );
+        assert_eq!(secret_key_share * generator, public_key_share);
 
         let decentralized_party_dkg_outputs: HashMap<_, _> =
             decentralized_party_decommitment_proof_verification_round_parties
@@ -213,41 +247,67 @@ pub(crate) mod tests {
                             secret_key_share_encryption_and_proof.clone(),
                         )
                         .unwrap();
-                    if party_id == 1 {decentralized_party_total_time = measurement.add(&decentralized_party_total_time, &measurement.end(now));};
+                    if party_id == evaluation_party_id {
+                        decentralized_party_total_time =
+                            measurement.add(&decentralized_party_total_time, &measurement.end(now));
+                    };
 
-                    (
-                        party_id,
-                        res,
-                    )
+                    (party_id, res)
                 })
                 .collect();
 
-        // TODO: check all are same.
         let decentralized_party_dkg_output =
             decentralized_party_dkg_outputs.get(&1).unwrap().clone();
 
         assert!(decentralized_party_dkg_outputs
+            .clone()
+            .into_iter()
+            .all(|(_, output)| decentralized_party_dkg_output == output));
+
+        assert!(decentralized_party_dkg_outputs
             .into_iter()
             .all(|(_, dkg_output)| {
+                let encrypted_secret_key_share = tiresias::CiphertextSpaceGroupElement::new(
+                    dkg_output.encrypted_secret_key_share,
+                    paillier_public_parameters.ciphertext_space_public_parameters(),
+                )
+                .unwrap();
+
                 let decentralized_party_secret_key_share_decryption: LargeBiPrimeSizedNumber =
                     paillier_decryption_key
-                        .decrypt(&dkg_output.encrypted_secret_key_share, &paillier_public_parameters)
+                        .decrypt(&encrypted_secret_key_share, &paillier_public_parameters)
                         .unwrap()
                         .into();
 
                 let decentralized_party_secret_key_share: secp256k1::Scalar =
                     decentralized_party_secret_key_share_decryption.into();
 
+                let public_key_share = secp256k1::GroupElement::new(
+                    dkg_output.public_key_share,
+                    &secp256k1_group_public_parameters,
+                )
+                .unwrap();
+
+                let centralized_party_public_key_share = secp256k1::GroupElement::new(
+                    dkg_output.centralized_party_public_key_share,
+                    &secp256k1_group_public_parameters,
+                )
+                .unwrap();
+
                 (dkg_output.encrypted_secret_key_share
                     == centralized_party_dkg_output.encrypted_decentralized_party_secret_key_share)
-                    && (decentralized_party_secret_key_share * &generator
+                    && ((decentralized_party_secret_key_share * generator).value()
                         == dkg_output.public_key_share)
-                    && (dkg_output.centralized_party_public_key_share
-                        + &dkg_output.public_key_share
+                    && dkg_output.centralized_party_public_key_share
+                        == centralized_party_dkg_output.public_key_share
+                    && ((centralized_party_public_key_share + public_key_share).value()
                         == dkg_output.public_key)
             }));
 
-        decentralized_party_total_time = measurement.add(&decentralized_party_total_time, &encryption_of_decentralized_party_secret_share_time);
+        decentralized_party_total_time = measurement.add(
+            &decentralized_party_total_time,
+            &encryption_of_decentralized_party_secret_share_time,
+        );
 
         println!(
             "\nProtocol, Number of Parties, Threshold, Centralized Party Total Time (ms), Decentralized Party Total Time (ms)",
@@ -262,5 +322,3 @@ pub(crate) mod tests {
         (centralized_party_dkg_output, decentralized_party_dkg_output)
     }
 }
-
-// TODO: bench

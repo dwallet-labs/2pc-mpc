@@ -1,32 +1,26 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+#![allow(clippy::type_complexity)]
+
 use commitment::GroupsPublicParametersAccessors as _;
-use proof::range::PublicParametersAccessors;
-use crypto_bigint::{rand_core::CryptoRngCore};
+use crypto_bigint::rand_core::CryptoRngCore;
 use enhanced_maurer::{encryption_of_discrete_log, EnhanceableLanguage};
 use group::{ComputationalSecuritySizedNumber, GroupElement, PrimeGroupElement, Samplable};
-use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
-use maurer::knowledge_of_discrete_log;
-use proof::{AggregatableRangeProof, range};
+use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
+use maurer::{knowledge_of_discrete_log, SOUND_PROOFS_REPETITIONS};
+use proof::{range, range::PublicParametersAccessors, AggregatableRangeProof};
 use serde::{Deserialize, Serialize};
-use homomorphic_encryption::GroupsPublicParametersAccessors;
-use crate::{
-    dkg::decentralized_party,
-};
 
-#[derive(Clone)]
-pub struct Output<
-    const SCALAR_LIMBS: usize,
-    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-    GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
-    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-> {
-    pub secret_key_share: GroupElement::Scalar,
-    pub public_key_share: GroupElement,
-    pub public_key: GroupElement,
-    pub encrypted_decentralized_party_secret_key_share: EncryptionKey::CiphertextSpaceGroupElement,
-    pub decentralized_party_public_key_share: GroupElement,
+use crate::dkg::decentralized_party;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Output<GroupElementValue, ScalarValue, CiphertextSpaceValue> {
+    pub(crate) secret_key_share: ScalarValue,
+    pub(crate) public_key_share: GroupElementValue,
+    pub public_key: GroupElementValue,
+    pub encrypted_decentralized_party_secret_key_share: CiphertextSpaceValue,
+    pub(in crate::dkg) decentralized_party_public_key_share: GroupElementValue,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -44,8 +38,8 @@ pub struct Party<
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-    UnboundedEncDLWitness: group::GroupElement + Samplable,
     RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    UnboundedEncDLWitness: group::GroupElement + Samplable,
     ProtocolContext: Clone + Serialize,
 > {
     pub(super) group_public_parameters: GroupElement::PublicParameters,
@@ -68,8 +62,8 @@ impl<
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
-        UnboundedEncDLWitness: group::GroupElement + Samplable,
         RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+        UnboundedEncDLWitness: group::GroupElement + Samplable,
         ProtocolContext: Clone + Serialize,
     >
     Party<
@@ -79,8 +73,8 @@ impl<
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
-        UnboundedEncDLWitness,
         RangeProof,
+        UnboundedEncDLWitness,
         ProtocolContext,
     >
 where
@@ -90,7 +84,7 @@ where
         GroupElement,
         EncryptionKey,
     >: maurer::Language<
-            { maurer::SOUND_PROOFS_REPETITIONS },
+            SOUND_PROOFS_REPETITIONS,
             WitnessSpaceGroupElement = encryption_of_discrete_log::WitnessSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 EncryptionKey,
@@ -108,7 +102,7 @@ where
                 EncryptionKey,
             >,
         > + EnhanceableLanguage<
-            { maurer::SOUND_PROOFS_REPETITIONS },
+            SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             UnboundedEncDLWitness,
@@ -131,8 +125,8 @@ where
                 SCALAR_LIMBS,
                 GroupElement,
                 EncryptionKey,
-                UnboundedEncDLWitness,
                 RangeProof,
+                UnboundedEncDLWitness,
                 ProtocolContext,
             >,
         >,
@@ -142,14 +136,17 @@ where
             GroupElement::Value,
             knowledge_of_discrete_log::Proof<GroupElement::Scalar, GroupElement, ProtocolContext>,
         >,
-        Output<SCALAR_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, GroupElement, EncryptionKey>,
+        Output<
+            GroupElement::Value,
+            group::Value<GroupElement::Scalar>,
+            group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
+        >,
     )> {
         let encrypted_decentralized_party_secret_key_share =
             EncryptionKey::CiphertextSpaceGroupElement::new(
                 decentralized_party_secret_key_share_encryption_and_proof
                     .encrypted_secret_key_share,
-                &self
-                    .encryption_scheme_public_parameters
+                self.encryption_scheme_public_parameters
                     .ciphertext_space_public_parameters(),
             )?;
 
@@ -164,8 +161,7 @@ where
             RangeProof,
         >::new(
             decentralized_party_secret_key_share_encryption_and_proof.range_proof_commitment,
-            &self
-                .range_proof_public_parameters
+            self.range_proof_public_parameters
                 .commitment_scheme_public_parameters()
                 .commitment_space_public_parameters(),
         )?;
@@ -190,6 +186,7 @@ where
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
                 self.encryption_scheme_public_parameters,
+                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
 
         let encryption_of_discrete_log_enhanced_language_public_parameters =
@@ -218,23 +215,26 @@ where
                 rng,
             )?;
 
+        let public_key = self.public_key_share.clone() + &decentralized_party_public_key_share;
+
+        let public_key_share = self.public_key_share.value();
         let public_key_share_decommitment_proof = PublicKeyShareDecommitmentAndProof::<
             GroupElement::Value,
             knowledge_of_discrete_log::Proof<GroupElement::Scalar, GroupElement, ProtocolContext>,
         > {
             proof: self.knowledge_of_discrete_log_proof,
-            public_key_share: self.public_key_share.value(),
+            public_key_share,
             commitment_randomness: self.commitment_randomness,
         };
 
-        let public_key = self.public_key_share.clone() + &decentralized_party_public_key_share;
-
         let output = Output {
-            secret_key_share: self.secret_key_share,
-            public_key_share: self.public_key_share,
-            public_key,
-            encrypted_decentralized_party_secret_key_share,
-            decentralized_party_public_key_share,
+            secret_key_share: self.secret_key_share.value(),
+            public_key_share,
+            public_key: public_key.value(),
+            encrypted_decentralized_party_secret_key_share:
+                decentralized_party_secret_key_share_encryption_and_proof.encrypted_secret_key_share,
+            decentralized_party_public_key_share:
+                decentralized_party_secret_key_share_encryption_and_proof.public_key_share,
         };
 
         Ok((public_key_share_decommitment_proof, output))
