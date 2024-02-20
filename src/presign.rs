@@ -21,7 +21,7 @@ pub(crate) mod tests {
         encryption_of_discrete_log::StatementAccessors,
         language::EnhancedLanguageStatementAccessors,
     };
-    use group::{ristretto, secp256k1, self_product, GroupElement as _, Samplable};
+    use group::{ristretto, secp256k1, self_product, GroupElement as _, PartyID, Samplable};
     use homomorphic_encryption::{
         AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
         GroupsPublicParametersAccessors,
@@ -30,6 +30,7 @@ pub(crate) mod tests {
         aggregation::test_helpers::{aggregates, aggregates_multiple},
         range::bulletproofs,
     };
+    use rand::prelude::IteratorRandom;
     use rand_core::OsRng;
     use rstest::rstest;
     use tiresias::{
@@ -43,12 +44,14 @@ pub(crate) mod tests {
     };
 
     #[rstest]
-    #[case(1)]
-    #[case(2)]
-    fn generates_presignatures(#[case] batch_size: usize) {
-        let number_of_parties = 4;
-        let threshold = 2;
-
+    #[case(2, 2, 1)]
+    #[case(2, 4, 4)]
+    #[case(6, 9, 2)]
+    fn generates_presignatures(
+        #[case] number_of_parties: PartyID,
+        #[case] threshold: PartyID,
+        #[case] batch_size: usize,
+    ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let paillier_public_parameters =
@@ -159,15 +162,16 @@ pub(crate) mod tests {
         centralized_party_total_time =
             measurement.add(&centralized_party_total_time, &measurement.end(now));
 
-        // TODO: do it with threshold
         let mut parties = HashSet::new();
-        (1..=number_of_parties).for_each(|i| {
-            parties.insert(i);
-        });
+        (1..=number_of_parties)
+            .choose_multiple(&mut OsRng, threshold.into())
+            .into_iter()
+            .for_each(|party_id| {
+                parties.insert(party_id);
+            });
         let evaluation_party_id = *parties.iter().next().unwrap();
 
-        let decentralized_party_encrypted_masked_key_share_and_public_nonce_shares_parties: HashMap<_, _> = (1
-            ..=number_of_parties)
+        let decentralized_party_encrypted_masked_key_share_and_public_nonce_shares_parties: HashMap<_, _> = parties.clone().into_iter()
             .map(|party_id| {
                 (
                     party_id,
