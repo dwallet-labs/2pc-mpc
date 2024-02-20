@@ -279,10 +279,10 @@ where
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Presign<GroupElementValue, CiphertextValue> {
     pub(crate) centralized_party_nonce_share_commitment: GroupElementValue, // K_A
-    pub(crate) nonce_public_share: GroupElementValue, // R_B
-    pub(crate) encrypted_mask: CiphertextValue, // \ct_1
-    pub(crate) encrypted_masked_key_share: CiphertextValue, // \ct_2
-    pub(crate) encrypted_masked_nonce_share: CiphertextValue, // \ct_4
+    pub(crate) nonce_public_share: GroupElementValue,                       // R_B
+    pub(crate) encrypted_mask: CiphertextValue,                             // \ct_1
+    pub(crate) encrypted_masked_key_share: CiphertextValue,                 // \ct_2
+    pub(crate) encrypted_masked_nonce_share: CiphertextValue,               // \ct_4
 }
 
 impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextValue> {
