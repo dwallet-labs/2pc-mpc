@@ -12,8 +12,7 @@ network [the dWallet Network](https://dwallet.io), the _2PC_ protocol is:
   required to
   participate in signing, while abstracting away the internal structure of the decentralized party.
 - locality: centralized party is O(1): communication and computation complexities of the client remain independent of
-  the network
-  properties (e.g. size).
+  the network properties (e.g. size). Not fully implemented due to a restriction in bulletproofs, which are not actually aggregatable range proofs. Will be fixed in the future.
 
 The _MPC_ protocol, where the decentralized party emulates the second party in the _2PC_ protocol, is:
 
@@ -24,8 +23,8 @@ The _MPC_ protocol, where the decentralized party emulates the second party in t
   for use-cases where there is no trust between the parties so that no party can deny (DOS) the ability to sign in
   multiparty without being identified.
 - publicly verifiable: a sessions' result, whether it terminates in a successful output or in an identifiable abort, can
-  be cryptographically verified publicly, so that anyone (even if they are not a party in the protocol) can verify the
-  result from a transcript of the session, which contains the (signed) messages that all parties sent in that session.
+  be cryptographically verified publicly, so anyone (even if they are not a party in the protocol) can verify the
+  result from that session's transcript, containing the (signed) messages sent by all parties in that session.
 - scalable & massively-decentralized:
     - O(n) communication: linear-scaling in communication.
     - practically O(1) in computation: due to novel aggregation & amortization techniques, the amortized cost per-party
