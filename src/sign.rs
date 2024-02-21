@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
 use crate::Error;
-use group::{AffineXCoordinate, Invert, PrimeGroupElement};
+use group::{AffineXCoordinate, GroupElement, Invert, PrimeGroupElement};
+use std::ops::Neg;
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
@@ -22,6 +23,11 @@ fn verify_signature<
     m: GroupElement::Scalar,
     public_key: GroupElement,
 ) -> crate::Result<()> {
+    // Attend to malleability by not accepting non-normalized signatures.
+    if s.neg().value() < s.value() {
+        return Err(Error::SignatureVerification);
+    };
+
     let generator = public_key.generator();
     let inverted_s: GroupElement::Scalar =
         Option::from(s.invert()).ok_or(Error::SignatureVerification)?;
