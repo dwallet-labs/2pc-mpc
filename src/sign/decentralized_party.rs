@@ -25,7 +25,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::ops::Neg;
 
-use super::DIMENSION;
+use super::{verify_signature, DIMENSION};
 use crate::{
     dkg, presign, sign::centralized_party::PublicNonceEncryptedPartialSignatureAndProof, Error,
 };
@@ -386,14 +386,17 @@ where
         ))
     }
 
-    // TODO: seperate to struct?
+    #[allow(clippy::too_many_arguments)]
     pub fn decrypt_signature(
+        message: GroupElement::Scalar,
+        public_key: GroupElement,
+        nonce_x_coordinate: GroupElement::Scalar,
         lagrange_coefficients: HashMap<PartyID, DecryptionKeyShare::LagrangeCoefficient>,
         decryption_key_share_public_parameters: &DecryptionKeyShare::PublicParameters,
         scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
         partial_signature_decryption_shares: HashMap<PartyID, DecryptionKeyShare::DecryptionShare>,
         masked_nonce_decryption_shares: HashMap<PartyID, DecryptionKeyShare::DecryptionShare>,
-    ) -> crate::Result<GroupElement::Scalar> {
+    ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
         let partial_signature: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> =
             DecryptionKeyShare::combine_decryption_shares_semi_honest(
                 partial_signature_decryption_shares,
@@ -429,11 +432,8 @@ where
         let inverted_masked_nonce = masked_nonce.invert();
 
         if inverted_masked_nonce.is_none().into() {
-            // TODO: in this case I should report invalid signature, and everyone should send their proven decrypted share.
-            todo!();
+            return Err(Error::SignatureVerification);
         }
-
-        // TODO: what is meant by this OUtput Ua if ...
 
         // TODO: add logic where the decryption fails?
         // TODO: add logic where the decryption succeeds but the signature is invalid; as honest
@@ -457,9 +457,9 @@ where
             signature_s
         };
 
-        // TODO: verify signature
+        verify_signature(nonce_x_coordinate, signature_s, message, public_key)?;
 
-        Ok(signature_s)
+        Ok((nonce_x_coordinate, signature_s))
     }
 
     #[allow(clippy::too_many_arguments)]

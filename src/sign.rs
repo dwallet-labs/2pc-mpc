@@ -1,5 +1,9 @@
 // Author: dWallet Labs, LTD.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
+
+use crate::Error;
+use group::{AffineXCoordinate, Invert, PrimeGroupElement};
+
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
 
@@ -8,6 +12,25 @@ pub mod decentralized_party;
 
 /// The dimension of the Committed Affine Evaluation language used in the signing protocol.
 pub const DIMENSION: usize = 2;
+
+fn verify_signature<
+    const SCALAR_LIMBS: usize,
+    GroupElement: PrimeGroupElement<SCALAR_LIMBS> + AffineXCoordinate<SCALAR_LIMBS>,
+>(
+    r: GroupElement::Scalar,
+    s: GroupElement::Scalar,
+    m: GroupElement::Scalar,
+    public_key: GroupElement,
+) -> crate::Result<()> {
+    let generator = public_key.generator();
+    let inverted_s: GroupElement::Scalar =
+        Option::from(s.invert()).ok_or(Error::SignatureVerification)?;
+    if (((m * inverted_s) * generator) + ((r * inverted_s) * public_key)).x() != r {
+        return Err(Error::SignatureVerification);
+    }
+
+    Ok(())
+}
 
 #[cfg(any(test, feature = "benchmarking"))]
 #[allow(unused_imports)]
@@ -276,8 +299,22 @@ pub(crate) mod tests {
             })
             .unzip();
 
+        let public_nonce = centralized_party_nonce_share.invert().unwrap()
+            * decentralized_party_nonce_public_share; // $R = k_A^-1*k_B*G$
+
+        assert_eq!(
+            public_nonce,
+            secp256k1::GroupElement::new(
+                public_nonce_encrypted_partial_signature_and_proof.public_nonce,
+                &secp256k1_group_public_parameters,
+            )
+            .unwrap()
+        );
+
+        let nonce_x_coordinate = public_nonce.x(); // $r$
+
         let now = measurement.start();
-        let signature_s = decentralized_party::Party::<
+        let (returned_nonce_x_coordinate, signature_s) = decentralized_party::Party::<
             { secp256k1::SCALAR_LIMBS },
             { ristretto::SCALAR_LIMBS },
             { RANGE_CLAIMS_PER_SCALAR },
@@ -294,6 +331,9 @@ pub(crate) mod tests {
             >,
             PhantomData<()>,
         >::decrypt_signature(
+            m,
+            public_key,
+            nonce_x_coordinate,
             lagrange_coefficients,
             &decryption_key_share_public_parameters,
             secp256k1_scalar_public_parameters,
@@ -302,6 +342,8 @@ pub(crate) mod tests {
         )
         .unwrap();
         let decentralized_party_threshold_decryption_time = measurement.end(now);
+
+        assert_eq!(nonce_x_coordinate, returned_nonce_x_coordinate);
 
         println!(
             "\nProtocol, Number of Parties, Threshold, Batch Size, Centralized Party Total Time (ms), Decentralized Party Decryption Share Time (ms), Decentralized Party Threshold Decryption Time (ms)",
@@ -319,20 +361,6 @@ pub(crate) mod tests {
             decentralized_party_nonce_share * generator,
             decentralized_party_nonce_public_share
         );
-
-        let public_nonce = centralized_party_nonce_share.invert().unwrap()
-            * decentralized_party_nonce_public_share; // $R = k_A^-1*k_B*G$
-
-        assert_eq!(
-            public_nonce,
-            secp256k1::GroupElement::new(
-                public_nonce_encrypted_partial_signature_and_proof.public_nonce,
-                &secp256k1_group_public_parameters,
-            )
-            .unwrap()
-        );
-
-        let nonce_x_coordinate = public_nonce.x(); // $r$
 
         let nonce =
             centralized_party_nonce_share * decentralized_party_nonce_share.invert().unwrap();

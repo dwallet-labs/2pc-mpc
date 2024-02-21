@@ -261,8 +261,11 @@ pub(crate) mod tests {
                 })
                 .collect();
 
-        let decentralized_party_dkg_output =
-            decentralized_party_dkg_outputs.get(&1).unwrap().clone();
+        let decentralized_party_dkg_output = decentralized_party_dkg_outputs
+            .values()
+            .next()
+            .unwrap()
+            .clone();
 
         assert!(decentralized_party_dkg_outputs
             .clone()

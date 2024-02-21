@@ -27,6 +27,8 @@ pub enum Error {
     Serialization(#[from] serde_json::Error),
     #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]
     WrongDecommitment,
+    #[error("signature failed to verify")]
+    SignatureVerification,
     #[error("invalid public parameters")]
     InvalidPublicParameters,
     #[error("invalid parameters")]
