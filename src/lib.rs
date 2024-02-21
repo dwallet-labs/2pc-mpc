@@ -12,18 +12,24 @@ pub enum Error {
     Group(#[from] group::Error),
     #[error("commitment error")]
     Commitment(#[from] commitment::Error),
+    #[error("homomorphic encryption error")]
+    HomomorphicEncryption(#[from] homomorphic_encryption::Error),
     #[error("proof error")]
     Proof(#[from] ::proof::Error),
     #[error("maurer error")]
     Maurer(#[from] maurer::Error),
     #[error("enhanced maurer error")]
     EnhancedMaurer(#[from] enhanced_maurer::Error),
+    #[error("tiresias error")]
+    Tiresias(#[from] tiresias::Error),
     #[error("serialization/deserialization error")]
     Serialization(#[from] serde_json::Error),
     #[error("parties {:?} sent mismatching encrypted masks in the first and second proof aggregation protocols in the presign protocol", .0)]
     MismatchingEncrypedMasks(Vec<PartyID>),
     #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]
     WrongDecommitment,
+    #[error("invalid public parameters")]
+    InvalidPublicParameters,
     #[error("invalid parameters")]
     InvalidParameters,
     #[error("an internal error that should never have happened and signifies a bug")]

@@ -1,4 +1,4 @@
-// Author: dWallet Labs, LTD.
+// Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
 pub mod centralized_party;
@@ -35,14 +35,14 @@ pub(crate) mod tests {
     #[case(2, 2)]
     #[case(2, 4)]
     #[case(6, 9)]
-    fn generates_distributed_key(#[case] number_of_parties: PartyID, #[case] threshold: PartyID) {
+    fn generates_distributed_key(#[case] threshold: PartyID, #[case] number_of_parties: PartyID) {
         generates_distributed_key_internal(number_of_parties, threshold);
     }
 
     #[allow(dead_code)]
     pub fn generates_distributed_key_internal(
-        number_of_parties: PartyID,
         threshold: PartyID,
+        number_of_parties: PartyID,
     ) -> (
         centralized_party::Output<
             secp256k1::group_element::Value,
@@ -261,8 +261,11 @@ pub(crate) mod tests {
                 })
                 .collect();
 
-        let decentralized_party_dkg_output =
-            decentralized_party_dkg_outputs.get(&1).unwrap().clone();
+        let decentralized_party_dkg_output = decentralized_party_dkg_outputs
+            .values()
+            .next()
+            .unwrap()
+            .clone();
 
         assert!(decentralized_party_dkg_outputs
             .clone()
