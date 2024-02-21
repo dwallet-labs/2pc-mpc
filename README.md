@@ -23,7 +23,7 @@ The _MPC_ protocol, where the decentralized party emulates the second party in t
 - identifiable abort: malicious behavior aborts the protocol identifiably, which is extremely important
   for use-cases where there is no trust between the parties so that no party can deny (DOS) the ability to sign in
   multiparty without being identified.
-- publicly verifiable: a sessions' result, whether it terminates in a successful output or in an identifiable abort, can
+- publicly verifiable: a session's result, whether it terminates in a successful output or in an identifiable abort, can
   be cryptographically verified publicly, so anyone (even if they are not a party in the protocol) can verify the
   result from that session's transcript, containing the (signed) messages sent by all parties in that session.
 - scalable & massively-decentralized:
