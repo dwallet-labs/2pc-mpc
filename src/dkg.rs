@@ -35,14 +35,14 @@ pub(crate) mod tests {
     #[case(2, 2)]
     #[case(2, 4)]
     #[case(6, 9)]
-    fn generates_distributed_key(#[case] number_of_parties: PartyID, #[case] threshold: PartyID) {
+    fn generates_distributed_key(#[case] threshold: PartyID, #[case] number_of_parties: PartyID) {
         generates_distributed_key_internal(number_of_parties, threshold);
     }
 
     #[allow(dead_code)]
     pub fn generates_distributed_key_internal(
-        number_of_parties: PartyID,
         threshold: PartyID,
+        number_of_parties: PartyID,
     ) -> (
         centralized_party::Output<
             secp256k1::group_element::Value,
