@@ -1,0 +1,45 @@
+# 2pc-mpc
+
+This crate is the official implementation of
+the ["2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC"](https://eprint.iacr.org/2024/253) paper in pure Rust.
+
+It provides the distributed key generation (`dkg`), `presign` and `sign` protocols for multiparty ECDSA under the novel
+2PC-MPC access structure: a two-party ECDSA where the second party is fully emulated by a network of n parties.
+Designed with the use case of _dWallets_ in mind, where a user signs transactions with a massively-decentralized
+network [the dWallet Network](https://dwallet.io), the _2PC_ protocol is:
+
+- non-collusive: both the centralized party (the user) and (a threshold) of the decentralized party (network) are
+  required to
+  participate in signing, while abstracting away the internal structure of the decentralized party.
+- locality: centralized party is O(1): communication and computation complexities of the client remain independent of
+  the network
+  properties (e.g. size).
+
+The _MPC_ protocol, where the decentralized party emulates the second party in the _2PC_ protocol, is:
+
+- UC secure: meaning it is secure for composition with other UC protocols and allows multiple sessions to execute in
+  parallel.
+- broadcast-only: no P2P/unicast communication, instead this protocol assumes a reliable broadcast channel exclusively.
+- identifiable abort: malicious behavior aborts the protocol identifiably, which is extremely important
+  for use-cases where there is no trust between the parties so that no party can deny (DOS) the ability to sign in
+  multiparty without being identified.
+- publicly verifiable: a sessions' result, whether it terminates in a successful output or in an identifiable abort, can
+  be cryptographically verified publicly, so that anyone (even if they are not a party in the protocol) can verify the
+  result from a transcript of the session, which contains the (signed) messages that all parties sent in that session.
+- scalable & massively-decentralized:
+    - O(n) communication: linear-scaling in communication.
+    - practically O(1) in computation: due to novel aggregation & amortization techniques, the amortized cost per-party
+      remains constant up to *thousands of parties*.
+
+Note: this protocol can easily be used as a traditional Threshold ECDSA protocol by emulating a centralized party
+with `0` secrets.
+
+# Security
+
+We have gone through a rigorous internal auditing process throughout development, requiring the approval of two
+additional cryptographers and one additional programmer in every pull request.
+That being said, this code has not been audited by a third party yet; use it at your own risk.
+
+# Releases
+
+This code has no official releases yet, and we reserve the right to change some of the public API until then.
