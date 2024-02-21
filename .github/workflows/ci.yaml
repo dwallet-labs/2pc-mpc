@@ -51,6 +51,12 @@ jobs:
       - name: Configure git with personal access token
         run: |
           git config --global url."https://x-access-token:${{ env.GH_PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
+      - name: Verify repo license
+        run: |
+          chmod +x ./scripts/verify-license-rust.sh
+          chmod +x ./scripts/verify-license-presence.sh
+          ./scripts/verify-license-rust.sh
+          ./scripts/verify-license-presence.sh
       - name: Install Rust ${{ env.rust_stable }}
         uses: dtolnay/rust-toolchain@stable
         with:
