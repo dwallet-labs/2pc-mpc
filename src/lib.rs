@@ -20,6 +20,8 @@ pub enum Error {
     EnhancedMaurer(#[from] enhanced_maurer::Error),
     #[error("serialization/deserialization error")]
     Serialization(#[from] serde_json::Error),
+    #[error("parties {:?} sent mismatching encrypted masks in the first and second proof aggregation protocols in the presign protocol", .0)]
+    MismatchingEncrypedMasks(Vec<PartyID>),
     #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]
     WrongDecommitment,
     #[error("invalid parameters")]
