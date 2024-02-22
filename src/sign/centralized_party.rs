@@ -203,7 +203,6 @@ where
 
         let inverted_nonce_share = inverted_nonce_share.unwrap();
 
-        // TODO: name
         let public_nonce = inverted_nonce_share * self.decentralized_party_nonce_public_share; // $R$
 
         let commitment_scheme_public_parameters =
