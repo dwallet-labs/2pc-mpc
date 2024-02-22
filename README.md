@@ -1,7 +1,15 @@
 # 2pc-mpc
 
-This crate is the official implementation of
-the ["2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC"](https://eprint.iacr.org/2024/253) paper in pure Rust.
+This crate is the official pure-Rust implementation of
+the ["2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC"](https://eprint.iacr.org/2024/253) paper by
+
+- Offir Friedman, dWallet Labs
+- Avichai Marmor, dWallet Labs
+- Dolev Mutzari, dWallet Labs
+- Omer Sadika, dWallet Labs
+- Yehonatan C. Scaly, dWallet Labs
+- Yuval Spiizer, dWallet Labs
+- Avishay Yanai, dWallet Labs.
 
 It provides the distributed key generation (`dkg`), `presign` and `sign` protocols for multiparty ECDSA under the novel
 2PC-MPC access structure: a two-party ECDSA where the second party is fully emulated by a network of n parties.
