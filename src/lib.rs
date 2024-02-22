@@ -4,6 +4,7 @@
 use group::PartyID;
 pub mod dkg;
 pub mod presign;
+pub mod sign;
 
 /// 2PC-MPC error.
 #[derive(thiserror::Error, Debug)]
@@ -28,6 +29,8 @@ pub enum Error {
     MismatchingEncrypedMasks(Vec<PartyID>),
     #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]
     WrongDecommitment,
+    #[error("signature failed to verify")]
+    SignatureVerification,
     #[error("invalid public parameters")]
     InvalidPublicParameters,
     #[error("invalid parameters")]
@@ -51,3 +54,6 @@ pub(crate) mod tests {
     pub const RANGE_CLAIMS_PER_SCALAR: usize =
         Uint::<{ secp256k1::SCALAR_LIMBS }>::BITS / RANGE_CLAIM_BITS;
 }
+
+#[cfg(feature = "benchmarking")]
+criterion::criterion_group!(benches, sign::benchmark);

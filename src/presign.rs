@@ -50,8 +50,8 @@ pub(crate) mod tests {
     #[case(2, 4, 4)]
     #[case(6, 9, 2)]
     fn generates_presignatures(
-        #[case] number_of_parties: PartyID,
         #[case] threshold: PartyID,
+        #[case] number_of_parties: PartyID,
         #[case] batch_size: usize,
     ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
@@ -76,8 +76,8 @@ pub(crate) mod tests {
             .unwrap();
 
         generates_presignatures_internal(
-            number_of_parties,
             threshold,
+            number_of_parties,
             batch_size,
             encrypted_decentralized_party_secret_key_share,
         );
@@ -85,8 +85,8 @@ pub(crate) mod tests {
 
     #[allow(dead_code)]
     pub fn generates_presignatures_internal(
-        number_of_parties: u16,
         threshold: u16,
+        number_of_parties: u16,
         batch_size: usize,
         encrypted_decentralized_party_secret_key_share: tiresias::CiphertextSpaceGroupElement,
     ) -> (
