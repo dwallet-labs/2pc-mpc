@@ -3,6 +3,7 @@
 
 use group::PartyID;
 pub mod dkg;
+pub mod presign;
 
 /// 2PC-MPC error.
 #[derive(thiserror::Error, Debug)]
@@ -23,6 +24,8 @@ pub enum Error {
     Tiresias(#[from] tiresias::Error),
     #[error("serialization/deserialization error")]
     Serialization(#[from] serde_json::Error),
+    #[error("parties {:?} sent mismatching encrypted masks in the first and second proof aggregation protocols in the presign protocol", .0)]
+    MismatchingEncrypedMasks(Vec<PartyID>),
     #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]
     WrongDecommitment,
     #[error("invalid public parameters")]
