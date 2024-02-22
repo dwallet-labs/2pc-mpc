@@ -1,12 +1,13 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use crate::Error;
-use group::{AffineXCoordinate, GroupElement, Invert, PrimeGroupElement};
 use std::ops::Neg;
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
+use group::{AffineXCoordinate, GroupElement, Invert, PrimeGroupElement};
+
+use crate::Error;
 
 pub mod centralized_party;
 pub mod decentralized_party;
@@ -41,17 +42,10 @@ fn verify_signature<
 #[cfg(any(test, feature = "benchmarking"))]
 #[allow(unused_imports)]
 pub(crate) mod tests {
-    use commitment::{pedersen, Pedersen};
     use core::marker::PhantomData;
-    use std::ops::Neg;
-    use std::{collections::HashMap, time::Duration};
+    use std::{collections::HashMap, ops::Neg, time::Duration};
 
-    use super::*;
-    use crate::{
-        dkg::tests::generates_distributed_key_internal,
-        presign::tests::generates_presignatures_internal, tests::RANGE_CLAIMS_PER_SCALAR,
-    };
-    use commitment::HomomorphicCommitmentScheme;
+    use commitment::{pedersen, HomomorphicCommitmentScheme, Pedersen};
     use criterion::measurement::{Measurement, WallTime};
     use crypto_bigint::{NonZero, Uint, U256, U64};
     use ecdsa::{
@@ -74,10 +68,15 @@ pub(crate) mod tests {
     use rand::prelude::IteratorRandom;
     use rand_core::OsRng;
     use rstest::rstest;
-    use tiresias::test_exports::BASE;
     use tiresias::{
-        test_exports::{deal_trusted_shares, N, SECRET_KEY},
+        test_exports::{deal_trusted_shares, BASE, N, SECRET_KEY},
         AdjustedLagrangeCoefficientSizedNumber, DecryptionKeyShare,
+    };
+
+    use super::*;
+    use crate::{
+        dkg::tests::generates_distributed_key_internal,
+        presign::tests::generates_presignatures_internal, tests::RANGE_CLAIMS_PER_SCALAR,
     };
 
     pub(crate) const MASK_LIMBS: usize =

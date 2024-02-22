@@ -3,6 +3,8 @@
 
 #![allow(clippy::type_complexity)]
 
+use std::{collections::HashMap, ops::Neg};
+
 use commitment::{pedersen, GroupsPublicParametersAccessors as _, Pedersen};
 use crypto_bigint::{rand_core::CryptoRngCore, CheckedMul, Encoding, NonZero, Uint};
 use enhanced_maurer::{
@@ -22,8 +24,6 @@ use maurer::{
 };
 use proof::{range::PublicParametersAccessors, AggregatableRangeProof};
 use serde::Serialize;
-use std::collections::HashMap;
-use std::ops::Neg;
 
 use super::{verify_signature, DIMENSION};
 use crate::{
