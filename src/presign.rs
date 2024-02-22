@@ -1,4 +1,4 @@
-// Author: dWallet Labs, LTD.
+// Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #![allow(clippy::type_complexity)]
@@ -27,7 +27,9 @@ pub(crate) mod tests {
         GroupsPublicParametersAccessors,
     };
     use proof::{
-        aggregation::test_helpers::{aggregates, aggregates_multiple},
+        aggregation::test_helpers::{
+            aggregates, aggregates_multiple, commitment_round, decommitment_round,
+        },
         range::bulletproofs,
     };
     use rand::prelude::IteratorRandom;
@@ -202,7 +204,7 @@ pub(crate) mod tests {
             })
             .collect();
 
-        let (parties, decentralized_party_encrypted_masked_nonce_shares_round_parties): (
+        let (aggregation_parties, decentralized_party_encrypted_masked_nonce_shares_round_parties): (
             HashMap<_, _>,
             HashMap<_, _>,
         ) = decentralized_party_encrypted_masked_key_share_and_public_nonce_shares_parties
@@ -246,7 +248,7 @@ pub(crate) mod tests {
         let (
             decentralized_party_encrypted_masked_key_share_commitment_round_parties,
             decentralized_party_public_nonce_shares_commitment_round_parties,
-        ) = parties
+        ) = aggregation_parties
             .into_iter()
             .map(
                 |(
@@ -357,6 +359,23 @@ pub(crate) mod tests {
             .map(|encrypted_masked_nonce_share| *encrypted_masked_nonce_share.language_statement())
             .collect();
 
+        // Above we use `aggregates` which does not return the messages, so we have to do a
+        // hot-patch just for the test. In a real use-case we'd run the
+        // aggregation protocol and save the statements from the decommitments, then pass these here
+        // instead.
+        // TODO: test properly
+        let individual_encrypted_nonce_shares_and_public_shares = parties
+            .clone()
+            .into_iter()
+            .map(|party_id| (party_id, encrypted_nonce_shares_and_public_shares.clone()))
+            .collect();
+
+        let individual_encrypted_masked_nonce_shares = parties
+            .clone()
+            .into_iter()
+            .map(|party_id| (party_id, encrypted_masked_nonce_shares.clone()))
+            .collect();
+
         let decentralized_party_presigns = decentralized_party::Presign::new_batch::<
             { secp256k1::SCALAR_LIMBS },
             { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
@@ -364,9 +383,12 @@ pub(crate) mod tests {
             tiresias::EncryptionKey,
             PhantomData<()>,
         >(
+            parties,
             centralized_party_nonce_shares_commitments_and_batched_proof,
             masks_and_encrypted_masked_key_share,
+            individual_encrypted_nonce_shares_and_public_shares,
             encrypted_nonce_shares_and_public_shares,
+            individual_encrypted_masked_nonce_shares,
             encrypted_masked_nonce_shares,
             &secp256k1_group_public_parameters,
         )

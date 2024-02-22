@@ -1,4 +1,4 @@
-// Author: dWallet Labs, LTD.
+// Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #![allow(clippy::type_complexity)]
@@ -435,18 +435,6 @@ where
             return Err(Error::SignatureVerification);
         }
 
-        // TODO: add logic where the decryption fails?
-        // TODO: add logic where the decryption succeeds but the signature is invalid; as honest
-        // verifier I should wish to see proofs for everyone. As malicious verifier, other honest
-        // verifiers should request to see proofs, and if all pass, blame me for wrong decryption.
-
-        // TODO: get r too, verify the sig, don't output if fails? or have it externally?
-
-        // TODO: have the signature verification party for both decentralized & centralized party?
-        // if so, should I put the malicious detection logic in this party?
-
-        // TODO: what about malleability?
-
         let signature_s = inverted_masked_nonce.unwrap() * partial_signature;
         let negated_signature_s = signature_s.neg();
 
@@ -526,6 +514,4 @@ where
             centralized_party_nonce_share_commitment,
         })
     }
-
-    // TODO: add verify signature function for advancing the party for all lazy parties.
 }

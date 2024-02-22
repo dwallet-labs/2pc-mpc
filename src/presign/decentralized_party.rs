@@ -1,5 +1,7 @@
-// Author: dWallet Labs, LTD.
+// Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
+
+use std::collections::{HashMap, HashSet};
 
 use commitment::Pedersen;
 use crypto_bigint::{Encoding, Uint};
@@ -8,7 +10,7 @@ use enhanced_maurer::{
     encryption_of_tuple, encryption_of_tuple::StatementAccessors as _,
     language::EnhancedLanguageStatementAccessors, EnhanceableLanguage,
 };
-use group::{GroupElement as _, PrimeGroupElement, Samplable};
+use group::{GroupElement as _, PartyID, PrimeGroupElement, Samplable};
 use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
 use maurer::{knowledge_of_decommitment, SOUND_PROOFS_REPETITIONS};
 use proof::{range, AggregatableRangeProof};
@@ -285,18 +287,28 @@ pub struct Presign<GroupElementValue, CiphertextValue> {
     pub(crate) encrypted_masked_nonce_share: CiphertextValue,               // \ct_4
 }
 
-impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextValue> {
+impl<GroupElementValue, CiphertextValue: PartialEq> Presign<GroupElementValue, CiphertextValue> {
     pub fn new<
         const SCALAR_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     >(
+        parties: HashSet<PartyID>,
         centralized_party_nonce_share_commitment: GroupElement,
         mask_and_encrypted_masked_key_share: encryption_of_tuple::StatementSpaceGroupElement<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
             EncryptionKey,
+        >,
+        individual_encrypted_nonce_share_and_public_share: HashMap<
+            PartyID,
+            encryption_of_discrete_log::StatementSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
         >,
         encrypted_nonce_share_and_public_share: encryption_of_discrete_log::StatementSpaceGroupElement<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
@@ -304,12 +316,20 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
             GroupElement,
             EncryptionKey,
         >,
+        individual_encrypted_masked_nonce_share: HashMap<
+            PartyID,
+            encryption_of_tuple::StatementSpaceGroupElement<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                EncryptionKey,
+            >,
+        >,
         encrypted_masked_nonce_share: encryption_of_tuple::StatementSpaceGroupElement<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
             EncryptionKey,
         >,
-    ) -> Self
+    ) -> Result<Self>
     where
         GroupElement: group::GroupElement<Value = GroupElementValue>,
         EncryptionKey::CiphertextSpaceGroupElement: group::GroupElement<Value = CiphertextValue>,
@@ -326,21 +346,66 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
             .base_by_discrete_log()
             .value();
 
+        if encrypted_nonce_share_and_public_share.encrypted_discrete_log()
+            != encrypted_masked_nonce_share.encrypted_multiplicand()
+        {
+            let malicious_parties: Vec<_> = parties
+                .into_iter()
+                .map(|party_id| {
+                    individual_encrypted_nonce_share_and_public_share
+                        .get(&party_id)
+                        .map(|x| x.encrypted_discrete_log())
+                        .zip(
+                            individual_encrypted_masked_nonce_share
+                                .get(&party_id)
+                                .map(|x| x.encrypted_multiplicand()),
+                        )
+                        .map(
+                            |(
+                                first_round_encrypted_mask_share,
+                                second_round_encrypted_mask_share,
+                            )| {
+                                (
+                                    party_id,
+                                    (
+                                        first_round_encrypted_mask_share,
+                                        second_round_encrypted_mask_share,
+                                    ),
+                                )
+                            },
+                        )
+                        .ok_or(Error::InvalidParameters)
+                })
+                .collect::<Result<HashMap<_, _>>>()?
+                .into_iter()
+                .filter(
+                    |(_, (first_round_encrypted_mask_share, second_round_encrypted_mask_share))| {
+                        first_round_encrypted_mask_share != second_round_encrypted_mask_share
+                    },
+                )
+                .map(|(party_id, _)| party_id)
+                .collect();
+
+            if malicious_parties.is_empty() {
+                return Err(Error::InvalidParameters);
+            }
+
+            return Err(Error::MismatchingEncrypedMasks(malicious_parties));
+        }
+
         let encrypted_masked_nonce_share = encrypted_masked_nonce_share.encrypted_product().value();
 
-        // TODO: match encrypted nonce E(k) from both the previous round
-        // aggregation and the current one, and IA.
-
-        Presign {
+        Ok(Presign {
             centralized_party_nonce_share_commitment: centralized_party_nonce_share_commitment
                 .value(),
             nonce_public_share,
             encrypted_mask,
             encrypted_masked_key_share,
             encrypted_masked_nonce_share,
-        }
+        })
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_batch<
         const SCALAR_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
@@ -348,13 +413,14 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         ProtocolContext: Clone + Serialize,
     >(
+        parties: HashSet<PartyID>,
         centralized_party_nonce_shares_commitments_and_batched_proof:
-        SignatureNonceSharesCommitmentsAndBatchedProof<SCALAR_LIMBS, GroupElement::Value, maurer::Proof<
-        SOUND_PROOFS_REPETITIONS,
-        knowledge_of_decommitment::Language<
-        SOUND_PROOFS_REPETITIONS,
-        SCALAR_LIMBS,
-        Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
+            SignatureNonceSharesCommitmentsAndBatchedProof<SCALAR_LIMBS, GroupElement::Value, maurer::Proof<
+            SOUND_PROOFS_REPETITIONS,
+            knowledge_of_decommitment::Language<
+                SOUND_PROOFS_REPETITIONS,
+            SCALAR_LIMBS,
+            Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >,
         ProtocolContext,
         >,>,
@@ -365,12 +431,33 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
                 EncryptionKey,
             >,
         >,
+        individual_encrypted_nonce_shares_and_public_shares: HashMap<
+            PartyID,
+            Vec<
+                encryption_of_discrete_log::StatementSpaceGroupElement<
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    SCALAR_LIMBS,
+                    GroupElement,
+                    EncryptionKey,
+                >,
+            >,
+        >,
         encrypted_nonce_shares_and_public_shares: Vec<
             encryption_of_discrete_log::StatementSpaceGroupElement<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 SCALAR_LIMBS,
                 GroupElement,
                 EncryptionKey,
+            >,
+        >,
+        individual_encrypted_masked_nonce_shares: HashMap<
+            PartyID,
+            Vec<
+                encryption_of_tuple::StatementSpaceGroupElement<
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    SCALAR_LIMBS,
+                    EncryptionKey,
+                >,
             >,
         >,
         encrypted_masked_nonce_shares: Vec<
@@ -386,6 +473,23 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
         GroupElement: group::GroupElement<Value = GroupElementValue>,
         EncryptionKey::CiphertextSpaceGroupElement: group::GroupElement<Value = CiphertextValue>,
     {
+        let batch_size = centralized_party_nonce_shares_commitments_and_batched_proof
+            .commitments
+            .len();
+
+        if individual_encrypted_nonce_shares_and_public_shares
+            .iter()
+            .any(|(_, v)| v.len() != batch_size)
+            || individual_encrypted_masked_nonce_shares
+                .iter()
+                .any(|(_, v)| v.len() != batch_size)
+            || masks_and_encrypted_masked_key_share.len() != batch_size
+            || encrypted_nonce_shares_and_public_shares.len() != batch_size
+            || encrypted_masked_nonce_shares.len() != batch_size
+        {
+            return Err(Error::InvalidParameters);
+        }
+
         let centralized_party_nonce_shares_commitments =
             centralized_party_nonce_shares_commitments_and_batched_proof
                 .commitments
@@ -393,38 +497,22 @@ impl<GroupElementValue, CiphertextValue> Presign<GroupElementValue, CiphertextVa
                 .map(|value| GroupElement::new(value, group_public_parameters))
                 .collect::<group::Result<Vec<_>>>()?;
 
-        let presigns: Vec<_> = centralized_party_nonce_shares_commitments
-            .into_iter()
-            .zip(
-                masks_and_encrypted_masked_key_share.into_iter().zip(
-                    encrypted_nonce_shares_and_public_shares
-                        .into_iter()
-                        .zip(encrypted_masked_nonce_shares),
-                ),
+        // safe to access vector indices as we've checked the lengths.
+        (0..batch_size).map(|i|
+            Self::new::<
+                SCALAR_LIMBS,
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >(
+                parties.clone(),
+                centralized_party_nonce_shares_commitments[i].clone(),
+                masks_and_encrypted_masked_key_share[i].clone(),
+                individual_encrypted_nonce_shares_and_public_shares.iter().map(|(party_id, statements)| (*party_id, statements[i].clone())).collect(),
+                encrypted_nonce_shares_and_public_shares[i].clone(),
+                individual_encrypted_masked_nonce_shares.iter().map(|(party_id, statements)| (*party_id, statements[i].clone())).collect(),
+                encrypted_masked_nonce_shares[i].clone(),
             )
-            .map(
-                |(
-                    centralized_party_nonce_share_commitment,
-                    (
-                        mask_and_encrypted_masked_key_share,
-                        (encrypted_nonce_share_and_public_share, encrypted_masked_nonce_share),
-                    ),
-                )| {
-                    Self::new::<
-                        SCALAR_LIMBS,
-                        PLAINTEXT_SPACE_SCALAR_LIMBS,
-                        GroupElement,
-                        EncryptionKey,
-                    >(
-                        centralized_party_nonce_share_commitment,
-                        mask_and_encrypted_masked_key_share,
-                        encrypted_nonce_share_and_public_share,
-                        encrypted_masked_nonce_share,
-                    )
-                },
-            )
-            .collect();
-
-        Ok(presigns)
+        ).collect()
     }
 }
