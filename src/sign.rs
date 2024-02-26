@@ -76,16 +76,16 @@ pub(crate) mod tests {
     use super::*;
     use crate::{
         dkg::tests::generates_distributed_key_internal,
-        presign::tests::generates_presignatures_internal, tests::RANGE_CLAIMS_PER_SCALAR,
+        presign::tests::generates_presignatures_internal,
+        sign::decentralized_party::signature_partial_decryption_round,
+        tests::RANGE_CLAIMS_PER_SCALAR,
     };
 
     pub(crate) const MASK_LIMBS: usize =
         secp256k1::SCALAR_LIMBS + StatisticalSecuritySizedNumber::LIMBS + U64::LIMBS;
 
-    // TODO: it's ok to take next power of two here right
-    // TODO: no MASK_LIMBS. Instead, have some upper bound on the upper bounds
     pub(crate) const RANGE_CLAIMS_PER_MASK: usize =
-        (Uint::<MASK_LIMBS>::BITS / bulletproofs::RANGE_CLAIM_BITS).next_power_of_two();
+        Uint::<MASK_LIMBS>::BITS / bulletproofs::RANGE_CLAIM_BITS;
 
     pub(crate) const NUM_RANGE_CLAIMS: usize =
         DIMENSION * RANGE_CLAIMS_PER_SCALAR + RANGE_CLAIMS_PER_MASK;
@@ -144,37 +144,39 @@ pub(crate) mod tests {
 
         let public_key = centralized_party_public_key_share + decentralized_party_public_key_share;
 
-        let centralized_party_sign_round_party = centralized_party::Party::<
-            { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
-            { secp256k1::SCALAR_LIMBS },
-            { RANGE_CLAIMS_PER_SCALAR },
-            { RANGE_CLAIMS_PER_MASK },
-            { ristretto::SCALAR_LIMBS },
-            { NUM_RANGE_CLAIMS },
-            secp256k1::GroupElement,
-            tiresias::EncryptionKey,
-            bulletproofs::RangeProof,
-            direct_product::GroupElement<
-                self_product::GroupElement<DIMENSION, secp256k1::Scalar>,
-                tiresias::RandomnessSpaceGroupElement,
-            >,
-            PhantomData<()>,
-        > {
-            protocol_context: PhantomData::<()>,
-            scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
-            group_public_parameters: secp256k1_group_public_parameters.clone(),
-            encryption_scheme_public_parameters: paillier_public_parameters.clone(),
-            unbounded_dcom_eval_witness_public_parameters:
-                unbounded_dcom_eval_witness_public_parameters.clone(),
-            range_proof_public_parameters: bulletproofs_public_parameters.clone(),
-            secret_key_share: centralized_party_secret_key_share,
-            public_key_share: centralized_party_public_key_share,
-            nonce_share_commitment_randomness,
-            nonce_share: centralized_party_nonce_share,
-            decentralized_party_nonce_public_share,
-            encrypted_mask,
-            encrypted_masked_key_share,
-        };
+        let centralized_party_signature_homomorphic_evaluation_round_party =
+            centralized_party::signature_homomorphic_evaluation_round::Party::<
+                { secp256k1::SCALAR_LIMBS },
+                { RANGE_CLAIMS_PER_SCALAR },
+                { RANGE_CLAIMS_PER_MASK },
+                { ristretto::SCALAR_LIMBS },
+                { NUM_RANGE_CLAIMS },
+                { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                secp256k1::GroupElement,
+                tiresias::EncryptionKey,
+                bulletproofs::RangeProof,
+                direct_product::GroupElement<
+                    self_product::GroupElement<DIMENSION, secp256k1::Scalar>,
+                    tiresias::RandomnessSpaceGroupElement,
+                >,
+                PhantomData<()>,
+            > {
+                protocol_context: PhantomData::<()>,
+                scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
+                group_public_parameters: secp256k1_group_public_parameters.clone(),
+                encryption_scheme_public_parameters: paillier_public_parameters.clone(),
+                unbounded_dcom_eval_witness_public_parameters:
+                    unbounded_dcom_eval_witness_public_parameters.clone(),
+                range_proof_public_parameters: bulletproofs_public_parameters.clone(),
+                public_key,
+                secret_key_share: centralized_party_secret_key_share,
+                public_key_share: centralized_party_public_key_share,
+                nonce_share_commitment_randomness,
+                nonce_share: centralized_party_nonce_share,
+                decentralized_party_nonce_public_share,
+                encrypted_mask,
+                encrypted_masked_key_share,
+            };
 
         let message = "singing!";
 
@@ -189,7 +191,10 @@ pub(crate) mod tests {
         let m = U256::from(m).into();
 
         let now = measurement.start();
-        let public_nonce_encrypted_partial_signature_and_proof = centralized_party_sign_round_party
+        let (
+            public_nonce_encrypted_partial_signature_and_proof,
+            signature_verification_round_party,
+        ) = centralized_party_signature_homomorphic_evaluation_round_party
             .evaluate_encrypted_partial_signature(m, &mut OsRng)
             .unwrap();
         centralized_party_total_time =
@@ -218,13 +223,14 @@ pub(crate) mod tests {
             .collect();
 
         let decrypters: Vec<_> = decryption_key_shares.clone().into_keys().collect();
+        let evaluation_party_id = *decrypters.first().unwrap();
 
         let decentralized_party_sign_round_parties: HashMap<_, _> = decryption_key_shares
             .into_iter()
             .map(|(party_id, decryption_key_share)| {
                 (
                     party_id,
-                    decentralized_party::Party::<
+                    signature_partial_decryption_round::Party::<
                         { secp256k1::SCALAR_LIMBS },
                         { ristretto::SCALAR_LIMBS },
                         { RANGE_CLAIMS_PER_SCALAR },
@@ -252,6 +258,7 @@ pub(crate) mod tests {
                             unbounded_dcom_eval_witness_public_parameters.clone(),
                         range_proof_public_parameters: bulletproofs_public_parameters.clone(),
                         nonce_public_share: decentralized_party_nonce_public_share,
+                        public_key,
                         encrypted_mask,
                         encrypted_masked_key_share,
                         encrypted_masked_nonce_share,
@@ -279,30 +286,41 @@ pub(crate) mod tests {
                 })
                 .collect();
 
-        let (partial_signature_decryption_shares, masked_nonce_decryption_shares): (
-            HashMap<_, _>,
+        let (decryption_shares, signature_threshold_decryption_round_parties): (
+            Vec<_>,
             HashMap<_, _>,
         ) = decentralized_party_sign_round_parties
             .into_iter()
             .map(|(party_id, party)| {
                 let now = measurement.start();
-                let (partial_signature_decryption_share, masked_nonce_decryption_share) = party
+                let (
+                    (partial_signature_decryption_share, masked_nonce_decryption_share),
+                    signature_threshold_decryption_round_party,
+                ) = party
                     .partially_decrypt_encrypted_signature_parts(
                         m,
                         public_nonce_encrypted_partial_signature_and_proof.clone(),
                         &mut OsRng,
                     )
                     .unwrap();
-                if party_id == 1 {
+                if party_id == evaluation_party_id {
                     decentralized_party_decryption_share_time = measurement.end(now);
                 };
 
                 (
-                    (party_id, partial_signature_decryption_share),
-                    (party_id, masked_nonce_decryption_share),
+                    (
+                        (party_id, partial_signature_decryption_share),
+                        (party_id, masked_nonce_decryption_share),
+                    ),
+                    (party_id, signature_threshold_decryption_round_party),
                 )
             })
             .unzip();
+
+        let (partial_signature_decryption_shares, masked_nonce_decryption_shares): (
+            HashMap<_, _>,
+            HashMap<_, _>,
+        ) = decryption_shares.into_iter().unzip();
 
         let public_nonce = centralized_party_nonce_share.invert().unwrap()
             * decentralized_party_nonce_public_share; // $R = k_A^-1*k_B*G$
@@ -318,37 +336,31 @@ pub(crate) mod tests {
 
         let nonce_x_coordinate = public_nonce.x(); // $r$
 
+        // choose some party as the amortized threshold decryption party
+        let signature_threshold_decryption_round_party =
+            signature_threshold_decryption_round_parties
+                .into_values()
+                .next()
+                .unwrap();
+
         let now = measurement.start();
-        let (returned_nonce_x_coordinate, signature_s) = decentralized_party::Party::<
-            { secp256k1::SCALAR_LIMBS },
-            { ristretto::SCALAR_LIMBS },
-            { RANGE_CLAIMS_PER_SCALAR },
-            { RANGE_CLAIMS_PER_MASK },
-            { NUM_RANGE_CLAIMS },
-            { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
-            secp256k1::GroupElement,
-            tiresias::EncryptionKey,
-            DecryptionKeyShare,
-            bulletproofs::RangeProof,
-            direct_product::GroupElement<
-                self_product::GroupElement<DIMENSION, secp256k1::Scalar>,
-                tiresias::RandomnessSpaceGroupElement,
-            >,
-            PhantomData<()>,
-        >::decrypt_signature(
-            m,
-            public_key,
-            nonce_x_coordinate,
-            lagrange_coefficients,
-            &decryption_key_share_public_parameters,
-            secp256k1_scalar_public_parameters,
-            partial_signature_decryption_shares,
-            masked_nonce_decryption_shares,
-        )
-        .unwrap();
+        let (returned_nonce_x_coordinate, signature_s) = signature_threshold_decryption_round_party
+            .decrypt_signature(
+                lagrange_coefficients,
+                partial_signature_decryption_shares,
+                masked_nonce_decryption_shares,
+            )
+            .unwrap();
         let decentralized_party_threshold_decryption_time = measurement.end(now);
 
         assert_eq!(nonce_x_coordinate, returned_nonce_x_coordinate);
+
+        let now = measurement.start();
+        signature_verification_round_party
+            .verify_signature(nonce_x_coordinate, signature_s)
+            .unwrap();
+        centralized_party_total_time =
+            measurement.add(&centralized_party_total_time, &measurement.end(now));
 
         println!(
             "\nProtocol, Number of Parties, Threshold, Batch Size, Centralized Party Total Time (ms), Decentralized Party Decryption Share Time (ms), Decentralized Party Threshold Decryption Time (ms)",
