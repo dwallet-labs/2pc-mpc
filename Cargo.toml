@@ -42,6 +42,3 @@ benchmarking = ["dep:criterion", "dep:rand_core", "dep:rstest", "dep:ecdsa", "de
 [[bench]]
 name = "benches"
 harness = false
-
-[patch.'https://github.com/dwallet-labs/homomorphic-encryption.git']
-homomorphic_encryption = { git = 'https://github.com:443/dwallet-labs/homomorphic-encryption.git?rev=tmp', branch = 'tmp' }
