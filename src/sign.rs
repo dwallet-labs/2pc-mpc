@@ -247,6 +247,7 @@ pub(crate) mod tests {
                         >,
                         PhantomData<()>,
                     > {
+                        threshold,
                         decryption_key_share,
                         decryption_key_share_public_parameters:
                             decryption_key_share_public_parameters.clone(),

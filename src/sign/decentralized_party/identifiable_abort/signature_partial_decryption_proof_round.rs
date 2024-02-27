@@ -4,7 +4,7 @@
 use commitment::Pedersen;
 use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
 use enhanced_maurer::{committed_linear_evaluation, EnhanceableLanguage};
-use group::{GroupElement, PrimeGroupElement, Samplable};
+use group::{GroupElement, PartyID, PrimeGroupElement, Samplable};
 use homomorphic_encryption::{
     AdditivelyHomomorphicDecryptionKeyShare, AdditivelyHomomorphicEncryptionKey,
     GroupsPublicParametersAccessors,
@@ -31,6 +31,7 @@ pub struct Party<
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     DecryptionKeyShare: AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
 > {
+    pub(in crate::sign) threshold: PartyID,
     pub(in crate::sign) decryption_key_share: DecryptionKeyShare,
     pub(in crate::sign) decryption_key_share_public_parameters:
         DecryptionKeyShare::PublicParameters,
@@ -69,6 +70,7 @@ where
 
         let signature_partial_decryption_verification_round_party =
             signature_partial_decryption_verification_round::Party {
+                threshold: self.threshold,
                 decryption_key_share_public_parameters: self.decryption_key_share_public_parameters,
                 encrypted_partial_signature: self.encrypted_partial_signature,
                 encrypted_masked_nonce_share: self.encrypted_masked_nonce_share,
@@ -88,6 +90,7 @@ where
         UnboundedDComEvalWitness: group::GroupElement + Samplable,
         ProtocolContext: Clone + Serialize,
     >(
+        threshold: PartyID,
         decryption_key_share: DecryptionKeyShare,
         decryption_key_share_public_parameters: DecryptionKeyShare::PublicParameters,
         presign: presign::decentralized_party::Presign<
@@ -187,6 +190,7 @@ where
         )?;
 
         Ok(Self {
+            threshold,
             decryption_key_share,
             decryption_key_share_public_parameters,
             encrypted_partial_signature,

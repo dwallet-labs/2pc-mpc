@@ -1,7 +1,10 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use std::{collections::HashMap, ops::Neg};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Neg,
+};
 
 use crypto_bigint::{NonZero, Uint};
 use group::{
@@ -22,13 +25,12 @@ pub struct Party<
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     DecryptionKeyShare: AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
 > {
-    pub(in crate::sign) decryption_key_share_public_parameters:
-        DecryptionKeyShare::PublicParameters,
-    pub(in crate::sign) scalar_group_public_parameters:
-        group::PublicParameters<GroupElement::Scalar>,
-    pub(in crate::sign) message: GroupElement::Scalar,
-    pub(in crate::sign) public_key: GroupElement,
-    pub(in crate::sign) nonce_x_coordinate: GroupElement::Scalar,
+    pub(super) threshold: PartyID,
+    pub(super) decryption_key_share_public_parameters: DecryptionKeyShare::PublicParameters,
+    pub(super) scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+    pub(super) message: GroupElement::Scalar,
+    pub(super) public_key: GroupElement,
+    pub(super) nonce_x_coordinate: GroupElement::Scalar,
 }
 
 impl<
@@ -61,9 +63,22 @@ where
         partial_signature_decryption_shares: HashMap<PartyID, DecryptionKeyShare::DecryptionShare>,
         masked_nonce_decryption_shares: HashMap<PartyID, DecryptionKeyShare::DecryptionShare>,
     ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
-        // TODO: should I here make sure exactly the pariticipants that I expected sent the
-        // messages, and that's its the same participants in both? and that its exactly threshold?
-        // And that they match the lagrange coefficients?
+        let decrypters: HashSet<_> = lagrange_coefficients.clone().into_keys().collect();
+        if decrypters.len() != usize::from(self.threshold)
+            || decrypters
+                != partial_signature_decryption_shares
+                    .keys()
+                    .cloned()
+                    .collect::<HashSet<_>>()
+            || decrypters
+                != masked_nonce_decryption_shares
+                    .keys()
+                    .cloned()
+                    .collect::<HashSet<_>>()
+        {
+            return Err(Error::InvalidParameters);
+        }
+
         let partial_signature: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> =
             DecryptionKeyShare::combine_decryption_shares_semi_honest(
                 partial_signature_decryption_shares,

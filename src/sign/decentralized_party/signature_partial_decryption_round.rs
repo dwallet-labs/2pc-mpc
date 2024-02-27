@@ -7,7 +7,7 @@ use enhanced_maurer::{
     committed_linear_evaluation, language::composed_witness_upper_bound, EnhanceableLanguage,
     EnhancedPublicParameters,
 };
-use group::{AffineXCoordinate, GroupElement, PrimeGroupElement, Samplable};
+use group::{AffineXCoordinate, GroupElement, PartyID, PrimeGroupElement, Samplable};
 use homomorphic_encryption::{
     AdditivelyHomomorphicDecryptionKeyShare, AdditivelyHomomorphicEncryptionKey,
     GroupsPublicParametersAccessors,
@@ -42,6 +42,7 @@ pub struct Party<
     UnboundedDComEvalWitness: group::GroupElement + Samplable,
     ProtocolContext: Clone + Serialize,
 > {
+    pub(in crate::sign) threshold: PartyID,
     pub(in crate::sign) decryption_key_share: DecryptionKeyShare,
     pub(in crate::sign) decryption_key_share_public_parameters:
         DecryptionKeyShare::PublicParameters,
@@ -394,6 +395,7 @@ where
 
         let signature_threhsold_decryption_round_party =
             signature_threhsold_decryption_round::Party {
+                threshold: self.threshold,
                 decryption_key_share_public_parameters: self.decryption_key_share_public_parameters,
                 scalar_group_public_parameters: self.scalar_group_public_parameters,
                 message,
@@ -412,6 +414,7 @@ where
 
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        threshold: PartyID,
         decryption_key_share: DecryptionKeyShare,
         decryption_key_share_public_parameters: DecryptionKeyShare::PublicParameters,
         protocol_context: ProtocolContext,
@@ -460,6 +463,7 @@ where
         )?;
 
         Ok(Self {
+            threshold,
             decryption_key_share,
             decryption_key_share_public_parameters,
             protocol_context,

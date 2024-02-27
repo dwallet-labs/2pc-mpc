@@ -1,7 +1,7 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crypto_bigint::rand_core::CryptoRngCore;
 use group::PartyID;
@@ -17,6 +17,7 @@ pub struct Party<
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     DecryptionKeyShare: AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
 > {
+    pub(super) threshold: PartyID,
     pub(super) decryption_key_share_public_parameters: DecryptionKeyShare::PublicParameters,
     pub(super) encrypted_partial_signature: EncryptionKey::CiphertextSpaceGroupElement,
     pub(super) encrypted_masked_nonce_share: EncryptionKey::CiphertextSpaceGroupElement,
@@ -41,22 +42,50 @@ where
         >,
         rng: &mut impl CryptoRngCore,
     ) -> Error {
-        // TODO: identifiable abort of non-responding parties
-        // if partial_signature_decryption_shares.keys().into_iter() !=
-        // masked_nonce_decryption_shares.keys().into_iter() ||
-        // masked_nonce_decryption_shares.keys().into_iter() !=
-        // signature_partial_decryption_proofs.keys().into_iter() {     return
-        // Error::InvalidParameters; }
+        let decrypters: HashSet<_> = lagrange_coefficients.clone().into_keys().collect();
 
-        // TODO: iterate over parties
-        let decryption_shares_and_proofs = partial_signature_decryption_shares
+        if decrypters.len() != usize::from(self.threshold)
+            || decrypters
+                != partial_signature_decryption_shares
+                    .keys()
+                    .cloned()
+                    .collect::<HashSet<_>>()
+            || decrypters
+                != masked_nonce_decryption_shares
+                    .keys()
+                    .cloned()
+                    .collect::<HashSet<_>>()
+        {
+            return Error::InvalidParameters;
+        }
+
+        let provers: HashSet<_> = signature_partial_decryption_proofs
+            .clone()
+            .into_keys()
+            .filter(|pid| decrypters.contains(pid))
+            .collect();
+
+        let mut unresponsive_parties: Vec<PartyID> =
+            decrypters.difference(&provers).cloned().collect();
+
+        unresponsive_parties.sort();
+
+        if !unresponsive_parties.is_empty() {
+            return Error::UnresponsiveParties(unresponsive_parties);
+        }
+
+        // safe to unwrap as we've checked the keys of the maps all exists.
+        let decryption_shares_and_proofs = decrypters
             .into_iter()
-            .map(|(party_id, partial_signature_decryption_share)| {
+            .map(|party_id| {
                 (
                     party_id,
                     (
                         vec![
-                            partial_signature_decryption_share,
+                            partial_signature_decryption_shares
+                                .get(&party_id)
+                                .unwrap()
+                                .clone(),
                             masked_nonce_decryption_shares
                                 .get(&party_id)
                                 .unwrap()
