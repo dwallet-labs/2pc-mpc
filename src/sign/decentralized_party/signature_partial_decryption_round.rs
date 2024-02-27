@@ -185,9 +185,6 @@ where
         ),
         signature_threhsold_decryption_round::Party<
             SCALAR_LIMBS,
-            RANGE_CLAIMS_PER_SCALAR,
-            RANGE_CLAIMS_PER_MASK,
-            NUM_RANGE_CLAIMS,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
             EncryptionKey,

@@ -17,9 +17,6 @@ use crate::{sign::verify_signature, Error};
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
     const SCALAR_LIMBS: usize,
-    const RANGE_CLAIMS_PER_SCALAR: usize,
-    const RANGE_CLAIMS_PER_MASK: usize,
-    const NUM_RANGE_CLAIMS: usize,
     const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
     EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
@@ -36,9 +33,6 @@ pub struct Party<
 
 impl<
         const SCALAR_LIMBS: usize,
-        const RANGE_CLAIMS_PER_SCALAR: usize,
-        const RANGE_CLAIMS_PER_MASK: usize,
-        const NUM_RANGE_CLAIMS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
         GroupElement: PrimeGroupElement<SCALAR_LIMBS> + AffineXCoordinate<SCALAR_LIMBS> + group::HashToGroup,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
@@ -46,9 +40,6 @@ impl<
     >
     Party<
         SCALAR_LIMBS,
-        RANGE_CLAIMS_PER_SCALAR,
-        RANGE_CLAIMS_PER_MASK,
-        NUM_RANGE_CLAIMS,
         PLAINTEXT_SPACE_SCALAR_LIMBS,
         GroupElement,
         EncryptionKey,
@@ -70,6 +61,9 @@ where
         partial_signature_decryption_shares: HashMap<PartyID, DecryptionKeyShare::DecryptionShare>,
         masked_nonce_decryption_shares: HashMap<PartyID, DecryptionKeyShare::DecryptionShare>,
     ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
+        // TODO: should I here make sure exactly the pariticipants that I expected sent the
+        // messages, and that's its the same participants in both? and that its exactly threshold?
+        // And that they match the lagrange coefficients?
         let partial_signature: Uint<PLAINTEXT_SPACE_SCALAR_LIMBS> =
             DecryptionKeyShare::combine_decryption_shares_semi_honest(
                 partial_signature_decryption_shares,
