@@ -195,7 +195,7 @@ pub(crate) mod tests {
             public_nonce_encrypted_partial_signature_and_proof,
             signature_verification_round_party,
         ) = centralized_party_signature_homomorphic_evaluation_round_party
-            .evaluate_encrypted_partial_signature(m, &mut OsRng)
+            .evaluate_encrypted_partial_signature_prehash(m, &mut OsRng)
             .unwrap();
         centralized_party_total_time =
             measurement.add(&centralized_party_total_time, &measurement.end(now));
@@ -298,7 +298,7 @@ pub(crate) mod tests {
                     (partial_signature_decryption_share, masked_nonce_decryption_share),
                     signature_threshold_decryption_round_party,
                 ) = party
-                    .partially_decrypt_encrypted_signature_parts(
+                    .partially_decrypt_encrypted_signature_parts_prehash(
                         m,
                         public_nonce_encrypted_partial_signature_and_proof.clone(),
                         &mut OsRng,

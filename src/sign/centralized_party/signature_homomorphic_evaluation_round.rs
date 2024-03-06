@@ -133,7 +133,10 @@ where
         >,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
-    pub fn evaluate_encrypted_partial_signature(
+    /// Evaluate the encrypted partial signature.
+    /// Note: `message` is a `Scalar` which must be a hash on the message bytes translated into a
+    /// 32-byte number.
+    pub fn evaluate_encrypted_partial_signature_prehash(
         self,
         message: GroupElement::Scalar,
         rng: &mut impl CryptoRngCore,
@@ -185,8 +188,6 @@ where
         >,
         signature_verification_round::Party<SCALAR_LIMBS, GroupElement>,
     )> {
-        // TODO: hash message
-
         let inverted_nonce_share = self.nonce_share.invert();
 
         if inverted_nonce_share.is_none().into() {
