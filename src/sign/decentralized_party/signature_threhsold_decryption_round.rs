@@ -50,10 +50,11 @@ impl<
 where
     Error: From<DecryptionKeyShare::Error>,
 {
-    /// The amortized threshold decryption party, which performs the heavy-lifting $$ O(n) $$ public
-    /// decryption logic. An honest party would verify the signature and output it if and only if it
-    /// is valid, otherwise (i.e. when `Error::SignatureVerification` is returned) requesting an
-    /// identifiable abort protocol to be commenced.
+    /// The designated threshold decryption party logic, which performs the amortized heavy-lifting
+    /// $$ O(n) $$ public decryption logic. An honest party would verify the signature and
+    /// output it if and only if it is valid, otherwise (i.e. when
+    /// `Error::SignatureVerification` is returned) requesting an identifiable abort protocol to
+    /// be commenced.
     ///
     /// This function never returns an invalid signature, so that parties that receive an invalid
     /// signature can blame the decrypter.
@@ -138,23 +139,21 @@ where
         Ok((self.nonce_x_coordinate, signature_s))
     }
 
-    // TODO: rename amortized party, perhaps to coordinator
-    // TODO: must I get the party ID of the coordinator and blame it in case of error, or is it
-    // sufficient to return the error and push that logic to implementors?
-
     /// The lightweight $$ O(1) $$ threshold decryption logic, which simply verifies the output of
-    /// the decryption sent by the amortized party. Blames it in case of an invalid signature, and
-    /// accepts otherwise.
+    /// the decryption sent by the designated decrypting party. Blames it in case of an invalid
+    /// signature, and accepts otherwise.
     pub fn verify_decrypted_signature(
         self,
         signature_s: GroupElement::Scalar,
+        designated_decrypting_party_id: PartyID,
     ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
         verify_signature(
             self.nonce_x_coordinate,
             signature_s,
             self.message,
             self.public_key,
-        )?;
+        )
+        .map_err(|_| Error::MaliciousDesignatedDecryptingParty(designated_decrypting_party_id))?;
 
         Ok((self.nonce_x_coordinate, signature_s))
     }

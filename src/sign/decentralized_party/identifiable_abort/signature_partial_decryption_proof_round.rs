@@ -32,6 +32,7 @@ pub struct Party<
     DecryptionKeyShare: AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
 > {
     pub(in crate::sign) threshold: PartyID,
+    pub(in crate::sign) designated_decrypting_party_id: PartyID,
     pub(in crate::sign) decryption_key_share: DecryptionKeyShare,
     pub(in crate::sign) decryption_key_share_public_parameters:
         DecryptionKeyShare::PublicParameters,
@@ -71,6 +72,7 @@ where
         let signature_partial_decryption_verification_round_party =
             signature_partial_decryption_verification_round::Party {
                 threshold: self.threshold,
+                designated_decrypting_party_id: self.designated_decrypting_party_id,
                 decryption_key_share_public_parameters: self.decryption_key_share_public_parameters,
                 encrypted_partial_signature: self.encrypted_partial_signature,
                 encrypted_masked_nonce_share: self.encrypted_masked_nonce_share,
@@ -91,6 +93,7 @@ where
         ProtocolContext: Clone + Serialize,
     >(
         threshold: PartyID,
+        designated_decrypting_party_id: PartyID,
         decryption_key_share: DecryptionKeyShare,
         decryption_key_share_public_parameters: DecryptionKeyShare::PublicParameters,
         presign: presign::decentralized_party::Presign<
@@ -191,6 +194,7 @@ where
 
         Ok(Self {
             threshold,
+            designated_decrypting_party_id,
             decryption_key_share,
             decryption_key_share_public_parameters,
             encrypted_partial_signature,
@@ -198,5 +202,3 @@ where
         })
     }
 }
-
-// TODO: should we put the protocol context there [in IA]
