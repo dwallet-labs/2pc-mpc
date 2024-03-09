@@ -675,7 +675,9 @@ pub(crate) mod tests {
                 number_of_parties,
                 batch_size,
                 encrypted_secret_key_share,
-            );
+                false,
+            )
+            .unwrap();
 
         let centralized_party_presign = centralized_party_presign.first().unwrap().clone();
         let decentralized_party_presign = decentralized_party_presign.first().unwrap().clone();

@@ -29,6 +29,8 @@ pub enum Error {
     MismatchingEncrypedMasks(Vec<PartyID>),
     #[error("parties {:?} did not send partial decryption proofs in the signing identifiable abort protocol", .0)]
     UnresponsiveParties(Vec<PartyID>),
+    #[error("not enough parties to initiate the session")]
+    ThresholdNotReached,
     #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]
     WrongDecommitment,
     #[error("the designated decrypting party behaved maliciously by not sending the honest decrypted values")]

@@ -18,7 +18,7 @@ use maurer::SOUND_PROOFS_REPETITIONS;
 use proof::AggregatableRangeProof;
 use serde::Serialize;
 
-use crate::dkg::decentralized_party::decommitment_proof_verification_round;
+use crate::{dkg::decentralized_party::decommitment_proof_verification_round, Error};
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
@@ -33,6 +33,7 @@ pub struct Party<
     ProtocolContext: Clone + Serialize,
 > {
     pub party_id: PartyID,
+    pub threshold: PartyID,
     pub parties: HashSet<PartyID>,
     pub protocol_context: ProtocolContext,
     pub group_public_parameters: GroupElement::PublicParameters,
@@ -126,6 +127,10 @@ where
             ProtocolContext,
         >,
     )> {
+        if self.parties.len() < self.threshold.into() {
+            return Err(Error::ThresholdNotReached);
+        }
+
         let encryption_randomness = EncryptionKey::RandomnessSpaceGroupElement::sample(
             &self
                 .encryption_scheme_public_parameters
