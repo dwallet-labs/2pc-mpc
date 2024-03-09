@@ -43,7 +43,7 @@ fn verify_signature<
 #[allow(unused_imports)]
 pub(crate) mod tests {
     use core::marker::PhantomData;
-    use std::{collections::HashMap, ops::Neg, time::Duration};
+    use std::{collections::HashMap, iter, ops::Neg, time::Duration};
 
     use commitment::{pedersen, HomomorphicCommitmentScheme, Pedersen};
     use criterion::measurement::{Measurement, WallTime};
@@ -70,7 +70,7 @@ pub(crate) mod tests {
     use rstest::rstest;
     use tiresias::{
         test_exports::{deal_trusted_shares, BASE, N, SECRET_KEY},
-        AdjustedLagrangeCoefficientSizedNumber, DecryptionKeyShare,
+        AdjustedLagrangeCoefficientSizedNumber, DecryptionKeyShare, PaillierModulusSizedNumber,
     };
 
     use super::*;
@@ -106,6 +106,8 @@ pub(crate) mod tests {
         encrypted_mask: tiresias::CiphertextSpaceGroupElement,
         encrypted_masked_key_share: tiresias::CiphertextSpaceGroupElement,
         encrypted_masked_nonce_share: tiresias::CiphertextSpaceGroupElement,
+        malicious_decrypter: bool,
+        designated_sending_wrong_signature: bool,
     ) {
         let measurement = WallTime;
         let mut centralized_party_total_time = Duration::ZERO;
@@ -180,7 +182,6 @@ pub(crate) mod tests {
 
         let message = "singing!";
 
-        // TODO: this sha256, should we use sha2?
         let m = bits2field::<k256::Secp256k1>(
             &<k256::Secp256k1 as DigestPrimitive>::Digest::new_with_prefix(message.as_bytes())
                 .finalize_fixed(),
@@ -216,6 +217,7 @@ pub(crate) mod tests {
                 )
             })
             .collect();
+
         let decryption_key_shares: HashMap<_, _> = decryption_key_shares
             .into_iter()
             .choose_multiple(&mut OsRng, usize::from(threshold))
@@ -318,10 +320,19 @@ pub(crate) mod tests {
             })
             .unzip();
 
-        let (partial_signature_decryption_shares, masked_nonce_decryption_shares): (
+        let (mut partial_signature_decryption_shares, masked_nonce_decryption_shares): (
             HashMap<_, _>,
             HashMap<_, _>,
         ) = decryption_shares.into_iter().unzip();
+
+        let malicious_decrypter_party_id =
+            *partial_signature_decryption_shares.keys().next().unwrap();
+        if malicious_decrypter {
+            partial_signature_decryption_shares.insert(
+                malicious_decrypter_party_id,
+                PaillierModulusSizedNumber::ZERO,
+            );
+        }
 
         let public_nonce = centralized_party_nonce_share.invert().unwrap()
             * decentralized_party_nonce_public_share; // $R = k_A^-1*k_B*G$
@@ -337,35 +348,81 @@ pub(crate) mod tests {
 
         let nonce_x_coordinate = public_nonce.x(); // $r$
 
+        let mut signature_threshold_decryption_round_parties =
+            signature_threshold_decryption_round_parties.into_iter();
+
         // choose some party as the amortized threshold decryption party
-        let signature_threshold_decryption_round_party =
-            signature_threshold_decryption_round_parties
-                .into_values()
-                .next()
-                .unwrap();
+        let (designated_party_id, signature_threshold_decryption_round_party) =
+            signature_threshold_decryption_round_parties.next().unwrap();
 
         let now = measurement.start();
-        let (returned_nonce_x_coordinate, signature_s) = signature_threshold_decryption_round_party
-            .decrypt_signature(
-                lagrange_coefficients,
-                partial_signature_decryption_shares,
-                masked_nonce_decryption_shares,
-            )
-            .unwrap();
+        let res = signature_threshold_decryption_round_party.decrypt_signature(
+            lagrange_coefficients,
+            partial_signature_decryption_shares,
+            masked_nonce_decryption_shares,
+        );
         let decentralized_party_threshold_decryption_time = measurement.end(now);
+        if malicious_decrypter {
+            assert!(
+                matches!(res.err().unwrap(), Error::SignatureVerification),
+                "Designated party should report error in verification in case of a malicious decrypter"
+            );
+
+            return;
+        }
+        let (returned_nonce_x_coordinate, signature_s) = if designated_sending_wrong_signature {
+            (nonce_x_coordinate, nonce_x_coordinate.neutral())
+        } else {
+            res.unwrap()
+        };
 
         assert_eq!(nonce_x_coordinate, returned_nonce_x_coordinate);
 
+        // now do the amortized threshold decryption logic which just verifies the signature.
+        signature_threshold_decryption_round_parties.for_each(
+            |(_, signature_threshold_decryption_round_party)| {
+                let res = signature_threshold_decryption_round_party
+                    .verify_decrypted_signature(signature_s, designated_party_id);
+
+                if designated_sending_wrong_signature {
+                    assert!(
+                        matches!(
+                            res.err().unwrap(),
+                            Error::MaliciousDesignatedDecryptingParty(party_id) if party_id == designated_party_id
+                        ),
+                        "Malicious designated decryption party which sends an invalid signature must be blamed"
+                    );
+                } else {
+                    assert!(
+                        res.is_ok(),
+                        "Signature verification should pass in case of an honest designated decryption party"
+                    );
+                }
+            },
+        );
+
         let now = measurement.start();
-        signature_verification_round_party
-            .verify_signature(nonce_x_coordinate, signature_s)
-            .unwrap();
+        let res =
+            signature_verification_round_party.verify_signature(nonce_x_coordinate, signature_s);
         centralized_party_total_time =
             measurement.add(&centralized_party_total_time, &measurement.end(now));
 
+        if designated_sending_wrong_signature {
+            assert!(
+                matches!(res.err().unwrap(), Error::SignatureVerification),
+                "An invalid signature sent by a malicious decentralized party must not be accepted"
+            );
+        } else {
+            res.unwrap();
+        }
+
+        if designated_sending_wrong_signature || malicious_decrypter {
+            return;
+        }
+
         println!(
-            "\nProtocol, Number of Parties, Threshold, Batch Size, Centralized Party Total Time (ms), Decentralized Party Decryption Share Time (ms), Decentralized Party Threshold Decryption Time (ms)",
-        );
+                "\nProtocol, Number of Parties, Threshold, Batch Size, Centralized Party Total Time (ms), Decentralized Party Decryption Share Time (ms), Decentralized Party Threshold Decryption Time (ms)",
+            );
 
         // TODO: batch
         println!(
@@ -394,11 +451,11 @@ pub(crate) mod tests {
             };
 
         assert_eq!(expected_signature_s, signature_s);
-
-        let signature_s: k256::Scalar = signature_s.into();
+        let signature_s_inner: k256::Scalar = signature_s.into();
 
         let signature =
-            Signature::from_scalars(k256::Scalar::from(nonce_x_coordinate), signature_s).unwrap();
+            Signature::from_scalars(k256::Scalar::from(nonce_x_coordinate), signature_s_inner)
+                .unwrap();
 
         let verifying_key =
             VerifyingKey::<k256::Secp256k1>::from_affine(public_key.value().into()).unwrap();
@@ -413,10 +470,19 @@ pub(crate) mod tests {
     }
 
     #[rstest]
-    #[case(2, 2)]
-    #[case(2, 4)]
-    #[case(6, 9)]
-    fn signs(#[case] threshold: PartyID, #[case] number_of_parties: PartyID) {
+    #[case(2, 2, false, false)]
+    #[case(2, 2, true, false)]
+    #[case(2, 2, false, true)]
+    #[case(2, 4, false, false)]
+    #[case(2, 4, true, false)]
+    #[case(2, 4, false, true)]
+    #[case(6, 9, false, false)]
+    fn signs(
+        #[case] threshold: PartyID,
+        #[case] number_of_parties: PartyID,
+        #[case] malicious_decrypter: bool,
+        #[case] designated_sending_wrong_signature: bool,
+    ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
@@ -538,6 +604,8 @@ pub(crate) mod tests {
             encrypted_mask,
             encrypted_masked_key_share,
             encrypted_masked_nonce_share,
+            malicious_decrypter,
+            designated_sending_wrong_signature,
         );
     }
 
@@ -686,8 +754,16 @@ pub(crate) mod tests {
             encrypted_mask,
             encrypted_masked_key_share,
             encrypted_masked_nonce_share,
+            false,
+            false,
         );
     }
+
+    // TODO: IA
+    // if designated_saying_error_verification {
+    // // Simulate a malicious designated decryption party trying to DOS by saying signature
+    // // was invalid, even tho it wasn't.
+    // return Err(Error::SignatureVerification);
 }
 
 #[cfg(feature = "benchmarking")]
