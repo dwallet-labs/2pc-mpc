@@ -225,7 +225,6 @@ where
 
         let nonce_x_coordinate = public_nonce.x(); // $r$
 
-        // TODO: what am I suppose to do here in the case of failure in decryption?
         let partial_signature_decryption_share = Option::from(
             self.decryption_key_share
                 .generate_decryption_share_semi_honest(
