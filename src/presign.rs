@@ -12,11 +12,12 @@ pub(crate) mod tests {
     use core::marker::PhantomData;
     use std::{
         collections::{HashMap, HashSet},
+        iter,
         time::Duration,
     };
 
     use criterion::measurement::{Measurement, WallTime};
-    use crypto_bigint::U256;
+    use crypto_bigint::{Uint, U256};
     use enhanced_maurer::{
         encryption_of_discrete_log::StatementAccessors,
         language::EnhancedLanguageStatementAccessors,
@@ -28,7 +29,8 @@ pub(crate) mod tests {
     };
     use proof::{
         aggregation::test_helpers::{
-            aggregates, aggregates_multiple, commitment_round, decommitment_round,
+            aggregates, aggregates_multiple, aggregates_multiple_with_decommitments,
+            aggregates_with_decommitments, commitment_round, decommitment_round,
         },
         range::bulletproofs,
     };
@@ -43,16 +45,21 @@ pub(crate) mod tests {
     use super::*;
     use crate::{
         dkg::decentralized_party::SecretKeyShareEncryptionAndProof, tests::RANGE_CLAIMS_PER_SCALAR,
+        Error,
     };
 
     #[rstest]
-    #[case(2, 2, 1)]
-    #[case(2, 4, 4)]
-    #[case(6, 9, 2)]
+    #[case(2, 2, 1, false)]
+    #[case(2, 2, 1, true)]
+    #[case(2, 4, 4, false)]
+    #[case(2, 4, 4, true)]
+    #[case(6, 9, 2, false)]
+    #[case(6, 9, 2, true)]
     fn generates_presignatures(
         #[case] threshold: PartyID,
         #[case] number_of_parties: PartyID,
         #[case] batch_size: usize,
+        #[case] mismatch_encrypted_masks: bool,
     ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
@@ -80,6 +87,7 @@ pub(crate) mod tests {
             number_of_parties,
             batch_size,
             encrypted_decentralized_party_secret_key_share,
+            mismatch_encrypted_masks,
         );
     }
 
@@ -89,7 +97,8 @@ pub(crate) mod tests {
         number_of_parties: u16,
         batch_size: usize,
         encrypted_decentralized_party_secret_key_share: tiresias::CiphertextSpaceGroupElement,
-    ) -> (
+        mismatch_encrypted_masks: bool,
+    ) -> Option<(
         Vec<
             centralized_party::Presign<
                 secp256k1::group_element::Value,
@@ -104,7 +113,7 @@ pub(crate) mod tests {
                 tiresias::CiphertextSpaceValue,
             >,
         >,
-    ) {
+    )> {
         let measurement = WallTime;
         let mut centralized_party_total_time = Duration::ZERO;
         let mut decentralized_party_total_time = Duration::ZERO;
@@ -190,6 +199,7 @@ pub(crate) mod tests {
                         PhantomData<()>,
                     > {
                         party_id,
+                        threshold,
                         parties: parties.clone(),
                         protocol_context: PhantomData::<()>,
                         scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
@@ -204,32 +214,33 @@ pub(crate) mod tests {
             })
             .collect();
 
-        let (aggregation_parties, decentralized_party_encrypted_masked_nonce_shares_round_parties): (
-            HashMap<_, _>,
-            HashMap<_, _>,
-        ) = decentralized_party_encrypted_masked_key_share_and_public_nonce_shares_parties
-            .into_iter()
-            .map(|(party_id, party)| {
-                let now = measurement.start();
-                let (
+        let (
+            aggregation_parties,
+            mut decentralized_party_encrypted_masked_nonce_shares_round_parties,
+        ): (HashMap<_, _>, HashMap<_, _>) =
+            decentralized_party_encrypted_masked_key_share_and_public_nonce_shares_parties
+                .into_iter()
+                .map(|(party_id, party)| {
+                    let now = measurement.start();
+                    let (
+                        (
+                            decentralized_party_encrypted_masked_key_share_commitment_round_party,
+                            decentralized_party_public_nonce_shares_commitment_round_party,
+                        ),
+                        decentralized_party_encrypted_masked_nonce_shares_round_party,
+                    ) = party
+                        .sample_mask_and_nonce_shares_and_initialize_proof_aggregation(
+                            centralized_party_nonce_shares_commitments_and_batched_proof.clone(),
+                            &mut OsRng,
+                        )
+                        .unwrap();
+
+                    if party_id == evaluation_party_id {
+                        decentralized_party_total_time =
+                            measurement.add(&decentralized_party_total_time, &measurement.end(now));
+                    };
+
                     (
-                        decentralized_party_encrypted_masked_key_share_commitment_round_party,
-                        decentralized_party_public_nonce_shares_commitment_round_party,
-                    ),
-                    decentralized_party_encrypted_masked_nonce_shares_round_party,
-                ) = party
-                    .sample_mask_and_nonce_shares_and_initialize_proof_aggregation(
-                        centralized_party_nonce_shares_commitments_and_batched_proof.clone(),
-                        &mut OsRng,
-                    )
-                    .unwrap();
-
-                if party_id == evaluation_party_id {
-                    decentralized_party_total_time =
-                        measurement.add(&decentralized_party_total_time, &measurement.end(now));
-                };
-
-                (
                     (
                         party_id,
                         (
@@ -242,8 +253,8 @@ pub(crate) mod tests {
                         decentralized_party_encrypted_masked_nonce_shares_round_party,
                     ),
                 )
-            })
-            .unzip();
+                })
+                .unzip();
 
         let (
             decentralized_party_encrypted_masked_key_share_commitment_round_parties,
@@ -279,13 +290,16 @@ pub(crate) mod tests {
         ) = aggregates(decentralized_party_encrypted_masked_key_share_commitment_round_parties);
 
         let (
+            encrypted_nonce_shares_and_public_shares_decommitments,
             ..,
             encrypted_nonce_shares_and_public_shares_time,
             (
                 encrypted_nonce_shares_and_public_shares_proof,
                 encrypted_nonce_shares_and_public_shares,
             ),
-        ) = aggregates(decentralized_party_public_nonce_shares_commitment_round_parties);
+        ) = aggregates_with_decommitments(
+            decentralized_party_public_nonce_shares_commitment_round_parties,
+        );
 
         let output = decentralized_party::Output::new(
             masks_and_encrypted_masked_key_share.clone(),
@@ -323,6 +337,34 @@ pub(crate) mod tests {
             .map(|statement| *statement.encrypted_discrete_log())
             .collect();
 
+        let number_of_malicious_parties = if parties.len() == 2 { 1 } else { 2 };
+        let mut mismatching_encrypted_masks_parties = parties
+            .clone()
+            .into_iter()
+            .choose_multiple(&mut OsRng, number_of_malicious_parties);
+        mismatching_encrypted_masks_parties.sort();
+
+        if mismatch_encrypted_masks {
+            // Replace the witnesses so that the two aggregation protocols would not correspond on
+            // the same statements.
+            mismatching_encrypted_masks_parties
+                .iter()
+                .for_each(|&party_id| {
+                    decentralized_party_encrypted_masked_nonce_shares_round_parties
+                        .get_mut(&party_id)
+                        .unwrap()
+                        .shares_of_signature_nonce_shares_witnesses = iter::repeat(
+                        tiresias::PlaintextSpaceGroupElement::new(
+                            Uint::<{ tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS }>::ZERO,
+                            paillier_public_parameters.plaintext_space_public_parameters(),
+                        )
+                        .unwrap(),
+                    )
+                    .take(batch_size)
+                    .collect();
+                });
+        }
+
         let decentralized_party_encrypted_masked_nonce_shares_commitment_round_parties: HashMap<
             _,
             Vec<_>,
@@ -347,7 +389,12 @@ pub(crate) mod tests {
             })
             .collect();
 
-        let (.., encrypted_masked_nonce_shares_time, res) = aggregates_multiple(
+        let (
+            encrypted_masked_nonce_shares_decommitments,
+            ..,
+            encrypted_masked_nonce_shares_time,
+            res,
+        ) = aggregates_multiple_with_decommitments(
             decentralized_party_encrypted_masked_nonce_shares_commitment_round_parties,
         );
 
@@ -359,24 +406,46 @@ pub(crate) mod tests {
             .map(|encrypted_masked_nonce_share| *encrypted_masked_nonce_share.language_statement())
             .collect();
 
-        // Above we use `aggregates` which does not return the messages, so we have to do a
-        // hot-patch just for the test. In a real use-case we'd run the
-        // aggregation protocol and save the statements from the decommitments, then pass these here
-        // instead.
-        // TODO: test properly
-        let individual_encrypted_nonce_shares_and_public_shares = parties
-            .clone()
+        let individual_encrypted_nonce_shares_and_public_shares =
+            encrypted_nonce_shares_and_public_shares_decommitments
+                .into_iter()
+                .map(|(party_id, decommitments)| {
+                    (
+                        party_id,
+                        decommitments
+                            .into_iter()
+                            .flat_map(|(maurer_decommitment, _)| {
+                                maurer_decommitment.statements.into_iter().map(|statement| {
+                                    let (_, language_statement) = statement.into();
+
+                                    language_statement
+                                })
+                            })
+                            .collect(),
+                    )
+                })
+                .collect();
+
+        let individual_encrypted_masked_nonce_shares = encrypted_masked_nonce_shares_decommitments
             .into_iter()
-            .map(|party_id| (party_id, encrypted_nonce_shares_and_public_shares.clone()))
+            .map(|(party_id, decommitments)| {
+                (
+                    party_id,
+                    decommitments
+                        .into_iter()
+                        .flat_map(|(maurer_decommitment, _)| {
+                            maurer_decommitment.statements.into_iter().map(|statement| {
+                                let (_, language_statement) = statement.into();
+
+                                language_statement
+                            })
+                        })
+                        .collect(),
+                )
+            })
             .collect();
 
-        let individual_encrypted_masked_nonce_shares = parties
-            .clone()
-            .into_iter()
-            .map(|party_id| (party_id, encrypted_masked_nonce_shares.clone()))
-            .collect();
-
-        let decentralized_party_presigns = decentralized_party::Presign::new_batch::<
+        let res = decentralized_party::Presign::new_batch::<
             { secp256k1::SCALAR_LIMBS },
             { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
             secp256k1::GroupElement,
@@ -391,8 +460,21 @@ pub(crate) mod tests {
             individual_encrypted_masked_nonce_shares,
             encrypted_masked_nonce_shares,
             &secp256k1_group_public_parameters,
-        )
-        .unwrap();
+        );
+
+        if mismatch_encrypted_masks {
+            assert!(
+                matches!(
+                    res.err().unwrap(),
+                    Error::MismatchingEncrypedMasks(malicious_parties) if malicious_parties == mismatching_encrypted_masks_parties
+                ),
+                "Parties who maliciously attempted to use different signature nonce shares in the two presign aggregation rounds must be identified"
+            );
+
+            return None;
+        }
+
+        let decentralized_party_presigns = res.unwrap();
 
         assert!(centralized_party_presigns
             .clone()
@@ -428,10 +510,10 @@ pub(crate) mod tests {
             decentralized_party_total_time.as_millis()
         );
 
-        (
+        Some((
             centralized_party_presigns,
             encrypted_nonce_shares,
             decentralized_party_presigns,
-        )
+        ))
     }
 }

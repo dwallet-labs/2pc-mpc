@@ -43,7 +43,7 @@ fn verify_signature<
 #[allow(unused_imports)]
 pub(crate) mod tests {
     use core::marker::PhantomData;
-    use std::{collections::HashMap, ops::Neg, time::Duration};
+    use std::{collections::HashMap, iter, ops::Neg, time::Duration};
 
     use commitment::{pedersen, HomomorphicCommitmentScheme, Pedersen};
     use criterion::measurement::{Measurement, WallTime};
@@ -70,25 +70,89 @@ pub(crate) mod tests {
     use rstest::rstest;
     use tiresias::{
         test_exports::{deal_trusted_shares, BASE, N, SECRET_KEY},
-        AdjustedLagrangeCoefficientSizedNumber, DecryptionKeyShare,
+        AdjustedLagrangeCoefficientSizedNumber, DecryptionKeyShare, LargeBiPrimeSizedNumber,
+        PaillierModulusSizedNumber,
     };
 
     use super::*;
     use crate::{
         dkg::tests::generates_distributed_key_internal,
-        presign::tests::generates_presignatures_internal, tests::RANGE_CLAIMS_PER_SCALAR,
+        presign::tests::generates_presignatures_internal,
+        sign::decentralized_party::{
+            identifiable_abort::{
+                signature_partial_decryption_proof_round,
+                signature_partial_decryption_verification_round,
+            },
+            signature_partial_decryption_round,
+        },
+        tests::RANGE_CLAIMS_PER_SCALAR,
     };
 
     pub(crate) const MASK_LIMBS: usize =
         secp256k1::SCALAR_LIMBS + StatisticalSecuritySizedNumber::LIMBS + U64::LIMBS;
 
-    // TODO: it's ok to take next power of two here right
-    // TODO: no MASK_LIMBS. Instead, have some upper bound on the upper bounds
     pub(crate) const RANGE_CLAIMS_PER_MASK: usize =
-        (Uint::<MASK_LIMBS>::BITS / bulletproofs::RANGE_CLAIM_BITS).next_power_of_two();
+        Uint::<MASK_LIMBS>::BITS / bulletproofs::RANGE_CLAIM_BITS;
 
     pub(crate) const NUM_RANGE_CLAIMS: usize =
         DIMENSION * RANGE_CLAIMS_PER_SCALAR + RANGE_CLAIMS_PER_MASK;
+
+    fn setup_decryption_key_shares(
+        threshold: u16,
+        number_of_parties: u16,
+    ) -> (
+        tiresias::decryption_key_share::PublicParameters,
+        HashMap<PartyID, DecryptionKeyShare>,
+        HashMap<PartyID, AdjustedLagrangeCoefficientSizedNumber>,
+    ) {
+        let (decryption_key_share_public_parameters, decryption_key_shares) =
+            deal_trusted_shares(threshold, number_of_parties, N, SECRET_KEY, BASE);
+        let decryption_key_shares: HashMap<_, _> = decryption_key_shares
+            .into_iter()
+            .map(|(party_id, share)| {
+                (
+                    party_id,
+                    DecryptionKeyShare::new(
+                        party_id,
+                        share,
+                        &decryption_key_share_public_parameters,
+                    )
+                    .unwrap(),
+                )
+            })
+            .collect();
+
+        let decryption_key_shares: HashMap<_, _> = decryption_key_shares
+            .into_iter()
+            .choose_multiple(&mut OsRng, usize::from(threshold))
+            .into_iter()
+            .collect();
+
+        let decrypters: Vec<_> = decryption_key_shares.clone().into_keys().collect();
+
+        let lagrange_coefficients: HashMap<PartyID, AdjustedLagrangeCoefficientSizedNumber> =
+            decrypters
+                .clone()
+                .into_iter()
+                .map(|j| {
+                    (
+                        j,
+                        DecryptionKeyShare::compute_lagrange_coefficient(
+                            j,
+                            number_of_parties,
+                            decrypters.clone(),
+                            &decryption_key_share_public_parameters,
+                        ),
+                    )
+                })
+                .collect();
+
+        (
+            decryption_key_share_public_parameters,
+            decryption_key_shares,
+            lagrange_coefficients,
+        )
+    }
 
     #[allow(clippy::too_many_arguments)]
     pub fn signs_internal(
@@ -106,6 +170,8 @@ pub(crate) mod tests {
         encrypted_mask: tiresias::CiphertextSpaceGroupElement,
         encrypted_masked_key_share: tiresias::CiphertextSpaceGroupElement,
         encrypted_masked_nonce_share: tiresias::CiphertextSpaceGroupElement,
+        malicious_decrypter: bool,
+        designated_sending_wrong_signature: bool,
     ) {
         let measurement = WallTime;
         let mut centralized_party_total_time = Duration::ZERO;
@@ -144,41 +210,42 @@ pub(crate) mod tests {
 
         let public_key = centralized_party_public_key_share + decentralized_party_public_key_share;
 
-        let centralized_party_sign_round_party = centralized_party::Party::<
-            { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
-            { secp256k1::SCALAR_LIMBS },
-            { RANGE_CLAIMS_PER_SCALAR },
-            { RANGE_CLAIMS_PER_MASK },
-            { ristretto::SCALAR_LIMBS },
-            { NUM_RANGE_CLAIMS },
-            secp256k1::GroupElement,
-            tiresias::EncryptionKey,
-            bulletproofs::RangeProof,
-            direct_product::GroupElement<
-                self_product::GroupElement<DIMENSION, secp256k1::Scalar>,
-                tiresias::RandomnessSpaceGroupElement,
-            >,
-            PhantomData<()>,
-        > {
-            protocol_context: PhantomData::<()>,
-            scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
-            group_public_parameters: secp256k1_group_public_parameters.clone(),
-            encryption_scheme_public_parameters: paillier_public_parameters.clone(),
-            unbounded_dcom_eval_witness_public_parameters:
-                unbounded_dcom_eval_witness_public_parameters.clone(),
-            range_proof_public_parameters: bulletproofs_public_parameters.clone(),
-            secret_key_share: centralized_party_secret_key_share,
-            public_key_share: centralized_party_public_key_share,
-            nonce_share_commitment_randomness,
-            nonce_share: centralized_party_nonce_share,
-            decentralized_party_nonce_public_share,
-            encrypted_mask,
-            encrypted_masked_key_share,
-        };
+        let centralized_party_signature_homomorphic_evaluation_round_party =
+            centralized_party::signature_homomorphic_evaluation_round::Party::<
+                { secp256k1::SCALAR_LIMBS },
+                { RANGE_CLAIMS_PER_SCALAR },
+                { RANGE_CLAIMS_PER_MASK },
+                { ristretto::SCALAR_LIMBS },
+                { NUM_RANGE_CLAIMS },
+                { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                secp256k1::GroupElement,
+                tiresias::EncryptionKey,
+                bulletproofs::RangeProof,
+                direct_product::GroupElement<
+                    self_product::GroupElement<DIMENSION, secp256k1::Scalar>,
+                    tiresias::RandomnessSpaceGroupElement,
+                >,
+                PhantomData<()>,
+            > {
+                protocol_context: PhantomData::<()>,
+                scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
+                group_public_parameters: secp256k1_group_public_parameters.clone(),
+                encryption_scheme_public_parameters: paillier_public_parameters.clone(),
+                unbounded_dcom_eval_witness_public_parameters:
+                    unbounded_dcom_eval_witness_public_parameters.clone(),
+                range_proof_public_parameters: bulletproofs_public_parameters.clone(),
+                public_key,
+                secret_key_share: centralized_party_secret_key_share,
+                public_key_share: centralized_party_public_key_share,
+                nonce_share_commitment_randomness,
+                nonce_share: centralized_party_nonce_share,
+                decentralized_party_nonce_public_share,
+                encrypted_mask,
+                encrypted_masked_key_share,
+            };
 
         let message = "singing!";
 
-        // TODO: this sha256, should we use sha2?
         let m = bits2field::<k256::Secp256k1>(
             &<k256::Secp256k1 as DigestPrimitive>::Digest::new_with_prefix(message.as_bytes())
                 .finalize_fixed(),
@@ -189,42 +256,26 @@ pub(crate) mod tests {
         let m = U256::from(m).into();
 
         let now = measurement.start();
-        let public_nonce_encrypted_partial_signature_and_proof = centralized_party_sign_round_party
-            .evaluate_encrypted_partial_signature(m, &mut OsRng)
+        let (
+            public_nonce_encrypted_partial_signature_and_proof,
+            signature_verification_round_party,
+        ) = centralized_party_signature_homomorphic_evaluation_round_party
+            .evaluate_encrypted_partial_signature_prehash(m, &mut OsRng)
             .unwrap();
         centralized_party_total_time =
             measurement.add(&centralized_party_total_time, &measurement.end(now));
 
-        let (decryption_key_share_public_parameters, decryption_key_shares) =
-            deal_trusted_shares(threshold, number_of_parties, N, SECRET_KEY, BASE);
-        let decryption_key_shares: HashMap<_, _> = decryption_key_shares
-            .into_iter()
-            .map(|(party_id, share)| {
-                (
-                    party_id,
-                    DecryptionKeyShare::new(
-                        party_id,
-                        share,
-                        &decryption_key_share_public_parameters,
-                    )
-                    .unwrap(),
-                )
-            })
-            .collect();
-        let decryption_key_shares: HashMap<_, _> = decryption_key_shares
-            .into_iter()
-            .choose_multiple(&mut OsRng, usize::from(threshold))
-            .into_iter()
-            .collect();
+        let (decryption_key_share_public_parameters, decryption_key_shares, lagrange_coefficients) =
+            setup_decryption_key_shares(threshold, number_of_parties);
 
-        let decrypters: Vec<_> = decryption_key_shares.clone().into_keys().collect();
+        let evaluation_party_id = *decryption_key_shares.keys().next().unwrap();
 
         let decentralized_party_sign_round_parties: HashMap<_, _> = decryption_key_shares
             .into_iter()
             .map(|(party_id, decryption_key_share)| {
                 (
                     party_id,
-                    decentralized_party::Party::<
+                    signature_partial_decryption_round::Party::<
                         { secp256k1::SCALAR_LIMBS },
                         { ristretto::SCALAR_LIMBS },
                         { RANGE_CLAIMS_PER_SCALAR },
@@ -241,6 +292,7 @@ pub(crate) mod tests {
                         >,
                         PhantomData<()>,
                     > {
+                        threshold,
                         decryption_key_share,
                         decryption_key_share_public_parameters:
                             decryption_key_share_public_parameters.clone(),
@@ -252,6 +304,7 @@ pub(crate) mod tests {
                             unbounded_dcom_eval_witness_public_parameters.clone(),
                         range_proof_public_parameters: bulletproofs_public_parameters.clone(),
                         nonce_public_share: decentralized_party_nonce_public_share,
+                        public_key,
                         encrypted_mask,
                         encrypted_masked_key_share,
                         encrypted_masked_nonce_share,
@@ -262,47 +315,50 @@ pub(crate) mod tests {
             })
             .collect();
 
-        let lagrange_coefficients: HashMap<PartyID, AdjustedLagrangeCoefficientSizedNumber> =
-            decrypters
-                .clone()
-                .into_iter()
-                .map(|j| {
-                    (
-                        j,
-                        DecryptionKeyShare::compute_lagrange_coefficient(
-                            j,
-                            number_of_parties,
-                            decrypters.clone(),
-                            &decryption_key_share_public_parameters,
-                        ),
-                    )
-                })
-                .collect();
-
-        let (partial_signature_decryption_shares, masked_nonce_decryption_shares): (
-            HashMap<_, _>,
+        let (decryption_shares, signature_threshold_decryption_round_parties): (
+            Vec<_>,
             HashMap<_, _>,
         ) = decentralized_party_sign_round_parties
             .into_iter()
             .map(|(party_id, party)| {
                 let now = measurement.start();
-                let (partial_signature_decryption_share, masked_nonce_decryption_share) = party
-                    .partially_decrypt_encrypted_signature_parts(
+                let (
+                    (partial_signature_decryption_share, masked_nonce_decryption_share),
+                    signature_threshold_decryption_round_party,
+                ) = party
+                    .partially_decrypt_encrypted_signature_parts_prehash(
                         m,
                         public_nonce_encrypted_partial_signature_and_proof.clone(),
                         &mut OsRng,
                     )
                     .unwrap();
-                if party_id == 1 {
+                if party_id == evaluation_party_id {
                     decentralized_party_decryption_share_time = measurement.end(now);
                 };
 
                 (
-                    (party_id, partial_signature_decryption_share),
-                    (party_id, masked_nonce_decryption_share),
+                    (
+                        (party_id, partial_signature_decryption_share),
+                        (party_id, masked_nonce_decryption_share),
+                    ),
+                    (party_id, signature_threshold_decryption_round_party),
                 )
             })
             .unzip();
+
+        let (mut partial_signature_decryption_shares, masked_nonce_decryption_shares): (
+            HashMap<_, _>,
+            HashMap<_, _>,
+        ) = decryption_shares.into_iter().unzip();
+
+        let malicious_decrypter_party_id =
+            *partial_signature_decryption_shares.keys().next().unwrap();
+        if malicious_decrypter {
+            partial_signature_decryption_shares.insert(
+                malicious_decrypter_party_id,
+                PaillierModulusSizedNumber::ZERO,
+            );
+        }
 
         let public_nonce = centralized_party_nonce_share.invert().unwrap()
             * decentralized_party_nonce_public_share; // $R = k_A^-1*k_B*G$
@@ -318,41 +374,81 @@ pub(crate) mod tests {
 
         let nonce_x_coordinate = public_nonce.x(); // $r$
 
+        let mut signature_threshold_decryption_round_parties =
+            signature_threshold_decryption_round_parties.into_iter();
+
+        // choose some party as the amortized threshold decryption party
+        let (designated_party_id, signature_threshold_decryption_round_party) =
+            signature_threshold_decryption_round_parties.next().unwrap();
+
         let now = measurement.start();
-        let (returned_nonce_x_coordinate, signature_s) = decentralized_party::Party::<
-            { secp256k1::SCALAR_LIMBS },
-            { ristretto::SCALAR_LIMBS },
-            { RANGE_CLAIMS_PER_SCALAR },
-            { RANGE_CLAIMS_PER_MASK },
-            { NUM_RANGE_CLAIMS },
-            { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
-            secp256k1::GroupElement,
-            tiresias::EncryptionKey,
-            DecryptionKeyShare,
-            bulletproofs::RangeProof,
-            direct_product::GroupElement<
-                self_product::GroupElement<DIMENSION, secp256k1::Scalar>,
-                tiresias::RandomnessSpaceGroupElement,
-            >,
-            PhantomData<()>,
-        >::decrypt_signature(
-            m,
-            public_key,
-            nonce_x_coordinate,
+        let res = signature_threshold_decryption_round_party.decrypt_signature(
             lagrange_coefficients,
-            &decryption_key_share_public_parameters,
-            secp256k1_scalar_public_parameters,
             partial_signature_decryption_shares,
             masked_nonce_decryption_shares,
-        )
-        .unwrap();
+        );
         let decentralized_party_threshold_decryption_time = measurement.end(now);
+        if malicious_decrypter {
+            assert!(
+                matches!(res.err().unwrap(), Error::SignatureVerification),
+                "Designated party should report error in verification in case of a malicious decrypter"
+            );
+
+            return;
+        }
+        let (returned_nonce_x_coordinate, signature_s) = if designated_sending_wrong_signature {
+            (nonce_x_coordinate, nonce_x_coordinate.neutral())
+        } else {
+            res.unwrap()
+        };
 
         assert_eq!(nonce_x_coordinate, returned_nonce_x_coordinate);
 
-        println!(
-            "\nProtocol, Number of Parties, Threshold, Batch Size, Centralized Party Total Time (ms), Decentralized Party Decryption Share Time (ms), Decentralized Party Threshold Decryption Time (ms)",
+        // now do the amortized threshold decryption logic which just verifies the signature.
+        signature_threshold_decryption_round_parties.for_each(
+            |(_, signature_threshold_decryption_round_party)| {
+                let res = signature_threshold_decryption_round_party
+                    .verify_decrypted_signature(signature_s, designated_party_id);
+
+                if designated_sending_wrong_signature {
+                    assert!(
+                        matches!(
+                            res.err().unwrap(),
+                            Error::MaliciousDesignatedDecryptingParty(party_id) if party_id == designated_party_id
+                        ),
+                        "Malicious designated decryption party which sends an invalid signature must be blamed"
+                    );
+                } else {
+                    assert!(
+                        res.is_ok(),
+                        "Signature verification should pass in case of an honest designated decryption party"
+                    );
+                }
+            },
         );
+
+        let now = measurement.start();
+        let res =
+            signature_verification_round_party.verify_signature(nonce_x_coordinate, signature_s);
+        centralized_party_total_time =
+            measurement.add(&centralized_party_total_time, &measurement.end(now));
+
+        if designated_sending_wrong_signature {
+            assert!(
+                matches!(res.err().unwrap(), Error::SignatureVerification),
+                "An invalid signature sent by a malicious decentralized party must not be accepted"
+            );
+        } else {
+            res.unwrap();
+        }
+
+        if designated_sending_wrong_signature || malicious_decrypter {
+            return;
+        }
+
+        println!(
+                "\nProtocol, Number of Parties, Threshold, Batch Size, Centralized Party Total Time (ms), Decentralized Party Decryption Share Time (ms), Decentralized Party Threshold Decryption Time (ms)",
+            );
 
         // TODO: batch
         println!(
@@ -381,11 +477,11 @@ pub(crate) mod tests {
             };
 
         assert_eq!(expected_signature_s, signature_s);
-
-        let signature_s: k256::Scalar = signature_s.into();
+        let signature_s_inner: k256::Scalar = signature_s.into();
 
         let signature =
-            Signature::from_scalars(k256::Scalar::from(nonce_x_coordinate), signature_s).unwrap();
+            Signature::from_scalars(k256::Scalar::from(nonce_x_coordinate), signature_s_inner)
+                .unwrap();
 
         let verifying_key =
             VerifyingKey::<k256::Secp256k1>::from_affine(public_key.value().into()).unwrap();
@@ -400,10 +496,19 @@ pub(crate) mod tests {
     }
 
     #[rstest]
-    #[case(2, 2)]
-    #[case(2, 4)]
-    #[case(6, 9)]
-    fn signs(#[case] threshold: PartyID, #[case] number_of_parties: PartyID) {
+    #[case(2, 2, false, false)]
+    #[case(2, 2, true, false)]
+    #[case(2, 2, false, true)]
+    #[case(2, 4, false, false)]
+    #[case(2, 4, true, false)]
+    #[case(2, 4, false, true)]
+    #[case(6, 9, false, false)]
+    fn signs(
+        #[case] threshold: PartyID,
+        #[case] number_of_parties: PartyID,
+        #[case] malicious_decrypter: bool,
+        #[case] designated_sending_wrong_signature: bool,
+    ) {
         let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
 
         let secp256k1_group_public_parameters =
@@ -525,6 +630,8 @@ pub(crate) mod tests {
             encrypted_mask,
             encrypted_masked_key_share,
             encrypted_masked_nonce_share,
+            malicious_decrypter,
+            designated_sending_wrong_signature,
         );
     }
 
@@ -568,7 +675,9 @@ pub(crate) mod tests {
                 number_of_parties,
                 batch_size,
                 encrypted_secret_key_share,
-            );
+                false,
+            )
+            .unwrap();
 
         let centralized_party_presign = centralized_party_presign.first().unwrap().clone();
         let decentralized_party_presign = decentralized_party_presign.first().unwrap().clone();
@@ -673,7 +782,177 @@ pub(crate) mod tests {
             encrypted_mask,
             encrypted_masked_key_share,
             encrypted_masked_nonce_share,
+            false,
+            false,
         );
+    }
+
+    #[rstest]
+    #[case(2, 2, false)]
+    #[case(2, 2, true)]
+    #[case(2, 4, false)]
+    #[case(2, 4, true)]
+    #[case(6, 9, false)]
+    #[case(6, 9, true)]
+    fn sign_identifiable_abort(
+        #[case] threshold: PartyID,
+        #[case] number_of_parties: PartyID,
+        #[case] dos: bool,
+    ) {
+        let (decryption_key_share_public_parameters, decryption_key_shares, lagrange_coefficients) =
+            setup_decryption_key_shares(threshold, number_of_parties);
+
+        let decrypters: Vec<_> = decryption_key_shares.keys().cloned().collect();
+
+        let designated_decrypting_party_id = *decryption_key_shares.keys().next().unwrap();
+
+        let paillier_encryption_key = tiresias::EncryptionKey::new(
+            &decryption_key_share_public_parameters.encryption_scheme_public_parameters,
+        )
+        .unwrap();
+
+        // Use dummy values for ciphertexts, as we don't do any signature verification here, just
+        // making sure decryption was done correctly.
+        let (_, encrypted_partial_signature) = paillier_encryption_key
+            .encrypt(
+                &tiresias::PlaintextSpaceGroupElement::new(
+                    Uint::<{ tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS }>::ZERO,
+                    decryption_key_share_public_parameters
+                        .encryption_scheme_public_parameters
+                        .plaintext_space_public_parameters(),
+                )
+                .unwrap(),
+                &decryption_key_share_public_parameters.encryption_scheme_public_parameters,
+                &mut OsRng,
+            )
+            .unwrap();
+
+        let (_, encrypted_masked_nonce_share) = paillier_encryption_key
+            .encrypt(
+                &tiresias::PlaintextSpaceGroupElement::new(
+                    Uint::<{ tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS }>::ONE,
+                    decryption_key_share_public_parameters
+                        .encryption_scheme_public_parameters
+                        .plaintext_space_public_parameters(),
+                )
+                .unwrap(),
+                &decryption_key_share_public_parameters.encryption_scheme_public_parameters,
+                &mut OsRng,
+            )
+            .unwrap();
+
+        let (mut partial_signature_decryption_shares, masked_nonce_decryption_shares): (
+            HashMap<_, _>,
+            HashMap<_, _>,
+        ) = decryption_key_shares
+            .clone()
+            .into_iter()
+            .map(|(party_id, decryption_key_share)| {
+                (
+                    (
+                        party_id,
+                        decryption_key_share
+                            .generate_decryption_share_semi_honest(
+                                &encrypted_partial_signature,
+                                &decryption_key_share_public_parameters,
+                            )
+                            .unwrap(),
+                    ),
+                    (
+                        party_id,
+                        decryption_key_share
+                            .generate_decryption_share_semi_honest(
+                                &encrypted_masked_nonce_share,
+                                &decryption_key_share_public_parameters,
+                            )
+                            .unwrap(),
+                    ),
+                )
+            })
+            .unzip();
+
+        let partial_decryption_proof_round_parties: HashMap<_, _> = decryption_key_shares
+            .into_iter()
+            .map(|(party_id, decryption_key_share)| {
+                (
+                    party_id,
+                    signature_partial_decryption_proof_round::Party::<
+                        { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
+                        tiresias::EncryptionKey,
+                        DecryptionKeyShare,
+                    > {
+                        threshold,
+                        designated_decrypting_party_id,
+                        decryption_key_share,
+                        decryption_key_share_public_parameters:
+                            decryption_key_share_public_parameters.clone(),
+                        encrypted_partial_signature,
+                        encrypted_masked_nonce_share,
+                    },
+                )
+            })
+            .collect();
+
+        let (signature_partial_decryption_proofs, partial_decryption_verification_round_parties): (
+            HashMap<_, _>,
+            HashMap<_, _>,
+        ) = partial_decryption_proof_round_parties
+            .into_iter()
+            .map(|(party_id, party)| {
+                let (proof, verification_party) = party
+                    .prove_correct_signature_partial_decryption(&mut OsRng)
+                    .unwrap();
+
+                ((party_id, proof), (party_id, verification_party))
+            })
+            .unzip();
+
+        let number_of_malicious_parties = if decrypters.len() == 2 { 1 } else { 2 };
+        let mut malicious_decrypters = decrypters
+            .into_iter()
+            .choose_multiple(&mut OsRng, number_of_malicious_parties);
+        malicious_decrypters.sort();
+
+        if !dos {
+            // Simulate malicious decrypters by having them send invalid decryption shares.
+            malicious_decrypters.iter().for_each(|&party_id| {
+                partial_signature_decryption_shares.insert(
+                    party_id,
+                    Uint::<{ tiresias::CIPHERTEXT_SPACE_SCALAR_LIMBS }>::ZERO,
+                );
+            });
+        }
+
+        partial_decryption_verification_round_parties
+            .into_iter()
+            .all(|(party_id, party)| {
+                if malicious_decrypters.contains(&party_id) {
+                    // No reason to check malicious party reported malicious behavior.
+                    true
+                } else {
+                    let err = party.identify_malicious_decrypters(
+                        lagrange_coefficients.clone(),
+                        partial_signature_decryption_shares.clone(),
+                        masked_nonce_decryption_shares.clone(),
+                        signature_partial_decryption_proofs.clone(),
+                        &mut OsRng,
+                    );
+
+                    if dos {
+                        // Test the case where the designated party tried to DOS by saying signature
+                        // was invalid, even tho it wasn't.
+                        matches!(
+                        err,
+                            Error::MaliciousDesignatedDecryptingParty(party_id) if party_id == designated_decrypting_party_id
+                            )
+                    } else {
+                        matches!(
+                        err,
+                        Error::Tiresias(tiresias::Error::ProtocolError(tiresias::ProtocolError::ProofVerificationError {malicious_parties})) if malicious_parties == malicious_decrypters
+                    )
+                    }
+                }
+            });
     }
 }
 

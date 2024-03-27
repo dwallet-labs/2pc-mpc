@@ -23,6 +23,7 @@ use crate::{
         centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
         decentralized_party::encrypted_masked_nonces_round,
     },
+    Error,
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -39,6 +40,7 @@ pub struct Party<
     ProtocolContext: Clone + Serialize,
 > {
     pub(in crate::presign) party_id: PartyID,
+    pub(in crate::presign) threshold: PartyID,
     pub(in crate::presign) parties: HashSet<PartyID>,
     pub(in crate::presign) protocol_context: ProtocolContext,
     pub(in crate::presign) scalar_group_public_parameters:
@@ -194,6 +196,10 @@ where
             ProtocolContext,
         >,
     )> {
+        if self.parties.len() < self.threshold.into() {
+            return Err(Error::ThresholdNotReached);
+        }
+
         let batch_size = centralized_party_nonce_shares_commitments_and_batched_proof
             .commitments
             .len();
@@ -511,6 +517,7 @@ where
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         party_id: PartyID,
+        threshold: PartyID,
         parties: HashSet<PartyID>,
         protocol_context: ProtocolContext,
         scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
@@ -531,6 +538,7 @@ where
 
         Ok(Self {
             party_id,
+            threshold,
             parties,
             protocol_context,
             scalar_group_public_parameters,

@@ -287,7 +287,11 @@ pub struct Presign<GroupElementValue, CiphertextValue> {
     pub(crate) encrypted_masked_nonce_share: CiphertextValue,               // \ct_4
 }
 
-impl<GroupElementValue, CiphertextValue: PartialEq> Presign<GroupElementValue, CiphertextValue> {
+impl<
+        GroupElementValue: Clone,
+        CiphertextValue: Clone + PartialEq + Serialize + for<'a> Deserialize<'a>,
+    > Presign<GroupElementValue, CiphertextValue>
+{
     pub fn new<
         const SCALAR_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
@@ -303,11 +307,13 @@ impl<GroupElementValue, CiphertextValue: PartialEq> Presign<GroupElementValue, C
         >,
         individual_encrypted_nonce_share_and_public_share: HashMap<
             PartyID,
-            encryption_of_discrete_log::StatementSpaceGroupElement<
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-                SCALAR_LIMBS,
-                GroupElement,
-                EncryptionKey,
+            group::Value<
+                encryption_of_discrete_log::StatementSpaceGroupElement<
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    SCALAR_LIMBS,
+                    GroupElement,
+                    EncryptionKey,
+                >,
             >,
         >,
         encrypted_nonce_share_and_public_share: encryption_of_discrete_log::StatementSpaceGroupElement<
@@ -318,10 +324,12 @@ impl<GroupElementValue, CiphertextValue: PartialEq> Presign<GroupElementValue, C
         >,
         individual_encrypted_masked_nonce_share: HashMap<
             PartyID,
-            encryption_of_tuple::StatementSpaceGroupElement<
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-                SCALAR_LIMBS,
-                EncryptionKey,
+            group::Value<
+                encryption_of_tuple::StatementSpaceGroupElement<
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    SCALAR_LIMBS,
+                    EncryptionKey,
+                >,
             >,
         >,
         encrypted_masked_nonce_share: encryption_of_tuple::StatementSpaceGroupElement<
@@ -349,16 +357,24 @@ impl<GroupElementValue, CiphertextValue: PartialEq> Presign<GroupElementValue, C
         if encrypted_nonce_share_and_public_share.encrypted_discrete_log()
             != encrypted_masked_nonce_share.encrypted_multiplicand()
         {
-            let malicious_parties: Vec<_> = parties
+            let mut malicious_parties: Vec<_> = parties
                 .into_iter()
                 .map(|party_id| {
                     individual_encrypted_nonce_share_and_public_share
                         .get(&party_id)
-                        .map(|x| x.encrypted_discrete_log())
+                        .map(|x| {
+                            let (encrypted_discrete_log, _) = x.into();
+
+                            encrypted_discrete_log.clone()
+                        })
                         .zip(
                             individual_encrypted_masked_nonce_share
                                 .get(&party_id)
-                                .map(|x| x.encrypted_multiplicand()),
+                                .map(|x| {
+                                    let value: [_; 2] = x.clone().into();
+
+                                    value[0].clone()
+                                }),
                         )
                         .map(
                             |(
@@ -389,6 +405,8 @@ impl<GroupElementValue, CiphertextValue: PartialEq> Presign<GroupElementValue, C
             if malicious_parties.is_empty() {
                 return Err(Error::InvalidParameters);
             }
+
+            malicious_parties.sort();
 
             return Err(Error::MismatchingEncrypedMasks(malicious_parties));
         }
@@ -434,11 +452,13 @@ impl<GroupElementValue, CiphertextValue: PartialEq> Presign<GroupElementValue, C
         individual_encrypted_nonce_shares_and_public_shares: HashMap<
             PartyID,
             Vec<
-                encryption_of_discrete_log::StatementSpaceGroupElement<
-                    PLAINTEXT_SPACE_SCALAR_LIMBS,
-                    SCALAR_LIMBS,
-                    GroupElement,
-                    EncryptionKey,
+                group::Value<
+                    encryption_of_discrete_log::StatementSpaceGroupElement<
+                        PLAINTEXT_SPACE_SCALAR_LIMBS,
+                        SCALAR_LIMBS,
+                        GroupElement,
+                        EncryptionKey,
+                    >,
                 >,
             >,
         >,
@@ -453,10 +473,12 @@ impl<GroupElementValue, CiphertextValue: PartialEq> Presign<GroupElementValue, C
         individual_encrypted_masked_nonce_shares: HashMap<
             PartyID,
             Vec<
-                encryption_of_tuple::StatementSpaceGroupElement<
-                    PLAINTEXT_SPACE_SCALAR_LIMBS,
-                    SCALAR_LIMBS,
-                    EncryptionKey,
+                group::Value<
+                    encryption_of_tuple::StatementSpaceGroupElement<
+                        PLAINTEXT_SPACE_SCALAR_LIMBS,
+                        SCALAR_LIMBS,
+                        EncryptionKey,
+                    >,
                 >,
             >,
         >,
