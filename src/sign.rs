@@ -77,6 +77,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::{
         dkg::tests::generates_distributed_key_internal,
+        k256::bulletproofs::{NUM_RANGE_CLAIMS, RANGE_CLAIMS_PER_MASK, RANGE_CLAIMS_PER_SCALAR},
         presign::tests::generates_presignatures_internal,
         sign::decentralized_party::{
             identifiable_abort::{
@@ -85,17 +86,7 @@ pub(crate) mod tests {
             },
             signature_partial_decryption_round,
         },
-        tests::RANGE_CLAIMS_PER_SCALAR,
     };
-
-    pub(crate) const MASK_LIMBS: usize =
-        secp256k1::SCALAR_LIMBS + StatisticalSecuritySizedNumber::LIMBS + U64::LIMBS;
-
-    pub(crate) const RANGE_CLAIMS_PER_MASK: usize =
-        Uint::<MASK_LIMBS>::BITS / bulletproofs::RANGE_CLAIM_BITS;
-
-    pub(crate) const NUM_RANGE_CLAIMS: usize =
-        DIMENSION * RANGE_CLAIMS_PER_SCALAR + RANGE_CLAIMS_PER_MASK;
 
     fn setup_decryption_key_shares(
         threshold: u16,
