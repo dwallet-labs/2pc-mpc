@@ -4,7 +4,12 @@
 pub mod centralized_party;
 pub mod decentralized_party;
 
-#[cfg(any(test, feature = "benchmarking"))]
+#[cfg(all(
+    any(test, feature = "benchmarking"),
+    feature = "k256",
+    feature = "paillier",
+    feature = "bulletproofs",
+))]
 pub(crate) mod tests {
     use core::marker::PhantomData;
     use std::{
@@ -28,7 +33,8 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::{
-        dkg::decentralized_party::SecretKeyShareEncryptionAndProof, tests::RANGE_CLAIMS_PER_SCALAR,
+        dkg::decentralized_party::SecretKeyShareEncryptionAndProof,
+        k256::bulletproofs::RANGE_CLAIMS_PER_SCALAR,
     };
 
     #[rstest]
@@ -64,7 +70,7 @@ pub(crate) mod tests {
             secp256k1::group_element::PublicParameters::default();
 
         let bulletproofs_public_parameters =
-            bulletproofs::PublicParameters::<{ RANGE_CLAIMS_PER_SCALAR }>::default();
+            bulletproofs::PublicParameters::<RANGE_CLAIMS_PER_SCALAR>::default();
 
         let paillier_public_parameters =
             tiresias::encryption_key::PublicParameters::new(N).unwrap();
@@ -75,7 +81,7 @@ pub(crate) mod tests {
         let centralized_party_commitment_round_party = centralized_party::commitment_round::Party::<
             { secp256k1::SCALAR_LIMBS },
             { ristretto::SCALAR_LIMBS },
-            { RANGE_CLAIMS_PER_SCALAR },
+            RANGE_CLAIMS_PER_SCALAR,
             { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
             secp256k1::GroupElement,
             tiresias::EncryptionKey,

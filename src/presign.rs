@@ -44,8 +44,8 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::{
-        dkg::decentralized_party::SecretKeyShareEncryptionAndProof, tests::RANGE_CLAIMS_PER_SCALAR,
-        Error,
+        dkg::decentralized_party::SecretKeyShareEncryptionAndProof,
+        k256::bulletproofs::RANGE_CLAIMS_PER_SCALAR, Error,
     };
 
     #[rstest]
@@ -124,7 +124,7 @@ pub(crate) mod tests {
             secp256k1::group_element::PublicParameters::default();
 
         let bulletproofs_public_parameters =
-            bulletproofs::PublicParameters::<{ RANGE_CLAIMS_PER_SCALAR }>::default();
+            bulletproofs::PublicParameters::<RANGE_CLAIMS_PER_SCALAR>::default();
 
         let paillier_public_parameters =
             tiresias::encryption_key::PublicParameters::new(N).unwrap();
