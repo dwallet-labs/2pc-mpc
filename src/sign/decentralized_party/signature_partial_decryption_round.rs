@@ -22,7 +22,7 @@ use crate::{
     dkg, presign,
     sign::{
         centralized_party::PublicNonceEncryptedPartialSignatureAndProof,
-        decentralized_party::signature_threhsold_decryption_round, DIMENSION,
+        decentralized_party::signature_threshold_decryption_round, DIMENSION,
     },
     Error,
 };
@@ -187,7 +187,7 @@ where
             DecryptionKeyShare::DecryptionShare,
             DecryptionKeyShare::DecryptionShare,
         ),
-        signature_threhsold_decryption_round::Party<
+        signature_threshold_decryption_round::Party<
             SCALAR_LIMBS,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             GroupElement,
@@ -243,8 +243,8 @@ where
         )
         .ok_or(Error::InternalError)?;
 
-        let signature_threhsold_decryption_round_party =
-            signature_threhsold_decryption_round::Party {
+        let signature_threshold_decryption_round_party =
+            signature_threshold_decryption_round::Party {
                 threshold: self.threshold,
                 decryption_key_share_public_parameters: self.decryption_key_share_public_parameters,
                 scalar_group_public_parameters: self.scalar_group_public_parameters,
@@ -258,7 +258,7 @@ where
                 partial_signature_decryption_share,
                 masked_nonce_decryption_share,
             ),
-            signature_threhsold_decryption_round_party,
+            signature_threshold_decryption_round_party,
         ))
     }
 

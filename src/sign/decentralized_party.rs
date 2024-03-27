@@ -5,4 +5,4 @@
 
 pub mod identifiable_abort;
 pub mod signature_partial_decryption_round;
-pub mod signature_threhsold_decryption_round;
+pub mod signature_threshold_decryption_round;
