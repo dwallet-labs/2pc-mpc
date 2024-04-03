@@ -1,7 +1,11 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use group::PartyID;
+use group::{PartyID, PrimeGroupElement, Samplable};
+use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
+use proof::{range, AggregatableRangeProof};
+use serde::Serialize;
+
 pub mod dkg;
 pub mod presign;
 pub mod sign;
@@ -51,8 +55,42 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub const CENTRALIZED_PARTY_ID: PartyID = 1;
 pub const DECENTRALIZED_PARTY_ID: PartyID = 2;
 
+#[derive(Serialize, Clone, PartialEq)]
+pub struct ProtocolPublicParameters<
+    const SCALAR_LIMBS: usize,
+    const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
+    const RANGE_CLAIMS_PER_SCALAR: usize,
+    const NUM_RANGE_CLAIMS: usize,
+    const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
+    GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
+    EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
+    RangeProof: AggregatableRangeProof<COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS>,
+    UnboundedEncDLWitness: group::GroupElement + Samplable,
+    UnboundedEncDHWitness: group::GroupElement + Samplable,
+    UnboundedDComEvalWitness: group::GroupElement + Samplable,
+> {
+    pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+    pub group_public_parameters: group::PublicParameters<GroupElement>,
+    pub encryption_scheme_public_parameters:
+        homomorphic_encryption::PublicParameters<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
+    pub unbounded_encdl_witness_public_parameters: group::PublicParameters<UnboundedEncDLWitness>,
+    pub unbounded_encdh_witness_public_parameters: group::PublicParameters<UnboundedEncDHWitness>,
+    pub unbounded_dcom_eval_witness_public_parameters:
+        group::PublicParameters<UnboundedDComEvalWitness>,
+    pub range_proof_enc_dl_public_parameters: range::PublicParameters<
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RANGE_CLAIMS_PER_SCALAR,
+        RangeProof,
+    >,
+    pub range_proof_dcom_eval_public_parameters: range::PublicParameters<
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        NUM_RANGE_CLAIMS,
+        RangeProof,
+    >,
+}
+
 #[cfg(feature = "paillier")]
-pub(crate) mod paillier {
+pub mod paillier {
     use group::self_product;
 
     pub const PLAINTEXT_SPACE_SCALAR_LIMBS: usize = tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS;
@@ -69,7 +107,7 @@ pub(crate) mod paillier {
 }
 
 #[cfg(feature = "bulletproofs")]
-pub(crate) mod bulletproofs {
+pub mod bulletproofs {
     use group::ristretto;
     use proof::range::bulletproofs;
 
@@ -77,13 +115,13 @@ pub(crate) mod bulletproofs {
     pub type RangeProof = bulletproofs::RangeProof;
 }
 
-#[cfg(feature = "k256")]
-pub mod k256 {
+#[cfg(feature = "secp256k1")]
+pub mod secp256k1 {
     use group::secp256k1;
 
-    pub(crate) const SCALAR_LIMBS: usize = secp256k1::SCALAR_LIMBS;
-    pub(crate) type GroupElement = secp256k1::GroupElement;
-    pub(crate) type Scalar = secp256k1::Scalar;
+    pub const SCALAR_LIMBS: usize = secp256k1::SCALAR_LIMBS;
+    pub type GroupElement = secp256k1::GroupElement;
+    pub type Scalar = secp256k1::Scalar;
 
     #[cfg(feature = "paillier")]
     pub mod paillier {
@@ -99,27 +137,98 @@ pub mod k256 {
 
         #[cfg(feature = "bulletproofs")]
         pub mod bulletproofs {
+
             use bulletproofs::*;
             use commitment::Pedersen;
             use enhanced_maurer::{encryption_of_discrete_log, encryption_of_tuple};
-            use group::secp256k1::GroupElement;
+            use group::{direct_product, secp256k1::GroupElement, self_product};
+            use homomorphic_encryption::GroupsPublicParametersAccessors;
             use maurer::{
                 committment_of_discrete_log, discrete_log_ratio_of_committed_values,
                 knowledge_of_decommitment, knowledge_of_discrete_log,
             };
+            use tiresias::LargeBiPrimeSizedNumber;
 
             use super::super::*;
             use crate::{
                 bulletproofs::*,
-                k256::paillier::UnboundedDComEvalWitness,
                 paillier::{
                     CiphertextSpaceGroupElement, DecryptionKeyShare, EncryptionKey,
                     UnboundedEncDHWitness, UnboundedEncDLWitness, PLAINTEXT_SPACE_SCALAR_LIMBS,
                 },
+                secp256k1::paillier::UnboundedDComEvalWitness,
             };
 
-            // TODO: maybe these with some macro, and only use::*.
-            // TODO: names
+            pub type ProtocolPublicParameters = crate::ProtocolPublicParameters<
+                SCALAR_LIMBS,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RANGE_CLAIMS_PER_SCALAR,
+                NUM_RANGE_CLAIMS,
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+                RangeProof,
+                UnboundedEncDLWitness,
+                UnboundedEncDHWitness,
+                UnboundedDComEvalWitness,
+            >;
+
+            impl ProtocolPublicParameters {
+                pub fn new(paillier_associated_bi_prime: LargeBiPrimeSizedNumber) -> Self {
+                    let scalar_group_public_parameters =
+                        secp256k1::scalar::PublicParameters::default();
+
+                    let group_public_parameters =
+                        secp256k1::group_element::PublicParameters::default();
+
+                    let range_proof_enc_dl_public_parameters =
+                        proof::range::bulletproofs::PublicParameters::<RANGE_CLAIMS_PER_SCALAR>::default();
+
+                    let range_proof_dcom_eval_public_parameters =
+                        proof::range::bulletproofs::PublicParameters::<NUM_RANGE_CLAIMS>::default();
+
+                    let encryption_scheme_public_parameters =
+                        tiresias::encryption_key::PublicParameters::new(
+                            paillier_associated_bi_prime,
+                        )
+                        .unwrap();
+
+                    let unbounded_encdl_witness_public_parameters =
+                        encryption_scheme_public_parameters
+                            .randomness_space_public_parameters()
+                            .clone();
+
+                    let unbounded_encdh_witness_public_parameters =
+                        self_product::PublicParameters::new(
+                            encryption_scheme_public_parameters
+                                .randomness_space_public_parameters()
+                                .clone(),
+                        );
+
+                    let unbounded_dcom_eval_witness_public_parameters =
+                        direct_product::PublicParameters(
+                            self_product::PublicParameters::new(
+                                scalar_group_public_parameters.clone(),
+                            ),
+                            encryption_scheme_public_parameters
+                                .randomness_space_public_parameters()
+                                .clone(),
+                        );
+
+                    Self {
+                        scalar_group_public_parameters,
+                        group_public_parameters,
+                        encryption_scheme_public_parameters,
+                        range_proof_enc_dl_public_parameters,
+                        range_proof_dcom_eval_public_parameters,
+                        unbounded_encdl_witness_public_parameters,
+                        unbounded_encdh_witness_public_parameters,
+                        unbounded_dcom_eval_witness_public_parameters,
+                    }
+                }
+            }
+
+            // TODO: Implement a similar macro like https://github.com/rozbb/rust-hpke/blob/main/src/kem/dhkem.rs (only use::*).
             pub type EncDLCommitmentRoundParty<ProtocolContext> =
                 enhanced_maurer::aggregation::commitment_round::Party<
                     { maurer::SOUND_PROOFS_REPETITIONS },
@@ -600,7 +709,7 @@ pub mod k256 {
     }
 
     #[cfg(feature = "bulletproofs")]
-    pub(crate) mod bulletproofs {
+    pub mod bulletproofs {
         use crypto_bigint::{Uint, U64};
         use group::{ristretto::GroupElement, StatisticalSecuritySizedNumber};
         use proof::range::bulletproofs::RANGE_CLAIM_BITS;

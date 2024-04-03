@@ -31,7 +31,7 @@ use crate::{
         },
         DIMENSION,
     },
-    Error,
+    Error, ProtocolPublicParameters,
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -476,14 +476,24 @@ where
         ))
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub fn new<
+        UnboundedEncDLWitness: group::GroupElement + Samplable,
+        UnboundedEncDHWitness: group::GroupElement + Samplable,
+    >(
         protocol_context: ProtocolContext,
-        scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
-        group_public_parameters: GroupElement::PublicParameters,
-        encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-        unbounded_dcom_eval_witness_public_parameters: UnboundedDComEvalWitness::PublicParameters,
-        range_proof_public_parameters: RangeProof::PublicParameters<NUM_RANGE_CLAIMS>,
+        protocol_public_parameters: ProtocolPublicParameters<
+            SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            NUM_RANGE_CLAIMS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+            UnboundedEncDLWitness,
+            UnboundedEncDHWitness,
+            UnboundedDComEvalWitness,
+        >,
         dkg_output: dkg::centralized_party::Output<
             GroupElement::Value,
             group::Value<GroupElement::Scalar>,
@@ -495,6 +505,12 @@ where
             group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
         >,
     ) -> crate::Result<Self> {
+        let scalar_group_public_parameters =
+            protocol_public_parameters.scalar_group_public_parameters;
+        let group_public_parameters = protocol_public_parameters.group_public_parameters;
+        let encryption_scheme_public_parameters =
+            protocol_public_parameters.encryption_scheme_public_parameters;
+
         let public_key = GroupElement::new(dkg_output.public_key, &group_public_parameters)?;
 
         let secret_key_share = GroupElement::Scalar::new(
@@ -533,8 +549,10 @@ where
             scalar_group_public_parameters,
             group_public_parameters,
             encryption_scheme_public_parameters,
-            unbounded_dcom_eval_witness_public_parameters,
-            range_proof_public_parameters,
+            unbounded_dcom_eval_witness_public_parameters: protocol_public_parameters
+                .unbounded_dcom_eval_witness_public_parameters,
+            range_proof_public_parameters: protocol_public_parameters
+                .range_proof_dcom_eval_public_parameters,
             public_key,
             secret_key_share,
             public_key_share,

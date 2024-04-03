@@ -24,7 +24,7 @@ use crate::{
         centralized_party::PublicNonceEncryptedPartialSignatureAndProof,
         decentralized_party::signature_threshold_decryption_round, DIMENSION,
     },
-    Error,
+    Error, ProtocolPublicParameters,
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -611,17 +611,27 @@ where
         )
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub fn new<
+        UnboundedEncDLWitness: group::GroupElement + Samplable,
+        UnboundedEncDHWitness: group::GroupElement + Samplable,
+    >(
         threshold: PartyID,
         decryption_key_share: DecryptionKeyShare,
         decryption_key_share_public_parameters: DecryptionKeyShare::PublicParameters,
         protocol_context: ProtocolContext,
-        scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
-        group_public_parameters: GroupElement::PublicParameters,
-        encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-        unbounded_dcom_eval_witness_public_parameters: UnboundedDComEvalWitness::PublicParameters,
-        range_proof_public_parameters: RangeProof::PublicParameters<NUM_RANGE_CLAIMS>,
+        protocol_public_parameters: ProtocolPublicParameters<
+            SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            NUM_RANGE_CLAIMS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+            UnboundedEncDLWitness,
+            UnboundedEncDHWitness,
+            UnboundedDComEvalWitness,
+        >,
         dkg_output: dkg::decentralized_party::Output<
             GroupElement::Value,
             group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
@@ -631,6 +641,12 @@ where
             group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
         >,
     ) -> crate::Result<Self> {
+        let scalar_group_public_parameters =
+            protocol_public_parameters.scalar_group_public_parameters;
+        let group_public_parameters = protocol_public_parameters.group_public_parameters;
+        let encryption_scheme_public_parameters =
+            protocol_public_parameters.encryption_scheme_public_parameters;
+
         let public_key = GroupElement::new(dkg_output.public_key, &group_public_parameters)?;
 
         let centralized_party_public_key_share = GroupElement::new(
@@ -669,8 +685,10 @@ where
             scalar_group_public_parameters,
             group_public_parameters,
             encryption_scheme_public_parameters,
-            unbounded_dcom_eval_witness_public_parameters,
-            range_proof_public_parameters,
+            unbounded_dcom_eval_witness_public_parameters: protocol_public_parameters
+                .unbounded_dcom_eval_witness_public_parameters,
+            range_proof_public_parameters: protocol_public_parameters
+                .range_proof_dcom_eval_public_parameters,
             public_key,
             nonce_public_share,
             encrypted_mask,

@@ -6,7 +6,12 @@
 pub mod centralized_party;
 pub mod decentralized_party;
 
-#[cfg(any(test, feature = "benchmarking"))]
+#[cfg(all(
+    any(test, feature = "benchmarking"),
+    feature = "secp256k1",
+    feature = "paillier",
+    feature = "bulletproofs",
+))]
 #[allow(unused_imports)]
 pub(crate) mod tests {
     use core::marker::PhantomData;
@@ -45,7 +50,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::{
         dkg::decentralized_party::SecretKeyShareEncryptionAndProof,
-        k256::bulletproofs::RANGE_CLAIMS_PER_SCALAR, Error,
+        secp256k1::bulletproofs::RANGE_CLAIMS_PER_SCALAR, Error, ProtocolPublicParameters,
     };
 
     #[rstest]
@@ -61,25 +66,33 @@ pub(crate) mod tests {
         #[case] batch_size: usize,
         #[case] mismatch_encrypted_masks: bool,
     ) {
-        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+        let protocol_public_parameters = ProtocolPublicParameters::new(N);
 
-        let paillier_public_parameters =
-            tiresias::encryption_key::PublicParameters::new(N).unwrap();
+        let paillier_encryption_key = tiresias::EncryptionKey::new(
+            &protocol_public_parameters.encryption_scheme_public_parameters,
+        )
+        .unwrap();
 
-        let paillier_encryption_key =
-            tiresias::EncryptionKey::new(&paillier_public_parameters).unwrap();
-
-        let decentralized_party_secret_key_share =
-            secp256k1::Scalar::sample(&secp256k1_scalar_public_parameters, &mut OsRng).unwrap();
+        let decentralized_party_secret_key_share = secp256k1::Scalar::sample(
+            &protocol_public_parameters.scalar_group_public_parameters,
+            &mut OsRng,
+        )
+        .unwrap();
 
         let plaintext = tiresias::PlaintextSpaceGroupElement::new(
             LargeBiPrimeSizedNumber::from(&U256::from(decentralized_party_secret_key_share)),
-            paillier_public_parameters.plaintext_space_public_parameters(),
+            protocol_public_parameters
+                .encryption_scheme_public_parameters
+                .plaintext_space_public_parameters(),
         )
         .unwrap();
 
         let (_, encrypted_decentralized_party_secret_key_share) = paillier_encryption_key
-            .encrypt(&plaintext, &paillier_public_parameters, &mut OsRng)
+            .encrypt(
+                &plaintext,
+                &protocol_public_parameters.encryption_scheme_public_parameters,
+                &mut OsRng,
+            )
             .unwrap();
 
         generates_presignatures_internal(
@@ -118,26 +131,7 @@ pub(crate) mod tests {
         let mut centralized_party_total_time = Duration::ZERO;
         let mut decentralized_party_total_time = Duration::ZERO;
 
-        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
-
-        let secp256k1_group_public_parameters =
-            secp256k1::group_element::PublicParameters::default();
-
-        let bulletproofs_public_parameters =
-            bulletproofs::PublicParameters::<RANGE_CLAIMS_PER_SCALAR>::default();
-
-        let paillier_public_parameters =
-            tiresias::encryption_key::PublicParameters::new(N).unwrap();
-
-        let unbounded_encdl_witness_public_parameters = paillier_public_parameters
-            .randomness_space_public_parameters()
-            .clone();
-
-        let unbounded_encdh_witness_public_parameters = self_product::PublicParameters::new(
-            paillier_public_parameters
-                .randomness_space_public_parameters()
-                .clone(),
-        );
+        let protocol_public_parameters = ProtocolPublicParameters::new(N);
 
         let centralized_party_commitment_round_party = centralized_party::commitment_round::Party::<
             { secp256k1::SCALAR_LIMBS },
@@ -152,14 +146,22 @@ pub(crate) mod tests {
             PhantomData<()>,
         > {
             protocol_context: PhantomData::<()>,
-            scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
-            group_public_parameters: secp256k1_group_public_parameters.clone(),
-            encryption_scheme_public_parameters: paillier_public_parameters.clone(),
-            unbounded_encdl_witness_public_parameters: unbounded_encdl_witness_public_parameters
+            scalar_group_public_parameters: protocol_public_parameters
+                .scalar_group_public_parameters
                 .clone(),
-            unbounded_encdh_witness_public_parameters: unbounded_encdh_witness_public_parameters
+            group_public_parameters: protocol_public_parameters.group_public_parameters.clone(),
+            encryption_scheme_public_parameters: protocol_public_parameters
+                .encryption_scheme_public_parameters
                 .clone(),
-            range_proof_public_parameters: bulletproofs_public_parameters.clone(),
+            unbounded_encdl_witness_public_parameters: protocol_public_parameters
+                .unbounded_encdl_witness_public_parameters
+                .clone(),
+            unbounded_encdh_witness_public_parameters: protocol_public_parameters
+                .unbounded_encdh_witness_public_parameters
+                .clone(),
+            range_proof_public_parameters: protocol_public_parameters
+                .range_proof_enc_dl_public_parameters
+                .clone(),
             encrypted_decentralized_party_secret_key_share,
         };
 
@@ -202,12 +204,12 @@ pub(crate) mod tests {
                         threshold,
                         parties: parties.clone(),
                         protocol_context: PhantomData::<()>,
-                        scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
-                        group_public_parameters: secp256k1_group_public_parameters.clone(),
-                        encryption_scheme_public_parameters: paillier_public_parameters.clone(),
-                        unbounded_encdl_witness_public_parameters: unbounded_encdl_witness_public_parameters.clone(),
-                        unbounded_encdh_witness_public_parameters: unbounded_encdh_witness_public_parameters.clone(),
-                        range_proof_public_parameters: bulletproofs_public_parameters.clone(),
+                        scalar_group_public_parameters: protocol_public_parameters.scalar_group_public_parameters.clone(),
+                        group_public_parameters: protocol_public_parameters.group_public_parameters.clone(),
+                        encryption_scheme_public_parameters: protocol_public_parameters.encryption_scheme_public_parameters.clone(),
+                        unbounded_encdl_witness_public_parameters: protocol_public_parameters.unbounded_encdl_witness_public_parameters.clone(),
+                        unbounded_encdh_witness_public_parameters: protocol_public_parameters.unbounded_encdh_witness_public_parameters.clone(),
+                        range_proof_public_parameters: protocol_public_parameters.range_proof_enc_dl_public_parameters.clone(),
                         encrypted_secret_key_share: encrypted_decentralized_party_secret_key_share,
                     },
                 )
@@ -356,7 +358,9 @@ pub(crate) mod tests {
                         .shares_of_signature_nonce_shares_witnesses = iter::repeat(
                         tiresias::PlaintextSpaceGroupElement::new(
                             Uint::<{ tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS }>::ZERO,
-                            paillier_public_parameters.plaintext_space_public_parameters(),
+                            protocol_public_parameters
+                                .encryption_scheme_public_parameters
+                                .plaintext_space_public_parameters(),
                         )
                         .unwrap(),
                     )
@@ -459,7 +463,7 @@ pub(crate) mod tests {
             encrypted_nonce_shares_and_public_shares,
             individual_encrypted_masked_nonce_shares,
             encrypted_masked_nonce_shares,
-            &secp256k1_group_public_parameters,
+            &protocol_public_parameters.group_public_parameters,
         );
 
         if mismatch_encrypted_masks {
