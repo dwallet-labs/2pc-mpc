@@ -23,10 +23,10 @@ use crate::{
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Output<GroupElementValue, CiphertextSpaceValue> {
-    pub(crate) public_key_share: GroupElementValue,
+    pub public_key_share: GroupElementValue,
     pub public_key: GroupElementValue,
     pub encrypted_secret_key_share: CiphertextSpaceValue,
-    pub(crate) centralized_party_public_key_share: GroupElementValue,
+    pub centralized_party_public_key_share: GroupElementValue,
 }
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]

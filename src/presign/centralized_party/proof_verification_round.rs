@@ -18,8 +18,9 @@ use proof::{range::PublicParametersAccessors, AggregatableRangeProof};
 use serde::Serialize;
 
 use crate::{
+    dkg,
     presign::{centralized_party::Presign, decentralized_party},
-    Error,
+    Error, ProtocolPublicParameters,
 };
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
@@ -41,7 +42,7 @@ pub struct Party<
     pub(super) unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
     pub(super) unbounded_encdh_witness_public_parameters: UnboundedEncDHWitness::PublicParameters,
     pub(super) range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
-    pub(super) signature_nonce_shares_and_commitment_randomnesses:
+    pub signature_nonce_shares_and_commitment_randomnesses:
         Vec<(GroupElement::Scalar, GroupElement::Scalar)>,
     pub(super) encrypted_decentralized_party_secret_key_share:
         EncryptionKey::CiphertextSpaceGroupElement,
@@ -437,5 +438,59 @@ where
                 },
             )
             .collect())
+    }
+
+    pub fn new<
+        const NUM_RANGE_CLAIMS: usize,
+        UnboundedDComEvalWitness: group::GroupElement + Samplable,
+    >(
+        signature_nonce_shares_and_commitment_randomnesses: Vec<(
+            GroupElement::Scalar,
+            GroupElement::Scalar,
+        )>,
+        protocol_context: ProtocolContext,
+        protocol_public_parameters: ProtocolPublicParameters<
+            SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            NUM_RANGE_CLAIMS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+            UnboundedEncDLWitness,
+            UnboundedEncDHWitness,
+            UnboundedDComEvalWitness,
+        >,
+        dkg_output: dkg::centralized_party::Output<
+            GroupElement::Value,
+            group::Value<GroupElement::Scalar>,
+            group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
+        >,
+    ) -> crate::Result<Self> {
+        let encryption_scheme_public_parameters =
+            protocol_public_parameters.encryption_scheme_public_parameters;
+
+        let encrypted_decentralized_party_secret_key_share =
+            EncryptionKey::CiphertextSpaceGroupElement::new(
+                dkg_output.encrypted_decentralized_party_secret_key_share,
+                encryption_scheme_public_parameters.ciphertext_space_public_parameters(),
+            )?;
+
+        Ok(Self {
+            protocol_context,
+            scalar_group_public_parameters: protocol_public_parameters
+                .scalar_group_public_parameters,
+            group_public_parameters: protocol_public_parameters.group_public_parameters,
+            encryption_scheme_public_parameters,
+            unbounded_encdl_witness_public_parameters: protocol_public_parameters
+                .unbounded_encdl_witness_public_parameters,
+            unbounded_encdh_witness_public_parameters: protocol_public_parameters
+                .unbounded_encdh_witness_public_parameters,
+            range_proof_public_parameters: protocol_public_parameters
+                .range_proof_enc_dl_public_parameters,
+            signature_nonce_shares_and_commitment_randomnesses,
+            encrypted_decentralized_party_secret_key_share,
+        })
     }
 }

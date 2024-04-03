@@ -15,7 +15,7 @@ pub mod decentralized_party;
 /// The dimension of the Committed Affine Evaluation language used in the signing protocol.
 pub const DIMENSION: usize = 2;
 
-fn verify_signature<
+pub fn verify_signature<
     const SCALAR_LIMBS: usize,
     GroupElement: PrimeGroupElement<SCALAR_LIMBS> + AffineXCoordinate<SCALAR_LIMBS>,
 >(
