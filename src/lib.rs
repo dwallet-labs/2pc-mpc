@@ -599,7 +599,7 @@ pub mod secp256k1 {
                     EncDLProof<ProtocolContext>,
                 >;
 
-            pub type MasksAndEncryptedMaskedKeyShare =
+            pub type EncryptedMaskAndMaskedNonceShare =
                 encryption_of_tuple::StatementSpaceGroupElement<
                     PLAINTEXT_SPACE_SCALAR_LIMBS,
                     SCALAR_LIMBS,
