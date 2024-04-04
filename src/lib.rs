@@ -348,7 +348,7 @@ pub mod secp256k1 {
                     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     RangeProof,
                     UnboundedEncDHWitness,
-                    encryption_of_discrete_log::Language<
+                    encryption_of_tuple::Language<
                         PLAINTEXT_SPACE_SCALAR_LIMBS,
                         SCALAR_LIMBS,
                         GroupElement,
@@ -364,7 +364,7 @@ pub mod secp256k1 {
                     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     RangeProof,
                     UnboundedEncDHWitness,
-                    encryption_of_discrete_log::Language<
+                    encryption_of_tuple::Language<
                         PLAINTEXT_SPACE_SCALAR_LIMBS,
                         SCALAR_LIMBS,
                         GroupElement,
@@ -380,7 +380,7 @@ pub mod secp256k1 {
                     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     RangeProof,
                     UnboundedEncDHWitness,
-                    encryption_of_discrete_log::Language<
+                    encryption_of_tuple::Language<
                         PLAINTEXT_SPACE_SCALAR_LIMBS,
                         SCALAR_LIMBS,
                         GroupElement,
@@ -396,7 +396,7 @@ pub mod secp256k1 {
                     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     RangeProof,
                     UnboundedEncDHWitness,
-                    encryption_of_discrete_log::Language<
+                    encryption_of_tuple::Language<
                         PLAINTEXT_SPACE_SCALAR_LIMBS,
                         SCALAR_LIMBS,
                         GroupElement,
@@ -412,7 +412,7 @@ pub mod secp256k1 {
                     COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     RangeProof,
                     UnboundedEncDHWitness,
-                    encryption_of_discrete_log::Language<
+                    encryption_of_tuple::Language<
                         PLAINTEXT_SPACE_SCALAR_LIMBS,
                         SCALAR_LIMBS,
                         GroupElement,
@@ -427,7 +427,7 @@ pub mod secp256k1 {
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RangeProof,
                 UnboundedEncDHWitness,
-                encryption_of_discrete_log::Language<
+                encryption_of_tuple::Language<
                     PLAINTEXT_SPACE_SCALAR_LIMBS,
                     SCALAR_LIMBS,
                     GroupElement,
