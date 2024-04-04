@@ -459,7 +459,7 @@ pub mod secp256k1 {
 
             pub type DComEvalProof<ProtocolContext> = enhanced_maurer::Proof<
                 { maurer::SOUND_PROOFS_REPETITIONS },
-                RANGE_CLAIMS_PER_SCALAR,
+                NUM_RANGE_CLAIMS,
                 COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                 RangeProof,
                 UnboundedDComEvalWitness,
