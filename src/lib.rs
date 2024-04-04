@@ -109,10 +109,31 @@ pub mod paillier {
 #[cfg(feature = "bulletproofs")]
 pub mod bulletproofs {
     use group::ristretto;
-    use proof::range::bulletproofs;
+    use proof::{range, range::bulletproofs};
 
     pub const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize = ristretto::SCALAR_LIMBS;
     pub type RangeProof = bulletproofs::RangeProof;
+
+    pub type MessageSpaceGroupElement<const NUM_RANGE_CLAIMS: usize> =
+        range::CommitmentSchemeMessageSpaceGroupElement<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >;
+
+    pub type RandomnessSpaceGroupElement<const NUM_RANGE_CLAIMS: usize> =
+        range::CommitmentSchemeRandomnessSpaceGroupElement<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >;
+
+    pub type CommitmentSpaceGroupElement<const NUM_RANGE_CLAIMS: usize> =
+        range::CommitmentSchemeCommitmentSpaceGroupElement<
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            NUM_RANGE_CLAIMS,
+            RangeProof,
+        >;
 }
 
 #[cfg(feature = "secp256k1")]
@@ -564,7 +585,7 @@ pub mod secp256k1 {
             pub type SecretKeyShareEncryptionAndProof<ProtocolContext> =
                 crate::dkg::decentralized_party::SecretKeyShareEncryptionAndProof<
                     group::Value<GroupElement>,
-                    group::Value<CommitmentSpaceGroupElement>,
+                    group::Value<CommitmentSpaceGroupElement<RANGE_CLAIMS_PER_SCALAR>>,
                     group::Value<CiphertextSpaceGroupElement>,
                     EncDLProof<ProtocolContext>,
                 >;
@@ -613,7 +634,7 @@ pub mod secp256k1 {
             pub type PresignDecentralizedPartyOutput<ProtocolContext> =
                 crate::presign::decentralized_party::Output<
                     group::Value<GroupElement>,
-                    group::Value<CommitmentSpaceGroupElement>,
+                    group::Value<CommitmentSpaceGroupElement<RANGE_CLAIMS_PER_SCALAR>>,
                     group::Value<CiphertextSpaceGroupElement>,
                     EncDHProof<ProtocolContext>,
                     EncDLProof<ProtocolContext>,
@@ -669,7 +690,7 @@ pub mod secp256k1 {
             pub type PublicNonceEncryptedPartialSignatureAndProof<ProtocolContext> =
                 crate::sign::centralized_party::PublicNonceEncryptedPartialSignatureAndProof<
                     group::Value<GroupElement>,
-                    group::Value<CommitmentSpaceGroupElement>,
+                    group::Value<CommitmentSpaceGroupElement<NUM_RANGE_CLAIMS>>,
                     group::Value<CiphertextSpaceGroupElement>,
                     ComDLProof<ProtocolContext>,
                     ComRatioProof<ProtocolContext>,
@@ -741,7 +762,7 @@ pub mod secp256k1 {
     #[cfg(feature = "bulletproofs")]
     pub mod bulletproofs {
         use crypto_bigint::{Uint, U64};
-        use group::{ristretto, StatisticalSecuritySizedNumber};
+        use group::StatisticalSecuritySizedNumber;
         use proof::range::bulletproofs::RANGE_CLAIM_BITS;
 
         use super::SCALAR_LIMBS;
@@ -755,10 +776,6 @@ pub mod secp256k1 {
 
         pub const NUM_RANGE_CLAIMS: usize =
             DIMENSION * RANGE_CLAIMS_PER_SCALAR + RANGE_CLAIMS_PER_MASK;
-
-        pub type MessageSpaceGroupElement = ristretto::Scalar;
-        pub type RandomnessSpaceGroupElement = ristretto::Scalar;
-        pub type CommitmentSpaceGroupElement = ristretto::GroupElement;
     }
 }
 
