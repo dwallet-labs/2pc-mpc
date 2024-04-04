@@ -741,10 +741,10 @@ pub mod secp256k1 {
     #[cfg(feature = "bulletproofs")]
     pub mod bulletproofs {
         use crypto_bigint::{Uint, U64};
-        use group::{ristretto::GroupElement, StatisticalSecuritySizedNumber};
+        use group::{ristretto, StatisticalSecuritySizedNumber};
         use proof::range::bulletproofs::RANGE_CLAIM_BITS;
 
-        use super::{Scalar, SCALAR_LIMBS};
+        use super::SCALAR_LIMBS;
         use crate::sign::DIMENSION;
 
         pub const RANGE_CLAIMS_PER_SCALAR: usize = Uint::<SCALAR_LIMBS>::BITS / RANGE_CLAIM_BITS;
@@ -756,9 +756,9 @@ pub mod secp256k1 {
         pub const NUM_RANGE_CLAIMS: usize =
             DIMENSION * RANGE_CLAIMS_PER_SCALAR + RANGE_CLAIMS_PER_MASK;
 
-        pub type MessageSpaceGroupElement = Scalar;
-        pub type RandomnessSpaceGroupElement = Scalar;
-        pub type CommitmentSpaceGroupElement = GroupElement;
+        pub type MessageSpaceGroupElement = ristretto::Scalar;
+        pub type RandomnessSpaceGroupElement = ristretto::Scalar;
+        pub type CommitmentSpaceGroupElement = ristretto::GroupElement;
     }
 }
 
