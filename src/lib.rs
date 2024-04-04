@@ -137,10 +137,11 @@ pub mod secp256k1 {
 
         #[cfg(feature = "bulletproofs")]
         pub mod bulletproofs {
-
             use bulletproofs::*;
             use commitment::Pedersen;
-            use enhanced_maurer::{encryption_of_discrete_log, encryption_of_tuple};
+            use enhanced_maurer::{
+                committed_linear_evaluation, encryption_of_discrete_log, encryption_of_tuple,
+            };
             use group::{direct_product, secp256k1::GroupElement, self_product};
             use homomorphic_encryption::GroupsPublicParametersAccessors;
             use maurer::{
@@ -157,6 +158,7 @@ pub mod secp256k1 {
                     UnboundedEncDHWitness, UnboundedEncDLWitness, PLAINTEXT_SPACE_SCALAR_LIMBS,
                 },
                 secp256k1::paillier::UnboundedDComEvalWitness,
+                sign::DIMENSION,
             };
 
             pub type ProtocolPublicParameters = crate::ProtocolPublicParameters<
@@ -434,6 +436,24 @@ pub mod secp256k1 {
                 ProtocolContext,
             >;
 
+            pub type DComEvalProof<ProtocolContext> = enhanced_maurer::Proof<
+                { maurer::SOUND_PROOFS_REPETITIONS },
+                RANGE_CLAIMS_PER_SCALAR,
+                COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                RangeProof,
+                UnboundedDComEvalWitness,
+                committed_linear_evaluation::Language<
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    SCALAR_LIMBS,
+                    RANGE_CLAIMS_PER_SCALAR,
+                    RANGE_CLAIMS_PER_MASK,
+                    DIMENSION,
+                    GroupElement,
+                    EncryptionKey,
+                >,
+                ProtocolContext,
+            >;
+
             pub type EncDHCommitment<ProtocolContext> =
             <EncDHCommitmentRoundParty<ProtocolContext> as proof::aggregation::CommitmentRoundParty<
                 EncDHProofAggregationOutput<ProtocolContext>,
@@ -645,6 +665,16 @@ pub mod secp256k1 {
                 group::Value<GroupElement>,
                 group::Value<CiphertextSpaceGroupElement>,
             >;
+
+            pub type PublicNonceEncryptedPartialSignatureAndProof<ProtocolContext> =
+                crate::sign::centralized_party::PublicNonceEncryptedPartialSignatureAndProof<
+                    group::Value<GroupElement>,
+                    group::Value<CommitmentSpaceGroupElement>,
+                    group::Value<CiphertextSpaceGroupElement>,
+                    ComDLProof<ProtocolContext>,
+                    ComRatioProof<ProtocolContext>,
+                    DComEvalProof<ProtocolContext>,
+                >;
 
             pub type SignatureHomomorphicEvaluationParty<ProtocolContext> =
                 crate::sign::centralized_party::signature_homomorphic_evaluation_round::Party<
