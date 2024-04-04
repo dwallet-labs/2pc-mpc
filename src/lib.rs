@@ -700,9 +700,9 @@ pub mod secp256k1 {
             pub type SignaturePartialDecryptionParty<ProtocolContext> =
                 crate::sign::decentralized_party::signature_partial_decryption_round::Party<
                     SCALAR_LIMBS,
+                    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     RANGE_CLAIMS_PER_SCALAR,
                     RANGE_CLAIMS_PER_MASK,
-                    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                     NUM_RANGE_CLAIMS,
                     PLAINTEXT_SPACE_SCALAR_LIMBS,
                     GroupElement,
