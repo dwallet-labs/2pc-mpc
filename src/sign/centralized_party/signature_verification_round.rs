@@ -3,7 +3,7 @@
 
 use group::{AffineXCoordinate, PrimeGroupElement};
 
-use crate::sign::verify_signature;
+use crate::{sign::verify_signature, Result};
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<const SCALAR_LIMBS: usize, GroupElement: PrimeGroupElement<SCALAR_LIMBS>> {
@@ -29,5 +29,17 @@ impl<
         )?;
 
         Ok(())
+    }
+
+    pub fn new(
+        message: GroupElement::Scalar,
+        public_key: GroupElement::Value,
+        group_public_parameters: group::PublicParameters<GroupElement>,
+    ) -> Result<Self> {
+        let public_key = GroupElement::new(public_key, &group_public_parameters)?;
+        Ok(Self {
+            message,
+            public_key,
+        })
     }
 }
