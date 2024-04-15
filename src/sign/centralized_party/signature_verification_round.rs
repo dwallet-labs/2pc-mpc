@@ -34,9 +34,9 @@ impl<
     pub fn new(
         message: GroupElement::Scalar,
         public_key: GroupElement::Value,
-        group_public_parameters: group::PublicParameters<GroupElement>,
+        group_public_parameters: &group::PublicParameters<GroupElement>,
     ) -> Result<Self> {
-        let public_key = GroupElement::new(public_key, &group_public_parameters)?;
+        let public_key = GroupElement::new(public_key, group_public_parameters)?;
         Ok(Self {
             message,
             public_key,
