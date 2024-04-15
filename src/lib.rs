@@ -538,6 +538,26 @@ pub mod secp256k1 {
                     ProtocolContext,
                 >;
 
+            pub type DKGDecommitmentRoundParty<ProtocolContext> =
+                crate::dkg::centralized_party::decommitment_round::Party<
+                    SCALAR_LIMBS,
+                    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                    RANGE_CLAIMS_PER_SCALAR,
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    GroupElement,
+                    EncryptionKey,
+                    RangeProof,
+                    UnboundedEncDLWitness,
+                    ProtocolContext,
+                >;
+
+            pub type DKGDecommitmentRoundState<ProtocolContext> =
+                crate::dkg::centralized_party::decommitment_round::State<
+                    group::Value<GroupElement>,
+                    group::Value<Scalar>,
+                    SchnorrProof<ProtocolContext>,
+                >;
+
             pub type PublicKeyShareDecommitmentAndProof<ProtocolContext> =
             crate::dkg::centralized_party::decommitment_round::PublicKeyShareDecommitmentAndProof<
                 group::Value<GroupElement>,
