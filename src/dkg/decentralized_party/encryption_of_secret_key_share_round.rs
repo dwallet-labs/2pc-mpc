@@ -134,6 +134,16 @@ where
             return Err(Error::ThresholdNotReached);
         }
 
+        // === Sample x_i ====
+        // Protocol 4, step 2b
+        let share_of_decentralized_party_secret_key_share =
+            GroupElement::Scalar::sample(&self.scalar_group_public_parameters, rng)?;
+
+        let share_of_decentralized_party_secret_key_share_value: Uint<SCALAR_LIMBS> =
+            share_of_decentralized_party_secret_key_share.into();
+
+        // === Sample ρ_i ===
+        // Protocol 4, step 2d
         let encryption_randomness = EncryptionKey::RandomnessSpaceGroupElement::sample(
             &self
                 .encryption_scheme_public_parameters
@@ -142,9 +152,7 @@ where
             rng,
         )?;
 
-        let share_of_decentralized_party_secret_key_share =
-            GroupElement::Scalar::sample(&self.scalar_group_public_parameters, rng)?;
-
+        // Construct EncDL language parameters, step 1.
         let language_public_parameters =
             encryption_of_discrete_log::PublicParameters::<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
@@ -157,7 +165,9 @@ where
                 self.encryption_scheme_public_parameters.clone(),
                 GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
-
+        
+        // Enhance; add range proof support to language
+        // Used in Protocol 4, steps 2e and 2f.
         let language_public_parameters = EnhancedPublicParameters::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -185,9 +195,14 @@ where
             language_public_parameters,
         )?;
 
-        let share_of_decentralized_party_secret_key_share_value: Uint<SCALAR_LIMBS> =
-            share_of_decentralized_party_secret_key_share.into();
-
+        // === Map (x_i, ρ_i) ====
+        // map it to the triple
+        // * [commitment_message]    cm_i = x_i
+        // * [commitment_randomness] cr_i = randomly sampled value
+        // * [unbounded_witness]     uw_i = ρ_i
+        //
+        // There is no direct mapping of this step to protocol 4;
+        // they are used to emulate the idealized F^{L_{EncDL}}_{agg-zk} component.
         let share_of_decentralized_party_secret_key_share_witness = EnhancedLanguage::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -217,6 +232,15 @@ where
             rng,
         )?;
 
+        // === Create commitment round party ===
+        //
+        // This round party consists of
+        // * Range proof commitment party
+        //   - contains (cm_i, cr_i)
+        //
+        // * Maurer commmitment party.
+        //   - contains (cm_i, cr_i, ρ_i), and
+        //   - more randomly sampled (message, randomness, witness) triples
         let encryption_of_secret_share_commitment_round_party =
             enhanced_maurer::aggregation::commitment_round::Party::<
                 SOUND_PROOFS_REPETITIONS,
