@@ -78,6 +78,9 @@ impl<
         ProtocolContext,
     >
 {
+    /// This function implements Protocol 4, step 1 of the
+    /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
+    /// src: https://eprint.iacr.org/2024/253
     pub fn sample_commit_and_prove_secret_key_share(
         self,
         rng: &mut impl CryptoRngCore,
@@ -95,9 +98,13 @@ impl<
             ProtocolContext,
         >,
     )> {
+        // === Sample x_A ====
+        // Protocol 4, step 1a
         let secret_key_share =
             GroupElement::Scalar::sample(&self.scalar_group_public_parameters, rng)?;
 
+        // === Create L_DL language parameters ===
+        // Used in Protocol 4, step 2b
         let language_public_parameters =
             knowledge_of_discrete_log::PublicParameters::new::<GroupElement::Scalar, GroupElement>(
                 self.scalar_group_public_parameters.clone(),
@@ -105,6 +112,9 @@ impl<
                 GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
 
+        // === Generate zero-knowledge proof for x_A ===
+        // Used in emulating the idealized F^{L_DL}_{com-zk} component
+        // Protocol 4, step 1b
         let (knowledge_of_discrete_log_proof, public_key_share) = knowledge_of_discrete_log::Proof::<
             GroupElement::Scalar,
             GroupElement,
@@ -116,13 +126,17 @@ impl<
             rng,
         )?;
 
+        // === Derive X_A ===
+        // Protocol 4, step 1a
         let public_key_share: GroupElement = public_key_share
             .first()
             .ok_or(crate::Error::InternalError)?
             .clone();
 
+        // === Commit to X_A ===
+        // Used in emulating the idealized F^{L_DL}_{com-zk} component
+        // Protocol 4, step 1b
         let commitment_randomness = ComputationalSecuritySizedNumber::random(rng);
-
         let commitment = commit_public_key_share(
             CENTRALIZED_PARTY_ID,
             &public_key_share,
