@@ -140,6 +140,9 @@ where
         >,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
+    /// This function implements Protocol 5, step 2a (i) - (iii) of the
+    /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
+    /// src: https://eprint.iacr.org/2024/253
     pub fn sample_mask_and_nonce_shares_and_initialize_proof_aggregation(
         self,
         centralized_party_nonce_shares_commitments_and_batched_proof:
@@ -210,19 +213,22 @@ where
                 self.group_public_parameters.clone(),
             )?;
 
+        // Construct L_DCOM language parameters
+        // Used in emulating F^{L_DCOM}_zk
         let language_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
             SOUND_PROOFS_REPETITIONS,
             SCALAR_LIMBS,
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >(commitment_scheme_public_parameters.clone());
 
+        // === Verify commitments to k_A ===
+        // Protocol 5, step 2a (i)
         let centralized_party_nonce_shares_commitments =
             centralized_party_nonce_shares_commitments_and_batched_proof
                 .commitments
                 .into_iter()
                 .map(|value| GroupElement::new(value, &self.group_public_parameters))
                 .collect::<group::Result<Vec<_>>>()?;
-
         centralized_party_nonce_shares_commitments_and_batched_proof
             .proof
             .verify(
@@ -231,12 +237,17 @@ where
                 centralized_party_nonce_shares_commitments.clone(),
             )?;
 
+        // ==================================
+        // Steps involving the EncDH language
+        // ==================================
+
+        // === Sample γ_i's ===
+        // Protocol 5, 2a (iii)
         let masks_shares = GroupElement::Scalar::sample_batch(
             &self.scalar_group_public_parameters,
             batch_size,
             rng,
         )?;
-
         let mask_shares_witnesses = masks_shares
             .clone()
             .into_iter()
@@ -255,6 +266,8 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
+        // === Sample η^i_1's ===
+        // Protocol 5, 2a (iii)
         let masks_encryption_randomness = EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
             self.encryption_scheme_public_parameters
                 .randomness_space_public_parameters(),
@@ -262,6 +275,8 @@ where
             rng,
         )?;
 
+        // === Sample η^i_2's ===
+        // Protocol 5, 2a (iii)
         let masked_key_share_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
                 self.encryption_scheme_public_parameters
@@ -316,6 +331,11 @@ where
             language_public_parameters,
         )?;
 
+        // Create (γ_i, η^i_1, η^i_2) tuples
+        // The elements are henceforth referred to as
+        // - multiplicand,
+        // - multiplicand randomness,
+        // - product randomness
         let witnesses = mask_shares_witnesses
             .clone()
             .into_iter()
@@ -342,7 +362,13 @@ where
                 },
             )
             .collect();
+        // TODO: use izip! instead:
+        // https://stackoverflow.com/questions/29669287/how-can-i-zip-more-than-two-iterators
 
+        // Map (γ_i, η^i_1, η^i_2) tuples to tuples of the form
+        // - [commitment message]    cm_i = decomposed γ_i
+        // - [commitment randomness] cr_i = fresh random sampled value
+        // - [unbounded witness]     uw_i = (η^i_1, η^i_2)
         let witnesses = EnhancedLanguage::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -357,6 +383,15 @@ where
             >,
         >::generate_witnesses(witnesses, &language_public_parameters, rng)?;
 
+        // === Create EncDH commitment round party ===
+        //
+        // This round party consists of
+        // * Range proof commitment party
+        //   - contains (cm_i, cr_i) = (γ_i, cr_i)
+        //
+        // * Maurer commmitment party.
+        //   - contains (cm_i, cr_i, uw_i) = (γ_i, cr_i, (η^i_1, η^i_2)), and
+        //   - more randomly sampled (message, randomness, witness) triples
         let key_share_masking_commitment_round_party =
             enhanced_maurer::aggregation::commitment_round::Party::<
                 SOUND_PROOFS_REPETITIONS,
@@ -380,6 +415,16 @@ where
                 rng,
             )?;
 
+        // ==================================
+        // Steps involving the EncDL language
+        // ==================================
+
+        // === Sample k_i ===
+        // Protocol 5, step 2a (ii)
+        //
+        //           !!! WARNING !!!
+        // This uses the same randomness as γ_i.
+        //           !!! WARNING !!!
         let shares_of_signature_nonce_shares_witnesses = masks_shares
             .clone()
             .into_iter()
@@ -398,6 +443,8 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
+        // === Sample η^i_3's ===
+        // Protocol 5, step 2a (ii)
         let shares_of_signature_nonce_shares_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
                 &self
@@ -448,6 +495,7 @@ where
             language_public_parameters,
         )?;
 
+        // Create (k_i, η^i_3) tuples
         let witnesses: Vec<_> = shares_of_signature_nonce_shares_witnesses
             .clone()
             .into_iter()
@@ -455,6 +503,10 @@ where
             .map(|(nonce_share, encryption_randomness)| (nonce_share, encryption_randomness).into())
             .collect();
 
+        // Map (k_i, η^i_3) tuples to tuples of the form
+        // - [commitment message]    cm_i = decomposed k_i
+        // - [commitment randomness] cr_i = fresh random sampled value
+        // - [unbounded witness]     uw_i = η^i_3
         let witnesses = EnhancedLanguage::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -469,6 +521,15 @@ where
             >,
         >::generate_witnesses(witnesses, &language_public_parameters, rng)?;
 
+        // === Create EncDL commitment round party ===
+        //
+        // This round party consists of
+        // * Range proof commitment party
+        //   - contains (cm_i, cr_i) = (k_i, cr_i)
+        //
+        // * Maurer commmitment party
+        //   - contains (cm_i, cr_i, uw_i) = (k_i, cr_i, η^i_3), and
+        //   - more randomly sampled (message, randomness, witness) triples
         let nonce_sharing_commitment_round_party =
             enhanced_maurer::aggregation::commitment_round::Party::<
                 SOUND_PROOFS_REPETITIONS,
