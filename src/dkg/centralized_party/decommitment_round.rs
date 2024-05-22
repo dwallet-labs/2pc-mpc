@@ -152,6 +152,7 @@ where
             group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
         >,
     )> {
+        // === enc(x_B) ===
         let encrypted_decentralized_party_secret_key_share =
             EncryptionKey::CiphertextSpaceGroupElement::new(
                 decentralized_party_secret_key_share_encryption_and_proof
@@ -160,6 +161,7 @@ where
                     .ciphertext_space_public_parameters(),
             )?;
 
+        // === X_B ===
         let decentralized_party_public_key_share = GroupElement::new(
             decentralized_party_secret_key_share_encryption_and_proof.public_key_share,
             &self.group_public_parameters,
@@ -186,6 +188,7 @@ where
         )
             .into();
 
+        // === Generate Enc_DL parameters ===
         let encryption_of_discrete_log_language_public_parameters =
             encryption_of_discrete_log::PublicParameters::<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
@@ -199,6 +202,8 @@ where
                 GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
 
+        // === Enhance Enc_DL parameters ===
+        // Include range proof capabilities
         let encryption_of_discrete_log_enhanced_language_public_parameters =
             enhanced_maurer::PublicParameters::new::<
                 RangeProof,
@@ -215,6 +220,8 @@ where
                 encryption_of_discrete_log_language_public_parameters,
             )?;
 
+        // === Verify X_B proof ===
+        // Protocol 4, step 3a
         // TODO: also we need to verify that the public key was DKG'ed right.
         decentralized_party_secret_key_share_encryption_and_proof
             .encryption_of_secret_key_share_proof
@@ -225,8 +232,13 @@ where
                 rng,
             )?;
 
+        // === Compute X := X_A + X_B ===
+        // Protocol 4, step 5a
         let public_key = self.public_key_share.clone() + &decentralized_party_public_key_share;
 
+        // === Generate
+        // Protocol 4, step 3c
+        // Used to emulate idealized F^{L_DL}_{com-zk}
         let public_key_share = self.public_key_share.value();
         let public_key_share_decommitment_proof = PublicKeyShareDecommitmentAndProof::<
             GroupElement::Value,
@@ -237,6 +249,8 @@ where
             commitment_randomness: self.commitment_randomness,
         };
 
+        // === Output (and record) ===
+        // Protocol 4, step 5a
         let output = Output {
             secret_key_share: self.secret_key_share.value(),
             public_key_share,
@@ -246,7 +260,6 @@ where
             decentralized_party_public_key_share:
                 decentralized_party_secret_key_share_encryption_and_proof.public_key_share,
         };
-
         Ok((public_key_share_decommitment_proof, output))
     }
 
