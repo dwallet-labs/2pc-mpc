@@ -215,7 +215,7 @@ where
 
         // Construct L_DCOM language parameters
         // Used in emulating F^{L_DCOM}_zk
-        let language_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
+        let l_dcom_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
             SOUND_PROOFS_REPETITIONS,
             SCALAR_LIMBS,
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
@@ -233,7 +233,7 @@ where
             .proof
             .verify(
                 &self.protocol_context,
-                &language_public_parameters,
+                &l_dcom_public_parameters,
                 centralized_party_nonce_shares_commitments.clone(),
             )?;
 
@@ -292,7 +292,8 @@ where
             RangeProof,
         >()?;
 
-        let language_public_parameters = encryption_of_tuple::PublicParameters::<
+        // Generate EncDH public parameters
+        let enc_dh_public_parameters = encryption_of_tuple::PublicParameters::<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
             GroupElement,
@@ -303,8 +304,7 @@ where
             self.encrypted_secret_key_share.value(),
             encrypted_secret_key_share_upper_bound,
         );
-
-        let language_public_parameters = EnhancedPublicParameters::<
+        let enc_dh_public_parameters = EnhancedPublicParameters::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -328,7 +328,7 @@ where
         >(
             self.unbounded_encdh_witness_public_parameters.clone(),
             self.range_proof_public_parameters.clone(),
-            language_public_parameters,
+            enc_dh_public_parameters,
         )?;
 
         // Create (γ_i, η^i_1, η^i_2) tuples
@@ -381,7 +381,7 @@ where
                 GroupElement,
                 EncryptionKey,
             >,
-        >::generate_witnesses(witnesses, &language_public_parameters, rng)?;
+        >::generate_witnesses(witnesses, &enc_dh_public_parameters, rng)?;
 
         // === Create EncDH commitment round party ===
         //
@@ -409,7 +409,7 @@ where
             >::new_session(
                 self.party_id,
                 self.parties.clone(),
-                language_public_parameters,
+                enc_dh_public_parameters,
                 self.protocol_context.clone(),
                 witnesses,
                 rng,
@@ -455,7 +455,8 @@ where
                 rng,
             )?;
 
-        let language_public_parameters =
+        // Generate EncDL public parameters
+        let enc_dl_public_parameters =
             encryption_of_discrete_log::PublicParameters::<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
                 SCALAR_LIMBS,
@@ -467,8 +468,7 @@ where
                 self.encryption_scheme_public_parameters.clone(),
                 GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
-
-        let language_public_parameters = EnhancedPublicParameters::<
+        let enc_dl_public_parameters = EnhancedPublicParameters::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -492,7 +492,7 @@ where
         >(
             self.unbounded_encdl_witness_public_parameters.clone(),
             self.range_proof_public_parameters.clone(),
-            language_public_parameters,
+            enc_dl_public_parameters,
         )?;
 
         // Create (k_i, η^i_3) tuples
@@ -519,7 +519,7 @@ where
                 GroupElement,
                 EncryptionKey,
             >,
-        >::generate_witnesses(witnesses, &language_public_parameters, rng)?;
+        >::generate_witnesses(witnesses, &enc_dl_public_parameters, rng)?;
 
         // === Create EncDL commitment round party ===
         //
@@ -547,7 +547,7 @@ where
             >::new_session(
                 self.party_id,
                 self.parties.clone(),
-                language_public_parameters,
+                enc_dl_public_parameters,
                 self.protocol_context.clone(),
                 witnesses,
                 rng,
