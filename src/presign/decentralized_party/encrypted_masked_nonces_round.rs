@@ -178,7 +178,7 @@ where
                     >()?;
 
                     // Generate EncDH public parameters
-                    let language_public_parameters = encryption_of_tuple::PublicParameters::<
+                    let enc_dh_public_parameters = encryption_of_tuple::PublicParameters::<
                         PLAINTEXT_SPACE_SCALAR_LIMBS,
                         SCALAR_LIMBS,
                         GroupElement,
@@ -189,7 +189,7 @@ where
                         encrypted_mask.value(),
                         encrypted_mask_upper_bound,
                     );
-                    let language_public_parameters = EnhancedPublicParameters::<
+                    let enc_dh_public_parameters = EnhancedPublicParameters::<
                         SOUND_PROOFS_REPETITIONS,
                         RANGE_CLAIMS_PER_SCALAR,
                         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -213,7 +213,7 @@ where
                     >(
                         self.unbounded_encdh_witness_public_parameters.clone(),
                         self.range_proof_public_parameters.clone(),
-                        language_public_parameters,
+                        enc_dh_public_parameters,
                     )?;
 
                     // map (ct_1, η^i_4)'s to tuples with
@@ -239,7 +239,7 @@ where
                             masked_nonces_encryption_randomness,
                         )
                             .into(),
-                        &language_public_parameters,
+                        &enc_dh_public_parameters,
                         rng,
                     )
                     .map_err(Error::from)
@@ -269,7 +269,7 @@ where
                         >::new_session(
                             self.party_id,
                             self.parties.clone(),
-                            language_public_parameters,
+                            enc_dh_public_parameters,
                             self.protocol_context.clone(),
                             vec![witness],
                             rng,
