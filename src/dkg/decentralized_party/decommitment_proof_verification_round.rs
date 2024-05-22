@@ -104,6 +104,9 @@ where
             UnboundedEncDLWitness,
         >,
 {
+    /// This function implements Protocol 4, steps 4/5 of the
+    /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
+    /// src: https://eprint.iacr.org/2024/253
     pub fn verify_decommitment_and_proof_of_centralized_party_public_key_share(
         self,
         decommitment_and_proof: centralized_party::PublicKeyShareDecommitmentAndProof<
@@ -133,26 +136,31 @@ where
     ) -> crate::Result<
         Output<GroupElement::Value, group::Value<EncryptionKey::CiphertextSpaceGroupElement>>,
     > {
+        // === X_B ===
         let public_key_share = GroupElement::new(
             secret_key_share_encryption_and_proof.public_key_share,
             &self.group_public_parameters,
         )?;
 
+        // === X_A ===
         let centralized_party_public_key_share = GroupElement::new(
             decommitment_and_proof.public_key_share,
             &self.group_public_parameters,
         )?;
 
+        // Check value revealed by A is consistent with commitment
+        // Used in emulating idealized F^{L_DL}_{com-zk}
         let reconstructed_commitment = commit_public_key_share(
             CENTRALIZED_PARTY_ID,
             &centralized_party_public_key_share,
             &decommitment_and_proof.commitment_randomness,
         )?;
-
         if reconstructed_commitment != self.commitment_to_centralized_party_secret_key_share {
             return Err(crate::Error::WrongDecommitment);
         }
 
+        // Generate L_DL parameters
+        // Used in emulating idealized F^{L_DL}_{com-zk}
         let language_public_parameters =
             knowledge_of_discrete_log::PublicParameters::new::<GroupElement::Scalar, GroupElement>(
                 self.scalar_group_public_parameters.clone(),
@@ -160,12 +168,16 @@ where
                 GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
 
+        // === Verify proof centralized party ===
+        // Protocol 4, step 4a
         decommitment_and_proof.proof.verify(
             &self.protocol_context,
             &language_public_parameters,
             vec![centralized_party_public_key_share.clone()],
         )?;
 
+        // === Compute X := X_A + X_B ===
+        // Protocol 4, step 5b
         let public_key = centralized_party_public_key_share.clone() + &public_key_share;
 
         Ok(Output {
