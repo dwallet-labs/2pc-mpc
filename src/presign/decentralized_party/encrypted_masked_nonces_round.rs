@@ -134,16 +134,18 @@ where
         >,
     > {
         let batch_size = encrypted_nonce_shares_and_public_shares.len();
-
         if masks_and_encrypted_masked_key_share.len() != batch_size {
             return Err(Error::InvalidParameters);
         }
 
+        // = ct_1
         let encrypted_masks: Vec<_> = masks_and_encrypted_masked_key_share
             .iter()
             .map(|statement| statement.encrypted_multiplicand().clone())
             .collect();
 
+        // === Sample η^i_4's ===
+        // Protocol 5, a (iii)
         let masked_nonce_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
                 self.encryption_scheme_public_parameters
@@ -175,6 +177,7 @@ where
                         RangeProof,
                     >()?;
 
+                    // Generate EncDH public parameters
                     let language_public_parameters = encryption_of_tuple::PublicParameters::<
                         PLAINTEXT_SPACE_SCALAR_LIMBS,
                         SCALAR_LIMBS,
@@ -186,7 +189,6 @@ where
                         encrypted_mask.value(),
                         encrypted_mask_upper_bound,
                     );
-
                     let language_public_parameters = EnhancedPublicParameters::<
                         SOUND_PROOFS_REPETITIONS,
                         RANGE_CLAIMS_PER_SCALAR,
@@ -214,6 +216,10 @@ where
                         language_public_parameters,
                     )?;
 
+                    // map (ct_1, η^i_4)'s to tuples with
+                    // - [commitment message]    cm_i = decomposed ct_1
+                    // - [commitment randomness] cr_i = randomly sampled value
+                    // - [unbounded element]     ue_i = η^i_4
                     EnhancedLanguage::<
                         SOUND_PROOFS_REPETITIONS,
                         RANGE_CLAIMS_PER_SCALAR,
@@ -238,6 +244,15 @@ where
                     )
                     .map_err(Error::from)
                     .and_then(|witness| {
+                        // === Create commitment round party ===
+                        //
+                        // This round party consists of
+                        // * Range proof commitment party
+                        //   - contains (cm_i, cr_i)
+                        //
+                        // * Maurer commmitment party.
+                        //   - contains (cm_i, cr_i, ue_i), and
+                        //   - more randomly sampled (message, randomness, witness) triples
                         enhanced_maurer::aggregation::commitment_round::Party::<
                             SOUND_PROOFS_REPETITIONS,
                             RANGE_CLAIMS_PER_SCALAR,
