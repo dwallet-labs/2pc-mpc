@@ -232,15 +232,16 @@ where
             rng,
         )?;
 
-        // === Create commitment round party ===
+        // === Prepare ct_i computation ===
+        // Protocol 4, step 2d
         //
-        // This round party consists of
-        // * Range proof commitment party
-        //   - contains (cm_i, cr_i)
+        // By calling `commit_statements_and_statement_mask` on this party,
+        // ct_i is created.
         //
-        // * Maurer commmitment party.
-        //   - contains (cm_i, cr_i, ρ_i), and
-        //   - more randomly sampled (message, randomness, witness) triples
+        // sources: 
+        // --------
+        // maurer::aggregation::commitment_round::commit_statements_and_statement_mask.
+        // ct_i = enhanced_maurer::Language::homomorphose(witnesses, &enc_dl_public_parameters).
         let encryption_of_secret_share_commitment_round_party =
             enhanced_maurer::aggregation::commitment_round::Party::<
                 SOUND_PROOFS_REPETITIONS,
