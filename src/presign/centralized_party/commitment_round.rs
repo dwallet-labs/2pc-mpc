@@ -76,6 +76,9 @@ impl<
         ProtocolContext,
     >
 {
+    /// This function implements Protocol 5, step 1 of the
+    /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
+    /// src: https://eprint.iacr.org/2024/253
     pub fn sample_commit_and_prove_signature_nonce_share(
         self,
         batch_size: usize,
@@ -107,36 +110,46 @@ impl<
             ProtocolContext,
         >,
     )> {
+        // Note: this function works in batches; the annotations are written as
+        // if the batch has size = 1.
+
+        // === Sample k_A ===
+        // Protocol 5, step 1a
         let signature_nonce_shares = GroupElement::Scalar::sample_batch(
             &self.scalar_group_public_parameters,
             batch_size,
             rng,
         )?;
 
+        // === Sample ρ_1 ===
+        // Protocol 5, step 1a
         let commitment_randomnesses = GroupElement::Scalar::sample_batch(
             &self.scalar_group_public_parameters,
             batch_size,
             rng,
         )?;
 
+        // Create (k_A, ρ_1) tuple
         let signature_nonce_shares_and_commitment_randomnesses: Vec<_> = signature_nonce_shares
             .into_iter()
             .zip(commitment_randomnesses)
             .map(|(nonce_share, commitment_randomness)| [nonce_share, commitment_randomness].into())
             .collect();
 
+        // Generate L_DCom parameters
         let commitment_scheme_public_parameters =
             pedersen::PublicParameters::derive::<SCALAR_LIMBS, GroupElement>(
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
             )?;
-
         let language_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
             SOUND_PROOFS_REPETITIONS,
             SCALAR_LIMBS,
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >(commitment_scheme_public_parameters.clone());
 
+        // === Create proof and commitment ===
+        // Protocol 5, steps 1b and 1a, respectively
         let (proof, commitments) = maurer::Proof::<
             SOUND_PROOFS_REPETITIONS,
             knowledge_of_decommitment::Language<
