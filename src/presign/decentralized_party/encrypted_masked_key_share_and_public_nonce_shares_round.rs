@@ -199,6 +199,9 @@ where
             ProtocolContext,
         >,
     )> {
+        // Note: this function works in batches; the annotations are written as
+        // if the batch has size = 1.
+
         if self.parties.len() < self.threshold.into() {
             return Err(Error::ThresholdNotReached);
         }
@@ -207,14 +210,13 @@ where
             .commitments
             .len();
 
+        // Construct L_DCOM language parameters
+        // Used in emulating F^{L_DCOM}_zk
         let commitment_scheme_public_parameters =
             pedersen::PublicParameters::derive::<SCALAR_LIMBS, GroupElement>(
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
             )?;
-
-        // Construct L_DCOM language parameters
-        // Used in emulating F^{L_DCOM}_zk
         let l_dcom_public_parameters = knowledge_of_decommitment::PublicParameters::new::<
             SOUND_PROOFS_REPETITIONS,
             SCALAR_LIMBS,
@@ -285,14 +287,13 @@ where
                 rng,
             )?;
 
+        // Generate EncDH public parameters
         let encrypted_secret_key_share_upper_bound = composed_witness_upper_bound::<
             RANGE_CLAIMS_PER_SCALAR,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,
         >()?;
-
-        // Generate EncDH public parameters
         let enc_dh_public_parameters = encryption_of_tuple::PublicParameters::<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
@@ -301,7 +302,9 @@ where
         >::new::<SCALAR_LIMBS, GroupElement, EncryptionKey>(
             self.scalar_group_public_parameters.clone(),
             self.encryption_scheme_public_parameters.clone(),
-            self.encrypted_secret_key_share.value(),
+
+            // = ct_key = AHE.Enc(x_B) (see Protocol 4, step 2e/f)
+            self.encrypted_secret_key_share.value(), 
             encrypted_secret_key_share_upper_bound,
         );
         let enc_dh_public_parameters = EnhancedPublicParameters::<
@@ -383,15 +386,16 @@ where
             >,
         >::generate_witnesses(witnesses, &enc_dh_public_parameters, rng)?;
 
-        // === Create EncDH commitment round party ===
+        // === Prepare ct^i_1, ct^i_2 computation ===
+        // Protocol 5, step 2a (iii) A/B
         //
-        // This round party consists of
-        // * Range proof commitment party
-        //   - contains (cm_i, cr_i) = (γ_i, cr_i)
+        // By calling `commit_statements_and_statement_mask` on this party,
+        // ct^i_1 and ct^i_2 are created.
         //
-        // * Maurer commmitment party.
-        //   - contains (cm_i, cr_i, uw_i) = (γ_i, cr_i, (η^i_1, η^i_2)), and
-        //   - more randomly sampled (message, randomness, witness) triples
+        // sources: 
+        // --------
+        // maurer::aggregation::commitment_round::commit_statements_and_statement_mask.
+        // ct^i_1, ct^i_2 = enhanced_maurer::Language::homomorphose(witnesses, &enc_dl_public_parameters).
         let key_share_masking_commitment_round_party =
             enhanced_maurer::aggregation::commitment_round::Party::<
                 SOUND_PROOFS_REPETITIONS,
@@ -466,6 +470,8 @@ where
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
                 self.encryption_scheme_public_parameters.clone(),
+
+                // = G (Protocol 5, step 2a (ii))
                 GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
         let enc_dl_public_parameters = EnhancedPublicParameters::<
@@ -507,29 +513,31 @@ where
         // - [commitment message]    cm_i = decomposed k_i
         // - [commitment randomness] cr_i = fresh random sampled value
         // - [unbounded witness]     uw_i = η^i_3
+        //
         let witnesses = EnhancedLanguage::<
-            SOUND_PROOFS_REPETITIONS,
-            RANGE_CLAIMS_PER_SCALAR,
-            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-            RangeProof,
-            UnboundedEncDLWitness,
-            encryption_of_discrete_log::Language<
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-                SCALAR_LIMBS,
-                GroupElement,
-                EncryptionKey,
-            >,
+        SOUND_PROOFS_REPETITIONS,
+        RANGE_CLAIMS_PER_SCALAR,
+        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+        RangeProof,
+        UnboundedEncDLWitness,
+        encryption_of_discrete_log::Language<
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        SCALAR_LIMBS,
+        GroupElement,
+        EncryptionKey,
+        >,
         >::generate_witnesses(witnesses, &enc_dl_public_parameters, rng)?;
-
-        // === Create EncDL commitment round party ===
+        
+        // === Prepare ct^i_3 computation ===      
+        // Protocol 5, step 2a (iii) C
         //
-        // This round party consists of
-        // * Range proof commitment party
-        //   - contains (cm_i, cr_i) = (k_i, cr_i)
+        // By calling `commit_statements_and_statement_mask` on this party,
+        // ct^i_3 is created.
         //
-        // * Maurer commmitment party
-        //   - contains (cm_i, cr_i, uw_i) = (k_i, cr_i, η^i_3), and
-        //   - more randomly sampled (message, randomness, witness) triples
+        // sources: 
+        // --------
+        // maurer::aggregation::commitment_round::commit_statements_and_statement_mask.
+        // ct^i_3 = enhanced_maurer::Language::homomorphose(witnesses, &enc_dl_public_parameters).
         let nonce_sharing_commitment_round_party =
             enhanced_maurer::aggregation::commitment_round::Party::<
                 SOUND_PROOFS_REPETITIONS,
