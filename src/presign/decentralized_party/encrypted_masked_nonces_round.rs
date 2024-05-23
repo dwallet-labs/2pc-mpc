@@ -97,6 +97,9 @@ where
         >,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
+    /// This function implements Protocol 5, step 2b of the
+    /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
+    /// src: https://eprint.iacr.org/2024/253
     pub fn initialize_proof_aggregation(
         self,
         masks_and_encrypted_masked_key_share: Vec<
@@ -133,6 +136,9 @@ where
             >,
         >,
     > {
+        // Note: this function works in batches; the annotations are written as
+        // if the batch has size = 1.
+
         let batch_size = encrypted_nonce_shares_and_public_shares.len();
         if masks_and_encrypted_masked_key_share.len() != batch_size {
             return Err(Error::InvalidParameters);
@@ -141,11 +147,13 @@ where
         // = ct_1
         let encrypted_masks: Vec<_> = masks_and_encrypted_masked_key_share
             .iter()
+            // map (ct_1, ct_2) to ct_1
+            // i.e., select ct_1 = AHE.Enc(pk, γ; η_1*)
             .map(|statement| statement.encrypted_multiplicand().clone())
             .collect();
 
-        // === Sample η^i_4's ===
-        // Protocol 5, a (iii)
+        // === Sample η^i_4 ===
+        // Protocol 5, 2a (iii)
         let masked_nonce_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
                 self.encryption_scheme_public_parameters
@@ -167,17 +175,18 @@ where
             )
             .map(
                 |(
+                    // = ct_1
                     encrypted_mask,
+                    // = (k_i, (η^i_3, η^i_4))
                     (nonce, (nonces_encryption_randomness, masked_nonces_encryption_randomness)),
                 )| {
+                    // Generate EncDH public parameters
                     let encrypted_mask_upper_bound = composed_witness_upper_bound::<
                         RANGE_CLAIMS_PER_SCALAR,
                         PLAINTEXT_SPACE_SCALAR_LIMBS,
                         COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
                         RangeProof,
                     >()?;
-
-                    // Generate EncDH public parameters
                     let enc_dh_public_parameters = encryption_of_tuple::PublicParameters::<
                         PLAINTEXT_SPACE_SCALAR_LIMBS,
                         SCALAR_LIMBS,
@@ -186,7 +195,7 @@ where
                     >::new::<SCALAR_LIMBS, GroupElement, EncryptionKey>(
                         self.scalar_group_public_parameters.clone(),
                         self.encryption_scheme_public_parameters.clone(),
-                        encrypted_mask.value(),
+                        encrypted_mask.value(), // = ct_1
                         encrypted_mask_upper_bound,
                     );
                     let enc_dh_public_parameters = EnhancedPublicParameters::<
@@ -216,10 +225,10 @@ where
                         enc_dh_public_parameters,
                     )?;
 
-                    // map (ct_1, η^i_4)'s to tuples with
-                    // - [commitment message]    cm_i = decomposed ct_1
+                    // map (k_i, η^i_3, η^i_4) to a tuple with
+                    // - [commitment message]    cm_i = decomposed k_i
                     // - [commitment randomness] cr_i = randomly sampled value
-                    // - [unbounded element]     ue_i = η^i_4
+                    // - [unbounded witness]     uw_i = (η^i_3, η^i_4)
                     EnhancedLanguage::<
                         SOUND_PROOFS_REPETITIONS,
                         RANGE_CLAIMS_PER_SCALAR,
@@ -234,9 +243,9 @@ where
                         >,
                     >::generate_witness(
                         (
-                            nonce,
-                            nonces_encryption_randomness,
-                            masked_nonces_encryption_randomness,
+                            nonce, // = k_i
+                            nonces_encryption_randomness, // = η^i_3
+                            masked_nonces_encryption_randomness, // = η^i_4
                         )
                             .into(),
                         &enc_dh_public_parameters,
@@ -244,15 +253,16 @@ where
                     )
                     .map_err(Error::from)
                     .and_then(|witness| {
-                        // === Create commitment round party ===
+                        // === Prepare ct^i_4 computation ===
+                        // Protocol 5, step 2b (iii)
                         //
-                        // This round party consists of
-                        // * Range proof commitment party
-                        //   - contains (cm_i, cr_i)
+                        // By calling `commit_statements_and_statement_mask` on this party,
+                        // ct^i_4 is created.
                         //
-                        // * Maurer commmitment party.
-                        //   - contains (cm_i, cr_i, ue_i), and
-                        //   - more randomly sampled (message, randomness, witness) triples
+                        // sources: 
+                        // --------
+                        // maurer::aggregation::commitment_round::commit_statements_and_statement_mask.
+                        // ct^i_4 = enhanced_maurer::Language::homomorphose(witnesses, &enc_dl_public_parameters).
                         enhanced_maurer::aggregation::commitment_round::Party::<
                             SOUND_PROOFS_REPETITIONS,
                             RANGE_CLAIMS_PER_SCALAR,
