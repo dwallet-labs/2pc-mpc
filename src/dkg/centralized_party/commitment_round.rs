@@ -109,7 +109,7 @@ impl<
             knowledge_of_discrete_log::PublicParameters::new::<GroupElement::Scalar, GroupElement>(
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
-                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
+                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters), // = G (Protocol 4)
             );
 
         // === Generate zero-knowledge proof for x_A ===
