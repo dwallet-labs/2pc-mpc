@@ -118,6 +118,9 @@ where
             UnboundedEncDLWitness,
         >,
 {
+    /// This function implements Protocol 4, step 3 of the
+    /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
+    /// src: https://eprint.iacr.org/2024/253
     pub fn decommit_proof_public_key_share(
         self,
         decentralized_party_secret_key_share_encryption_and_proof: decentralized_party::SecretKeyShareEncryptionAndProof<
@@ -199,11 +202,10 @@ where
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
                 self.encryption_scheme_public_parameters,
-                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
-            );
 
-        // === Enhance Enc_DL parameters ===
-        // Include range proof capabilities
+                // = G (Protocol 4, step 2b)
+                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters), 
+            );
         let encryption_of_discrete_log_enhanced_language_public_parameters =
             enhanced_maurer::PublicParameters::new::<
                 RangeProof,
@@ -236,7 +238,7 @@ where
         // Protocol 4, step 5a
         let public_key = self.public_key_share.clone() + &decentralized_party_public_key_share;
 
-        // === Generate
+        // === Generate public key share proof ===
         // Protocol 4, step 3c
         // Used to emulate idealized F^{L_DL}_{com-zk}
         let public_key_share = self.public_key_share.value();
