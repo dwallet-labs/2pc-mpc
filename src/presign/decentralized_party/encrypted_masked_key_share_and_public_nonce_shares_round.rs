@@ -335,10 +335,6 @@ where
         )?;
 
         // Create (γ_i, η^i_1, η^i_2) tuples
-        // The elements are henceforth referred to as
-        // - multiplicand,
-        // - multiplicand randomness,
-        // - product randomness
         let witnesses = mask_shares_witnesses
             .clone()
             .into_iter()
