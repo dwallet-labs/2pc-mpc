@@ -68,15 +68,16 @@ where
         partial_signature_decryption_shares: HashMap<PartyID, DecryptionKeyShare::DecryptionShare>,
         masked_nonce_decryption_shares: HashMap<PartyID, DecryptionKeyShare::DecryptionShare>,
     ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
+        // Check whether all involved decrypters submitted their ct_A and ct_4 shares.
         let decrypters: HashSet<_> = lagrange_coefficients.clone().into_keys().collect();
-        if decrypters.len() != usize::from(self.threshold)
+        if decrypters.len() != usize::from(self.threshold) 
             || decrypters
-                != partial_signature_decryption_shares
+                != partial_signature_decryption_shares // ct_A shares
                     .keys()
                     .cloned()
                     .collect::<HashSet<_>>()
             || decrypters
-                != masked_nonce_decryption_shares
+                != masked_nonce_decryption_shares // ct_4 shares
                     .keys()
                     .cloned()
                     .collect::<HashSet<_>>()
