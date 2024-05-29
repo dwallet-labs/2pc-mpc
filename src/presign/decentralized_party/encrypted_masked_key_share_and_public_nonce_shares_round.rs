@@ -268,7 +268,7 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
-        // === Sample η^i_1's ===
+        // === Sample η^i_{mask_1}'s ===
         // Protocol 5, 2a (iii)
         let masks_encryption_randomness = EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
             self.encryption_scheme_public_parameters
@@ -277,7 +277,7 @@ where
             rng,
         )?;
 
-        // === Sample η^i_2's ===
+        // === Sample η^i_{mask_2}'s ===
         // Protocol 5, 2a (iii)
         let masked_key_share_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
@@ -334,7 +334,7 @@ where
             enc_dh_public_parameters,
         )?;
 
-        // Create (γ_i, η^i_1, η^i_2) tuples
+        // Create (γ_i, η^i_{mask_1}, η^i_{mask_2}) tuples
         let witnesses = mask_shares_witnesses
             .clone()
             .into_iter()
@@ -364,10 +364,10 @@ where
         // TODO: use izip! instead:
         // https://stackoverflow.com/questions/29669287/how-can-i-zip-more-than-two-iterators
 
-        // Map (γ_i, η^i_1, η^i_2) tuples to tuples of the form
+        // Map (γ_i, η^i_{mask_1}, η^i_{mask_2}) tuples to tuples of the form
         // - [commitment message]    cm_i = decomposed γ_i
         // - [commitment randomness] cr_i = fresh random sampled value
-        // - [unbounded witness]     uw_i = (η^i_1, η^i_2)
+        // - [unbounded witness]     uw_i = (η^i_{mask_1}, η^i_{mask_2})
         let witnesses = EnhancedLanguage::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -443,7 +443,7 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
-        // === Sample η^i_3's ===
+        // === Sample η^i_{mask_3}'s ===
         // Protocol 5, step 2a (ii)
         let shares_of_signature_nonce_shares_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
@@ -497,7 +497,7 @@ where
             enc_dl_public_parameters,
         )?;
 
-        // Create (k_i, η^i_3) tuples
+        // Create (k_i, η^i_{mask_3}) tuples
         let witnesses: Vec<_> = shares_of_signature_nonce_shares_witnesses
             .clone()
             .into_iter()
@@ -505,10 +505,10 @@ where
             .map(|(nonce_share, encryption_randomness)| (nonce_share, encryption_randomness).into())
             .collect();
 
-        // Map (k_i, η^i_3) tuples to tuples of the form
+        // Map (k_i, η^i_{mask_3}) tuples to tuples of the form
         // - [commitment message]    cm_i = decomposed k_i
         // - [commitment randomness] cr_i = fresh random sampled value
-        // - [unbounded witness]     uw_i = η^i_3
+        // - [unbounded witness]     uw_i = η^i_{mask_3}
         //
         let witnesses = EnhancedLanguage::<
         SOUND_PROOFS_REPETITIONS,
