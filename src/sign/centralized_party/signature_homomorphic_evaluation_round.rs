@@ -424,7 +424,7 @@ where
         )?;
 
         // === Compute ct_A ===
-        // Protocol 6, step 1e, dash 3
+        // Protocol 6, step 1d and step 1e, dash 3
         let witness = EnhancedLanguage::<
             SOUND_PROOFS_REPETITIONS,
             NUM_RANGE_CLAIMS,
