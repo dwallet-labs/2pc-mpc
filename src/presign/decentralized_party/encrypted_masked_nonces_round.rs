@@ -152,7 +152,7 @@ where
             .map(|statement| statement.encrypted_multiplicand().clone())
             .collect();
 
-        // === Sample η^i_4 ===
+        // === Sample η^i_{mask_4} ===
         // Protocol 5, 2a (iii)
         let masked_nonce_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
@@ -177,7 +177,7 @@ where
                 |(
                     // = ct_1
                     encrypted_mask,
-                    // = (k_i, (η^i_3, η^i_4))
+                    // = (k_i, (η^i_{mask_3}, η^i_{mask_4}))
                     (nonce, (nonces_encryption_randomness, masked_nonces_encryption_randomness)),
                 )| {
                     // Generate EncDH public parameters
@@ -225,10 +225,10 @@ where
                         enc_dh_public_parameters,
                     )?;
 
-                    // map (k_i, η^i_3, η^i_4) to a tuple with
+                    // map (k_i, η^i_{mask_3}, η^i_{mask_4}) to a tuple with
                     // - [commitment message]    cm_i = decomposed k_i
                     // - [commitment randomness] cr_i = randomly sampled value
-                    // - [unbounded witness]     uw_i = (η^i_3, η^i_4)
+                    // - [unbounded witness]     uw_i = (η^i_{mask_3}, η^i_{mask_4})
                     EnhancedLanguage::<
                         SOUND_PROOFS_REPETITIONS,
                         RANGE_CLAIMS_PER_SCALAR,
@@ -244,8 +244,8 @@ where
                     >::generate_witness(
                         (
                             nonce, // = k_i
-                            nonces_encryption_randomness, // = η^i_3
-                            masked_nonces_encryption_randomness, // = η^i_4
+                            nonces_encryption_randomness, // = η^i_{mask_3}
+                            masked_nonces_encryption_randomness, // = η^i_{mask_4}
                         )
                             .into(),
                         &enc_dh_public_parameters,
