@@ -334,8 +334,9 @@ where
             ),
         ];
 
-        // === Sample ??? ===
-        // ???????????????
+        // === Sample ω ===
+        // Required for secure evaluation of the DComEval function.
+        // See `homomorphic-encryption::AdditivelyHomomorphicEncryptionKey::securely_evaluate_linear_combination_with_randomness`
         let mask = EncryptionKey::sample_mask_for_secure_function_evaluation(
             &ciphertexts_and_upper_bounds,
             &self.encryption_scheme_public_parameters,
@@ -363,7 +364,7 @@ where
         ]
         .into();
 
-        // = (A, ρ, ???, η)
+        // = (A, ρ, ω, η)
         let witness = (
             coefficients,
             commitment_randomness,
