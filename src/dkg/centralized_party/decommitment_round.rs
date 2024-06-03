@@ -206,7 +206,7 @@ where
                 self.encryption_scheme_public_parameters,
 
                 // = G (Protocol 4, step 2b)
-                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters), 
+                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
         let encryption_of_discrete_log_enhanced_language_public_parameters =
             enhanced_maurer::PublicParameters::new::<

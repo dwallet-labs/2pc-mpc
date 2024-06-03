@@ -428,11 +428,11 @@ impl<
 
         Ok(Presign {
             centralized_party_nonce_share_commitment: centralized_party_nonce_share_commitment
-                .value(),                   // = K_A
-            nonce_public_share,             // = R_B            
-            encrypted_mask,                 // = ct_1 = AHE.Enc(γ)
-            encrypted_masked_key_share,     // = ct_2 = AHE.Enc(γ * x_B)
-            encrypted_masked_nonce_share,   // = ct_4 = AHE.Enc(k * γ * x_B)
+                .value(), // = K_A
+            nonce_public_share,           // = R_B
+            encrypted_mask,               // = ct_1 = AHE.Enc(γ)
+            encrypted_masked_key_share,   // = ct_2 = AHE.Enc(γ * x_B)
+            encrypted_masked_nonce_share, // = ct_4 = AHE.Enc(k * γ * x_B)
         })
     }
 

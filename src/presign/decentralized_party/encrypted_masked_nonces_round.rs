@@ -243,8 +243,8 @@ where
                         >,
                     >::generate_witness(
                         (
-                            nonce, // = k_i
-                            nonces_encryption_randomness, // = η^i_{mask_3}
+                            nonce,                               // = k_i
+                            nonces_encryption_randomness,        // = η^i_{mask_3}
                             masked_nonces_encryption_randomness, // = η^i_{mask_4}
                         )
                             .into(),
@@ -259,7 +259,7 @@ where
                         // By calling `commit_statements_and_statement_mask` on this party,
                         // ct^i_4 is created.
                         //
-                        // sources: 
+                        // sources:
                         // --------
                         // maurer::aggregation::commitment_round::commit_statements_and_statement_mask.
                         // ct^i_4 = enhanced_maurer::Language::homomorphose(witnesses, &enc_dl_public_parameters).

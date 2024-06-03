@@ -135,7 +135,7 @@ where
     /// This function implements Protocol 5, step 3 of the
     /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
     /// src: https://eprint.iacr.org/2024/253
-    /// 
+    ///
     /// Note: this function operates on batches; the annotations are written as
     /// if the batch size equals 1.
     pub fn verify_presign_output(
