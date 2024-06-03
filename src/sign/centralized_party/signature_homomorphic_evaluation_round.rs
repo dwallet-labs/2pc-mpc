@@ -203,7 +203,7 @@ where
         // = R
         let public_nonce = inverted_nonce_share * self.decentralized_party_nonce_public_share;
 
-        // Generate DComDL public parameters
+        // Construct L_DComDL public parameters
         let commitment_scheme_public_parameters =
             pedersen::PublicParameters::derive::<SCALAR_LIMBS, GroupElement>(
                 self.scalar_group_public_parameters.clone(),
@@ -221,7 +221,8 @@ where
             public_nonce.value(),
         );
 
-        // === Generate DComDL proof ===
+        // === Construct R_B proof ===
+        // Used in emulating the idealized F^{L_DComDL}_zk component
         // Protocol 6, step 1e, dash 1
         let (public_nonce_proof, _) = maurer::Proof::<
             SOUND_PROOFS_REPETITIONS,
@@ -244,7 +245,9 @@ where
         let nonce_share_by_key_share_commitment_randomness =
             GroupElement::Scalar::sample(&self.scalar_group_public_parameters, rng)?;
 
-        // Generate DComRatio public parameters
+        // Construct L_DComRatio public parameters
+        // Note: uses X_A instead of x_a.
+        // See the description of DComRatio in Section L for clarification.
         let language_public_parameters =
             discrete_log_ratio_of_committed_values::PublicParameters::new::<
                 SCALAR_LIMBS,
@@ -254,10 +257,11 @@ where
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
                 commitment_scheme_public_parameters.clone(),
-                self.public_key_share,
+                self.public_key_share, // = X_A
             );
 
-        // === Generate DComRatio proof ===
+        // === Generate (K_A, U_A, X_A) proof ===
+        // Used in emulating the idealized F^{L_DComRatio}_zk component
         // Protocol 6, step 1e, dash 2
         let (nonce_share_by_key_share_proof, statement) = maurer::Proof::<
             SOUND_PROOFS_REPETITIONS,
@@ -271,9 +275,9 @@ where
             &self.protocol_context,
             &language_public_parameters,
             vec![[
-                self.nonce_share,
-                self.nonce_share_commitment_randomness,
-                nonce_share_by_key_share_commitment_randomness,
+                self.nonce_share, // = k_A
+                self.nonce_share_commitment_randomness, // = ρ_1
+                nonce_share_by_key_share_commitment_randomness, // = ρ_2
             ]
             .into()],
             rng,
@@ -303,7 +307,7 @@ where
         let second_coefficient_commitment_randomness =
             nonce_x_coordinate * self.nonce_share_commitment_randomness;
 
-        // === Sample η ===
+        // === Sample η_eval ===
         // Protocol 6, step 1d
         let partial_signature_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample(
@@ -337,6 +341,7 @@ where
         // === Sample ω ===
         // Required for secure evaluation of the DComEval function.
         // See `homomorphic-encryption::AdditivelyHomomorphicEncryptionKey::securely_evaluate_linear_combination_with_randomness`
+        // as well as Section 5.2 of the paper.
         let mask = EncryptionKey::sample_mask_for_secure_function_evaluation(
             &ciphertexts_and_upper_bounds,
             &self.encryption_scheme_public_parameters,
@@ -373,7 +378,7 @@ where
         )
             .into();
 
-        // Generate DComEval language parameters
+        // Construct L_DComEval language parameters
         let ciphertexts_and_upper_bounds =
             ciphertexts_and_upper_bounds.map(|(ct, upper_bound)| (ct.value(), upper_bound));
         let commitment_scheme_public_parameters = commitment_scheme_public_parameters.into();

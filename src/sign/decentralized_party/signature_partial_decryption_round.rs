@@ -404,7 +404,7 @@ where
                 .into()],
             )?;
 
-        // Generate DComEval language parameters
+        // Construct L_DComEval language parameters
         let encrypted_mask_upper_bound = composed_witness_upper_bound::<
             RANGE_CLAIMS_PER_SCALAR,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
