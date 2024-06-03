@@ -135,6 +135,9 @@ where
     /// This function implements Protocol 5, step 3 of the
     /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
     /// src: https://eprint.iacr.org/2024/253
+    /// 
+    /// Note: this function operates on batches; the annotations are written as
+    /// if the batch size equals 1.
     pub fn verify_presign_output(
         self,
         output: decentralized_party::Output<
@@ -184,9 +187,6 @@ where
             >,
         >,
     > {
-        // Note: this function works in batches; the annotations are written as
-        // if the batch has size = 1.
-
         let batch_size = self
             .signature_nonce_shares_and_commitment_randomnesses
             .len();
@@ -247,7 +247,7 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
-        // Gather EncDH language public parameters
+        // Construct L_EncDH language public parameters
         let encrypted_secret_key_share_upper_bound = composed_witness_upper_bound::<
             RANGE_CLAIMS_PER_SCALAR,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
@@ -292,7 +292,7 @@ where
             language_public_parameters,
         )?;
 
-        // === Verify proof ===
+        // === Verify ct_1, ct_2 proof ===
         // Protocol 5, step 3b
         let statements = encrypted_masks
             .into_iter()
@@ -361,7 +361,7 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
-        // Gather EncDL public parameters
+        // Construct L_EncDL public parameters
         let language_public_parameters =
             encryption_of_discrete_log::PublicParameters::<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
@@ -401,7 +401,7 @@ where
             language_public_parameters,
         )?;
 
-        // === Verify proof ===
+        // === Verify ct_3 proof ===
         // Protocol 5, step 3a
         let statements = encrypted_nonces
             .into_iter()

@@ -140,9 +140,12 @@ where
         >,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
-    /// This function implements Protocol 5, step 2a (i) - (iii) of the
+    /// This function implements Protocol 5, step 2a of the
     /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
     /// src: https://eprint.iacr.org/2024/253
+    ///
+    /// Note: this function operates on batches; the annotations are written as
+    /// if the batch size equals 1.
     pub fn sample_mask_and_nonce_shares_and_initialize_proof_aggregation(
         self,
         centralized_party_nonce_shares_commitments_and_batched_proof:
@@ -199,9 +202,6 @@ where
             ProtocolContext,
         >,
     )> {
-        // Note: this function works in batches; the annotations are written as
-        // if the batch has size = 1.
-
         if self.parties.len() < self.threshold.into() {
             return Err(Error::ThresholdNotReached);
         }
@@ -212,6 +212,7 @@ where
 
         // Construct L_DCOM language parameters
         // Used in emulating F^{L_DCOM}_zk
+        // Protocol 5, step 2a (i)
         let commitment_scheme_public_parameters =
             pedersen::PublicParameters::derive::<SCALAR_LIMBS, GroupElement>(
                 self.scalar_group_public_parameters.clone(),
@@ -223,7 +224,7 @@ where
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >(commitment_scheme_public_parameters.clone());
 
-        // === Verify commitments to k_A ===
+        // === Verify commitment to k_A ===
         // Protocol 5, step 2a (i)
         let centralized_party_nonce_shares_commitments =
             centralized_party_nonce_shares_commitments_and_batched_proof
@@ -287,7 +288,9 @@ where
                 rng,
             )?;
 
-        // Generate EncDH public parameters
+        // Construct L_EncDH public parameters
+        // Used in emulating F^{L_EncDH}_{agg-zk}
+        // Protocol 5, step 2a (iv)
         let encrypted_secret_key_share_upper_bound = composed_witness_upper_bound::<
             RANGE_CLAIMS_PER_SCALAR,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
@@ -455,7 +458,9 @@ where
                 rng,
             )?;
 
-        // Generate EncDL public parameters
+        // Construct L_EncDL public parameters
+        // Used in emulating F^{L_EncDL}_{agg-zk}
+        // Protocol 5, step 2a (v)
         let enc_dl_public_parameters =
             encryption_of_discrete_log::PublicParameters::<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,

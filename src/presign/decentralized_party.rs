@@ -352,14 +352,17 @@ impl<
         GroupElement: group::GroupElement<Value = GroupElementValue>,
         EncryptionKey::CiphertextSpaceGroupElement: group::GroupElement<Value = CiphertextValue>,
     {
+        // = ct_1
         let encrypted_mask = mask_and_encrypted_masked_key_share
             .encrypted_multiplicand()
             .value();
 
+        // = ct_2
         let encrypted_masked_key_share = mask_and_encrypted_masked_key_share
             .encrypted_product()
             .value();
 
+        // = R_B
         let nonce_public_share = encrypted_nonce_share_and_public_share
             .base_by_discrete_log()
             .value();
