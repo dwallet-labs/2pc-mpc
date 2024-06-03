@@ -424,11 +424,12 @@ where
 
         // === Sample k_i ===
         // Protocol 5, step 2a (ii)
-        //
-        //           !!! WARNING !!!
-        // This uses the same randomness as γ_i.
-        //           !!! WARNING !!!
-        let shares_of_signature_nonce_shares_witnesses = masks_shares
+        let share_of_signature_nonce_share = GroupElement::Scalar::sample_batch(
+            &self.scalar_group_public_parameters,
+            batch_size,
+            rng,
+        )?;
+        let shares_of_signature_nonce_shares_witnesses = share_of_signature_nonce_share
             .clone()
             .into_iter()
             .map(|share_of_signature_nonce_share| {
