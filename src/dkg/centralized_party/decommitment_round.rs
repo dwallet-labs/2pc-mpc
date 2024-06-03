@@ -118,7 +118,7 @@ where
             UnboundedEncDLWitness,
         >,
 {
-    /// This function implements Protocol 4, step 3 of the
+    /// This function implements Protocol 4, steps 3 and 5 of the
     /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
     /// src: https://eprint.iacr.org/2024/253
     pub fn decommit_proof_public_key_share(
@@ -155,7 +155,7 @@ where
             group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
         >,
     )> {
-        // === enc(x_B) ===
+        // = enc(x_B)
         let encrypted_decentralized_party_secret_key_share =
             EncryptionKey::CiphertextSpaceGroupElement::new(
                 decentralized_party_secret_key_share_encryption_and_proof
@@ -164,7 +164,7 @@ where
                     .ciphertext_space_public_parameters(),
             )?;
 
-        // === X_B ===
+        // = X_B
         let decentralized_party_public_key_share = GroupElement::new(
             decentralized_party_secret_key_share_encryption_and_proof.public_key_share,
             &self.group_public_parameters,
@@ -191,7 +191,9 @@ where
         )
             .into();
 
-        // === Generate Enc_DL parameters ===
+        // Construct L_EncDL parameters
+        // Used in emulating the idealized F^{L_EncDL}_{agg-zk} component
+        // Protocol 4, step 3a
         let encryption_of_discrete_log_language_public_parameters =
             encryption_of_discrete_log::PublicParameters::<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
@@ -238,9 +240,9 @@ where
         // Protocol 4, step 5a
         let public_key = self.public_key_share.clone() + &decentralized_party_public_key_share;
 
-        // === Generate public key share proof ===
-        // Protocol 4, step 3c
+        // === Construct X_A proof object ===
         // Used to emulate idealized F^{L_DL}_{com-zk}
+        // Protocol 4, step 3c
         let public_key_share = self.public_key_share.value();
         let public_key_share_decommitment_proof = PublicKeyShareDecommitmentAndProof::<
             GroupElement::Value,
