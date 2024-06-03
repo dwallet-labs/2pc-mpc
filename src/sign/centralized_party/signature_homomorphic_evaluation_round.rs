@@ -275,8 +275,8 @@ where
             &self.protocol_context,
             &language_public_parameters,
             vec![[
-                self.nonce_share, // = k_A
-                self.nonce_share_commitment_randomness, // = ρ_1
+                self.nonce_share,                               // = k_A
+                self.nonce_share_commitment_randomness,         // = ρ_1
                 nonce_share_by_key_share_commitment_randomness, // = ρ_2
             ]
             .into()],

@@ -79,7 +79,7 @@ impl<
     /// This function implements Protocol 5, step 1 of the
     /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
     /// src: https://eprint.iacr.org/2024/253
-    /// 
+    ///
     /// Note: this function operates on batches; the annotations are written as
     /// if the batch size equals 1.
     pub fn sample_commit_and_prove_signature_nonce_share(

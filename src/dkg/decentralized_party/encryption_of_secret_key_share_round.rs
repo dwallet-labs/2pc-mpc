@@ -240,7 +240,7 @@ where
         // By calling `commit_statements_and_statement_mask` on this party,
         // ct_i is created.
         //
-        // sources: 
+        // sources:
         // --------
         // maurer::aggregation::commitment_round::commit_statements_and_statement_mask.
         // ct_i = enhanced_maurer::Language::homomorphose(witnesses, &enc_dl_public_parameters).

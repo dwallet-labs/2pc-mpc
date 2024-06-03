@@ -307,7 +307,7 @@ where
             self.encryption_scheme_public_parameters.clone(),
 
             // = ct_key = AHE.Enc(x_B) (see Protocol 4, step 2e/f)
-            self.encrypted_secret_key_share.value(), 
+            self.encrypted_secret_key_share.value(),
             encrypted_secret_key_share_upper_bound,
         );
         let enc_dh_public_parameters = EnhancedPublicParameters::<
@@ -391,7 +391,7 @@ where
         // By calling `commit_statements_and_statement_mask` on this party,
         // ct^i_1 and ct^i_2 are created.
         //
-        // sources: 
+        // sources:
         // --------
         // maurer::aggregation::commitment_round::commit_statements_and_statement_mask.
         // ct^i_1, ct^i_2 = enhanced_maurer::Language::homomorphose(witnesses, &enc_dl_public_parameters).
@@ -516,26 +516,26 @@ where
         // - [unbounded witness]     uw_i = η^i_{mask_3}
         //
         let witnesses = EnhancedLanguage::<
-        SOUND_PROOFS_REPETITIONS,
-        RANGE_CLAIMS_PER_SCALAR,
-        COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
-        RangeProof,
-        UnboundedEncDLWitness,
-        encryption_of_discrete_log::Language<
-        PLAINTEXT_SPACE_SCALAR_LIMBS,
-        SCALAR_LIMBS,
-        GroupElement,
-        EncryptionKey,
-        >,
+            SOUND_PROOFS_REPETITIONS,
+            RANGE_CLAIMS_PER_SCALAR,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RangeProof,
+            UnboundedEncDLWitness,
+            encryption_of_discrete_log::Language<
+                PLAINTEXT_SPACE_SCALAR_LIMBS,
+                SCALAR_LIMBS,
+                GroupElement,
+                EncryptionKey,
+            >,
         >::generate_witnesses(witnesses, &enc_dl_public_parameters, rng)?;
-        
-        // === Prepare ct^i_3 computation ===      
+
+        // === Prepare ct^i_3 computation ===
         // Protocol 5, step 2a (iii) C
         //
         // By calling `commit_statements_and_statement_mask` on this party,
         // ct^i_3 is created.
         //
-        // sources: 
+        // sources:
         // --------
         // maurer::aggregation::commitment_round::commit_statements_and_statement_mask.
         // ct^i_3 = enhanced_maurer::Language::homomorphose(witnesses, &enc_dl_public_parameters).

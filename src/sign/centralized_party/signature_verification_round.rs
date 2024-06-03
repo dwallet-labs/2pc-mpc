@@ -23,9 +23,9 @@ impl<
     ) -> crate::Result<()> {
         verify_signature(
             nonce_x_coordinate, // = r
-            signature_s, // = s
-            self.message, // = m
-            self.public_key, // = X
+            signature_s,        // = s
+            self.message,       // = m
+            self.public_key,    // = X
         )?;
 
         Ok(())
