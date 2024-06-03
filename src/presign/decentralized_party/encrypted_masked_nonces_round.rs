@@ -100,6 +100,9 @@ where
     /// This function implements Protocol 5, step 2b of the
     /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
     /// src: https://eprint.iacr.org/2024/253
+    ///
+    /// Note: this function operates on batches; the annotations are written as
+    /// if the batch size equals 1.
     pub fn initialize_proof_aggregation(
         self,
         masks_and_encrypted_masked_key_share: Vec<
@@ -136,9 +139,6 @@ where
             >,
         >,
     > {
-        // Note: this function works in batches; the annotations are written as
-        // if the batch has size = 1.
-
         let batch_size = encrypted_nonce_shares_and_public_shares.len();
         if masks_and_encrypted_masked_key_share.len() != batch_size {
             return Err(Error::InvalidParameters);
@@ -180,7 +180,7 @@ where
                     // = (k_i, (η^i_{mask_3}, η^i_{mask_4}))
                     (nonce, (nonces_encryption_randomness, masked_nonces_encryption_randomness)),
                 )| {
-                    // Generate EncDH public parameters
+                    // Construct EncDH public parameters
                     let encrypted_mask_upper_bound = composed_witness_upper_bound::<
                         RANGE_CLAIMS_PER_SCALAR,
                         PLAINTEXT_SPACE_SCALAR_LIMBS,

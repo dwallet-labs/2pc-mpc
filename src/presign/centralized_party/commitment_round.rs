@@ -79,6 +79,9 @@ impl<
     /// This function implements Protocol 5, step 1 of the
     /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
     /// src: https://eprint.iacr.org/2024/253
+    /// 
+    /// Note: this function operates on batches; the annotations are written as
+    /// if the batch size equals 1.
     pub fn sample_commit_and_prove_signature_nonce_share(
         self,
         batch_size: usize,
@@ -110,9 +113,6 @@ impl<
             ProtocolContext,
         >,
     )> {
-        // Note: this function works in batches; the annotations are written as
-        // if the batch has size = 1.
-
         // === Sample k_A ===
         // Protocol 5, step 1a
         let signature_nonce_shares = GroupElement::Scalar::sample_batch(
@@ -136,7 +136,7 @@ impl<
             .map(|(nonce_share, commitment_randomness)| [nonce_share, commitment_randomness].into())
             .collect();
 
-        // Generate L_DCom parameters
+        // Construct L_DCom parameters
         let commitment_scheme_public_parameters =
             pedersen::PublicParameters::derive::<SCALAR_LIMBS, GroupElement>(
                 self.scalar_group_public_parameters.clone(),
@@ -148,7 +148,7 @@ impl<
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >(commitment_scheme_public_parameters.clone());
 
-        // === Create proof and commitment ===
+        // === Create proof and commitment to k_A ===
         // Protocol 5, steps 1b and 1a, respectively
         let (proof, commitments) = maurer::Proof::<
             SOUND_PROOFS_REPETITIONS,
