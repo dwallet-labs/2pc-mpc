@@ -99,6 +99,9 @@ where
             UnboundedEncDLWitness,
         >,
 {
+    /// This function implements Protocol 4, step 2 of the
+    /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
+    /// src: https://eprint.iacr.org/2024/253
     pub fn sample_secret_key_share_and_initialize_proof_aggregation(
         self,
         commitment_to_centralized_party_secret_key_share: Commitment,
@@ -152,7 +155,9 @@ where
             rng,
         )?;
 
-        // Construct EncDL language parameters, step 1.
+        // Construct L_EncDL parameters
+        // Used in emulating the idealized F^{L_EncDL}_{agg-zk} component
+        // Protocol 4, steps 2e and 2f.
         let language_public_parameters =
             encryption_of_discrete_log::PublicParameters::<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
@@ -165,9 +170,6 @@ where
                 self.encryption_scheme_public_parameters.clone(),
                 GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
-        
-        // Enhance; add range proof support to language
-        // Used in Protocol 4, steps 2e and 2f.
         let language_public_parameters = EnhancedPublicParameters::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -196,7 +198,7 @@ where
         )?;
 
         // === Map (x_i, ρ_i) ====
-        // map it to the triple
+        // map (x_i, ρ_i) to the triple
         // * [commitment_message]    cm_i = x_i
         // * [commitment_randomness] cr_i = randomly sampled value
         // * [unbounded_witness]     uw_i = ρ_i
