@@ -424,10 +424,6 @@ where
 
         // === Sample k_i ===
         // Protocol 5, step 2a (ii)
-        //
-        //           !!! WARNING !!!
-        // This uses the same randomness as γ_i.
-        //           !!! WARNING !!!
         let shares_of_signature_nonce_shares_witnesses = masks_shares
             .clone()
             .into_iter()
