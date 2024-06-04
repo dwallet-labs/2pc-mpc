@@ -18,7 +18,10 @@ use maurer::SOUND_PROOFS_REPETITIONS;
 use proof::AggregatableRangeProof;
 use serde::Serialize;
 
-use crate::{dkg::decentralized_party::decommitment_proof_verification_round, Error};
+use crate::{
+    dkg::decentralized_party::decommitment_proof_verification_round, Error,
+    ProtocolPublicParameters,
+};
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
@@ -32,15 +35,15 @@ pub struct Party<
     UnboundedEncDLWitness: group::GroupElement + Samplable,
     ProtocolContext: Clone + Serialize,
 > {
-    pub party_id: PartyID,
-    pub threshold: PartyID,
-    pub parties: HashSet<PartyID>,
-    pub protocol_context: ProtocolContext,
-    pub group_public_parameters: GroupElement::PublicParameters,
-    pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
-    pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    pub unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
-    pub range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
+    party_id: PartyID,
+    threshold: PartyID,
+    parties: HashSet<PartyID>,
+    protocol_context: ProtocolContext,
+    group_public_parameters: GroupElement::PublicParameters,
+    scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+    encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
+    unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
+    range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
 }
 
 impl<
@@ -261,5 +264,45 @@ where
             encryption_of_secret_share_commitment_round_party,
             decommitment_round_party,
         ))
+    }
+
+    pub fn new<
+        const NUM_RANGE_CLAIMS: usize,
+        UnboundedEncDHWitness: group::GroupElement + Samplable,
+        UnboundedDComEvalWitness: group::GroupElement + Samplable,
+    >(
+        protocol_public_parameters: ProtocolPublicParameters<
+            SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            NUM_RANGE_CLAIMS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+            UnboundedEncDLWitness,
+            UnboundedEncDHWitness,
+            UnboundedDComEvalWitness,
+        >,
+        party_id: PartyID,
+        threshold: PartyID,
+        parties: HashSet<PartyID>,
+        protocol_context: ProtocolContext,
+    ) -> Self {
+        Party {
+            party_id,
+            threshold,
+            parties,
+            protocol_context,
+            scalar_group_public_parameters: protocol_public_parameters
+                .scalar_group_public_parameters,
+            group_public_parameters: protocol_public_parameters.group_public_parameters,
+            encryption_scheme_public_parameters: protocol_public_parameters
+                .encryption_scheme_public_parameters,
+            unbounded_encdl_witness_public_parameters: protocol_public_parameters
+                .unbounded_encdl_witness_public_parameters,
+            range_proof_public_parameters: protocol_public_parameters
+                .range_proof_enc_dl_public_parameters,
+        }
     }
 }

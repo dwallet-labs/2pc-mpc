@@ -12,7 +12,7 @@ use maurer::{knowledge_of_discrete_log, SOUND_PROOFS_REPETITIONS};
 use proof::{range, range::PublicParametersAccessors, AggregatableRangeProof};
 use serde::{Deserialize, Serialize};
 
-use crate::dkg::decentralized_party;
+use crate::{dkg::decentralized_party, ProtocolPublicParameters};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Output<GroupElementValue, ScalarValue, CiphertextSpaceValue> {
@@ -28,6 +28,16 @@ pub struct PublicKeyShareDecommitmentAndProof<GroupElementValue, DLProof> {
     pub(in crate::dkg) proof: DLProof,
     pub(in crate::dkg) public_key_share: GroupElementValue,
     pub(in crate::dkg) commitment_randomness: ComputationalSecuritySizedNumber,
+}
+
+/// This structs is a serializable state to use in case the `Party` struct cannot be saved in
+/// memory.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct State<GroupElementValue, ScalarValue, DLProof> {
+    proof: DLProof,
+    secret_key_share: ScalarValue,
+    public_key_share: GroupElementValue,
+    commitment_randomness: ComputationalSecuritySizedNumber,
 }
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -238,5 +248,71 @@ where
         };
 
         Ok((public_key_share_decommitment_proof, output))
+    }
+
+    pub fn to_state(
+        self,
+    ) -> State<
+        GroupElement::Value,
+        group::Value<GroupElement::Scalar>,
+        knowledge_of_discrete_log::Proof<GroupElement::Scalar, GroupElement, ProtocolContext>,
+    > {
+        State {
+            secret_key_share: self.secret_key_share.value(),
+            public_key_share: self.public_key_share.value(),
+            proof: self.knowledge_of_discrete_log_proof,
+            commitment_randomness: self.commitment_randomness,
+        }
+    }
+
+    pub fn new<
+        const NUM_RANGE_CLAIMS: usize,
+        UnboundedEncDHWitness: group::GroupElement + Samplable,
+        UnboundedDComEvalWitness: group::GroupElement + Samplable,
+    >(
+        protocol_public_parameters: ProtocolPublicParameters<
+            SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            NUM_RANGE_CLAIMS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+            UnboundedEncDLWitness,
+            UnboundedEncDHWitness,
+            UnboundedDComEvalWitness,
+        >,
+        state: State<
+            GroupElement::Value,
+            group::Value<GroupElement::Scalar>,
+            knowledge_of_discrete_log::Proof<GroupElement::Scalar, GroupElement, ProtocolContext>,
+        >,
+        protocol_context: ProtocolContext,
+    ) -> crate::Result<Self> {
+        let scalar_group_public_parameters =
+            protocol_public_parameters.scalar_group_public_parameters;
+
+        let group_public_parameters = protocol_public_parameters.group_public_parameters;
+
+        let secret_key_share =
+            GroupElement::Scalar::new(state.secret_key_share, &scalar_group_public_parameters)?;
+        let public_key_share = GroupElement::new(state.public_key_share, &group_public_parameters)?;
+
+        Ok(Party {
+            protocol_context,
+            scalar_group_public_parameters,
+            group_public_parameters,
+            encryption_scheme_public_parameters: protocol_public_parameters
+                .encryption_scheme_public_parameters,
+            unbounded_encdl_witness_public_parameters: protocol_public_parameters
+                .unbounded_encdl_witness_public_parameters,
+            range_proof_public_parameters: protocol_public_parameters
+                .range_proof_enc_dl_public_parameters,
+            secret_key_share,
+            public_key_share,
+            knowledge_of_discrete_log_proof: state.proof,
+            commitment_randomness: state.commitment_randomness,
+        })
     }
 }

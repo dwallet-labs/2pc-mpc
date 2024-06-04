@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod signature_homomorphic_evaluation_round;
-mod signature_verification_round;
+pub mod signature_verification_round;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct PublicNonceEncryptedPartialSignatureAndProof<

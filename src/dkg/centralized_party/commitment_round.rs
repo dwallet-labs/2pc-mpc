@@ -12,7 +12,9 @@ use merlin::Transcript;
 use proof::{AggregatableRangeProof, TranscriptProtocol};
 use serde::Serialize;
 
-use crate::{dkg::centralized_party::decommitment_round, CENTRALIZED_PARTY_ID};
+use crate::{
+    dkg::centralized_party::decommitment_round, ProtocolPublicParameters, CENTRALIZED_PARTY_ID,
+};
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
@@ -26,12 +28,12 @@ pub struct Party<
     UnboundedEncDLWitness: group::GroupElement + Samplable,
     ProtocolContext: Clone + Serialize,
 > {
-    pub protocol_context: ProtocolContext,
-    pub scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
-    pub group_public_parameters: GroupElement::PublicParameters,
-    pub encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-    pub unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
-    pub range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
+    protocol_context: ProtocolContext,
+    scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
+    group_public_parameters: GroupElement::PublicParameters,
+    encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
+    unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
+    range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
 }
 
 pub fn commit_public_key_share<GroupElement: group::GroupElement>(
@@ -142,5 +144,39 @@ impl<
         };
 
         Ok((commitment, party))
+    }
+
+    pub fn new<
+        const NUM_RANGE_CLAIMS: usize,
+        UnboundedEncDHWitness: group::GroupElement + Samplable,
+        UnboundedDComEvalWitness: group::GroupElement + Samplable,
+    >(
+        protocol_public_parameters: ProtocolPublicParameters<
+            SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            NUM_RANGE_CLAIMS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+            UnboundedEncDLWitness,
+            UnboundedEncDHWitness,
+            UnboundedDComEvalWitness,
+        >,
+        protocol_context: ProtocolContext,
+    ) -> Self {
+        Party {
+            protocol_context,
+            scalar_group_public_parameters: protocol_public_parameters
+                .scalar_group_public_parameters,
+            group_public_parameters: protocol_public_parameters.group_public_parameters,
+            encryption_scheme_public_parameters: protocol_public_parameters
+                .encryption_scheme_public_parameters,
+            unbounded_encdl_witness_public_parameters: protocol_public_parameters
+                .unbounded_encdl_witness_public_parameters,
+            range_proof_public_parameters: protocol_public_parameters
+                .range_proof_enc_dl_public_parameters,
+        }
     }
 }

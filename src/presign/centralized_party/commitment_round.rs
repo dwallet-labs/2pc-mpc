@@ -11,7 +11,7 @@ use maurer::{knowledge_of_decommitment, SOUND_PROOFS_REPETITIONS};
 use proof::AggregatableRangeProof;
 use serde::{Deserialize, Serialize};
 
-use crate::{dkg, presign::centralized_party::proof_verification_round};
+use crate::{dkg, presign::centralized_party::proof_verification_round, ProtocolPublicParameters};
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
@@ -181,21 +181,33 @@ impl<
         Ok((signature_nonce_shares_commitments_and_batched_proof, party))
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub fn new<
+        const NUM_RANGE_CLAIMS: usize,
+        UnboundedDComEvalWitness: group::GroupElement + Samplable,
+    >(
         protocol_context: ProtocolContext,
-        scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
-        group_public_parameters: GroupElement::PublicParameters,
-        encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-        unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
-        unbounded_encdh_witness_public_parameters: UnboundedEncDHWitness::PublicParameters,
-        range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
+        protocol_public_parameters: ProtocolPublicParameters<
+            SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            NUM_RANGE_CLAIMS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+            UnboundedEncDLWitness,
+            UnboundedEncDHWitness,
+            UnboundedDComEvalWitness,
+        >,
         dkg_output: dkg::centralized_party::Output<
             GroupElement::Value,
             group::Value<GroupElement::Scalar>,
             group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
         >,
     ) -> crate::Result<Self> {
+        let encryption_scheme_public_parameters =
+            protocol_public_parameters.encryption_scheme_public_parameters;
+
         let encrypted_decentralized_party_secret_key_share =
             EncryptionKey::CiphertextSpaceGroupElement::new(
                 dkg_output.encrypted_decentralized_party_secret_key_share,
@@ -204,12 +216,16 @@ impl<
 
         Ok(Self {
             protocol_context,
-            scalar_group_public_parameters,
-            group_public_parameters,
+            scalar_group_public_parameters: protocol_public_parameters
+                .scalar_group_public_parameters,
+            group_public_parameters: protocol_public_parameters.group_public_parameters,
             encryption_scheme_public_parameters,
-            unbounded_encdl_witness_public_parameters,
-            unbounded_encdh_witness_public_parameters,
-            range_proof_public_parameters,
+            unbounded_encdl_witness_public_parameters: protocol_public_parameters
+                .unbounded_encdl_witness_public_parameters,
+            unbounded_encdh_witness_public_parameters: protocol_public_parameters
+                .unbounded_encdh_witness_public_parameters,
+            range_proof_public_parameters: protocol_public_parameters
+                .range_proof_enc_dl_public_parameters,
             encrypted_decentralized_party_secret_key_share,
         })
     }

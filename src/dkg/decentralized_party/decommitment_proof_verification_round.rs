@@ -18,15 +18,15 @@ use crate::{
         centralized_party, centralized_party::commitment_round::commit_public_key_share,
         decentralized_party,
     },
-    CENTRALIZED_PARTY_ID,
+    ProtocolPublicParameters, CENTRALIZED_PARTY_ID,
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Output<GroupElementValue, CiphertextSpaceValue> {
-    pub(crate) public_key_share: GroupElementValue,
+    pub public_key_share: GroupElementValue,
     pub public_key: GroupElementValue,
     pub encrypted_secret_key_share: CiphertextSpaceValue,
-    pub(crate) centralized_party_public_key_share: GroupElementValue,
+    pub centralized_party_public_key_share: GroupElementValue,
 }
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -175,5 +175,39 @@ where
                 .encrypted_secret_key_share,
             centralized_party_public_key_share: decommitment_and_proof.public_key_share,
         })
+    }
+
+    pub fn new<
+        const NUM_RANGE_CLAIMS: usize,
+        UnboundedEncDHWitness: group::GroupElement + Samplable,
+        UnboundedDComEvalWitness: group::GroupElement + Samplable,
+    >(
+        protocol_public_parameters: ProtocolPublicParameters<
+            SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            NUM_RANGE_CLAIMS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+            UnboundedEncDLWitness,
+            UnboundedEncDHWitness,
+            UnboundedDComEvalWitness,
+        >,
+        commitment_to_centralized_party_secret_key_share: Commitment,
+        protocol_context: ProtocolContext,
+    ) -> Self {
+        Party {
+            protocol_context,
+            scalar_group_public_parameters: protocol_public_parameters
+                .scalar_group_public_parameters,
+            group_public_parameters: protocol_public_parameters.group_public_parameters,
+            encryption_scheme_public_parameters: protocol_public_parameters
+                .encryption_scheme_public_parameters,
+            commitment_to_centralized_party_secret_key_share,
+            _unbounded_witness_choice: PhantomData,
+            _range_proof_choice: PhantomData,
+        }
     }
 }

@@ -23,7 +23,7 @@ use crate::{
         centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
         decentralized_party::encrypted_masked_nonces_round,
     },
-    Error,
+    Error, ProtocolPublicParameters,
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -514,23 +514,35 @@ where
         ))
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub fn new<
+        const NUM_RANGE_CLAIMS: usize,
+        UnboundedDComEvalWitness: group::GroupElement + Samplable,
+    >(
         party_id: PartyID,
         threshold: PartyID,
         parties: HashSet<PartyID>,
         protocol_context: ProtocolContext,
-        scalar_group_public_parameters: group::PublicParameters<GroupElement::Scalar>,
-        group_public_parameters: GroupElement::PublicParameters,
-        encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
-        unbounded_encdl_witness_public_parameters: UnboundedEncDLWitness::PublicParameters,
-        unbounded_encdh_witness_public_parameters: UnboundedEncDHWitness::PublicParameters,
-        range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
+        protocol_public_parameters: ProtocolPublicParameters<
+            SCALAR_LIMBS,
+            COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+            RANGE_CLAIMS_PER_SCALAR,
+            NUM_RANGE_CLAIMS,
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+            RangeProof,
+            UnboundedEncDLWitness,
+            UnboundedEncDHWitness,
+            UnboundedDComEvalWitness,
+        >,
         dkg_output: dkg::decentralized_party::Output<
             GroupElement::Value,
             group::Value<EncryptionKey::CiphertextSpaceGroupElement>,
         >,
     ) -> crate::Result<Self> {
+        let encryption_scheme_public_parameters =
+            protocol_public_parameters.encryption_scheme_public_parameters;
+
         let encrypted_secret_key_share = EncryptionKey::CiphertextSpaceGroupElement::new(
             dkg_output.encrypted_secret_key_share,
             encryption_scheme_public_parameters.ciphertext_space_public_parameters(),
@@ -541,12 +553,16 @@ where
             threshold,
             parties,
             protocol_context,
-            scalar_group_public_parameters,
-            group_public_parameters,
+            scalar_group_public_parameters: protocol_public_parameters
+                .scalar_group_public_parameters,
+            group_public_parameters: protocol_public_parameters.group_public_parameters,
             encryption_scheme_public_parameters,
-            unbounded_encdl_witness_public_parameters,
-            unbounded_encdh_witness_public_parameters,
-            range_proof_public_parameters,
+            unbounded_encdl_witness_public_parameters: protocol_public_parameters
+                .unbounded_encdl_witness_public_parameters,
+            unbounded_encdh_witness_public_parameters: protocol_public_parameters
+                .unbounded_encdh_witness_public_parameters,
+            range_proof_public_parameters: protocol_public_parameters
+                .range_proof_enc_dl_public_parameters,
             encrypted_secret_key_share,
         })
     }

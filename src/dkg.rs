@@ -4,7 +4,12 @@
 pub mod centralized_party;
 pub mod decentralized_party;
 
-#[cfg(any(test, feature = "benchmarking"))]
+#[cfg(all(
+    any(test, feature = "benchmarking"),
+    feature = "secp256k1",
+    feature = "paillier",
+    feature = "bulletproofs",
+))]
 pub(crate) mod tests {
     use core::marker::PhantomData;
     use std::{
@@ -13,11 +18,11 @@ pub(crate) mod tests {
     };
 
     use criterion::measurement::{Measurement, WallTime};
-    use group::{ristretto, secp256k1, CyclicGroupElement, GroupElement, PartyID};
+    use group::{secp256k1, CyclicGroupElement, GroupElement, PartyID};
     use homomorphic_encryption::{
         AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors,
     };
-    use proof::{aggregation::test_helpers::aggregates, range::bulletproofs};
+    use proof::aggregation::test_helpers::aggregates;
     use rand::seq::IteratorRandom;
     use rand_core::OsRng;
     use rstest::rstest;
@@ -28,7 +33,7 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::{
-        dkg::decentralized_party::SecretKeyShareEncryptionAndProof, tests::RANGE_CLAIMS_PER_SCALAR,
+        dkg::decentralized_party::SecretKeyShareEncryptionAndProof, ProtocolPublicParameters,
     };
 
     #[rstest]
@@ -58,40 +63,19 @@ pub(crate) mod tests {
         let mut centralized_party_total_time = Duration::ZERO;
         let mut decentralized_party_total_time = Duration::ZERO;
 
-        let secp256k1_scalar_public_parameters = secp256k1::scalar::PublicParameters::default();
+        let protocol_public_parameters = ProtocolPublicParameters::new(N);
 
-        let secp256k1_group_public_parameters =
-            secp256k1::group_element::PublicParameters::default();
+        let paillier_decryption_key = tiresias::DecryptionKey::new(
+            SECRET_KEY,
+            &protocol_public_parameters.encryption_scheme_public_parameters,
+        )
+        .unwrap();
 
-        let bulletproofs_public_parameters =
-            bulletproofs::PublicParameters::<{ RANGE_CLAIMS_PER_SCALAR }>::default();
-
-        let paillier_public_parameters =
-            tiresias::encryption_key::PublicParameters::new(N).unwrap();
-
-        let paillier_decryption_key =
-            tiresias::DecryptionKey::new(SECRET_KEY, &paillier_public_parameters).unwrap();
-
-        let centralized_party_commitment_round_party = centralized_party::commitment_round::Party::<
-            { secp256k1::SCALAR_LIMBS },
-            { ristretto::SCALAR_LIMBS },
-            { RANGE_CLAIMS_PER_SCALAR },
-            { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
-            secp256k1::GroupElement,
-            tiresias::EncryptionKey,
-            bulletproofs::RangeProof,
-            tiresias::RandomnessSpaceGroupElement,
-            PhantomData<()>,
-        > {
-            protocol_context: PhantomData::<()>,
-            scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
-            group_public_parameters: secp256k1_group_public_parameters.clone(),
-            encryption_scheme_public_parameters: paillier_public_parameters.clone(),
-            range_proof_public_parameters: bulletproofs_public_parameters.clone(),
-            unbounded_encdl_witness_public_parameters: paillier_public_parameters
-                .randomness_space_public_parameters()
-                .clone(),
-        };
+        let centralized_party_commitment_round_party =
+            centralized_party::commitment_round::Party::new(
+                protocol_public_parameters.clone(),
+                PhantomData,
+            );
 
         let now = measurement.start();
         let (
@@ -118,29 +102,13 @@ pub(crate) mod tests {
             .map(|party_id| {
                 (
                     party_id,
-                    decentralized_party::encryption_of_secret_key_share_round::Party::<
-                        { secp256k1::SCALAR_LIMBS },
-                        { ristretto::SCALAR_LIMBS },
-                        { RANGE_CLAIMS_PER_SCALAR },
-                        { tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS },
-                        secp256k1::GroupElement,
-                        tiresias::EncryptionKey,
-                        bulletproofs::RangeProof,
-                        tiresias::RandomnessSpaceGroupElement,
-                        PhantomData<()>,
-                    > {
+                    decentralized_party::encryption_of_secret_key_share_round::Party::new(
+                        protocol_public_parameters.clone(),
                         party_id,
                         threshold,
-                        parties: parties.clone(),
-                        protocol_context: PhantomData::<()>,
-                        scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
-                        group_public_parameters: secp256k1_group_public_parameters.clone(),
-                        encryption_scheme_public_parameters: paillier_public_parameters.clone(),
-                        unbounded_encdl_witness_public_parameters: paillier_public_parameters
-                            .randomness_space_public_parameters()
-                            .clone(),
-                        range_proof_public_parameters: bulletproofs_public_parameters.clone(),
-                    },
+                        parties.clone(),
+                        PhantomData::<()>,
+                    ),
                 )
             })
             .collect();
@@ -211,25 +179,25 @@ pub(crate) mod tests {
 
         let decentralized_party_public_key_share = secp256k1::GroupElement::new(
             centralized_party_dkg_output.decentralized_party_public_key_share,
-            &secp256k1_group_public_parameters,
+            &protocol_public_parameters.group_public_parameters,
         )
         .unwrap();
 
         let secret_key_share = secp256k1::Scalar::new(
             centralized_party_dkg_output.secret_key_share,
-            &secp256k1_scalar_public_parameters,
+            &protocol_public_parameters.scalar_group_public_parameters,
         )
         .unwrap();
 
         let public_key_share = secp256k1::GroupElement::new(
             centralized_party_dkg_output.public_key_share,
-            &secp256k1_group_public_parameters,
+            &protocol_public_parameters.group_public_parameters,
         )
         .unwrap();
 
         let public_key = secp256k1::GroupElement::new(
             centralized_party_dkg_output.public_key,
-            &secp256k1_group_public_parameters,
+            &protocol_public_parameters.group_public_parameters,
         )
         .unwrap();
 
@@ -278,13 +246,18 @@ pub(crate) mod tests {
             .all(|(_, dkg_output)| {
                 let encrypted_secret_key_share = tiresias::CiphertextSpaceGroupElement::new(
                     dkg_output.encrypted_secret_key_share,
-                    paillier_public_parameters.ciphertext_space_public_parameters(),
+                    protocol_public_parameters
+                        .encryption_scheme_public_parameters
+                        .ciphertext_space_public_parameters(),
                 )
                 .unwrap();
 
                 let decentralized_party_secret_key_share_decryption: LargeBiPrimeSizedNumber =
                     paillier_decryption_key
-                        .decrypt(&encrypted_secret_key_share, &paillier_public_parameters)
+                        .decrypt(
+                            &encrypted_secret_key_share,
+                            &protocol_public_parameters.encryption_scheme_public_parameters,
+                        )
                         .unwrap()
                         .into();
 
@@ -293,13 +266,13 @@ pub(crate) mod tests {
 
                 let public_key_share = secp256k1::GroupElement::new(
                     dkg_output.public_key_share,
-                    &secp256k1_group_public_parameters,
+                    &protocol_public_parameters.group_public_parameters,
                 )
                 .unwrap();
 
                 let centralized_party_public_key_share = secp256k1::GroupElement::new(
                     dkg_output.centralized_party_public_key_share,
-                    &secp256k1_group_public_parameters,
+                    &protocol_public_parameters.group_public_parameters,
                 )
                 .unwrap();
 
