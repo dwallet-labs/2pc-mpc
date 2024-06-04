@@ -38,7 +38,7 @@ pub struct Party<
     pub(super) encryption_scheme_public_parameters: EncryptionKey::PublicParameters,
     pub(super) unbounded_encdh_witness_public_parameters: UnboundedEncDHWitness::PublicParameters,
     pub(super) range_proof_public_parameters: RangeProof::PublicParameters<RANGE_CLAIMS_PER_SCALAR>,
-    pub(super) shares_of_signature_nonce_shares_witnesses:
+    pub(crate) shares_of_signature_nonce_shares_witnesses:
         Vec<EncryptionKey::PlaintextSpaceGroupElement>,
     pub(super) shares_of_signature_nonce_shares_encryption_randomness:
         Vec<EncryptionKey::RandomnessSpaceGroupElement>,

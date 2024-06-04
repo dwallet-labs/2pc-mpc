@@ -36,7 +36,7 @@ pub(crate) mod tests {
     #[case(2, 4)]
     #[case(6, 9)]
     fn generates_distributed_key(#[case] threshold: PartyID, #[case] number_of_parties: PartyID) {
-        generates_distributed_key_internal(number_of_parties, threshold);
+        generates_distributed_key_internal(threshold, number_of_parties);
     }
 
     #[allow(dead_code)]
@@ -130,6 +130,7 @@ pub(crate) mod tests {
                         PhantomData<()>,
                     > {
                         party_id,
+                        threshold,
                         parties: parties.clone(),
                         protocol_context: PhantomData::<()>,
                         scalar_group_public_parameters: secp256k1_scalar_public_parameters.clone(),
