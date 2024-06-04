@@ -295,7 +295,7 @@ impl<
     pub fn new<
         const SCALAR_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
+        GroupElement,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
     >(
         parties: HashSet<PartyID>,
@@ -339,7 +339,8 @@ impl<
         >,
     ) -> Result<Self>
     where
-        GroupElement: group::GroupElement<Value = GroupElementValue>,
+        GroupElement:
+            group::GroupElement<Value = GroupElementValue> + PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey::CiphertextSpaceGroupElement: group::GroupElement<Value = CiphertextValue>,
     {
         let encrypted_mask = mask_and_encrypted_masked_key_share
@@ -427,7 +428,7 @@ impl<
     pub fn new_batch<
         const SCALAR_LIMBS: usize,
         const PLAINTEXT_SPACE_SCALAR_LIMBS: usize,
-        GroupElement: PrimeGroupElement<SCALAR_LIMBS>,
+        GroupElement,
         EncryptionKey: AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS>,
         ProtocolContext: Clone + Serialize,
     >(
@@ -492,7 +493,8 @@ impl<
         group_public_parameters: &GroupElement::PublicParameters,
     ) -> Result<Vec<Self>>
     where
-        GroupElement: group::GroupElement<Value = GroupElementValue>,
+        GroupElement:
+            group::GroupElement<Value = GroupElementValue> + PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey::CiphertextSpaceGroupElement: group::GroupElement<Value = CiphertextValue>,
     {
         let batch_size = centralized_party_nonce_shares_commitments_and_batched_proof
