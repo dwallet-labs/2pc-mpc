@@ -133,6 +133,10 @@ where
         >,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
+    /// This function implements step 1 of Protocol 6 (Sign):
+    /// Computes ct_A and constructs zk-proofs for it, R_B and (K_A, U_A, X_A).
+    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
+    ///
     /// Evaluate the encrypted partial signature.
     /// Note: `message` is a `Scalar` which must be a hash on the message bytes translated into a
     /// 32-byte number.
@@ -188,23 +192,23 @@ where
         >,
         signature_verification_round::Party<SCALAR_LIMBS, GroupElement>,
     )> {
+        // = (k_A)^{-1}
         let inverted_nonce_share = self.nonce_share.invert();
-
         if inverted_nonce_share.is_none().into() {
             // This has negligible probability of failing.
             return Err(crate::Error::InternalError);
         }
-
         let inverted_nonce_share = inverted_nonce_share.unwrap();
 
-        let public_nonce = inverted_nonce_share * self.decentralized_party_nonce_public_share; // $R$
+        // = R
+        let public_nonce = inverted_nonce_share * self.decentralized_party_nonce_public_share;
 
+        // Construct L_DComDL public parameters
         let commitment_scheme_public_parameters =
             pedersen::PublicParameters::derive::<SCALAR_LIMBS, GroupElement>(
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
             )?;
-
         let language_public_parameters = committment_of_discrete_log::PublicParameters::new::<
             SCALAR_LIMBS,
             GroupElement::Scalar,
@@ -214,9 +218,12 @@ where
             self.scalar_group_public_parameters.clone(),
             self.group_public_parameters.clone(),
             commitment_scheme_public_parameters.clone(),
-            public_nonce.value(),
+            public_nonce.value(), // = R
         );
 
+        // === Construct R_B proof ===
+        // Used in emulating the idealized F^{L_DComDL}_zk component
+        // Protocol 6, step 1e, dash 1
         let (public_nonce_proof, _) = maurer::Proof::<
             SOUND_PROOFS_REPETITIONS,
             committment_of_discrete_log::Language<
@@ -229,13 +236,18 @@ where
         >::prove(
             &self.protocol_context,
             &language_public_parameters,
-            vec![[self.nonce_share, self.nonce_share_commitment_randomness].into()],
+            vec![[self.nonce_share, self.nonce_share_commitment_randomness].into()], // = [k_A, ρ_1]
             rng,
         )?;
 
+        // === Sample ρ_2 ===
+        // Protocol 6, step 1b
         let nonce_share_by_key_share_commitment_randomness =
             GroupElement::Scalar::sample(&self.scalar_group_public_parameters, rng)?;
 
+        // Construct L_DComRatio public parameters
+        // Note: uses X_A instead of x_a.
+        // See the description of DComRatio in Section L for clarification.
         let language_public_parameters =
             discrete_log_ratio_of_committed_values::PublicParameters::new::<
                 SCALAR_LIMBS,
@@ -245,9 +257,12 @@ where
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
                 commitment_scheme_public_parameters.clone(),
-                self.public_key_share,
+                self.public_key_share, // = X_A
             );
 
+        // === Generate (K_A, U_A, X_A) proof ===
+        // Used in emulating the idealized F^{L_DComRatio}_zk component
+        // Protocol 6, step 1e, dash 2
         let (nonce_share_by_key_share_proof, statement) = maurer::Proof::<
             SOUND_PROOFS_REPETITIONS,
             discrete_log_ratio_of_committed_values::Language<
@@ -260,33 +275,40 @@ where
             &self.protocol_context,
             &language_public_parameters,
             vec![[
-                self.nonce_share,
-                self.nonce_share_commitment_randomness,
-                nonce_share_by_key_share_commitment_randomness,
+                self.nonce_share,                               // = k_A
+                self.nonce_share_commitment_randomness,         // = ρ_1
+                nonce_share_by_key_share_commitment_randomness, // = ρ_2
             ]
             .into()],
             rng,
         )?;
-
         let statement = statement.first().ok_or(crate::Error::InternalError)?;
 
+        // = U_A
         let nonce_share_by_key_share_commitment =
             statement.altered_base_committment_of_discrete_log().clone();
 
-        let nonce_x_coordinate = public_nonce.x(); // $r$
+        // = r
+        let nonce_x_coordinate = public_nonce.x();
 
+        // = a_1
         let first_coefficient = (nonce_x_coordinate * self.nonce_share * self.secret_key_share)
-            + (message * self.nonce_share); // $a1$
+            + (message * self.nonce_share);
 
+        // = r * ρ_2 + m * ρ_1
         let first_coefficient_commitment_randomness = (nonce_x_coordinate
             * nonce_share_by_key_share_commitment_randomness)
             + (message * self.nonce_share_commitment_randomness);
 
-        let second_coefficient = nonce_x_coordinate * self.nonce_share; // $a2$
+        // = a_2
+        let second_coefficient = nonce_x_coordinate * self.nonce_share;
 
+        // = r * ρ_1
         let second_coefficient_commitment_randomness =
             nonce_x_coordinate * self.nonce_share_commitment_randomness;
 
+        // === Sample η_eval ===
+        // Protocol 6, step 1d
         let partial_signature_encryption_randomness =
             EncryptionKey::RandomnessSpaceGroupElement::sample(
                 self.encryption_scheme_public_parameters
@@ -300,7 +322,6 @@ where
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,
         >()?;
-
         let encrypted_masked_key_share_upper_bound: Option<_> = composed_witness_upper_bound::<
             RANGE_CLAIMS_PER_SCALAR,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
@@ -309,7 +330,6 @@ where
         >()?
         .checked_mul(&encrypted_mask_upper_bound)
         .into();
-
         let ciphertexts_and_upper_bounds = [
             (self.encrypted_mask, encrypted_mask_upper_bound),
             (
@@ -318,18 +338,19 @@ where
             ),
         ];
 
+        // === Sample ω ===
+        // Required for secure evaluation of the DComEval function.
+        // See `homomorphic-encryption::AdditivelyHomomorphicEncryptionKey::securely_evaluate_linear_combination_with_randomness`
+        // as well as Section 5.2 of the paper.
         let mask = EncryptionKey::sample_mask_for_secure_function_evaluation(
             &ciphertexts_and_upper_bounds,
             &self.encryption_scheme_public_parameters,
             rng,
         )?;
 
-        let ciphertexts_and_upper_bounds =
-            ciphertexts_and_upper_bounds.map(|(ct, upper_bound)| (ct.value(), upper_bound));
-
+        // = A (see DComEval language definition, Section 5.2)
         let coefficients: [Uint<SCALAR_LIMBS>; DIMENSION] =
             [first_coefficient, second_coefficient].map(|coefficient| coefficient.into());
-
         let coefficients: self_product::GroupElement<DIMENSION, _> = coefficients
             .map(|coefficient| {
                 EncryptionKey::PlaintextSpaceGroupElement::new(
@@ -341,12 +362,14 @@ where
             .flat_map_results()?
             .into();
 
+        // = ρ (see DComEval language definition, Section 5.2)
         let commitment_randomness: self_product::GroupElement<DIMENSION, _> = [
             first_coefficient_commitment_randomness,
             second_coefficient_commitment_randomness,
         ]
         .into();
 
+        // = (A, ρ, ω, η)
         let witness = (
             coefficients,
             commitment_randomness,
@@ -355,8 +378,10 @@ where
         )
             .into();
 
+        // Construct L_DComEval language parameters
+        let ciphertexts_and_upper_bounds =
+            ciphertexts_and_upper_bounds.map(|(ct, upper_bound)| (ct.value(), upper_bound));
         let commitment_scheme_public_parameters = commitment_scheme_public_parameters.into();
-
         let language_public_parameters = committed_linear_evaluation::PublicParameters::<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
@@ -370,7 +395,6 @@ where
             commitment_scheme_public_parameters,
             ciphertexts_and_upper_bounds,
         );
-
         let language_public_parameters = EnhancedPublicParameters::<
             SOUND_PROOFS_REPETITIONS,
             NUM_RANGE_CLAIMS,
@@ -404,6 +428,8 @@ where
             language_public_parameters,
         )?;
 
+        // === Compute ct_A ===
+        // Protocol 6, step 1d and step 1e, dash 3
         let witness = EnhancedLanguage::<
             SOUND_PROOFS_REPETITIONS,
             NUM_RANGE_CLAIMS,
@@ -420,7 +446,6 @@ where
                 EncryptionKey,
             >,
         >::generate_witness(witness, &language_public_parameters, rng)?;
-
         let (encrypted_partial_signature_proof, statement) = enhanced_maurer::Proof::<
             SOUND_PROOFS_REPETITIONS,
             NUM_RANGE_CLAIMS,
@@ -443,11 +468,10 @@ where
             vec![witness],
             rng,
         )?;
-
         let statement = statement.first().ok_or(crate::Error::InternalError)?;
 
         let encrypted_partial_signature_range_proof_commitment = statement.range_proof_commitment();
-        let encrypted_partial_signature = statement.language_statement().evaluated_ciphertext();
+        let encrypted_partial_signature = statement.language_statement().evaluated_ciphertext(); // = ct_A
         let coefficient_commitments: &[_; DIMENSION] =
             statement.language_statement().commitments().into();
 

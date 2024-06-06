@@ -22,10 +22,10 @@ impl<
         signature_s: GroupElement::Scalar,
     ) -> crate::Result<()> {
         verify_signature(
-            nonce_x_coordinate,
-            signature_s,
-            self.message,
-            self.public_key,
+            nonce_x_coordinate, // = r
+            signature_s,        // = s
+            self.message,       // = m
+            self.public_key,    // = X
         )?;
 
         Ok(())

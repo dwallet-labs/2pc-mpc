@@ -115,11 +115,13 @@ where
             ProtocolContext,
         >,
     ) -> Self {
+        // = x_i
         let encrypted_secret_key_share = encryption_of_secret_share
             .language_statement()
             .encrypted_discrete_log()
             .value();
 
+        // = X_i
         let public_key_share = encryption_of_secret_share
             .language_statement()
             .base_by_discrete_log()

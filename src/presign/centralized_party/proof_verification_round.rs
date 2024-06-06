@@ -132,6 +132,12 @@ where
         >,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
+    /// This function implements step 3 of Protocol 5 (Presign):
+    /// Verifies zk-proofs for ct_1, ct_2 and ct_3.
+    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
+    ///
+    /// Note: this function operates on batches; the annotations are written as
+    /// if the batch size equals 1.
     pub fn verify_presign_output(
         self,
         output: decentralized_party::Output<
@@ -192,6 +198,8 @@ where
             return Err(Error::InvalidParameters);
         }
 
+        // = ct_1
+        // = AHE.Enc(γ)
         let encrypted_masks = output
             .encrypted_masks
             .clone()
@@ -205,6 +213,9 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
+        // = ct_2
+        // = AHE.Enc(γ) * ct_key
+        // = AHE.Enc(γ * x_B)
         let encrypted_masked_key_shares = output
             .encrypted_masked_key_shares
             .clone()
@@ -218,6 +229,7 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
+        // commitments to the range proof of γ
         let key_share_masking_range_proof_commitments = output
             .key_share_masking_range_proof_commitments
             .into_iter()
@@ -235,31 +247,13 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
-        let statements = encrypted_masks
-            .into_iter()
-            .zip(encrypted_masked_key_shares)
-            .zip(key_share_masking_range_proof_commitments)
-            .map(
-                |(
-                    (encrypted_mask, encrypted_masked_key_share),
-                    key_share_masking_range_proof_commitment,
-                )| {
-                    (
-                        key_share_masking_range_proof_commitment,
-                        [encrypted_mask, encrypted_masked_key_share].into(),
-                    )
-                        .into()
-                },
-            )
-            .collect();
-
+        // Construct L_EncDH language public parameters
         let encrypted_secret_key_share_upper_bound = composed_witness_upper_bound::<
             RANGE_CLAIMS_PER_SCALAR,
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             RangeProof,
         >()?;
-
         let language_public_parameters = encryption_of_tuple::PublicParameters::<
             PLAINTEXT_SPACE_SCALAR_LIMBS,
             SCALAR_LIMBS,
@@ -271,7 +265,6 @@ where
             self.encrypted_decentralized_party_secret_key_share.value(),
             encrypted_secret_key_share_upper_bound,
         );
-
         let language_public_parameters = EnhancedPublicParameters::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -299,6 +292,25 @@ where
             language_public_parameters,
         )?;
 
+        // === Verify ct_1, ct_2 proof ===
+        // Protocol 5, step 3b
+        let statements = encrypted_masks
+            .into_iter()
+            .zip(encrypted_masked_key_shares)
+            .zip(key_share_masking_range_proof_commitments)
+            .map(
+                |(
+                    (encrypted_mask, encrypted_masked_key_share),
+                    key_share_masking_range_proof_commitment,
+                )| {
+                    (
+                        key_share_masking_range_proof_commitment,
+                        [encrypted_mask, encrypted_masked_key_share].into(),
+                    )
+                        .into()
+                },
+            )
+            .collect();
         output.masks_and_encrypted_masked_key_share_proof.verify(
             &self.protocol_context,
             &language_public_parameters,
@@ -306,6 +318,8 @@ where
             rng,
         )?;
 
+        // = ct_3
+        // = AHE.Enc(k)
         let encrypted_nonces = output
             .encrypted_nonces
             .clone()
@@ -319,6 +333,7 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
+        // = R_B
         let decentralized_party_nonce_public_shares = output
             .nonce_public_shares
             .clone()
@@ -328,6 +343,7 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
+        // commitments to the range proof of k
         let nonce_sharing_range_proof_commitments = output
             .nonce_sharing_range_proof_commitments
             .into_iter()
@@ -345,21 +361,7 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
-        let statements = encrypted_nonces
-            .into_iter()
-            .zip(decentralized_party_nonce_public_shares)
-            .zip(nonce_sharing_range_proof_commitments)
-            .map(
-                |((encrypted_nonce, nonce_public_share), nonce_sharing_range_proof_commitment)| {
-                    (
-                        nonce_sharing_range_proof_commitment,
-                        (encrypted_nonce, nonce_public_share).into(),
-                    )
-                        .into()
-                },
-            )
-            .collect();
-
+        // Construct L_EncDL public parameters
         let language_public_parameters =
             encryption_of_discrete_log::PublicParameters::<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,
@@ -372,7 +374,6 @@ where
                 self.encryption_scheme_public_parameters.clone(),
                 GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
-
         let language_public_parameters = EnhancedPublicParameters::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -400,6 +401,22 @@ where
             language_public_parameters,
         )?;
 
+        // === Verify ct_3 proof ===
+        // Protocol 5, step 3a
+        let statements = encrypted_nonces
+            .into_iter()
+            .zip(decentralized_party_nonce_public_shares)
+            .zip(nonce_sharing_range_proof_commitments)
+            .map(
+                |((encrypted_nonce, nonce_public_share), nonce_sharing_range_proof_commitment)| {
+                    (
+                        nonce_sharing_range_proof_commitment,
+                        (encrypted_nonce, nonce_public_share).into(),
+                    )
+                        .into()
+                },
+            )
+            .collect();
         output
             .encrypted_nonce_shares_and_public_shares_proof
             .verify(
@@ -429,11 +446,11 @@ where
                     ),
                 )| {
                     Presign {
-                        nonce_share: nonce_share.value(),
-                        decentralized_party_nonce_public_share,
-                        encrypted_mask,
-                        encrypted_masked_key_share,
-                        commitment_randomness: commitment_randomness.value(),
+                        nonce_share: nonce_share.value(),                     // = k_A
+                        decentralized_party_nonce_public_share,               // = R_B
+                        encrypted_mask,                                       // = ct_1
+                        encrypted_masked_key_share,                           // = ct_2
+                        commitment_randomness: commitment_randomness.value(), // = ρ_1
                     }
                 },
             )

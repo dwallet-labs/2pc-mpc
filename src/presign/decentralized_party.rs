@@ -205,6 +205,8 @@ where
             return Err(Error::InvalidParameters);
         }
 
+        // = ct_1
+        // = AHE.Enc(γ)
         let encrypted_masks: Vec<_> = masks_and_encrypted_masked_key_share
             .iter()
             .map(|mask_and_encrypted_masked_key_share| {
@@ -215,6 +217,9 @@ where
             })
             .collect();
 
+        // = ct_2
+        // = AHE.Enc(γ) * ct_key
+        // = AHE.Enc(γ * x_B)
         let encrypted_masked_key_shares: Vec<_> = masks_and_encrypted_masked_key_share
             .iter()
             .map(|mask_and_encrypted_masked_key_share| {
@@ -225,6 +230,7 @@ where
             })
             .collect();
 
+        // commitments for range proof on γ
         let key_share_masking_range_proof_commitments: Vec<_> =
             masks_and_encrypted_masked_key_share
                 .iter()
@@ -235,6 +241,8 @@ where
                 })
                 .collect();
 
+        // = ct_3
+        // = AHE.Enc(k)
         let encrypted_nonces: Vec<_> = encrypted_nonce_shares_and_public_shares
             .iter()
             .map(|nonce_share_encryption_and_public_share| {
@@ -245,6 +253,7 @@ where
             })
             .collect();
 
+        // = R_B
         let nonce_public_shares: Vec<_> = encrypted_nonce_shares_and_public_shares
             .iter()
             .map(|nonce_share_encryption_and_public_share| {
@@ -255,6 +264,7 @@ where
             })
             .collect();
 
+        // commitments to the range proof of k
         let nonce_sharing_range_proof_commitments: Vec<_> =
             encrypted_nonce_shares_and_public_shares
                 .iter()
@@ -343,14 +353,17 @@ impl<
             group::GroupElement<Value = GroupElementValue> + PrimeGroupElement<SCALAR_LIMBS>,
         EncryptionKey::CiphertextSpaceGroupElement: group::GroupElement<Value = CiphertextValue>,
     {
+        // = ct_1
         let encrypted_mask = mask_and_encrypted_masked_key_share
             .encrypted_multiplicand()
             .value();
 
+        // = ct_2
         let encrypted_masked_key_share = mask_and_encrypted_masked_key_share
             .encrypted_product()
             .value();
 
+        // = R_B
         let nonce_public_share = encrypted_nonce_share_and_public_share
             .base_by_discrete_log()
             .value();
@@ -416,11 +429,11 @@ impl<
 
         Ok(Presign {
             centralized_party_nonce_share_commitment: centralized_party_nonce_share_commitment
-                .value(),
-            nonce_public_share,
-            encrypted_mask,
-            encrypted_masked_key_share,
-            encrypted_masked_nonce_share,
+                .value(), // = K_A
+            nonce_public_share,           // = R_B
+            encrypted_mask,               // = ct_1 = AHE.Enc(γ)
+            encrypted_masked_key_share,   // = ct_2 = AHE.Enc(γ * x_B)
+            encrypted_masked_nonce_share, // = ct_4 = AHE.Enc(k * γ * x_B)
         })
     }
 
