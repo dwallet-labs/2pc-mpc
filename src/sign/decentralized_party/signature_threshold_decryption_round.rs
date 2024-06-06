@@ -50,9 +50,8 @@ impl<
 where
     Error: From<DecryptionKeyShare::Error>,
 {
-    /// This function implements Protocol 6, step 2 of the
-    /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
-    /// src: https://eprint.iacr.org/2024/253
+    /// This function implements step 2 of Protocol 6 (Sign)
+    /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
     ///
     /// The designated threshold decryption party logic, which performs the amortized heavy-lifting
     /// $$ O(n) $$ public decryption logic. An honest party would verify the signature and

@@ -269,9 +269,8 @@ where
         ))
     }
 
-    /// This function implements Protocol 6, step 2a of the
-    /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
-    /// src: https://eprint.iacr.org/2024/253
+    /// This function implements step 2a of Protocol 6 (Sign)
+    /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
     #[allow(clippy::too_many_arguments)]
     fn verify_encrypted_signature_parts_prehash_inner(
         message: GroupElement::Scalar,

@@ -97,9 +97,8 @@ where
         >,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
-    /// This function implements Protocol 5, step 2b of the
-    /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
-    /// src: https://eprint.iacr.org/2024/253
+    /// This function implements step 2b of Protocol 5 (Presign)
+    /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
     ///
     /// Note: this function operates on batches; the annotations are written as
     /// if the batch size equals 1.

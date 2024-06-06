@@ -78,9 +78,8 @@ impl<
         ProtocolContext,
     >
 {
-    /// This function implements Protocol 4, step 1 of the
-    /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
-    /// src: https://eprint.iacr.org/2024/253
+    /// This function implements step 1 of Protocol 4 (DKG)
+    /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
     pub fn sample_commit_and_prove_secret_key_share(
         self,
         rng: &mut impl CryptoRngCore,

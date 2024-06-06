@@ -133,9 +133,8 @@ where
         >,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
-    /// This function implements Protocol 6, step 1 of the
-    /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
-    /// src: https://eprint.iacr.org/2024/253
+    /// This function implements step 1 of Protocol 6 (Sign)
+    /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
     ///
     /// Evaluate the encrypted partial signature.
     /// Note: `message` is a `Scalar` which must be a hash on the message bytes translated into a

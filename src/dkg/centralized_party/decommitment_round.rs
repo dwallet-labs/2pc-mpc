@@ -118,9 +118,8 @@ where
             UnboundedEncDLWitness,
         >,
 {
-    /// This function implements Protocol 4, steps 3 and 5 of the
-    /// 2PC-MPC: Emulating Two Party ECDSA in Large-Scale MPC paper.
-    /// src: https://eprint.iacr.org/2024/253
+    /// This function implements steps 3 and 5 of Protocol 4 (DKG)
+    /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
     pub fn decommit_proof_public_key_share(
         self,
         decentralized_party_secret_key_share_encryption_and_proof: decentralized_party::SecretKeyShareEncryptionAndProof<
