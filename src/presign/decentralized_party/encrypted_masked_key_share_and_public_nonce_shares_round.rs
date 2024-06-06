@@ -306,9 +306,7 @@ where
         >::new::<SCALAR_LIMBS, GroupElement, EncryptionKey>(
             self.scalar_group_public_parameters.clone(),
             self.encryption_scheme_public_parameters.clone(),
-
-            // = ct_key = AHE.Enc(x_B) (see Protocol 4, step 2e/f)
-            self.encrypted_secret_key_share.value(),
+            self.encrypted_secret_key_share.value(), // = ct_key = AHE.Enc(x_B) (see Protocol 4, step 2e/f)
             encrypted_secret_key_share_upper_bound,
         );
         let enc_dh_public_parameters = EnhancedPublicParameters::<
@@ -473,9 +471,7 @@ where
                 self.scalar_group_public_parameters.clone(),
                 self.group_public_parameters.clone(),
                 self.encryption_scheme_public_parameters.clone(),
-
-                // = G (Protocol 5, step 2a (ii))
-                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
+                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters), // = G (Protocol 5, step 2a (ii))
             );
         let enc_dl_public_parameters = EnhancedPublicParameters::<
             SOUND_PROOFS_REPETITIONS,

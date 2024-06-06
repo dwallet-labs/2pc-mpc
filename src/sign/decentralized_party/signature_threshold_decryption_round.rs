@@ -70,7 +70,7 @@ where
     ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
         // Check whether all involved decrypters submitted their ct_A and ct_4 shares.
         let decrypters: HashSet<_> = lagrange_coefficients.clone().into_keys().collect();
-        if decrypters.len() != usize::from(self.threshold) 
+        if decrypters.len() != usize::from(self.threshold)
             || decrypters
                 != partial_signature_decryption_shares // ct_A shares
                     .keys()
