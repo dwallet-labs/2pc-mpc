@@ -271,7 +271,7 @@ where
 
     /// This function implements step 2a of Protocol 6 (Sign):
     /// Verifies zk-proofs of R_B, (K_A, U_A, X_A) and ct_A.
-    /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
+    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
     #[allow(clippy::too_many_arguments)]
     fn verify_encrypted_signature_parts_prehash_inner(
         message: GroupElement::Scalar,

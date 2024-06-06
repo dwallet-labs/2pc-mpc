@@ -106,7 +106,7 @@ where
 {
     /// This function implements steps 4 and 5 of Protocol 4 (DKG):
     /// Verifies commitment and zk-proof for X_A, and computes X := X_A + X_B.
-    /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
+    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
     pub fn verify_decommitment_and_proof_of_centralized_party_public_key_share(
         self,
         decommitment_and_proof: centralized_party::PublicKeyShareDecommitmentAndProof<

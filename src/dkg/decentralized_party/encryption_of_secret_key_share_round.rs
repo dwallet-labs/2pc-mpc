@@ -101,7 +101,7 @@ where
 {
     /// This function implements step 2 of Protocol 4 (DKG):
     /// Samples x_i and prepares computation of ct_i & its zk-proof.
-    /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
+    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
     pub fn sample_secret_key_share_and_initialize_proof_aggregation(
         self,
         commitment_to_centralized_party_secret_key_share: Commitment,

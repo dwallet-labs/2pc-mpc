@@ -99,7 +99,7 @@ where
 {
     /// This function implements step 2b of Protocol 5 (Presign):
     /// Prepares computation of ct^i_4 and its zk-proof.
-    /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
+    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
     ///
     /// Note: this function operates on batches; the annotations are written as
     /// if the batch size equals 1.

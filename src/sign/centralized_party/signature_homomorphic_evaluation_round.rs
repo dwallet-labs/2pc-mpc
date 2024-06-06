@@ -135,7 +135,7 @@ where
 {
     /// This function implements step 1 of Protocol 6 (Sign):
     /// Computes ct_A and constructs zk-proofs for it, R_B and (K_A, U_A, X_A).
-    /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
+    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
     ///
     /// Evaluate the encrypted partial signature.
     /// Note: `message` is a `Scalar` which must be a hash on the message bytes translated into a

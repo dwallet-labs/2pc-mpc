@@ -80,7 +80,7 @@ impl<
 {
     /// This function implements step 1 of Protocol 4 (DKG):
     /// Samples x_A, computes X_A & zk-proof and commits to these values.
-    /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
+    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
     pub fn sample_commit_and_prove_secret_key_share(
         self,
         rng: &mut impl CryptoRngCore,

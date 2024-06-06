@@ -52,7 +52,7 @@ where
 {
     /// This function implements step 2 of Protocol 6 (Sign):
     /// Computes signature (r, s) for (m, pk).
-    /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
+    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
     ///
     /// The designated threshold decryption party logic, which performs the amortized heavy-lifting
     /// $$ O(n) $$ public decryption logic. An honest party would verify the signature and
