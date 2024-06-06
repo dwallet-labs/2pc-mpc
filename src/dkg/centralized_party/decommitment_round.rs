@@ -118,7 +118,8 @@ where
             UnboundedEncDLWitness,
         >,
 {
-    /// This function implements steps 3 and 5 of Protocol 4 (DKG)
+    /// This function implements steps 3 and 5 of Protocol 4 (DKG):
+    /// Verifies zk-proof for X_B and computes X := X_A + X_B.
     /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
     pub fn decommit_proof_public_key_share(
         self,

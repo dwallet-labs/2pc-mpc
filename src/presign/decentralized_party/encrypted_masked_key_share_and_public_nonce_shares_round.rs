@@ -140,7 +140,9 @@ where
         >,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
-    /// This function implements step 2a of Protocol 5 (Presign)
+    /// This function implements step 2a of Protocol 5 (Presign):
+    /// Verifies commitment and zk-proof for K_A, samples γ_i and k_i, and
+    /// prepares computation of ct^i_1, ct^i_2 and ct^i_3, and their zk-proofs.
     /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
     ///
     /// Note: this function operates on batches; the annotations are written as

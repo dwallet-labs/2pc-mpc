@@ -132,7 +132,8 @@ where
         >,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
-    /// This function implements step 3 of Protocol 5 (Presign)
+    /// This function implements step 3 of Protocol 5 (Presign):
+    /// Verifies zk-proofs for ct_1, ct_2 and ct_3.
     /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
     ///
     /// Note: this function operates on batches; the annotations are written as

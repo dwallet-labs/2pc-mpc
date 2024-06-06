@@ -133,7 +133,8 @@ where
         >,
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
-    /// This function implements step 1 of Protocol 6 (Sign)
+    /// This function implements step 1 of Protocol 6 (Sign):
+    /// Computes ct_A and constructs zk-proofs for it, R_B and (K_A, U_A, X_A).
     /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
     ///
     /// Evaluate the encrypted partial signature.
@@ -217,7 +218,7 @@ where
             self.scalar_group_public_parameters.clone(),
             self.group_public_parameters.clone(),
             commitment_scheme_public_parameters.clone(),
-            public_nonce.value(),
+            public_nonce.value(), // = R
         );
 
         // === Construct R_B proof ===

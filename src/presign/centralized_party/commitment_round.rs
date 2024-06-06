@@ -76,7 +76,8 @@ impl<
         ProtocolContext,
     >
 {
-    /// This function implements step 1 of Protocol 5 (Presign)
+    /// This function implements step 1 of Protocol 5 (Presign):
+    /// Samples k_A, computes K_A & its zk-proof and commits to these values.
     /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
     ///
     /// Note: this function operates on batches; the annotations are written as

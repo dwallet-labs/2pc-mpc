@@ -269,7 +269,8 @@ where
         ))
     }
 
-    /// This function implements step 2a of Protocol 6 (Sign)
+    /// This function implements step 2a of Protocol 6 (Sign):
+    /// Verifies zk-proofs of R_B, (K_A, U_A, X_A) and ct_A.
     /// src: https://eprint.iacr.org/archive/2024/253/20240217:153208
     #[allow(clippy::too_many_arguments)]
     fn verify_encrypted_signature_parts_prehash_inner(
@@ -356,7 +357,7 @@ where
             public_nonce_encrypted_partial_signature_and_proof.public_nonce,
         );
 
-        // === Verify DComDL proof ===
+        // === Verify (K_A, R_B) proof ===
         // Protocol 6, step 2a, dash 1
         public_nonce_encrypted_partial_signature_and_proof
             .public_nonce_proof
