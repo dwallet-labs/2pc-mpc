@@ -83,6 +83,19 @@ jobs:
       - name: Run Tests
         run: cargo test --all-features --release
 
+  verify-license:
+    name: License Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Verify repo license
+        run: |
+          chmod +x "${{ github.workspace }}/.github/scripts/verify-license-rust.sh"
+          chmod +x "${{ github.workspace }}/.github/scripts/verify-license-presence.sh"
+          "${{ github.workspace }}/.github/scripts/verify-license-rust.sh"
+          "${{ github.workspace }}/.github/scripts/verify-license-presence.sh"
+
   clippy:
     name: clippy
     runs-on: ubuntu-latest
