@@ -921,6 +921,7 @@ pub(crate) mod tests {
             })
             .collect();
 
+        // TODO: call this function from the first identifiable abort round.
         let (signature_partial_decryption_proofs, partial_decryption_verification_round_parties): (
             HashMap<_, _>,
             HashMap<_, _>,
