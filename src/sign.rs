@@ -1017,8 +1017,9 @@ pub(crate) mod tests {
             })
             .unzip();
 
-        for (party_id, decryption_share) in semi.iter_mut() {
-            assert_eq!(decryption_share, full.get(party_id).unwrap());
+        for (party_id, semi_decryption_share) in semi.iter_mut() {
+            let full_decryption_share = full.get(party_id).unwrap();
+            assert_eq!(semi_decryption_share, full_decryption_share);
         }
 
     }
