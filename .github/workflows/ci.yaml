@@ -51,12 +51,6 @@ jobs:
       - name: Configure git with personal access token
         run: |
           git config --global url."https://x-access-token:${{ env.GH_PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
-      - name: Verify repo license
-        run: |
-          chmod +x ./scripts/verify-license-rust.sh
-          chmod +x ./scripts/verify-license-presence.sh
-          ./scripts/verify-license-rust.sh
-          ./scripts/verify-license-presence.sh
       - name: Install Rust ${{ env.rust_stable }}
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -82,6 +76,19 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Run Tests
         run: cargo test --all-features --release
+
+  verify-license:
+    name: License Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Verify repo license
+        run: |
+          chmod +x "${{ github.workspace }}/.github/scripts/verify-license-rust.sh"
+          chmod +x "${{ github.workspace }}/.github/scripts/verify-license-presence.sh"
+          "${{ github.workspace }}/.github/scripts/verify-license-rust.sh"
+          "${{ github.workspace }}/.github/scripts/verify-license-presence.sh"
 
   clippy:
     name: clippy
