@@ -236,7 +236,7 @@ where
         >::prove(
             &self.protocol_context,
             &language_public_parameters,
-            vec![[self.nonce_share, self.nonce_share_commitment_randomness].into()], // = [k_A, ρ_1]
+            vec![[self.nonce_share, self.nonce_share_commitment_randomness].into()], /* = [k_A, ρ_1] */
             rng,
         )?;
 

@@ -34,22 +34,17 @@ pub(crate) mod tests {
     };
     use proof::{
         aggregation::test_helpers::{
-            aggregates, aggregates_multiple, aggregates_multiple_with_decommitments,
-            aggregates_with_decommitments, commitment_round, decommitment_round,
+            aggregates, aggregates_multiple_with_decommitments, aggregates_with_decommitments,
         },
         range::bulletproofs,
     };
     use rand::prelude::IteratorRandom;
     use rand_core::OsRng;
     use rstest::rstest;
-    use tiresias::{
-        test_exports::{N, SECRET_KEY},
-        LargeBiPrimeSizedNumber,
-    };
+    use tiresias::{test_exports::N, LargeBiPrimeSizedNumber};
 
     use super::*;
     use crate::{
-        dkg::decentralized_party::SecretKeyShareEncryptionAndProof,
         secp256k1::bulletproofs::RANGE_CLAIMS_PER_SCALAR, Error, ProtocolPublicParameters,
     };
 
@@ -470,7 +465,7 @@ pub(crate) mod tests {
             assert!(
                 matches!(
                     res.err().unwrap(),
-                    Error::MismatchingEncrypedMasks(malicious_parties) if malicious_parties == mismatching_encrypted_masks_parties
+                    Error::MismatchingEncryptedMasks(malicious_parties) if malicious_parties == mismatching_encrypted_masks_parties
                 ),
                 "Parties who maliciously attempted to use different signature nonce shares in the two presign aggregation rounds must be identified"
             );

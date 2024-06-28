@@ -10,15 +10,15 @@ use enhanced_maurer::{encryption_of_discrete_log, EnhanceableLanguage};
 use group::{PrimeGroupElement, Samplable};
 use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
 use maurer::knowledge_of_discrete_log;
-use proof::{range, AggregatableRangeProof};
+use proof::{AggregatableRangeProof, range};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    CENTRALIZED_PARTY_ID,
     dkg::{
         centralized_party, centralized_party::commitment_round::commit_public_key_share,
         decentralized_party,
-    },
-    ProtocolPublicParameters, CENTRALIZED_PARTY_ID,
+    }, ProtocolPublicParameters,
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -105,8 +105,8 @@ where
         >,
 {
     /// This function implements steps 4 and 5 of Protocol 4 (DKG):
-    /// Verifies commitment and zk-proof for X_A, and computes X := X_A + X_B.
-    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
+    /// Verifies commitment and zk-proof for $X_A$, and computes $X:=X_A+X_B$.
+    /// [Source](https://eprint.iacr.org/archive/2024/253/20240217:153208)
     pub fn verify_decommitment_and_proof_of_centralized_party_public_key_share(
         self,
         decommitment_and_proof: centralized_party::PublicKeyShareDecommitmentAndProof<
@@ -149,7 +149,7 @@ where
         )?;
 
         // === Check commitment X_A ===
-        // Used in emulating idealized F^{L_DL}_{com-zk}
+        // Used in emulating idealized $F^{L_DL}_{com-zk}$
         // Protocol 4, step 4a
         let reconstructed_commitment = commit_public_key_share(
             CENTRALIZED_PARTY_ID,
@@ -161,7 +161,7 @@ where
         }
 
         // === Verify knowledge of x_A proof ===
-        // Used in emulating idealized F^{L_DL}_{com-zk}
+        // Used in emulating idealized $F^{L_DL}_{com-zk}$
         // Protocol 4, step 4a
         let language_public_parameters =
             knowledge_of_discrete_log::PublicParameters::new::<GroupElement::Scalar, GroupElement>(
@@ -172,12 +172,13 @@ where
         decommitment_and_proof.proof.verify(
             &self.protocol_context,
             &language_public_parameters,
+            // todo(zeev): this can be passed by ref?
             vec![centralized_party_public_key_share.clone()],
         )?;
 
         // === Compute X := X_A + X_B ===
         // Protocol 4, step 5b
-        let public_key = centralized_party_public_key_share.clone() + &public_key_share;
+        let public_key = centralized_party_public_key_share + &public_key_share;
 
         // === Output (and record) ===
         // Protocol 4, step 5b

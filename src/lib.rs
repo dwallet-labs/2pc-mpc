@@ -1,7 +1,7 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use group::{PartyID, PrimeGroupElement, Samplable};
+use group::{PrimeGroupElement, Samplable};
 use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
 use proof::{range, AggregatableRangeProof};
 use serde::Serialize;
@@ -20,7 +20,7 @@ pub enum Error {
     #[error("homomorphic encryption error")]
     HomomorphicEncryption(#[from] homomorphic_encryption::Error),
     #[error("proof error")]
-    Proof(#[from] ::proof::Error),
+    Proof(#[from] proof::Error),
     #[error("maurer error")]
     Maurer(#[from] maurer::Error),
     #[error("enhanced maurer error")]
@@ -30,7 +30,7 @@ pub enum Error {
     #[error("serialization/deserialization error")]
     Serialization(#[from] serde_json::Error),
     #[error("parties {:?} sent mismatching encrypted masks in the first and second proof aggregation protocols in the presign protocol", .0)]
-    MismatchingEncrypedMasks(Vec<PartyID>),
+    MismatchingEncryptedMasks(Vec<PartyID>),
     #[error("parties {:?} did not send partial decryption proofs in the signing identifiable abort protocol", .0)]
     UnresponsiveParties(Vec<PartyID>),
     #[error("not enough parties to initiate the session")]
@@ -52,9 +52,13 @@ pub enum Error {
 /// 2PC-MPC result.
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// A unique identifier of a party in an MPC protocol.
+pub type PartyID = u16;
+
 pub const CENTRALIZED_PARTY_ID: PartyID = 1;
 pub const DECENTRALIZED_PARTY_ID: PartyID = 2;
 
+// todo: document this.
 #[derive(Serialize, Clone, PartialEq)]
 pub struct ProtocolPublicParameters<
     const SCALAR_LIMBS: usize,
@@ -90,7 +94,7 @@ pub struct ProtocolPublicParameters<
 }
 
 #[cfg(feature = "paillier")]
-pub mod paillier {
+pub mod paillier_common {
     use group::self_product;
 
     pub const PLAINTEXT_SPACE_SCALAR_LIMBS: usize = tiresias::PLAINTEXT_SPACE_SCALAR_LIMBS;
@@ -107,7 +111,7 @@ pub mod paillier {
 }
 
 #[cfg(feature = "bulletproofs")]
-pub mod bulletproofs {
+pub mod bulletproofs_common {
     use group::ristretto;
     use proof::{range, range::bulletproofs};
 
@@ -173,8 +177,11 @@ pub mod secp256k1 {
 
             use super::super::*;
             use crate::{
-                bulletproofs::*,
-                paillier::{
+                bulletproofs_common::{
+                    CommitmentSpaceGroupElement, RangeProof,
+                    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                },
+                paillier_common::{
                     CiphertextSpaceGroupElement, DecryptionKeyShare, EncryptionKey,
                     UnboundedEncDHWitness, UnboundedEncDLWitness, PLAINTEXT_SPACE_SCALAR_LIMBS,
                 },

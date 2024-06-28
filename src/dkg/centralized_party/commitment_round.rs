@@ -13,10 +13,17 @@ use proof::{AggregatableRangeProof, TranscriptProtocol};
 use serde::Serialize;
 
 use crate::{
-    dkg::centralized_party::decommitment_round, ProtocolPublicParameters, CENTRALIZED_PARTY_ID,
+    CENTRALIZED_PARTY_ID, dkg::centralized_party::decommitment_round, Error::InternalError,
+    ProtocolPublicParameters,
 };
 
+const DKG_COMMITMENT_ROUND: &str = "DKG commitment round of a centralized party";
+
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
+/// This struct is used to represent the centralized party in the Commitment round of the DKG
+/// protocol.
+/// This is the first round of the DKG protocol, where the party samples a secret key
+/// share and commits to it with a zero-knowledge proof.
 pub struct Party<
     const SCALAR_LIMBS: usize,
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
@@ -41,7 +48,7 @@ pub fn commit_public_key_share<GroupElement: group::GroupElement>(
     public_key_share: &GroupElement,
     commitment_randomness: &ComputationalSecuritySizedNumber,
 ) -> crate::Result<Commitment> {
-    let mut transcript = Transcript::new(b"DKG commitment round of centralized party");
+    let mut transcript = Transcript::new(DKG_COMMITMENT_ROUND.as_ref());
 
     transcript
         .serialize_to_transcript_as_json(b"public key share", &public_key_share.value())
@@ -49,7 +56,7 @@ pub fn commit_public_key_share<GroupElement: group::GroupElement>(
 
     Ok(Commitment::commit_transcript(
         party_id,
-        "DKG commitment round of centralized party".to_string(),
+        DKG_COMMITMENT_ROUND.to_string(),
         &mut transcript,
         commitment_randomness,
     ))
@@ -79,8 +86,9 @@ impl<
     >
 {
     /// This function implements step 1 of Protocol 4 (DKG):
-    /// Samples x_A, computes X_A & zk-proof and commits to these values.
-    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
+    /// Samples $x_A$, computes $X_A$ & zk-proof and commits to these values.
+    /// [Source](https://eprint.iacr.org/archive/2024/253/20240217:153208)
+    /// Returns a tuple with `commitment` and the centralized party for the decommitment round.
     pub fn sample_commit_and_prove_secret_key_share(
         self,
         rng: &mut impl CryptoRngCore,
@@ -104,14 +112,16 @@ impl<
             GroupElement::Scalar::sample(&self.scalar_group_public_parameters, rng)?;
 
         // === Construct proof for x_A ===
-        // Used in emulating the idealized F^{L_DL}_{com-zk} component
+        // Used in emulating the idealized $F^{L_DL}_{com-zk}$ component
         // Protocol 4, step 1b
-        let language_public_parameters =
-            knowledge_of_discrete_log::PublicParameters::new::<GroupElement::Scalar, GroupElement>(
-                self.scalar_group_public_parameters.clone(),
-                self.group_public_parameters.clone(),
-                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters), // = G (Protocol 4)
-            );
+        let language_public_parameters = knowledge_of_discrete_log::PublicParameters::new::<
+            GroupElement::Scalar,
+            GroupElement,
+        >(
+            self.scalar_group_public_parameters.clone(),
+            self.group_public_parameters.clone(),
+            GroupElement::generator_value_from_public_parameters(&self.group_public_parameters), /* = G (Protocol 4) */
+        );
         let (knowledge_of_discrete_log_proof, public_key_share) = knowledge_of_discrete_log::Proof::<
             GroupElement::Scalar,
             GroupElement,
@@ -125,13 +135,10 @@ impl<
 
         // === Derive X_A ===
         // Protocol 4, step 1a
-        let public_key_share: GroupElement = public_key_share
-            .first()
-            .ok_or(crate::Error::InternalError)?
-            .clone();
+        let public_key_share: GroupElement = public_key_share.first().ok_or(InternalError)?.clone();
 
         // === Commit to X_A ===
-        // Used in emulating the idealized F^{L_DL}_{com-zk} component
+        // Used in emulating the idealized $F^{L_DL}_{com-zk}$ component
         // Protocol 4, step 1b
         let commitment_randomness = ComputationalSecuritySizedNumber::random(rng);
         let commitment = commit_public_key_share(
@@ -140,6 +147,7 @@ impl<
             &commitment_randomness,
         )?;
 
+        // Construct the centralized party for the decommitment round.
         let party = decommitment_round::Party {
             group_public_parameters: self.group_public_parameters,
             scalar_group_public_parameters: self.scalar_group_public_parameters,
@@ -157,6 +165,8 @@ impl<
         Ok((commitment, party))
     }
 
+    /// Construct a new instance of the centralized `Party` struct for the Commitment round.
+    /// This function is used to initialize the DKG protocol.
     pub fn new<
         const NUM_RANGE_CLAIMS: usize,
         UnboundedEncDHWitness: group::GroupElement + Samplable,
