@@ -225,7 +225,7 @@ the protocol.
       the randomness $\rho_1$. This maintains the integrity of Alice's commitment and the correctness of the public
       value $R_B$.
 
-2. **Proof from $\mathcal{F}\_{\text{LDComEval}}\[\mathbb{P}\_{pp}, pk, \text{ct}\_1, \text{ct}\_2]\_{zk}$:**
+2. **Proof from $\mathcal{F}\_{\text{LDComRatio}}\[\mathbb{P}\_{pp}, (\mathbb{G}, G, q)\]\_{zk}$:**
     - **Proof Content:**  
       $(\text{proof, sid} \| \text{pid}_A, K_A, U_A, X_A)$
 
