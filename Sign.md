@@ -215,7 +215,7 @@ the protocol.
 
 #### Proofs Received by Bob:
 
-1. **Proof from $\mathcal{F}\_{\text{LDComDL}}$\mathbb{P}\_{pp}, (\mathbb{G}, R, q)]\_{zk}$:**
+1. **Proof from $\mathcal{F}\_{\text{LDComDL}}$\mathbb{P}\_{pp}, (\mathbb{G}, R, q)\]\_{zk}$:**
     - **Proof Content:**  
       $(\text{proof, sid} \| \text{pid}_A, K_A, R_B)$
 
