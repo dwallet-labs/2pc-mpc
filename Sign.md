@@ -59,13 +59,9 @@ on a given message.
 
 ### Step (d)
 
-- **Homomorphically Evaluate:**
-  $$
-  a_1 x_1 + a_2 x_2
-  $$
-  $$
-  \text{ct}_A = \text{AHE.Eval}(pk, f_A, \text{ct}_1, \text{ct}_2; \eta_{\text{eval}})
-  $$
+- **Homomorphically Evaluate:**  
+  $a_1 x_1 + a_2 x_2$  
+  $\text{ct}_A = \text{AHE.Eval}(pk, f_A, \text{ct}_1, \text{ct}\_2; \eta\_{\text{eval}})$
 
 **Variables:**
 
