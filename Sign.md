@@ -91,20 +91,14 @@ function $f_A(x_1, x_2)$:**
 ### Step (e)
 
 - **Send Proofs:**
-    - Alice sends the following proofs:
-      $$
-      (\text{prove, sid, pid}_A, K_A, R_B; k_A, \rho_1) \text{ to } \mathcal{F}_
-      {\text{LDComDL}}[\mathbb{R}_{pp}, \mathbb{G}, \mathbb{Q}]
-      $$
-      $$
-      (\text{prove, sid, pid}_A, K_A, U_A, X_A; k_A, x_A, \rho_2) \text{ to } \mathcal{F}_
-      {\text{LDComRatio}}[\mathbb{P}_{pp}, (\mathbb{G}, \mathbb{Q})]_{zk}
-      $$
-      $$
-      (\text{prove, sid, pid}_A,
-      \text{ct}_A, C_1, C_2; a_1, a_2, r, \rho_2 + m \cdot \rho_1, r \cdot \rho_1, \eta) \text{ to } \mathcal{F}_
-      {\text{LDComEval}}[\mathbb{P}_{pp}, \mathbb{P}_{pk}, \mathbb{P}_{ct}_1, \mathbb{P}_{ct}_2]_{zk}
-      $$
+    - Alice sends the following proofs:  
+      $(\text{prove, sid, pid}\_A, K_A, R_B; k_A, \rho_1) \text{ to } \mathcal{F}\_
+      {\text{LDComDL}}\[\mathbb{R}_{pp}, \mathbb{G}, \mathbb{Q}\]$  
+      $(\text{prove, sid, pid}\_A, K_A, U_A, X_A; k_A, x_A, \rho_2) \text{ to } \mathcal{F}\_
+      {\text{LDComRatio}}[\mathbb{P}\_{pp}, (\mathbb{G}, \mathbb{Q})\]\_{zk}$  
+      $(\text{prove, sid, pid}\_A, \text{ct}\_A, C_1, C_2; a_1, a_2, r, \rho_2 + m \cdot \rho_1, r \cdot \rho_1, \eta)
+      \text{ to } \mathcal{F}\_
+      {\text{LDComEval}}\[\mathbb{P}\_{pp}, \mathbb{P}_{pk}, \mathbb{P}\_{ct}_1, \mathbb{P}\_{ct}_2\]\_{zk}$
 
 **Variables:**
 
