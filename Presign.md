@@ -38,8 +38,8 @@ several rounds and messages exchanged between the parties.
 (b) **Second Round:**
 
 - (i) **Receive Proofs:**
-    - $B_i$ receives $(\text{proof, sid} \| \gamma, \text{ct}_1, \text{ct}_2)$ from $\mathcal{F}_
-      {\text{LEncDH}\[pk, \text{ctkey}]}^{\text{agg-zk}}$ and $(\text{proof, sid, R, ct}_3)$ from $\mathcal{F}_
+    - $B_i$ receives $(\text{proof, sid} \| \gamma, \text{ct}\_1, \text{ct}\_2)$ from $\mathcal{F}\_
+      {\text{LEncDH}\[pk, \text{ctkey}]}^{\text{agg-zk}}$ and $(\text{proof, sid, R, ct}\_3)$ from $\mathcal{F}_
       {\text{LEncDL}}^{\text{agg-zk}}$.
 - (ii) **Malicious Check:**
     - If $B_i$ receives $(\text{malicious, sid, U'})$, it records the malicious parties and aborts.
