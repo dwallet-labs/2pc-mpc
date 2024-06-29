@@ -59,9 +59,19 @@ on a given message.
 
 ### Step (d)
 
-- **Homomorphically Evaluate:**  
-  $a_1 x_1 + a_2 x_2$  
-  $\text{ct}_A = \text{AHE.Eval}(pk, f_A, \text{ct}_1, \text{ct}\_2; \eta\_{\text{eval}})$
+**Alice performs a homomorphic evaluation of the ciphertexts $\text{ct}\_1$ and $\text{ct}\_2$ using her private
+function $f_A(x_1, x_2)$:**
+
+1. **Private Function Definition:**
+   \[
+   f_A(x_1, x_2) := a_1 x_1 + a_2 x_2
+   \]
+   where $a_1$ and $a_2$ are coefficients previously computed by Alice.
+
+2. **Homomorphic Evaluation:**
+   \[
+   \text{ct}_A \leftarrow \text{AHE.Eval}(pk, f_A, \text{ct}_1, \text{ct}_2; \eta_{\text{eval}})
+   \]
 
 **Variables:**
 
@@ -73,6 +83,18 @@ on a given message.
 
 - To perform homomorphic evaluation on the ciphertexts, ensuring computations are done securely without decrypting the
   values.
+
+### Step (d) - Homomorphic Evaluation
+
+**Explanation:**
+
+- **$\text{AHE.Eval}(pk, f_A, \text{ct}_1, \text{ct}_2; \eta_{\text{eval}})$:** This function evaluates the encrypted
+  ciphertexts $\text{ct}_1$ and $\text{ct}_2$ using the public key $pk$ and the specified function $f_A$.
+  The evaluation uses randomness $\eta_{\text{eval}}$ to ensure security.
+- **Output:** The result of this homomorphic evaluation is a new ciphertext $\text{ct}_A$ which represents the
+  encrypted form of the value computed by the function $f_A(x_1, x_2)$.
+
+-----
 
 ### Step (e)
 
@@ -133,7 +155,7 @@ on a given message.
 ### Step (b)
 
 - **Validation of Values:**
-    - Bob verifies that the values used in the proofs are consistent with previously known records (keygen, \(
+    - Bob verifies that the values used in the proofs are consistent with previously known records (keygen, $
       X_A$, $X$, $\text{ctkey}$, $pk$) and presign data ($R_B, K_A, U_A$).
 
 ### Step (c)
