@@ -29,8 +29,8 @@ on a given message.
 ### Step (b)
 
 - **Sample and Compute:**
-  $\rho_2 \in \mathbb{R}_{pp}$
-  $U_A = \text{Com}(k_A; \rho_2)$
+  Sample: $\rho_2 \in \mathbb{R}_{pp}$  
+  Compute: $U_A = \text{Com}(k_A; \rho_2)$
 
 **Variables:**
 
