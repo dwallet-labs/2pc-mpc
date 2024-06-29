@@ -31,8 +31,8 @@ several rounds and messages exchanged between the parties.
     - $B_i$ sends $(\text{prove, sid} \| \gamma, \text{pid}_i, \text{ct}\_1, \text{ct}\_2; \gamma_i, \eta\_
       {\text{mask}\_1}, \eta\_{\text{mask}\_2})$ to $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ctkey}\]}^{\text{agg-zk}}$.
 - (v) **Send $R_i$ and $k_i$:**
-    - $B_i$ sends $(\text{prove, sid, pid}_i, R_i, \text{ct}_3; k_i, \eta_{\text{mask}_3})$ to $\mathcal{F}_
-      {\text{LEncDL}}^{\text{agg-zk}}$.
+    - $B_i$ sends $(\text{prove, sid, pid}_i, R_i, \text{ct}\_3; k_i, \eta\_{\text{mask}\_3})$ to
+      $\mathcal{F}\_{\text{LEncDL}}^{\text{agg-zk}}$.
 - Can be found in [here](./src/presign/decentralized_party/encrypted_masked_key_share_and_public_nonce_shares_round.rs).
 
 (b) **Second Round:**
