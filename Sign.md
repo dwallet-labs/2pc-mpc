@@ -118,7 +118,6 @@ the protocol's security.
         - **$x_A$**: Alice's private key share.
         - **$\rho_2$**: Additional randomness used in the commitment $U_A$.
         - **$\text{ct}\_A$**: Ciphertext resulting from the homomorphic evaluation.
-        - **$C_1, C_2$**: Computed values used in the proofs.
         - **$a_1, a_2$**: Intermediate values computed by Alice.
         - **$r$**: x-coordinate of the combined nonce.
         - **$m$**: Message to be signed.
@@ -146,10 +145,8 @@ the protocol's security.
         2. **Sending Proofs:**
             - Alice sends:
               $(\text{prove, sid, pid}_A, \text{ct}_A, C_1, C_2; a_1, a_2, r \cdot \rho_2 + m \cdot \rho_1, r \cdot
-              \rho_1,
-              \eta)$
-            - To:
-              $\mathcal{F}_{\text{LDComEval}}\[\text{pp}, pk, \text{ct}_1, \text{ct}_2\]\_{zk}$
+              \rho_1, \eta)$
+            - To: $\mathcal{F}_{\text{LDComEval}}\[\text{pp}, pk, \text{ct}_1, \text{ct}_2\]\_{zk}$
 
     - **Variables:**
         - **$r$**: x-coordinate of the combined nonce $R$.
@@ -163,6 +160,7 @@ the protocol's security.
         - **$\rho_2$**: Additional randomness used in the commitment $U_A$.
         - **$\rho_1$**: Randomness used in Alice's initial commitment.
         - **$\eta$**: Randomness used in the evaluation.
+        - **$C_1, C_2$**: Computed values used in the proofs.
 
     - **Purpose:**
 
