@@ -186,130 +186,124 @@ the protocol's security.
       maintaining the security of the protocol while allowing Bob and any verifying party to trust that Alice has
       followed the protocol correctly.
 
-## 2. Bob’s Verification and Output:
+## Step 2 - Bob's Verification and Output
 
 ### Step (a)
 
-- **Verification of Proofs:**
-    - Bob receives and verifies the following proofs:
-      $$
-      (\text{proof, sid} \| \text{pid}_A, K_A, R_B) \text{ from } \mathcal{F}_
-      {\text{LDComDL}}[\mathbb{P}_{pp}, \mathbb{G}, \mathbb{Q}]
-      $$
-      $$
-      (\text{proof, sid} \| \text{pid}_A, K_A, U_A, X_A) \text{ from } \mathcal{F}_
-      {\text{LDComRatio}}[\mathbb{P}_{pp}, (\mathbb{G}, \mathbb{Q})]_{zk}
-      $$
-      $$
-      (\text{proof, sid} \| \text{pid}_A, \text{ct}_A, C_1, C_2) \text{ from } \mathcal{F}_
-      {\text{LDComEval}}[\mathbb{P}_{pp}, \mathbb{P}_{pk}, \mathbb{P}_{ct}_1, \mathbb{P}_{ct}_2]_{zk}
-      $$
+**Explanation:**
+Bob receives and verifies a series of proofs from Alice to ensure the integrity and correctness of the values and
+computations involved in the signature generation process. If any of the proofs are invalid or not received, Bob aborts
+the protocol.
 
-**Variables:**
+#### Variables and Functions Used:
 
-- Bob verifies the received proofs to ensure they are consistent with the values obtained previously.
+- **$\text{proof}$**: Indicates that Alice is providing a proof of knowledge or correctness.
+- **$\text{sid}$**: Session identifier, uniquely identifying the current session of the protocol.
+- **$\text{pid}_A$**: Protocol identifier for Alice.
+- **$K_A$**: Commitment to Alice's nonce.
+- **$R_B$**: Bob's public value related to his nonce.
+- **$U_A$**: Commitment to Alice's nonce with additional randomness $\rho_2$.
+- **$X_A$**: Alice's public key share.
+- **$\text{ct}\_A$**: Ciphertext resulting from the homomorphic evaluation.
+- **$C_1, C_2$**: Computed values used in the proofs.
+- **$\mathcal{F}\_{\text{LDComDL}}\[\mathbb{P}\_{pp}, (\mathbb{G}, R, q)]\_{zk}$**: Ideal functionality handling
+  commitments and zero-knowledge proofs for discrete logarithms.
+- **$\mathcal{F}\_{\text{LDComRatio}}[\mathbb{P}\_{pp}, (\mathbb{G}, G, q)\]\_{zk}$**: Ideal functionality handling
+  commitments and zero-knowledge proofs for ratios.
+- **$\mathcal{F}\_{\text{LDComEval}}\[\mathbb{P}\_{pp}, pk, \text{ct}\_1, \text{ct}\_2]\_{zk}$**: Ideal functionality
+  handling commitments and zero-knowledge proofs for evaluations.
 
-**Purpose:**
+#### Proofs Received by Bob:
 
-- To ensure that Alice’s commitments and computations are valid and consistent with the agreed protocol.
+1. **Proof from $\mathcal{F}\_{\text{LDComDL}}\[\mathbb{P}\_{pp}, (\mathbb{G}, R, q)]\_{zk}$:**
+    - **Proof Content:**  
+      $(\text{proof, sid} \| \text{pid}_A, K_A, R_B)$
 
-### Step (b)
+   **Purpose:**
 
-- **Validation of Values:**
-    - Bob verifies that the values used in the proofs are consistent with previously known records (keygen, $
-      X_A$, $X$, $\text{ctkey}$, $pk$) and presign data ($R_B, K_A, U_A$).
+    - This proof ensures that the commitments $K_A$ and $R_B$ are correctly related to Alice's nonce $k_A$ and
+      the randomness $\rho_1$. This maintains the integrity of Alice's commitment and the correctness of the public
+      value $R_B$.
 
-### Step (c)
+2. **Proof from $\mathcal{F}\_{\text{LDComRatio}}\[\mathbb{P}\_{pp}, (\mathbb{G}, G, q)\]\_{zk}$:**
+    - **Proof Content:**  
+      $(\text{proof, sid} \| \text{pid}_A, K_A, U_A, X_A)$
 
-- **Decryption and Computation:**
-    - Bob sends:
-      $$
-      (\text{decrypt, pk, ct}_A) \text{ and } (\text{decrypt, pk, ct}_4) \text{ to } \mathcal{F}_{\text{AHE}}
-      $$
-    - Bob waits for responses:
-      $$
-      \text{Let the responses be } (\text{decrypted, pk, ct}_A, pt_4, U_A)
-      $$
-        - If $pt_4 = \bot$ or $pt_4 = \bot$, aborts.
-        - Otherwise, computes:
-          $$
-          s' = pt_4 - \gamma \cdot \text{mod } q
-          $$
-          $$
-          s' = min \{ s', q - s' \}
-          $$
+   **Purpose:**
 
-**Variables:**
+    - This proof ensures that the commitments $K_A$, $U_A$, and $X_A$ are correctly related to Alice's nonce $
+      k_A$ and private key share $x_A$. This verifies the integrity of Alice's key shares and the correctness of the
+      commitments.
 
-- $pt_4$: Plaintext value decrypted from $ct_4$.
-- $s'$: Intermediate signature value.
+3. **Proof from $\mathcal{F}\_{\text{LDComEval}}\[\mathbb{P}\_{pp}, pk, \text{ct}\_1, \text{ct}\_2]\_{zk}$:**
+    - **Proof Content:**
+      $(\text{proof, sid} \| \text{pid}_A, \text{ct}_A, C_1, C_2)$
 
-**Purpose:**
+   **Purpose:**
 
-- To decrypt the ciphertexts and compute the intermediate signature value $s'$, ensuring it is within the valid
-  range.
+    - This proof ensures that the ciphertext $\text{ct}_A$ is correctly computed using the intermediate values $a_1$
+      and $a_2$, and that the values $C_1$ and $C_2$ are correctly related to the commitments and the message $
+      m$. This maintains the integrity and correctness of the homomorphic evaluation and the resulting ciphertext.
 
-## 3. Output:
+#### Summary:
 
-- **Final Signature:**
-    - Bob outputs the signature $(r, s)$, where $s = min \{ s', q - s' \}$.
+In this step, Bob receives and verifies a series of proofs from Alice. These proofs are essential for ensuring that
+Alice's commitments, computed values, and the resulting ciphertext from the homomorphic evaluation are all correct and
+consistent. If any of the proofs are invalid or not received, Bob aborts the protocol. This process is crucial for
+maintaining the protocol's integrity and security, allowing Bob to trust that Alice has followed the protocol correctly
+without revealing her private values.
 
-**Variables:**
+### Step (b) - Verification of Values
 
-- $r$: x-coordinate of the combined nonce.
-- $s$: Final signature value.
+**Explanation:**
+Bob verifies that the values used in the proofs provided by Alice are consistent with the values he has previously
+obtained. This ensures that all commitments, key shares, and computed values match and are valid.
 
-**Purpose:**
+#### Variables and Functions Used:
 
-- To produce the final digital signature on the message, ensuring its validity and security.
+- **keygen**: The process of generating keys.
+- **$X_A$**: Alice's public key share.
+- **$X$**: Combined public key.
+- **ctkey**: Ciphertext key used in previous steps.
+- **$pk$**: Public key.
+- **presign**: Pre-signing phase data.
+- **$sid$**: Session identifier.
+- **$R_B$**: Bob's public value related to his nonce.
+- **$K_A$**: Commitment to Alice's nonce.
+- **$pt'$**: Plaintext value from pre-signing.
+- **$r$**: x-coordinate of the combined nonce $R$.
+- **$U_A$**: Commitment to Alice's nonce with additional randomness $\rho_2$.
+- **$C_1$**: Computed value combining $U_A$ and $K_A$ with the message $m$.
+- **$C_2$**: Computed value combining $r$ and $K_A$.
+- **$R|_{x\text{-axis}}$**: x-coordinate of the combined nonce $R$.
 
-## Summary:
+#### Verification Steps:
 
-Protocol 6 describes a secure multi-party process for generating a digital signature. The process involves multiple
-rounds of commitments, computations, and verifications to ensure the signature is generated collaboratively and verified
-correctly. Each step is designed to maintain the security and integrity of the signature generation process using
-cryptographic techniques like homomorphic encryption and zero-knowledge proofs.
+1. **Verify Consistency with Previous Records:**
+    - Bob checks that the values used in Alice's proofs match his previously recorded values:
+        - Records include (keygen, $X_A$, $X$, ctkey, pk).
+        - Pre-signing data (presign, sid, $R_B$, $K_A$, pt').
 
+   **Purpose:**
 
+    - This step ensures that the values used in Alice's proofs are consistent with the values obtained during key
+      generation
+      and pre-signing phases. Consistency verifies that no tampering or errors have occurred.
 
----
-
-2. **Computing $C_1$ and $C_2$:**
-    - **Computation:**
-      $C_1 = (r \circ U_A) \oplus (m \circ K_A)$
-      $
-      C_2 = r \circ K_A
-      $
-
-**Variables:**
-
-- **$\circ$**: A cryptographic operation (e.g., point multiplication on an elliptic curve).
-- **$\oplus$**: Another cryptographic operation (e.g., addition or XOR).
-
-**Purpose:**
-
-- $C_1$ and $C_2$ are computed values that combine Alice's commitments and the message $m$. These values are
-  used to provide further proof of correctness in the protocol.
-
-3. **Sending Final Proof:**
-    - **Proof 3:**
-      $
-      \text{prove, sid, pid}_A, \text{ct}_A, C_1, C_2; a_1, a_2, r, \rho_2 + m \cdot \rho_1, r \cdot \rho_1, \eta
-      $
-      Sent to $\mathcal{F}_{\text{LDComEval}}[\mathbb{P}_{pp}, \mathbb{P}_{pk}, \mathbb{P}_{ct}_1, \mathbb{P}_{ct}_2]_
-      {zk}$.
+2. **Verify Computed Values $C_1$ and $C_2$:**
+    - Bob verifies that:
+        - $C_1 = (r \circ U_A) \oplus (m \circ K_A)$
+        - $C_2 = r \circ K_A$
+    - Where $r = R|_{x\text{-axis}}$.
 
 **Purpose:**
 
-- This proof ensures that the homomorphic evaluation resulting in $\text{ct}_A$ is correct and that the values $
-  C_1$ and $C_2$ are correctly computed based on the initial commitments and the message $m$. The proof
-  includes intermediate values $a_1$ and $a_2$, as well as the randomness used in the evaluation.
+- Verifying $C_1$ and $C_2$ ensures that Alice's computations involving her commitments, nonce, and the message
+  are correct. This step is crucial for validating the integrity of the signature generation process.
 
-### Summary:
+#### Summary:
 
-In step (e), Alice sends a series of proofs to various ideal functionalities to ensure that her commitments, computed
-values, and the resulting ciphertext from the homomorphic evaluation are all correct and consistent. These proofs are
-essential for maintaining the protocol's integrity and security, as they allow Bob and any verifying party to trust that
-Alice has followed the protocol correctly without revealing her private values.
-
-- To send the necessary proofs to the ideal functionalities, ensuring the integrity and correctness of the computations.
+In step (b), Bob verifies that the values used in Alice's proofs are consistent with his previously recorded values and
+that the computed values $C_1$ and $C_2$ are correct. This verification step is essential for maintaining the
+integrity and security of the protocol, ensuring that all commitments, key shares, and computed values match and are
+valid. If any inconsistencies are found, Bob aborts the protocol.
