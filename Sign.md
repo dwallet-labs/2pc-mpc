@@ -94,6 +94,21 @@ Alice sends a series of proofs to various functionalities to ensure the integrit
 computations involved in the signature generation process. These proofs are verified by the functionalities to maintain
 the protocol's security.
 
+- **Computation and Sending:**
+
+    1. **Computing $C_1$ and $C_2$:**
+        - **Computation of $C_1$:**
+          $C_1 = (r \circ U_A) \oplus (m \circ K_A)$
+        - **Computation of $C_2$:**
+          $C_2 = r \circ K_A$
+
+    2. **Sending Proofs:**
+        - Alice sends:
+          $(\text{prove, sid, pid}_A, \text{ct}_A, C_1, C_2; a_1, a_2, r \cdot \rho_2 + m \cdot \rho_1, r \cdot \rho_1,
+          \eta)$
+        - To:
+          $\mathcal{F}_{\text{LDComEval}}\[\text{pp}, pk, \text{ct}_1, \text{ct}_2\]\_{zk}$
+
 **Variables:**
 
 - **$\text{prove}$**: Operation indicating that Alice is providing a proof of knowledge or correctness.
@@ -150,21 +165,6 @@ the protocol's security.
     - **$\rho_2$**: Additional randomness used in the commitment $U_A$.
     - **$\rho_1$**: Randomness used in Alice's initial commitment.
     - **$\eta$**: Randomness used in the evaluation.
-
-- **Computation and Sending:**
-
-    1. **Computing $C_1$ and $C_2$:**
-        - **Computation of $C_1$:**
-          $C_1 = (r \circ U_A) \oplus (m \circ K_A)$
-        - **Computation of $C_2$:**
-          $C_2 = r \circ K_A$
-
-    2. **Sending Proofs:**
-        - Alice sends:
-          $(\text{prove, sid, pid}_A, \text{ct}_A, C_1, C_2; a_1, a_2, r \cdot \rho_2 + m \cdot \rho_1, r \cdot \rho_1,
-          \eta)$
-        - To:
-          $\mathcal{F}_{\text{LDComEval}}\[\text{pp}, pk, \text{ct}_1, \text{ct}_2\]\_{zk}$
 
 - **Purpose:**
 
