@@ -139,17 +139,17 @@ the protocol's security.
   computations.
 
 - **Variables:**
-- **$r$**: x-coordinate of the combined nonce $R$.
-- **$U_A$**: Commitment to Alice's nonce with additional randomness $\rho_2$.
-- **$K_A$**: Commitment to Alice's nonce.
-- **$m$**: Message to be signed.
-- **$\circ$**: A cryptographic operation (e.g., point multiplication on an elliptic curve).
-- **$\oplus$**: Another cryptographic operation (e.g., addition or XOR).
-- **$\text{ct}_A$**: Ciphertext resulting from the homomorphic evaluation.
-- **$a_1, a_2$**: Intermediate values computed by Alice.
-- **$\rho_2$**: Additional randomness used in the commitment $U_A$.
-- **$\rho_1$**: Randomness used in Alice's initial commitment.
-- **$\eta$**: Randomness used in the evaluation.
+    - **$r$**: x-coordinate of the combined nonce $R$.
+    - **$U_A$**: Commitment to Alice's nonce with additional randomness $\rho_2$.
+    - **$K_A$**: Commitment to Alice's nonce.
+    - **$m$**: Message to be signed.
+    - **$\circ$**: A cryptographic operation (e.g., point multiplication on an elliptic curve).
+    - **$\oplus$**: Another cryptographic operation (e.g., addition or XOR).
+    - **$\text{ct}_A$**: Ciphertext resulting from the homomorphic evaluation.
+    - **$a_1, a_2$**: Intermediate values computed by Alice.
+    - **$\rho_2$**: Additional randomness used in the commitment $U_A$.
+    - **$\rho_1$**: Randomness used in Alice's initial commitment.
+    - **$\eta$**: Randomness used in the evaluation.
 
 - **Computation and Sending:**
 
