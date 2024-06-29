@@ -348,7 +348,7 @@ ensuring that the computations are valid and for producing the final signature c
       $s' = pt_4^{-1} \cdot \left( (\gamma \cdot k_B)^{-1} \cdot \left( (r \cdot k_A + m \cdot k_A) \cdot \gamma
       \right) + r \cdot k_A \cdot \gamma \right) \mod q$
     - Bob then computes:  
-      $s = \min \{ s', q - s' \}$
+      $s = \min \left{ s', q - s' \right}$
 
 **Purpose:**
 
