@@ -9,7 +9,7 @@ several rounds and messages exchanged between the parties.
 (a) **Sampling and Commitment:**
 
 - Alice samples a random $k_A$ from $Z_q$ and computes $K_A = \text{Com}(k_A; \rho_1)$.
-- Alice sends $(\text{prove, sid, pid}\_A, K_A; k_A, \rho_1)$ to $\mathcal{F}_{\text{LDCom}_{zk}}$.
+- Alice sends $(\text{prove, sid, pid}\_A, K_A; k_A, \rho_1)$ to $\mathcal{F}\_{\text{LDCom}_{zk}}$.
 
 #### 2. Bob's Message:
 
@@ -22,13 +22,13 @@ several rounds and messages exchanged between the parties.
     - $B_i$ samples $k_i \leftarrow Z_q^*$ and computes $R_i = k_i \cdot G$. $k_B = \sum_i k_i$.
 - (iii) **Generate AHE Components:**
     - $B_i$ samples $\gamma_i \leftarrow [0, q]$, and randomness $\eta_i$ for masks.
-    - $\text{ct}_1 = \text{AHE.Enc}(pk, \gamma_i; \eta_{\text{mask}_1})$.
-    - $\text{ct}_2 = \text{AHE.Eval}(pk, f_i, \text{ctkey}, \eta_{\text{mask}_2})$ where $f_i(x) = \gamma_i \cdot
+    - $\text{ct}_1 = \text{AHE.Enc}(pk, \gamma_i; \eta\_{\text{mask}_1})$.
+    - $\text{ct}\_2 = \text{AHE.Eval}(pk, f_i, \text{ctkey}, \eta_{\text{mask}_2})$ where $f_i(x) = \gamma_i \cdot
       x$.
-    - $\text{ct}_3 = \text{AHE.Enc}(pk, k_i; \eta_{\text{mask}_3})$.
+    - $\text{ct}_3 = \text{AHE.Enc}(pk, k_i; \eta\_{\text{mask}_3})$.
 - (iv) **Send Proofs:**
     - $B_i$ sends $(\text{prove, sid} \| \gamma, \text{pid}_i, \text{ct}_1, \text{ct}_2; \gamma_i, \eta_
-      {\text{mask}_1}, \eta_{\text{mask}_2})$ to $\mathcal{F}_{\text{LEncDH}[pk, \text{ctkey}]}^{\text{agg-zk}}$.
+      {\text{mask}\_1}, \eta\_{\text{mask}\_2})$ to $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ctkey}\]}^{\text{agg-zk}}$.
 - (v) **Send $R_i$ and $k_i$:**
     - $B_i$ sends $(\text{prove, sid, pid}_i, R_i, \text{ct}_3; k_i, \eta_{\text{mask}_3})$ to $\mathcal{F}_
       {\text{LEncDL}}^{\text{agg-zk}}$.
@@ -37,16 +37,16 @@ several rounds and messages exchanged between the parties.
 
 - (i) **Receive Proofs:**
     - $B_i$ receives $(\text{proof, sid} \| \gamma, \text{ct}_1, \text{ct}_2)$ from $\mathcal{F}_
-      {\text{LEncDH}[pk, \text{ctkey}]}^{\text{agg-zk}}$ and $(\text{proof, sid, R, ct}_3)$ from $\mathcal{F}_
+      {\text{LEncDH}\[pk, \text{ctkey}]}^{\text{agg-zk}}$ and $(\text{proof, sid, R, ct}_3)$ from $\mathcal{F}_
       {\text{LEncDL}}^{\text{agg-zk}}$.
 - (ii) **Malicious Check:**
     - If $B_i$ receives $(\text{malicious, sid, U'})$, it records the malicious parties and aborts.
 - (iii) **Compute Combined Ciphertext:**
-    - $B_i$ computes $\text{ct}_4 = \text{AHE.Eval}(pk, f_i', \text{ct}_1, \eta_{\text{mask}_4})$ where $f_i'(
+    - $B_i$ computes $\text{ct}_4 = \text{AHE.Eval}(pk, f_i', \text{ct}\_1, \eta\_{\text{mask}_4})$ where $f_i'(
       x) = k_i \cdot x$.
 - (iv) **Send Proofs:**
-    - $B_i$ sends $(\text{prove, sid} \| k, \text{pid}_i, \text{ct}_3, \text{ct}_4; k_i, \eta_{\text{mask}_3},
-      \eta_{\text{mask}_4})$ to $\mathcal{F}_{\text{LEncDH}[pk, \text{ct}_1]}^{\text{agg-zk}}$.
+    - $B_i$ sends $(\text{prove, sid} \| k, \text{pid}_i, \text{ct}_3, \text{ct}\_4; k_i, \eta\_{\text{mask}\_3},
+      \eta\_{\text{mask}\_4})$ to $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ct}_1]}^{\text{agg-zk}}$.
 
 (c) **Proof Verification:**
 
@@ -56,12 +56,12 @@ several rounds and messages exchanged between the parties.
 
 #### 3. Alice's Verification:
 
-(a) **Verify $R_B$ and $\text{ct}_3$:**
+(a) **Verify $R_B$ and $\text{ct}\_3$:**
 
-- Alice receives $(\text{proof, sid, R}_B, \text{ct}_3)$ from $\mathcal{F}_{\text{LEncDL}}^{\text{agg-zk}}$. If
+- Alice receives $(\text{proof, sid, R}\_B, \text{ct}\_3)$ from $\mathcal{F}_{\text{LEncDL}}^{\text{agg-zk}}$. If
   valid, continues; otherwise, aborts.
   (b) **Verify Combined Ciphertexts:**
-- Alice receives $(\text{proof, sid, ct}_1, \text{ct}_2)$ from $\mathcal{F}_{\text{LEncDH}[pk, \text{ctkey}]
+- Alice receives $(\text{proof, sid, ct}_1, \text{ct}\_2)$ from $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ctkey}]
   }^{\text{agg-zk}}$. If valid, continues; otherwise, aborts.
 
 #### 4. Output:
