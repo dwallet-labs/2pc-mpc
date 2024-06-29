@@ -43,7 +43,7 @@ on a given message.
 
 ### Step (c)
 
-- **Set Values:**
+- **Set Values:**  
   $a_1 = r \cdot k_A + x_A + m \cdot k_A$  
   $a_2 = r \cdot k_A$
 
