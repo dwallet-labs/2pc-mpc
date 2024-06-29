@@ -90,8 +90,6 @@ function $f_A(x_1, x_2)$:**
 
 ### Step (e) - Sending Proofs
 
-**Explanation:**
-
 Alice sends a series of proofs to various functionalities to ensure the integrity and correctness of the values and
 computations involved in the signature generation process. These proofs are verified by the functionalities to maintain
 the protocol's security.
