@@ -166,11 +166,11 @@ the key generation process between multiple parties.
     - **Definition:** Ciphertext of the key used in the AHE scheme.
     - **Role:** Used in the evaluation of $\text{ct}_2$.
 
-16. **$\mathcal{F}_{\text{LDCom}_{zk}}$**:
+16. **$\mathcal{F}\_{\text{LDCom}\_{zk}}$**:
     - **Definition:** Functionality handling commitments and zero-knowledge proofs for discrete logarithms.
     - **Role:** Ensures commitments are valid and proofs are verified.
 
-17. **$\mathcal{F}_{\text{LEncDH}[pk, \text{ctkey}]}^{\text{agg-zk}}$**:
+17. **$\mathcal{F}_{\text{LEncDH}\[pk, \text{ctkey}\]}^{\text{agg-zk}}$**:
     - **Definition:** Functionality handling encrypted discrete logarithms with aggregated zero-knowledge proofs.
     - **Role:** Verifies the encrypted commitments and their proofs.
 
