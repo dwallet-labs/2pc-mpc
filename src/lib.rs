@@ -3,7 +3,7 @@
 
 use group::{PrimeGroupElement, Samplable};
 use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
-use proof::{range, AggregatableRangeProof};
+use proof::{AggregatableRangeProof, range};
 use serde::Serialize;
 
 pub mod dkg;
@@ -152,8 +152,9 @@ pub mod secp256k1 {
     pub mod paillier {
         use group::{direct_product, self_product};
 
-        use super::Scalar;
         use crate::sign::DIMENSION;
+
+        use super::Scalar;
 
         type UnboundedDComEvalWitness = direct_product::GroupElement<
             self_product::GroupElement<DIMENSION, Scalar>,
@@ -162,7 +163,6 @@ pub mod secp256k1 {
 
         #[cfg(feature = "bulletproofs")]
         pub mod bulletproofs {
-            use bulletproofs::*;
             use commitment::Pedersen;
             use enhanced_maurer::{
                 committed_linear_evaluation, encryption_of_discrete_log, encryption_of_tuple,
@@ -175,19 +175,22 @@ pub mod secp256k1 {
             };
             use tiresias::LargeBiPrimeSizedNumber;
 
-            use super::super::*;
+            use bulletproofs::*;
+
             use crate::{
                 bulletproofs_common::{
-                    CommitmentSpaceGroupElement, RangeProof,
-                    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
+                    COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS, CommitmentSpaceGroupElement,
+                    RangeProof,
                 },
                 paillier_common::{
                     CiphertextSpaceGroupElement, DecryptionKeyShare, EncryptionKey,
-                    UnboundedEncDHWitness, UnboundedEncDLWitness, PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    PLAINTEXT_SPACE_SCALAR_LIMBS, UnboundedEncDHWitness, UnboundedEncDLWitness,
                 },
                 secp256k1::paillier::UnboundedDComEvalWitness,
                 sign::DIMENSION,
             };
+
+            use super::super::*;
 
             pub type ProtocolPublicParameters = crate::ProtocolPublicParameters<
                 SCALAR_LIMBS,
@@ -788,12 +791,13 @@ pub mod secp256k1 {
 
     #[cfg(feature = "bulletproofs")]
     pub mod bulletproofs {
-        use crypto_bigint::{Uint, U64};
+        use crypto_bigint::{U64, Uint};
         use group::StatisticalSecuritySizedNumber;
         use proof::range::bulletproofs::RANGE_CLAIM_BITS;
 
-        use super::SCALAR_LIMBS;
         use crate::sign::DIMENSION;
+
+        use super::SCALAR_LIMBS;
 
         pub const RANGE_CLAIMS_PER_SCALAR: usize = Uint::<SCALAR_LIMBS>::BITS / RANGE_CLAIM_BITS;
         pub const MASK_LIMBS: usize =

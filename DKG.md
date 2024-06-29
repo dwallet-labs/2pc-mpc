@@ -148,9 +148,9 @@ defined in the protocol.
 - The details of the protocol are elaborated in the document sections on Key Generation Protocols, specifically under
   Protocol 4 in the provided PDF【7:1†source】【7:2†source】.
 
-### Glossary for Protocol 4 in the Paper
+# Glossary for Protocol 4 in the Paper
 
-#### Variables and Functions
+## Variables and Functions
 
 1. **$A$**:
     - **Meaning:** Alice, one of the two parties involved in the key generation protocol.
@@ -218,7 +218,7 @@ defined in the protocol.
 22. **$X$**:
     - **Meaning:** The shared ECDSA verification key computed as $X = X_A + X_B$.
 
-#### Steps in the Protocol
+## Steps in the Protocol
 
 1. **$com–prove, pid_A, X_A; x_A$**:
     - **Meaning:** Alice commits to her random value $x_A$ and generates a zero-knowledge proof of knowledge of $x_A$.

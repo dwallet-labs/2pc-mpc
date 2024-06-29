@@ -6,10 +6,10 @@
 use std::collections::HashSet;
 
 use commitment::{pedersen, Pedersen};
-use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
+use crypto_bigint::{Encoding, rand_core::CryptoRngCore, Uint};
 use enhanced_maurer::{
-    encryption_of_discrete_log, encryption_of_tuple, language::composed_witness_upper_bound,
-    EnhanceableLanguage, EnhancedLanguage, EnhancedPublicParameters,
+    encryption_of_discrete_log, encryption_of_tuple, EnhanceableLanguage,
+    EnhancedLanguage, EnhancedPublicParameters, language::composed_witness_upper_bound,
 };
 use group::{GroupElement, PartyID, PrimeGroupElement, Samplable};
 use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
@@ -19,11 +19,11 @@ use serde::Serialize;
 
 use crate::{
     dkg,
+    Error,
     presign::{
         centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
         decentralized_party::encrypted_masked_nonces_round,
-    },
-    Error, ProtocolPublicParameters,
+    }, ProtocolPublicParameters,
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -141,9 +141,9 @@ where
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
     /// This function implements step 2a of Protocol 5 (Presign):
-    /// Verifies commitment and zk-proof for K_A, samples γ_i and k_i, and
-    /// prepares computation of ct^i_1, ct^i_2 and ct^i_3, and their zk-proofs.
-    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
+    /// Verifies commitment and zk-proof for $K_A$, samples $γ_i$ and $k_i$.
+    /// Prepares computation of $ct^i_1$, $ct^i_2$ and $ct^i_3$, and their zk-proofs.
+    /// [Source](https://eprint.iacr.org/archive/2024/253/20240217:153208)
     ///
     /// Note: this function operates on batches; the annotations are written as
     /// if the batch size equals 1.
@@ -212,7 +212,7 @@ where
             .len();
 
         // Construct L_DCOM language parameters
-        // Used in emulating F^{L_DCOM}_zk
+        // Used in emulating $F^{L_DCOM}_zk$
         // Protocol 5, step 2a (i)
         let commitment_scheme_public_parameters =
             pedersen::PublicParameters::derive::<SCALAR_LIMBS, GroupElement>(
@@ -230,15 +230,15 @@ where
         let centralized_party_nonce_shares_commitments =
             centralized_party_nonce_shares_commitments_and_batched_proof
                 .commitments
-                .into_iter()
-                .map(|value| GroupElement::new(value, &self.group_public_parameters))
+                .iter()
+                .map(|&value| GroupElement::new(value, &self.group_public_parameters))
                 .collect::<group::Result<Vec<_>>>()?;
         centralized_party_nonce_shares_commitments_and_batched_proof
             .proof
             .verify(
                 &self.protocol_context,
                 &l_dcom_public_parameters,
-                centralized_party_nonce_shares_commitments.clone(),
+                centralized_party_nonce_shares_commitments,
             )?;
 
         // ==================================
@@ -306,8 +306,8 @@ where
         >::new::<SCALAR_LIMBS, GroupElement, EncryptionKey>(
             self.scalar_group_public_parameters.clone(),
             self.encryption_scheme_public_parameters.clone(),
-            self.encrypted_secret_key_share.value(), /* = ct_key = AHE.Enc(x_B) (see Protocol 4,
-                                                      * step 2e/f) */
+            // ct_key = AHE.Enc(x_B) (see Protocol 4, step 2e/f)
+            self.encrypted_secret_key_share.value(),
             encrypted_secret_key_share_upper_bound,
         );
         let enc_dh_public_parameters = EnhancedPublicParameters::<

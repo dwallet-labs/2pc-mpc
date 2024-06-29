@@ -22,12 +22,12 @@ pub(crate) mod tests {
     };
 
     use criterion::measurement::{Measurement, WallTime};
-    use crypto_bigint::{Uint, U256};
+    use crypto_bigint::{U256, Uint};
     use enhanced_maurer::{
         encryption_of_discrete_log::StatementAccessors,
         language::EnhancedLanguageStatementAccessors,
     };
-    use group::{ristretto, secp256k1, self_product, GroupElement as _, PartyID, Samplable};
+    use group::{GroupElement as _, PartyID, ristretto, Samplable, secp256k1, self_product};
     use homomorphic_encryption::{
         AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
         GroupsPublicParametersAccessors,
@@ -41,12 +41,13 @@ pub(crate) mod tests {
     use rand::prelude::IteratorRandom;
     use rand_core::OsRng;
     use rstest::rstest;
-    use tiresias::{test_exports::N, LargeBiPrimeSizedNumber};
+    use tiresias::{LargeBiPrimeSizedNumber, test_exports::N};
+
+    use crate::{
+        Error, ProtocolPublicParameters, secp256k1::bulletproofs::RANGE_CLAIMS_PER_SCALAR,
+    };
 
     use super::*;
-    use crate::{
-        secp256k1::bulletproofs::RANGE_CLAIMS_PER_SCALAR, Error, ProtocolPublicParameters,
-    };
 
     #[rstest]
     #[case(2, 2, 1, false)]
@@ -68,6 +69,7 @@ pub(crate) mod tests {
         )
         .unwrap();
 
+        // ECDSA key share of the decentralized party.
         let decentralized_party_secret_key_share = secp256k1::Scalar::sample(
             &protocol_public_parameters.scalar_group_public_parameters,
             &mut OsRng,
@@ -99,7 +101,6 @@ pub(crate) mod tests {
         );
     }
 
-    #[allow(dead_code)]
     pub fn generates_presignatures_internal(
         threshold: u16,
         number_of_parties: u16,
@@ -128,7 +129,7 @@ pub(crate) mod tests {
 
         let protocol_public_parameters = ProtocolPublicParameters::new(N);
 
-        let centralized_party_commitment_round_party = centralized_party::commitment_round::Party::<
+        let centralized_party_commitment_round = centralized_party::commitment_round::Party::<
             { secp256k1::SCALAR_LIMBS },
             { ristretto::SCALAR_LIMBS },
             { RANGE_CLAIMS_PER_SCALAR },
@@ -161,10 +162,11 @@ pub(crate) mod tests {
         };
 
         let now = measurement.start();
+        // Step 1: Centralized Party Sampling and Commitment.
         let (
             centralized_party_nonce_shares_commitments_and_batched_proof,
-            centralized_party_proof_verification_round_party,
-        ) = centralized_party_commitment_round_party
+            centralized_party_proof_verification_round,
+        ) = centralized_party_commitment_round
             .sample_commit_and_prove_signature_nonce_share(batch_size, &mut OsRng)
             .unwrap();
         centralized_party_total_time =
@@ -179,8 +181,9 @@ pub(crate) mod tests {
             });
         let evaluation_party_id = *parties.iter().next().unwrap();
 
-        let decentralized_party_encrypted_masked_key_share_and_public_nonce_shares_parties: HashMap<_, _> = parties.clone().into_iter()
-            .map(|party_id| {
+        // Create the decentralized party instances for Protocol 5 step 2.
+        let decentralized_party_encrypted_masked_key_share_and_public_nonce_shares_parties: HashMap<_, _> = parties.iter()
+            .map(|&party_id| {
                 (
                     party_id,
                     decentralized_party::encrypted_masked_key_share_and_public_nonce_shares_round::Party::<
@@ -307,7 +310,7 @@ pub(crate) mod tests {
         .unwrap();
 
         let now = measurement.start();
-        let centralized_party_presigns = centralized_party_proof_verification_round_party
+        let centralized_party_presigns = centralized_party_proof_verification_round
             .verify_presign_output(output, &mut OsRng)
             .unwrap();
         centralized_party_total_time =

@@ -77,8 +77,8 @@ impl<
     >
 {
     /// This function implements step 1 of Protocol 5 (Presign):
-    /// Samples k_A, computes K_A & its zk-proof and commits to these values.
-    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
+    /// Samples $k_A$, computes $K_A$ & its zk-proof and commits to these values.
+    /// [Source](https://eprint.iacr.org/archive/2024/253/20240217:153208)
     ///
     /// Note: this function operates on batches; the annotations are written as
     /// if the batch size equals 1.
@@ -149,7 +149,8 @@ impl<
         >(commitment_scheme_public_parameters.clone());
 
         // === Create proof and commitment to k_A ===
-        // Protocol 5, steps 1b and 1a, respectively
+        // Protocol 5, steps 1b (=proof) and 1a (=commitments), respectively
+        // The ZK language is `knowledge of decommitment`.
         let (proof, commitments) = maurer::Proof::<
             SOUND_PROOFS_REPETITIONS,
             knowledge_of_decommitment::Language<
@@ -171,7 +172,7 @@ impl<
             rng,
         )?;
 
-        let party = proof_verification_round::Party {
+        let next_party = proof_verification_round::Party {
             group_public_parameters: self.group_public_parameters,
             scalar_group_public_parameters: self.scalar_group_public_parameters,
             encryption_scheme_public_parameters: self.encryption_scheme_public_parameters,
@@ -191,7 +192,10 @@ impl<
         let signature_nonce_shares_commitments_and_batched_proof =
             SignatureNonceSharesCommitmentsAndBatchedProof { commitments, proof };
 
-        Ok((signature_nonce_shares_commitments_and_batched_proof, party))
+        Ok((
+            signature_nonce_shares_commitments_and_batched_proof,
+            next_party,
+        ))
     }
 
     pub fn new<
