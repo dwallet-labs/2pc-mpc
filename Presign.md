@@ -4,14 +4,14 @@ The presigning protocol involves multiple parties (A, $B_1, B_2, \ldots, B_n$) w
 random nonce $k$. The protocol uses public key $pk$ and ciphertext $ctkey$ as inputs, and it consists of
 several rounds and messages exchanged between the parties.
 
-#### 1. Alice's Message:
+## 1. Alice's Message:
 
 (a) **Sampling and Commitment:**
 
 - Alice samples a random $k_A$ from $Z_q$ and computes $K_A = \text{Com}(k_A; \rho_1)$.
 - Alice sends $(\text{prove, sid, pid}\_A, K_A; k_A, \rho_1)$ to $\mathcal{F}\_{\text{LDCom}_{zk}}$.
 
-#### 2. Bob's Message:
+## 2. Bob's Message:
 
 (a) **First Round:**
 
@@ -54,7 +54,7 @@ several rounds and messages exchanged between the parties.
   {\text{LEncDH}[pk, \text{ct}_1]}^{\text{agg-zk}}$. If valid, continues; otherwise, records the malicious parties and
   aborts.
 
-#### 3. Alice's Verification:
+## 3. Alice's Verification:
 
 (a) **Verify $R_B$ and $\text{ct}\_3$:**
 
@@ -64,7 +64,7 @@ several rounds and messages exchanged between the parties.
 - Alice receives $(\text{proof, sid, ct}_1, \text{ct}\_2)$ from $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ctkey}]
   }^{\text{agg-zk}}$. If valid, continues; otherwise, aborts.
 
-#### 4. Output:
+## 4. Output:
 
 (a) **Alice Records:**
 
@@ -74,7 +74,7 @@ several rounds and messages exchanged between the parties.
 - Bob records $(\text{presign, sid, R}_B, K_A, \text{ct}_3, \text{ct}_4)$, where $\text{ct}_4$ encrypts $
   \gamma \cdot k_B \mod q$.
 
-### Summary:
+## Summary:
 
 - **Rounds and Steps:**
     - **Alice:** Samples $k_A$, computes $K_A$, sends commitment and proof.
