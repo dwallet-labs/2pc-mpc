@@ -136,7 +136,7 @@ the key generation process between multiple parties.
     - **Definition:** Random value sampled by each $B_i$.
     - **Role:** Used in the generation of AHE components.
 
-9. **$\eta_{\text{mask}_1}, \eta_{\text{mask}_2}, \eta_{\text{mask}_3}, \eta_{\text{mask}_4}$**:
+9. **$\eta\_{\text{mask}\_1}, \eta\_{\text{mask}\_2}, \eta\_{\text{mask}\_3}, \eta\_{\text{mask}\_4}$**:
     - **Definition:** Random values used for masking during encryption.
     - **Role:** Adds security to the encryption process.
 
