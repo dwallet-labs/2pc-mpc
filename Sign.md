@@ -109,25 +109,25 @@ the protocol's security.
         - To:
           $\mathcal{F}_{\text{LDComEval}}\[\text{pp}, pk, \text{ct}_1, \text{ct}_2\]\_{zk}$
 
-**Variables:**
+- **Variables:**
 
-- **$\text{prove}$**: Operation indicating that Alice is providing a proof of knowledge or correctness.
-- **$\text{sid}$**: Session identifier, uniquely identifying the current session of the protocol.
-- **$\text{pid}\_A$**: Protocol identifier for Alice.
-- **$K_A$**: Commitment to Alice's nonce.
-- **$R_B$**: Bob's public value related to his nonce.
-- **$k_A$**: Alice's nonce.
-- **$\rho\_1$**: Randomness used in Alice's initial commitment.
-- **$U_A$**: Commitment to Alice's nonce with additional randomness $\rho_2$.
-- **$X_A$**: Alice's public key share.
-- **$x_A$**: Alice's private key share.
-- **$\rho_2$**: Additional randomness used in the commitment $U_A$.
-- **$\text{ct}\_A$**: Ciphertext resulting from the homomorphic evaluation.
-- **$C_1, C_2$**: Computed values used in the proofs.
-- **$a_1, a_2$**: Intermediate values computed by Alice.
-- **$r$**: x-coordinate of the combined nonce.
-- **$m$**: Message to be signed.
-- **$\eta$**: Randomness used in the evaluation.
+  - **$\text{prove}$**: Operation indicating that Alice is providing a proof of knowledge or correctness.
+  - **$\text{sid}$**: Session identifier, uniquely identifying the current session of the protocol.
+  - **$\text{pid}\_A$**: Protocol identifier for Alice.
+  - **$K_A$**: Commitment to Alice's nonce.
+  - **$R_B$**: Bob's public value related to his nonce.
+  - **$k_A$**: Alice's nonce.
+  - **$\rho\_1$**: Randomness used in Alice's initial commitment.
+  - **$U_A$**: Commitment to Alice's nonce with additional randomness $\rho_2$.
+  - **$X_A$**: Alice's public key share.
+  - **$x_A$**: Alice's private key share.
+  - **$\rho_2$**: Additional randomness used in the commitment $U_A$.
+  - **$\text{ct}\_A$**: Ciphertext resulting from the homomorphic evaluation.
+  - **$C_1, C_2$**: Computed values used in the proofs.
+  - **$a_1, a_2$**: Intermediate values computed by Alice.
+  - **$r$**: x-coordinate of the combined nonce.
+  - **$m$**: Message to be signed.
+  - **$\eta$**: Randomness used in the evaluation.
 
 **Explanation:**
 
