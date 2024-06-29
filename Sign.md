@@ -94,100 +94,99 @@ Alice sends a series of proofs to various functionalities to ensure the integrit
 computations involved in the signature generation process. These proofs are verified by the functionalities to maintain
 the protocol's security.
 
-- **Variables:**
-
-    - **$\text{prove}$**: Operation indicating that Alice is providing a proof of knowledge or correctness.
-    - **$\text{sid}$**: Session identifier, uniquely identifying the current session of the protocol.
-    - **$\text{pid}\_A$**: Protocol identifier for Alice.
-    - **$K_A$**: Commitment to Alice's nonce.
-    - **$R_B$**: Bob's public value related to his nonce.
-    - **$k_A$**: Alice's nonce.
-    - **$\rho\_1$**: Randomness used in Alice's initial commitment.
-    - **$U_A$**: Commitment to Alice's nonce with additional randomness $\rho_2$.
-    - **$X_A$**: Alice's public key share.
-    - **$x_A$**: Alice's private key share.
-    - **$\rho_2$**: Additional randomness used in the commitment $U_A$.
-    - **$\text{ct}\_A$**: Ciphertext resulting from the homomorphic evaluation.
-    - **$C_1, C_2$**: Computed values used in the proofs.
-    - **$a_1, a_2$**: Intermediate values computed by Alice.
-    - **$r$**: x-coordinate of the combined nonce.
-    - **$m$**: Message to be signed.
-    - **$\eta$**: Randomness used in the evaluation.
-
-**Explanation:**
-
 1. **Sending Initial Proofs:**
-    - **Proof 1:**  
-      Alice sends $(\text{prove, sid, pid}_A, K_A, R_B; k_A, \rho_1)$ to $\mathcal{F}\_
-      {\text{LDComDL}}\[\text{pp}, (\mathbb{G}, R, q)\]\_{zk}$.
+    - **Explanation:**
 
-    - **Proof 2:**  
-      Alice sends $(\text{prove, sid, pid}\_A, K_A, U_A, X_A; k_A, x_A, \rho_1, \rho_2)$ to $\mathcal{F}_
-      {\text{LDComRatio}}\[\text{pp}, (\mathbb{G}, G, q)\]_{zk}$.
+        - **Proof 1:**  
+          Alice sends $(\text{prove, sid, pid}_A, K_A, R_B; k_A, \rho_1)$ to $\mathcal{F}\_
+          {\text{LDComDL}}\[\text{pp}, (\mathbb{G}, R, q)\]\_{zk}$.
 
-   **Purpose:**
+        - **Proof 2:**  
+          Alice sends $(\text{prove, sid, pid}\_A, K_A, U_A, X_A; k_A, x_A, \rho_1, \rho_2)$ to $\mathcal{F}_
+          {\text{LDComRatio}}\[\text{pp}, (\mathbb{G}, G, q)\]_{zk}$.
 
-    - These proofs demonstrate that Alice's commitments $K_A$ and $U_A$ and the values $R_B$ and $X_A$ are
-      correctly computed and related to her private nonce $k_A$ and public key share $x_A$. The proofs ensure the
-      integrity of Alice's commitments and key shares.
+    - **Variables:**
+        - **$\text{prove}$**: Operation indicating that Alice is providing a proof of knowledge or correctness.
+        - **$\text{sid}$**: Session identifier, uniquely identifying the current session of the protocol.
+        - **$\text{pid}\_A$**: Protocol identifier for Alice.
+        - **$K_A$**: Commitment to Alice's nonce.
+        - **$R_B$**: Bob's public value related to his nonce.
+        - **$k_A$**: Alice's nonce.
+        - **$\rho\_1$**: Randomness used in Alice's initial commitment.
+        - **$U_A$**: Commitment to Alice's nonce with additional randomness $\rho_2$.
+        - **$X_A$**: Alice's public key share.
+        - **$x_A$**: Alice's private key share.
+        - **$\rho_2$**: Additional randomness used in the commitment $U_A$.
+        - **$\text{ct}\_A$**: Ciphertext resulting from the homomorphic evaluation.
+        - **$C_1, C_2$**: Computed values used in the proofs.
+        - **$a_1, a_2$**: Intermediate values computed by Alice.
+        - **$r$**: x-coordinate of the combined nonce.
+        - **$m$**: Message to be signed.
+        - **$\eta$**: Randomness used in the evaluation.
+
+    - **Purpose:**
+        - These proofs demonstrate that Alice's commitments $K_A$ and $U_A$ and the values $R_B$ and $X_A$ are
+          correctly computed and related to her private nonce $k_A$ and public key share $x_A$. The proofs ensure the
+          integrity of Alice's commitments and key shares.
 
 2. **Computing and Sending $C_1$ and $C_2$**
 
-- **Explanation:** Alice computes two values, $C_1$ and $C_2$, which are used to provide further proof of
-  correctness in the protocol. These values are then sent along with additional proofs to ensure the integrity and
-  correctness of the computations.
+   Alice computes two values, $C_1$ and $C_2$, which are used to provide further proof of
+   correctness in the protocol. These values are then sent along with additional proofs to ensure the integrity and
+   correctness of the computations.
 
-- **Computation and Sending:**
+    - **Computation and Sending:**
 
-    1. **Computing $C_1$ and $C_2$:**
-        - **Computation of $C_1$:**
-          $C_1 = (r \circ U_A) \oplus (m \circ K_A)$
-        - **Computation of $C_2$:**
-          $C_2 = r \circ K_A$
+        1. **Computing $C_1$ and $C_2$:**
+            - **Computation of $C_1$:**
+              $C_1 = (r \circ U_A) \oplus (m \circ K_A)$
+            - **Computation of $C_2$:**
+              $C_2 = r \circ K_A$
 
-    2. **Sending Proofs:**
-        - Alice sends:
-          $(\text{prove, sid, pid}_A, \text{ct}_A, C_1, C_2; a_1, a_2, r \cdot \rho_2 + m \cdot \rho_1, r \cdot \rho_1,
-          \eta)$
-        - To:
-          $\mathcal{F}_{\text{LDComEval}}\[\text{pp}, pk, \text{ct}_1, \text{ct}_2\]\_{zk}$
+        2. **Sending Proofs:**
+            - Alice sends:
+              $(\text{prove, sid, pid}_A, \text{ct}_A, C_1, C_2; a_1, a_2, r \cdot \rho_2 + m \cdot \rho_1, r \cdot
+              \rho_1,
+              \eta)$
+            - To:
+              $\mathcal{F}_{\text{LDComEval}}\[\text{pp}, pk, \text{ct}_1, \text{ct}_2\]\_{zk}$
 
-- **Variables:**
-    - **$r$**: x-coordinate of the combined nonce $R$.
-    - **$U_A$**: Commitment to Alice's nonce with additional randomness $\rho_2$.
-    - **$K_A$**: Commitment to Alice's nonce.
-    - **$m$**: Message to be signed.
-    - **$\circ$**: A cryptographic operation (e.g., point multiplication on an elliptic curve).
-    - **$\oplus$**: Another cryptographic operation (e.g., addition or XOR).
-    - **$\text{ct}_A$**: Ciphertext resulting from the homomorphic evaluation.
-    - **$a_1, a_2$**: Intermediate values computed by Alice.
-    - **$\rho_2$**: Additional randomness used in the commitment $U_A$.
-    - **$\rho_1$**: Randomness used in Alice's initial commitment.
-    - **$\eta$**: Randomness used in the evaluation.
+    - **Variables:**
+        - **$r$**: x-coordinate of the combined nonce $R$.
+        - **$U_A$**: Commitment to Alice's nonce with additional randomness $\rho_2$.
+        - **$K_A$**: Commitment to Alice's nonce.
+        - **$m$**: Message to be signed.
+        - **$\circ$**: A cryptographic operation (e.g., point multiplication on an elliptic curve).
+        - **$\oplus$**: Another cryptographic operation (e.g., addition or XOR).
+        - **$\text{ct}_A$**: Ciphertext resulting from the homomorphic evaluation.
+        - **$a_1, a_2$**: Intermediate values computed by Alice.
+        - **$\rho_2$**: Additional randomness used in the commitment $U_A$.
+        - **$\rho_1$**: Randomness used in Alice's initial commitment.
+        - **$\eta$**: Randomness used in the evaluation.
 
-- **Purpose:**
+    - **Purpose:**
 
-    - **Computation of $C_1$ and $C_2$:**
-        - **$C_1$:** Combines $r$ with the commitment $U_A$ and the message $m$ with the commitment $K_A$, ensuring that
-          the final value incorporates both the nonce and the message.
-        - **$C_2$:** Combines $r$ directly with the commitment $K_A$, ensuring the consistency of the nonce and
-          the commitment.
+        - **Computation of $C_1$ and $C_2$:**
+            - **$C_1$:** Combines $r$ with the commitment $U_A$ and the message $m$ with the commitment $K_A$, ensuring
+              that
+              the final value incorporates both the nonce and the message.
+            - **$C_2$:** Combines $r$ directly with the commitment $K_A$, ensuring the consistency of the nonce and
+              the commitment.
 
-    - **Sending Proofs:**
-        - The proofs ensure that the computations resulting in $\text{ct}_A$, $C_1$, and $C_2$ are correct and
-          consistent with the previously committed values and the message $m$. The inclusion of $a_1$, $a_2$,
-          $r \cdot \rho_2 + m \cdot \rho_1$, $r \cdot \rho_1$, and $\eta$ in the proof provides all the necessary
-          intermediate values and randomness used in the computations, allowing the functionality to verify the
-          correctness
-          without revealing Alice's private values.
+        - **Sending Proofs:**
+            - The proofs ensure that the computations resulting in $\text{ct}_A$, $C_1$, and $C_2$ are correct and
+              consistent with the previously committed values and the message $m$. The inclusion of $a_1$, $a_2$,
+              $r \cdot \rho_2 + m \cdot \rho_1$, $r \cdot \rho_1$, and $\eta$ in the proof provides all the necessary
+              intermediate values and randomness used in the computations, allowing the functionality to verify the
+              correctness
+              without revealing Alice's private values.
 
-- **Summary:**
-
-In this step, Alice computes two values $C_1$ and $C_2$ that combine her nonce commitments and the message to be
-signed. She then sends these values along with additional proofs to the ideal functionality
-$\mathcal{F}_{\text{LDComEval}}$. This process ensures the integrity and correctness of the computations, maintaining
-the security of the protocol while allowing Bob and any verifying party to trust that Alice has followed the protocol
-correctly.
+    - **Summary:**
+      In this step, Alice computes two values $C_1$ and $C_2$ that combine her nonce commitments and the message to be
+      signed. She then sends these values along with additional proofs to the ideal functionality
+      $\mathcal{F}_{\text{LDComEval}}$. This process ensures the integrity and correctness of the computations,
+      maintaining the security of the protocol while allowing Bob and any verifying party to trust that Alice has
+      followed the protocol correctly.
 
 ## 2. Bob’s Verification and Output:
 
