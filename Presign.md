@@ -53,8 +53,8 @@ several rounds and messages exchanged between the parties.
 (c) **Proof Verification:**
 
 - $B_i$ receives $(\text{proof, sid} \| k, \text{ct}_3, \text{ct}\_4)$ from
-  $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ct}_1\]}^{\text{agg-zk}}$. If valid, continues; otherwise, records the malicious
-  parties and aborts.
+  $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ct}_1\]}^{\text{agg-zk}}$.  
+  If valid, continues; otherwise, records the malicious parties and aborts.
 
 Can be found in [here](./src/presign/decentralized_party/encrypted_masked_nonces_round.rs)
 
