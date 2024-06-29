@@ -124,8 +124,8 @@ the protocol's security.
       {\text{LDComDL}}\[\text{pp}, (\mathbb{G}, R, q)\]\_{zk}$.
 
     - **Proof 2:**
-      $\text{prove, sid, pid}\_A, K_A, U_A, X_A; k_A, x_A, \rho_2$
-      Sent to $\mathcal{F}\_{\text{LDComRatio}}\[\mathbb{P}\_{pp}, (\mathbb{G}, \mathbb{Q})\]\_{zk}$.
+      Alice sends $(\text{prove, sid, pid}\_A, K_A, U_A, X_A; k_A, x_A, \rho_1, \rho_2)$ to $\mathcal{F}_
+      {\text{LDComRatio}}\[\text{pp}, (\mathbb{G}, G, q)\]_{zk}$.
 
 **Purpose:**
 
