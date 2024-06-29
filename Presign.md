@@ -9,7 +9,7 @@ several rounds and messages exchanged between the parties.
 (a) **Sampling and Commitment:**
 
 - Alice samples a random $k_A$ from $Z_q$ and computes $K_A = \text{Com}(k_A; \rho_1)$.
-- Alice sends $(\text{prove, sid, pid}_A, K_A; k_A, \rho_1)$ to $\mathcal{F}_{\text{LDCom}_{zk}}$.
+- Alice sends $(\text{prove, sid, pid}\_A, K_A; k_A, \rho_1)$ to $\mathcal{F}_{\text{LDCom}_{zk}}$.
 
 #### 2. Bob's Message:
 
