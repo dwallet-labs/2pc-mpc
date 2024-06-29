@@ -16,7 +16,7 @@ several rounds and messages exchanged between the parties.
 (a) **First Round:**
 
 - (i) **Receive Commitment:**
-    - $B_i$ receives $(\text{proof, sid, pid}_A, K_A)$ from $\mathcal{F}_{\text{LDCom}_{zk}}$. If not valid,
+    - $B_i$ receives $(\text{proof, sid, pid}\_A, K_A)$ from $\mathcal{F}\_{\text{LDCom}_{zk}}$. If not valid,
       it aborts.
 - (ii) **Sample and Compute:**
     - $B_i$ samples $k_i \leftarrow Z_q^*$ and computes $R_i = k_i \cdot G$. $k_B = \sum_i k_i$.
