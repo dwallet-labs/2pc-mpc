@@ -10,7 +10,8 @@ several rounds and messages exchanged between the parties.
 
 - Alice samples a random $k_A$ from $Z_q$ and computes $K_A = \text{Com}(k_A; \rho_1)$.
 - Alice sends $(\text{prove, sid, pid}\_A, K_A; k_A, \rho_1)$ to $\mathcal{F}\_{\text{LDCom}_{zk}}$.
-- Can be found in [here](./src/presign/centralized_party/commitment_round.rs).
+
+Can be found in [here](./src/presign/centralized_party/commitment_round.rs).
 
 ## 2. Bob's Message:
 
@@ -33,14 +34,15 @@ several rounds and messages exchanged between the parties.
 - (v) **Send $R_i$ and $k_i$:**
     - $B_i$ sends $(\text{prove, sid, pid}_i, R_i, \text{ct}\_3; k_i, \eta\_{\text{mask}\_3})$ to
       $\mathcal{F}\_{\text{LEncDL}}^{\text{agg-zk}}$.
-- Can be found in [here](./src/presign/decentralized_party/encrypted_masked_key_share_and_public_nonce_shares_round.rs).
+
+Can be found in [here](./src/presign/decentralized_party/encrypted_masked_key_share_and_public_nonce_shares_round.rs).
 
 (b) **Second Round:**
 
 - (i) **Receive Proofs:**
-    - $B_i$ receives $(\text{proof, sid} \| \gamma, \text{ct}_1, \text{ct}_2)$ from $\mathcal{F}_
-      {\text{LEncDH}\[pk, \text{ctkey}]}^{\text{agg-zk}}$ and $(\text{proof, sid, R, ct}_3)$ from $\mathcal{F}_
-      {\text{LEncDL}}^{\text{agg-zk}}$.
+    - $B\_i$ receives $(\text{proof, sid} \| \gamma, \text{ct}\_1, \text{ct}\_2)$ from
+      $\mathcal{F}\_{\text{LEncDH}\[pk,\text{ctkey}\]}^{\text{agg-zk}}$ and  
+      $(\text{proof, sid, R, ct}\_3)$ from $\mathcal{F}\_{\text{LEncDL}}^{\text{agg-zk}}$.
 - (ii) **Malicious Check:**
     - If $B_i$ receives $(\text{malicious, sid, U'})$, it records the malicious parties and aborts.
 - (iii) **Compute Combined Ciphertext:**
@@ -52,11 +54,11 @@ several rounds and messages exchanged between the parties.
 
 (c) **Proof Verification:**
 
-- $B_i$ receives $(\text{proof, sid} \| k, \text{ct}_3, \text{ct}_4)$ from $\mathcal{F}_
-  {\text{LEncDH}[pk, \text{ct}_1]}^{\text{agg-zk}}$. If valid, continues; otherwise, records the malicious parties and
-  aborts.
+- $B_i$ receives $(\text{proof, sid} \| k, \text{ct}_3, \text{ct}\_4)$ from
+  $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ct}_1\]}^{\text{agg-zk}}$.  
+  If valid, continues; otherwise, records the malicious parties and aborts.
 
-- Can be found in [here](./src/presign/decentralized_party/encrypted_masked_nonces_round.rs)
+Can be found in [here](./src/presign/decentralized_party/encrypted_masked_nonces_round.rs)
 
 ## 3. Alice's Verification:
 
@@ -70,19 +72,19 @@ several rounds and messages exchanged between the parties.
 - Alice receives $(\text{proof, sid, ct}_1, \text{ct}\_2)$ from $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ctkey}]
   }^{\text{agg-zk}}$. If valid, continues; otherwise, aborts.
 
-- Can be found in [here](./src/presign/centralized_party/proof_verification_round.rs)
+Can be found in [here](./src/presign/centralized_party/proof_verification_round.rs)
 
 ## 4. Output:
 
 (a) **Alice Records:**
 
-- Alice records $(\text{presign, sid, R}_B, \text{ct}_1, \text{ct}_2; k_A, \rho_1)$ where $\text{ct}_1$ and $
-  \text{ct}_2$ are encryptions of $\gamma$ and $\gamma \cdot x_B$.
+- Alice records $(\text{presign, sid, R}_B, \text{ct}_1, \text{ct}_2; k_A, \rho_1)$ where $\text{ct}_1$ and
+  $\text{ct}_2$ are encryptions of $\gamma$ and $\gamma \cdot x_B$.
 
 (b) **Bob Records:**
 
-- Bob records $(\text{presign, sid, R}_B, K_A, \text{ct}_3, \text{ct}_4)$, where $\text{ct}_4$ encrypts $
-  \gamma \cdot k_B \mod q$.
+- Bob records $(\text{presign, sid, R}_B, K_A, \text{ct}_3, \text{ct}_4)$, where $\text{ct}_4$ encrypts
+  $\gamma \cdot k_B \mod q$.
 
 ## Summary:
 
@@ -148,20 +150,20 @@ the key generation process between multiple parties.
 
 10. **$\text{ct}_1$**:
     - **Definition:** Ciphertext of $\gamma_i$ encrypted using AHE.
-    - **Formula:** $\text{ct}_1 = \text{AHE.Enc}(pk, \gamma_i; \eta_{\text{mask}_1})$.
+    - **Formula:** $\text{ct}\_1 = \text{AHE.Enc}(pk, \gamma_i; \eta_{\text{mask}_1})$.
 
 11. **$\text{ct}_2$**:
     - **Definition:** Ciphertext of $\gamma_i \cdot x_B$ evaluated using AHE.
-    - **Formula:** $\text{ct}_2 = \text{AHE.Eval}(pk, f_i, \text{ctkey}, \eta_{\text{mask}_2})$.
+    - **Formula:** $\text{ct}\_2 = \text{AHE.Eval}(pk, f_i, \text{ctkey}, \eta_{\text{mask}_2})$.
     - **Function:** $f_i(x) = \gamma_i \cdot x$.
 
 12. **$\text{ct}_3$**:
     - **Definition:** Ciphertext of $k_i$ encrypted using AHE.
-    - **Formula:** $\text{ct}_3 = \text{AHE.Enc}(pk, k_i; \eta_{\text{mask}_3})$.
+    - **Formula:** $\text{ct}\_3 = \text{AHE.Enc}(pk, k_i; \eta\_{\text{mask}_3})$.
 
 13. **$\text{ct}_4$**:
     - **Definition:** Combined ciphertext computed by each $B_i$.
-    - **Formula:** $\text{ct}_4 = \text{AHE.Eval}(pk, f_i', \text{ct}_1, \eta_{\text{mask}_4})$.
+    - **Formula:** $\text{ct}_4 = \text{AHE.Eval}(pk, f_i', \text{ct}\_1, \eta\_{\text{mask}_4})$.
     - **Function:** $f_i'(x) = k_i \cdot x$.
 
 14. **$pk$**:
@@ -187,16 +189,16 @@ the key generation process between multiple parties.
 ## Protocol Steps:
 
 1. **Alice’s Message (Round 1):**
-    - Alice commits to $k_A$ and sends $K_A$ and proof to $\mathcal{F}_{\text{LDCom}_{zk}}$.
+    - Alice commits to $k_A$ and sends $K_A$ and proof to $\mathcal{F}\_{\text{LDCom}\_{zk}}$.
 
 2. **Bob’s Message (First Round):**
     - $B_i$ receives commitment, samples $k_i$, computes $R_i$, generates AHE components, and sends proofs
-      to $\mathcal{F}_{\text{LEncDH}[pk, \text{ctkey}]}^{\text{agg-zk}}$ and $\mathcal{F}_
+      to $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ctkey}\]}^{\text{agg-zk}}$ and $\mathcal{F}_
       {\text{LEncDL}}^{\text{agg-zk}}$.
 
 3. **Bob’s Message (Second Round):**
-    - $B_i$ receives proofs, checks for malicious activity, computes combined ciphertext, and sends proofs to \(
-      \mathcal{F}_{\text{LEncDH}[pk, \text{ct}_1]}^{\text{agg-zk}}$.
+    - $B_i$ receives proofs, checks for malicious activity, computes combined ciphertext, and sends proofs to
+      $\mathcal{F}_{\text{LEncDH}\[pk, \text{ct}_1\]}^{\text{agg-zk}}$.
 
 4. **Proof Verification:**
     - Both Alice and Bob verify each other’s proofs using the functionalities.
