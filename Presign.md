@@ -56,7 +56,7 @@ several rounds and messages exchanged between the parties.
   {\text{LEncDH}[pk, \text{ct}_1]}^{\text{agg-zk}}$. If valid, continues; otherwise, records the malicious parties and
   aborts.
 
-- Can be found in [here](./src/presign/decentralized_party/encrypted_masked_nonces_round.rs)
+Can be found in [here](./src/presign/decentralized_party/encrypted_masked_nonces_round.rs)
 
 ## 3. Alice's Verification:
 
@@ -70,19 +70,19 @@ several rounds and messages exchanged between the parties.
 - Alice receives $(\text{proof, sid, ct}_1, \text{ct}\_2)$ from $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ctkey}]
   }^{\text{agg-zk}}$. If valid, continues; otherwise, aborts.
 
-- Can be found in [here](./src/presign/centralized_party/proof_verification_round.rs)
+Can be found in [here](./src/presign/centralized_party/proof_verification_round.rs)
 
 ## 4. Output:
 
 (a) **Alice Records:**
 
-- Alice records $(\text{presign, sid, R}_B, \text{ct}_1, \text{ct}_2; k_A, \rho_1)$ where $\text{ct}_1$ and $
-  \text{ct}_2$ are encryptions of $\gamma$ and $\gamma \cdot x_B$.
+- Alice records $(\text{presign, sid, R}_B, \text{ct}_1, \text{ct}_2; k_A, \rho_1)$ where $\text{ct}_1$ and
+  $\text{ct}_2$ are encryptions of $\gamma$ and $\gamma \cdot x_B$.
 
 (b) **Bob Records:**
 
-- Bob records $(\text{presign, sid, R}_B, K_A, \text{ct}_3, \text{ct}_4)$, where $\text{ct}_4$ encrypts $
-  \gamma \cdot k_B \mod q$.
+- Bob records $(\text{presign, sid, R}_B, K_A, \text{ct}_3, \text{ct}_4)$, where $\text{ct}_4$ encrypts
+  $\gamma \cdot k_B \mod q$.
 
 ## Summary:
 
