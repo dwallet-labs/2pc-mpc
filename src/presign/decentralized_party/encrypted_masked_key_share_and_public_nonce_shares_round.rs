@@ -225,7 +225,7 @@ where
             Pedersen<1, SCALAR_LIMBS, GroupElement::Scalar, GroupElement>,
         >(commitment_scheme_public_parameters.clone());
 
-        // === Verify commitment to k_A ===
+        // === Verify commitment and proof of `k_A` ===
         // Protocol 5, step 2a (i)
         let centralized_party_nonce_shares_commitments =
             centralized_party_nonce_shares_commitments_and_batched_proof
@@ -245,7 +245,9 @@ where
         // Steps involving the EncDH language
         // ==================================
 
-        // === Sample γ_i's ===
+        // === Sample γ_i's (gamma)'s - random values for masking (nonce) ===
+        // Used as a blinding factor to obscure the actual values during intermediate computations
+        // and evaluations.
         // Protocol 5, 2a (iii)
         let masks_shares = GroupElement::Scalar::sample_batch(
             &self.scalar_group_public_parameters,
@@ -272,6 +274,8 @@ where
 
         // === Sample η^i_{mask_1}'s ===
         // Protocol 5, 2a (iii)
+        // Used for providing randomness in the encryption process to ensure security and prevent
+        // pattern recognition.
         let masks_encryption_randomness = EncryptionKey::RandomnessSpaceGroupElement::sample_batch(
             self.encryption_scheme_public_parameters
                 .randomness_space_public_parameters(),
@@ -290,7 +294,7 @@ where
             )?;
 
         // Construct L_EncDH public parameters
-        // Used in emulating F^{L_EncDH}_{agg-zk}
+        // Used in emulating $F^{L_EncDH}_{agg-zk}$
         // Protocol 5, step 2a (iv)
         let encrypted_secret_key_share_upper_bound = composed_witness_upper_bound::<
             RANGE_CLAIMS_PER_SCALAR,
@@ -386,7 +390,7 @@ where
         >::generate_witnesses(witnesses, &enc_dh_public_parameters, rng)?;
 
         // === Prepare ct^i_1, ct^i_2 computation ===
-        // Protocol 5, step 2a (iii) A/B
+        // Protocol 5, step 2a (iii) A and B
         //
         // By calling `commit_statements_and_statement_mask` on this party,
         // ct^i_1 and ct^i_2 are created.
@@ -461,7 +465,7 @@ where
             )?;
 
         // Construct L_EncDL public parameters
-        // Used in emulating F^{L_EncDL}_{agg-zk}
+        // Used in emulating $F^{L_EncDL}_{agg-zk}$
         // Protocol 5, step 2a (v)
         let enc_dl_public_parameters = encryption_of_discrete_log::PublicParameters::<
             PLAINTEXT_SPACE_SCALAR_LIMBS,

@@ -4,24 +4,25 @@
 #![allow(clippy::type_complexity)]
 
 use commitment::GroupsPublicParametersAccessors;
-use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
+use crypto_bigint::{Encoding, rand_core::CryptoRngCore, Uint};
 use enhanced_maurer::{
-    encryption_of_discrete_log, encryption_of_tuple, language::composed_witness_upper_bound,
-    EnhanceableLanguage, EnhancedPublicParameters,
+    encryption_of_discrete_log, encryption_of_tuple, EnhanceableLanguage,
+    EnhancedPublicParameters, language::composed_witness_upper_bound,
 };
 use group::{GroupElement as _, PrimeGroupElement, Samplable};
 use homomorphic_encryption::{
     AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors as _,
 };
 use maurer::SOUND_PROOFS_REPETITIONS;
-use proof::{range::PublicParametersAccessors, AggregatableRangeProof};
+use proof::{AggregatableRangeProof, range::PublicParametersAccessors};
 use serde::Serialize;
 
 use crate::{
     dkg,
-    presign::{centralized_party::Presign, decentralized_party},
-    Error, ProtocolPublicParameters,
+    Error,
+    presign::{centralized_party::Presign, decentralized_party}, ProtocolPublicParameters,
 };
+
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
     const SCALAR_LIMBS: usize,
@@ -133,8 +134,8 @@ where
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
     /// This function implements step 3 of Protocol 5 (Presign):
-    /// Verifies zk-proofs for ct_1, ct_2 and ct_3.
-    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
+    /// Verifies zk-proofs for $ct_1$, $ct_2$ and $ct_3$.
+    /// [Source](https://eprint.iacr.org/archive/2024/253/20240217:153208)
     ///
     /// Note: this function operates on batches; the annotations are written as
     /// if the batch size equals 1.
@@ -199,7 +200,7 @@ where
         }
 
         // = ct_1
-        // = AHE.Enc(γ)
+        // = AHE.Enc(γ-(gamma))
         let encrypted_masks = output
             .encrypted_masks
             .clone()
@@ -214,8 +215,8 @@ where
             .collect::<group::Result<Vec<_>>>()?;
 
         // = ct_2
-        // = AHE.Enc(γ) * ct_key
-        // = AHE.Enc(γ * x_B)
+        // = AHE.Eval(γ) * ct_key
+        // = AHE.Eval(γ * x_B)
         let encrypted_masked_key_shares = output
             .encrypted_masked_key_shares
             .clone()
@@ -229,7 +230,7 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
-        // commitments to the range proof of γ
+        // commitments to the range proof of γ (gamma)
         let key_share_masking_range_proof_commitments = output
             .key_share_masking_range_proof_commitments
             .into_iter()
@@ -292,7 +293,7 @@ where
             language_public_parameters,
         )?;
 
-        // === Verify ct_1, ct_2 proof ===
+        // === Verify `ct_1`, `ct_2` proof ===
         // Protocol 5, step 3b
         let statements = encrypted_masks
             .into_iter()
@@ -319,7 +320,7 @@ where
         )?;
 
         // = ct_3
-        // = AHE.Enc(k)
+        // = AHE.Enc(k_B)
         let encrypted_nonces = output
             .encrypted_nonces
             .clone()
@@ -361,7 +362,7 @@ where
             })
             .collect::<group::Result<Vec<_>>>()?;
 
-        // Construct L_EncDL public parameters
+        // Construct `L_EncDL` public parameters
         let language_public_parameters =
             encryption_of_discrete_log::PublicParameters::<
                 PLAINTEXT_SPACE_SCALAR_LIMBS,

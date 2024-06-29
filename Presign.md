@@ -56,17 +56,21 @@ several rounds and messages exchanged between the parties.
   {\text{LEncDH}[pk, \text{ct}_1]}^{\text{agg-zk}}$. If valid, continues; otherwise, records the malicious parties and
   aborts.
 
+- Can be found in [here](./src/presign/decentralized_party/encrypted_masked_nonces_round.rs)
+
 ## 3. Alice's Verification:
 
 (a) **Verify $R_B$ and $\text{ct}\_3$:**
 
 - Alice receives $(\text{proof, sid, R}\_B, \text{ct}\_3)$ from $\mathcal{F}_{\text{LEncDL}}^{\text{agg-zk}}$. If
   valid, continues; otherwise, aborts.
-  
+
 (b) **Verify Combined Ciphertexts:**
 
 - Alice receives $(\text{proof, sid, ct}_1, \text{ct}\_2)$ from $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ctkey}]
   }^{\text{agg-zk}}$. If valid, continues; otherwise, aborts.
+
+- Can be found in [here](./src/presign/centralized_party/proof_verification_round.rs)
 
 ## 4. Output:
 

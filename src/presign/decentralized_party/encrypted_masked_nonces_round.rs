@@ -5,11 +5,11 @@
 
 use std::collections::HashSet;
 
-use crypto_bigint::{rand_core::CryptoRngCore, Encoding, Uint};
+use crypto_bigint::{Encoding, rand_core::CryptoRngCore, Uint};
 use enhanced_maurer::{
     encryption_of_discrete_log, encryption_of_tuple, encryption_of_tuple::StatementAccessors,
-    language::composed_witness_upper_bound, EnhanceableLanguage, EnhancedLanguage,
-    EnhancedPublicParameters,
+    EnhanceableLanguage, EnhancedLanguage, EnhancedPublicParameters,
+    language::composed_witness_upper_bound,
 };
 use group::{GroupElement as _, PartyID, PrimeGroupElement, Samplable};
 use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
@@ -98,8 +98,8 @@ where
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
     /// This function implements step 2b of Protocol 5 (Presign):
-    /// Prepares computation of ct^i_4 and its zk-proof.
-    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
+    /// Prepares computation of $ct^i_4$ and its zk-proof.
+    /// [Source](https://eprint.iacr.org/archive/2024/253/20240217:153208)
     ///
     /// Note: this function operates on batches; the annotations are written as
     /// if the batch size equals 1.
