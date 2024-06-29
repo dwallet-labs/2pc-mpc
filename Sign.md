@@ -120,8 +120,8 @@ the protocol's security.
 
 1. **Sending Initial Proofs:**
     - **Proof 1:**  
-      ($\text{prove, sid, pid}\_A, K_A, R_B; k_A, \rho_1$)
-      Sent to $\mathcal{F}\_{\text{LDComDL}}\[\mathbb{P}_{pp}, (\mathbb{G}, \mathbb{Q})\]\_{zk}$.
+      Alice sends $(\text{prove, sid, pid}_A, K_A, R_B; k_A, \rho_1)$ to $\mathcal{F}\_
+      {\text{LDComDL}}\[\text{pp}, (\mathbb{G}, R, q)\]\_{zk}$.
 
     - **Proof 2:**
       $\text{prove, sid, pid}_A, K_A, U_A, X_A; k_A, x_A, \rho_2$  
@@ -162,7 +162,7 @@ the protocol's security.
 
 **Purpose:**
 
-- This proof ensures that the homomorphic evaluation resulting in $\text{ct}_A$ is correct and that the values \(
+- This proof ensures that the homomorphic evaluation resulting in $\text{ct}_A$ is correct and that the values $
   C_1$ and $C_2$ are correctly computed based on the initial commitments and the message $m$. The proof
   includes intermediate values $a_1$ and $a_2$, as well as the randomness used in the evaluation.
 
