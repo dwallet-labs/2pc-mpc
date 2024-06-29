@@ -10,7 +10,7 @@ several rounds and messages exchanged between the parties.
 
 - Alice samples a random $k_A$ from $Z_q$ and computes $K_A = \text{Com}(k_A; \rho_1)$.
 - Alice sends $(\text{prove, sid, pid}\_A, K_A; k_A, \rho_1)$ to $\mathcal{F}\_{\text{LDCom}_{zk}}$.
-  
+
 Can be found in [here](./src/presign/centralized_party/commitment_round.rs).
 
 ## 2. Bob's Message:
@@ -197,8 +197,8 @@ the key generation process between multiple parties.
       {\text{LEncDL}}^{\text{agg-zk}}$.
 
 3. **Bob’s Message (Second Round):**
-    - $B_i$ receives proofs, checks for malicious activity, computes combined ciphertext, and sends proofs to \(
-      \mathcal{F}_{\text{LEncDH}\[pk, \text{ct}_1\]}^{\text{agg-zk}}$.
+    - $B_i$ receives proofs, checks for malicious activity, computes combined ciphertext, and sends proofs to
+      $\mathcal{F}_{\text{LEncDH}\[pk, \text{ct}_1\]}^{\text{agg-zk}}$.
 
 4. **Proof Verification:**
     - Both Alice and Bob verify each other’s proofs using the functionalities.
