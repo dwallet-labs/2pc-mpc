@@ -6,7 +6,7 @@ Protocol 6 describes the steps for generating a digital signature using a shared
 process involves multiple rounds of communication and computation between parties to securely generate a valid signature
 on a given message.
 
-## 1. Alice's Message:
+## 1. Alice's Message
 
 ### Step (a)
 
@@ -186,7 +186,7 @@ the protocol's security.
       maintaining the security of the protocol while allowing Bob and any verifying party to trust that Alice has
       followed the protocol correctly.
 
-## Step 2 - Bob's Verification and Output
+## 2 - Bob's Verification and Output
 
 ### Step (a)
 
@@ -351,7 +351,8 @@ ensuring that the computations are valid and for producing the final signature c
       $s' = pt_4^{-1} \cdot pt_A \mod q$  
       which is equal to:  
       $(\gamma k_B)^{-1} \cdot ((r k_A x_A + m k_A) \gamma + r k_A \gamma x_B) = k^{-1} (r x + m) \mod q$
-    - Bob then computes (this ensures the uniqueness of the signature):
+    - Bob then
+      computes ([to ensure the uniqueness of the signature](#explanation-of-ensuring-uniqueness-of-the-signature)):
 
 ```math
 s = \min \left\{ s', q - s' \right\}
@@ -365,10 +366,71 @@ s = \min \left\{ s', q - s' \right\}
   the valid range by taking the minimum value between $s'$ and $q - s'$. This step finalizes the computation
   needed for the signature.
 
-### Summary:
+#### Summary:
 
 In step (c), Bob decrypts the received ciphertexts and computes the intermediate signature value $s'$. This involves
 handling decryption failures and ensuring the correctness of the decrypted values. Bob then computes the final signature
 component $s$ by taking the minimum value between $s'$ and $q - s'$. This step is critical for producing a
 valid signature and maintaining the integrity and security of the protocol. If any inconsistencies or errors are found
 during decryption, Bob aborts the protocol.
+
+## 3 - Output
+
+**Explanation:**
+After performing all the necessary verifications and computations, Bob outputs the final signature.
+
+#### Variables and Functions Used:
+
+- **$r$**: x-coordinate of the combined nonce $R$.
+- **$s$**: Final signature component computed in the previous step.
+
+#### Output:
+
+- **Signature:**
+  $\sigma = (r, s)$
+
+**Purpose:**
+
+- The purpose of this step is to produce the final digital signature $\sigma$ on the message. The signature is
+  composed of the values $r$ and $s$, which have been verified and computed through the secure multi-party
+  protocol.
+
+### Summary:
+
+In step 3, Bob outputs the final signature $\sigma = (r, s)$. This signature is the result of the secure multi-party
+computation process, ensuring that it is valid, unique, and consistent with the inputs and computations performed by
+both Alice and Bob throughout the protocol. This step concludes the signature generation process, providing a secure and
+verifiable digital signature on the message.
+
+## Explanation of Ensuring Uniqueness of the Signature
+
+In the last sentence of step 2(c), it states that Bob outputs $s = \min(s', q - s')$ to ensure the uniqueness of the
+signature. Here’s why this step is important:
+
+#### Ensuring Uniqueness
+
+1. **Range of Signature Values:**
+    - The signature value $s$ needs to be unique and fall within a standardized range to prevent ambiguity. In
+      modular arithmetic, a value and its complement modulo $q$ can represent the same result.
+    - For example, if $s'$ is a computed value, both $s'$ and $q - s'$ can be considered valid
+      representations. However, using both can lead to multiple valid signatures for the same message, which is
+      undesirable.
+
+2. **Standardizing the Signature:**
+    - By taking $s = \min(s', q - s')$, Bob ensures that the signature value $s$ is always the smaller of the
+      two possible representations.
+    - This standardization ensures that for any given message and nonce, there is only one unique signature \(
+      \sigma = (r, s)$.
+
+3. **Preventing Ambiguity:**
+    - Ensuring that $s$ is within a specific range prevents any ambiguity in the signature verification process. It
+      guarantees that each message will have one unique signature, making the signature scheme more robust and secure.
+    - This also simplifies the verification process since verifiers do not need to consider multiple possible values
+      for $s$.
+
+### Summary:
+
+In step 2(c), the final computation of $s$ as $s = \min(s', q - s')$ ensures the uniqueness of the signature.
+This step is crucial because it standardizes the signature value, preventing multiple valid representations and ensuring
+that each message has a single, unique signature. This enhances the security and robustness of the signature scheme,
+making it easier and more reliable to verify signatures.
