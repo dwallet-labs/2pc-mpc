@@ -62,7 +62,9 @@ several rounds and messages exchanged between the parties.
 
 - Alice receives $(\text{proof, sid, R}\_B, \text{ct}\_3)$ from $\mathcal{F}_{\text{LEncDL}}^{\text{agg-zk}}$. If
   valid, continues; otherwise, aborts.
-  (b) **Verify Combined Ciphertexts:**
+  
+(b) **Verify Combined Ciphertexts:**
+
 - Alice receives $(\text{proof, sid, ct}_1, \text{ct}\_2)$ from $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ctkey}]
   }^{\text{agg-zk}}$. If valid, continues; otherwise, aborts.
 
