@@ -100,7 +100,7 @@ generation and signing processes.
 This glossary provides definitions for the variables and functions used in Protocol 5, which is the presigning phase of
 the key generation process between multiple parties.
 
-#### Variables:
+## Variables:
 
 1. **$k_A$**:
     - **Definition:** A random integer sampled by Alice from the group $Z_q$.
@@ -179,7 +179,7 @@ the key generation process between multiple parties.
     - **Definition:** Functionality handling encrypted discrete logarithms with aggregated zero-knowledge proofs.
     - **Role:** Ensures that the encrypted values and their proofs are valid.
 
-#### Protocol Steps:
+## Protocol Steps:
 
 1. **Alice’s Message (Round 1):**
     - Alice commits to $k_A$ and sends $K_A$ and proof to $\mathcal{F}_{\text{LDCom}_{zk}}$.
@@ -202,7 +202,7 @@ the key generation process between multiple parties.
 This glossary provides a detailed reference to the variables and functions used in Protocol 5, helping to understand the
 roles and operations performed by each component in the presigning process.
 
-# Explanation of $\mathcal{F}_{\text{LDCom}_{zk}}$
+# Explanation of $\mathcal{F}\_{\text{LDCom}\_{zk}}$
 
 ## Definition:
 
