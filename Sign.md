@@ -11,9 +11,7 @@ on a given message.
 ### Step (a)
 
 - **Compute:**
-  $$
-  R = (k_A)^{-1} \cdot R_B = (k_A)^{-1} k_B \cdot G
-  $$
+  $$R = (k_A)^{-1} \cdot R_B = (k_A)^{-1} k_B \cdot G$$
   where $r = R|_{x\text{-axis}} \mod q$ and denote $k = k_A^{-1} k_B$.
 
 **Variables:**
