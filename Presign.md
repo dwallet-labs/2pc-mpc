@@ -174,7 +174,7 @@ the key generation process between multiple parties.
     - **Definition:** Functionality handling encrypted discrete logarithms with aggregated zero-knowledge proofs.
     - **Role:** Verifies the encrypted commitments and their proofs.
 
-18. **$\mathcal{F}_{\text{LEncDL}}^{\text{agg-zk}}$**:
+18. **$\mathcal{F}\_{\text{LEncDL}}^{\text{agg-zk}}$**:
     - **Definition:** Functionality handling encrypted discrete logarithms with aggregated zero-knowledge proofs.
     - **Role:** Ensures that the encrypted values and their proofs are valid.
 
