@@ -168,8 +168,8 @@ the protocol's security.
 - **Purpose:**
 
     - **Computation of $C_1$ and $C_2$:**
-        - **$C_1$:** Combines $r$ with the commitment $U_A$ and the message $m$ with the commitment \(
-          K_A$, ensuring that the final value incorporates both the nonce and the message.
+        - **$C_1$:** Combines $r$ with the commitment $U_A$ and the message $m$ with the commitment $K_A$, ensuring that
+          the final value incorporates both the nonce and the message.
         - **$C_2$:** Combines $r$ directly with the commitment $K_A$, ensuring the consistency of the nonce and
           the commitment.
 
