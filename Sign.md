@@ -235,7 +235,7 @@ the protocol.
       k_A$ and private key share $x_A$. This verifies the integrity of Alice's key shares and the correctness of the
       commitments.
 
-3. **Proof from $\mathcal{F}\_{\text{LDComEval}}\[\mathbb{P}\_{pp}, pk, \text{ct}\_1, \text{ct}\_2]\_{zk}$:**
+3. **Proof from $\mathcal{F}\_{\text{LDComEval}}\[pp, pk, \text{ct}\_1, \text{ct}\_2]\_{zk}$:**
     - **Proof Content:**
       $(\text{proof, sid} \| \text{pid}_A, \text{ct}_A, C_1, C_2)$
 
