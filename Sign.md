@@ -135,13 +135,12 @@ the protocol's security.
 
 2. **Computing and Sending $C_1$ and $C_2$**
 
-**Explanation:**
-Alice computes two values, $C_1$ and $C_2$, which are used to provide further proof of correctness in the
-protocol. These values are then sent along with additional proofs to ensure the integrity and correctness of the
-computations.
+- **Explanation:** Alice computes two values, $C_1$ and $C_2$, which are used to provide further proof of
+  correctness in the
+  protocol. These values are then sent along with additional proofs to ensure the integrity and correctness of the
+  computations.
 
-**Variables:**
-
+- **Variables:**
 - **$r$**: x-coordinate of the combined nonce $R$.
 - **$U_A$**: Commitment to Alice's nonce with additional randomness $\rho_2$.
 - **$K_A$**: Commitment to Alice's nonce.
@@ -154,37 +153,38 @@ computations.
 - **$\rho_1$**: Randomness used in Alice's initial commitment.
 - **$\eta$**: Randomness used in the evaluation.
 
-**Computation and Sending:**
+- **Computation and Sending:**
 
-1. **Computing $C_1$ and $C_2$:**
-    - **Computation of $C_1$:**
-      $C_1 = (r \circ U_A) \oplus (m \circ K_A)$
-    - **Computation of $C_2$:**
-      $C_2 = r \circ K_A$
+    1. **Computing $C_1$ and $C_2$:**
+        - **Computation of $C_1$:**
+          $C_1 = (r \circ U_A) \oplus (m \circ K_A)$
+        - **Computation of $C_2$:**
+          $C_2 = r \circ K_A$
 
-2. **Sending Proofs:**
-    - Alice sends:
-      $(\text{prove, sid, pid}_A, \text{ct}_A, C_1, C_2; a_1, a_2, r \cdot \rho_2 + m \cdot \rho_1, r \cdot \rho_1,
-      \eta)$
-    - To:
-      $\mathcal{F}_{\text{LDComEval}}\[\text{pp}, pk, \text{ct}_1, \text{ct}_2\]\_{zk}$
+    2. **Sending Proofs:**
+        - Alice sends:
+          $(\text{prove, sid, pid}_A, \text{ct}_A, C_1, C_2; a_1, a_2, r \cdot \rho_2 + m \cdot \rho_1, r \cdot \rho_1,
+          \eta)$
+        - To:
+          $\mathcal{F}_{\text{LDComEval}}\[\text{pp}, pk, \text{ct}_1, \text{ct}_2\]\_{zk}$
 
-**Purpose:**
+- **Purpose:**
 
-- **Computation of $C_1$ and $C_2$:**
-    - **$C_1$:** Combines $r$ with the commitment $U_A$ and the message $m$ with the commitment \(
-      K_A$, ensuring that the final value incorporates both the nonce and the message.
-    - **$C_2$:** Combines $r$ directly with the commitment $K_A$, ensuring the consistency of the nonce and
-      the commitment.
+    - **Computation of $C_1$ and $C_2$:**
+        - **$C_1$:** Combines $r$ with the commitment $U_A$ and the message $m$ with the commitment \(
+          K_A$, ensuring that the final value incorporates both the nonce and the message.
+        - **$C_2$:** Combines $r$ directly with the commitment $K_A$, ensuring the consistency of the nonce and
+          the commitment.
 
-- **Sending Proofs:**
-    - The proofs ensure that the computations resulting in $\text{ct}_A$, $C_1$, and $C_2$ are correct and
-      consistent with the previously committed values and the message $m$. The inclusion of $a_1$, $a_2$, \(
-      r \cdot \rho_2 + m \cdot \rho_1$, $r \cdot \rho_1$, and $\eta$ in the proof provides all the necessary
-      intermediate values and randomness used in the computations, allowing the functionality to verify the correctness
-      without revealing Alice's private values.
+    - **Sending Proofs:**
+        - The proofs ensure that the computations resulting in $\text{ct}_A$, $C_1$, and $C_2$ are correct and
+          consistent with the previously committed values and the message $m$. The inclusion of $a_1$, $a_2$,
+          $r \cdot \rho_2 + m \cdot \rho_1$, $r \cdot \rho_1$, and $\eta$ in the proof provides all the necessary
+          intermediate values and randomness used in the computations, allowing the functionality to verify the
+          correctness
+          without revealing Alice's private values.
 
-**Summary:**
+- **Summary:**
 
 In this step, Alice computes two values $C_1$ and $C_2$ that combine her nonce commitments and the message to be
 signed. She then sends these values along with additional proofs to the ideal functionality
