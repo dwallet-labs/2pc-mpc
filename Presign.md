@@ -40,9 +40,9 @@ Can be found in [here](./src/presign/decentralized_party/encrypted_masked_key_sh
 (b) **Second Round:**
 
 - (i) **Receive Proofs:**
-    - $B_i$ receives $(\text{proof, sid} \| \gamma, \text{ct}\_1, \text{ct}\_2)$ from
-      $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ctkey}]}^{\text{agg-zk}}$ and $(\text{proof, sid, R, ct}\_3)$ from
-      $\mathcal{F}_{\text{LEncDL}}^{\text{agg-zk}}$.
+    - $B_i$ receives $(\text{proof, sid} \| \gamma, \text{ct}_1, \text{ct}\_2)$ from
+      $\mathcal{F}\_{\text{LEncDH}\[pk, \text{ctkey}\]}^{\text{agg-zk}}$ and $(\text{proof, sid, R, \text{ct}_3})$ from
+      $\mathcal{F}\_{\text{LEncDL}}^{\text{agg-zk}}$.
 - (ii) **Malicious Check:**
     - If $B_i$ receives $(\text{malicious, sid, U'})$, it records the malicious parties and aborts.
 - (iii) **Compute Combined Ciphertext:**
