@@ -99,11 +99,11 @@ the protocol's security.
 
         - **Proof 1:**  
           Alice sends $(\text{prove, sid, pid}_A, K_A, R_B; k_A, \rho_1)$ to $\mathcal{F}\_
-          {\text{LDComDL}}$\text{pp}, (\mathbb{G}, R, q)$\_{zk}$.
+          {\text{LDComDL}}\[\text{pp}, (\mathbb{G}, R, q)\]\_{zk}$.
 
         - **Proof 2:**  
           Alice sends $(\text{prove, sid, pid}\_A, K_A, U_A, X_A; k_A, x_A, \rho_1, \rho_2)$ to $\mathcal{F}_
-          {\text{LDComRatio}}$\text{pp}, (\mathbb{G}, G, q)$_{zk}$.
+          {\text{LDComRatio}}\[\text{pp}, (\mathbb{G}, G, q)\]_{zk}$.
 
     - **Variables:**
         - **$\text{prove}$**: Operation indicating that Alice is providing a proof of knowledge or correctness.
@@ -146,7 +146,7 @@ the protocol's security.
             - Alice sends:
               $(\text{prove, sid, pid}_A, \text{ct}_A, C_1, C_2; a_1, a_2, r \cdot \rho_2 + m \cdot \rho_1, r \cdot
               \rho_1, \eta)$
-            - To: $\mathcal{F}_{\text{LDComEval}}$\text{pp}, pk, \text{ct}_1, \text{ct}_2$\_{zk}$
+           - To: $\mathcal{F}_{\text{LDComEval}}\[\text{pp}, pk, \text{ct}_1, \text{ct}_2\]\_{zk}$
 
     - **Variables:**
         - **$r$**: x-coordinate of the combined nonce $R$.
@@ -206,11 +206,11 @@ the protocol.
 - **$X_A$**: Alice's public key share.
 - **$\text{ct}\_A$**: Ciphertext resulting from the homomorphic evaluation.
 - **$C_1, C_2$**: Computed values used in the proofs.
-- **$\mathcal{F}\_{\text{LDComDL}}$\mathbb{P}\_{pp}, (\mathbb{G}, R, q)]\_{zk}$**: Ideal functionality handling
+- **$\mathcal{F}\_{\text{LDComDL}}\[\mathbb{P}\_{pp}, (\mathbb{G}, R, q)]\_{zk}$**: Ideal functionality handling
   commitments and zero-knowledge proofs for discrete logarithms.
-- **$\mathcal{F}\_{\text{LDComRatio}}[\mathbb{P}\_{pp}, (\mathbb{G}, G, q)$\_{zk}$**: Ideal functionality handling
+- **$\mathcal{F}\_{\text{LDComRatio}}[\mathbb{P}\_{pp}, (\mathbb{G}, G, q)\]\_{zk}$**: Ideal functionality handling
   commitments and zero-knowledge proofs for ratios.
-- **$\mathcal{F}\_{\text{LDComEval}}$\mathbb{P}\_{pp}, pk, \text{ct}\_1, \text{ct}\_2]\_{zk}$**: Ideal functionality
+- **$\mathcal{F}\_{\text{LDComEval}}\[\mathbb{P}\_{pp}, pk, \text{ct}\_1, \text{ct}\_2]\_{zk}$**: Ideal functionality
   handling commitments and zero-knowledge proofs for evaluations.
 
 #### Proofs Received by Bob:
@@ -225,7 +225,7 @@ the protocol.
       the randomness $\rho_1$. This maintains the integrity of Alice's commitment and the correctness of the public
       value $R_B$.
 
-2. **Proof from $\mathcal{F}\_{\text{LDComRatio}}$\mathbb{P}\_{pp}, (\mathbb{G}, G, q)$\_{zk}$:**
+2. **Proof from $\mathcal{F}\_{\text{LDComEval}}\[\mathbb{P}\_{pp}, pk, \text{ct}\_1, \text{ct}\_2]\_{zk}$:**
     - **Proof Content:**  
       $(\text{proof, sid} \| \text{pid}_A, K_A, U_A, X_A)$
 
