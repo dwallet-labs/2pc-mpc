@@ -12,7 +12,7 @@ on a given message.
 
 - **Compute:**
   $R = (k_A)^{-1} \cdot R_B = (k_A)^{-1} k_B \cdot G$
-  and $r = R|_{x\text{-axis}} \mod q$ and denote $k = k_A^{-1} k_B$.
+  and $r = R|_{x\text{-axis}} \mod q$; denote $k = k_A^{-1} k_B$.
 
 **Variables:**
 
