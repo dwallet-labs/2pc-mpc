@@ -337,12 +337,13 @@ ensuring that the computations are valid and for producing the final signature c
       $\text{decrypt, pk, ct}_4$
 
 2. **Waiting for Responses:**
-    - Bob waits for the responses, which include the decrypted values:  
-      - $(\text{decrypted, pk, ct}_A, pt_a, U_A)$
-      - $(\text{decrypted, pk, ct}_4, pt_4, U_4)$
+    - Bob waits for the responses, which include the decrypted values:
+        - $(\text{decrypted, pk, ct}_A, pt_a, U_A)$
+        - $(\text{decrypted, pk, ct}_4, pt_4, U_4)$
 
 3. **Handling Decryption Failures:**
     - If $pt_4$ is invalid ($pt_4 = \bot$) or missing, Bob aborts the protocol.
+    - If $pt_a$ is invalid ($pt_a = \bot$) or missing, Bob aborts the protocol.
 
 4. **Computing Intermediate Signature $s'$:**
     - If the decryption is successful, Bob computes:  
