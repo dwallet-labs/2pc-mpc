@@ -91,11 +91,12 @@ function $f_A(x_1, x_2)$:**
 ### Step (e) - Sending Proofs
 
 **Explanation:**
+  
 Alice sends a series of proofs to various functionalities to ensure the integrity and correctness of the values and
 computations involved in the signature generation process. These proofs are verified by the functionalities to maintain
 the protocol's security.
 
-#### Variables:
+**Variables:**
 
 - **$\text{prove}$**: Operation indicating that Alice is providing a proof of knowledge or correctness.
 - **$\text{sid}$**: Session identifier, uniquely identifying the current session of the protocol.
@@ -115,20 +116,16 @@ the protocol's security.
 - **$m$**: Message to be signed.
 - **$\eta$**: Randomness used in the evaluation.
 
-#### Explanations:
+**Explanation:**
 
 1. **Sending Initial Proofs:**
-    - **Proof 1:**
-      \[
-      \text{prove, sid, pid}_A, K_A, R_B; k_A, \rho_1
-      \]
-      Sent to $\mathcal{F}_{\text{LDComDL}}[\mathbb{P}_{pp}, (\mathbb{G}, \mathbb{Q})]_{zk}$.
+    - **Proof 1:**  
+      $\text{prove, sid, pid}\_A, K_A, R_B; k_A, \rho_1$  
+      Sent to $\mathcal{F}\_{\text{LDComDL}}\[\mathbb{P}_{pp}, (\mathbb{G}, \mathbb{Q})\]\_{zk}$.
 
     - **Proof 2:**
-      \[
-      \text{prove, sid, pid}_A, K_A, U_A, X_A; k_A, x_A, \rho_2
-      \]
-      Sent to $\mathcal{F}_{\text{LDComRatio}}[\mathbb{P}_{pp}, (\mathbb{G}, \mathbb{Q})]_{zk}$.
+      $\text{prove, sid, pid}_A, K_A, U_A, X_A; k_A, x_A, \rho_2$  
+      Sent to $\mathcal{F}\_{\text{LDComRatio}}\[\mathbb{P}_{pp}, (\mathbb{G}, \mathbb{Q})\]_{zk}$.
 
 **Purpose:**
 
@@ -138,12 +135,12 @@ the protocol's security.
 
 2. **Computing $C_1$ and $C_2$:**
     - **Computation:**
-      \[
+      $
       C_1 = (r \circ U_A) \oplus (m \circ K_A)
-      \]
-      \[
+      $
+      $
       C_2 = r \circ K_A
-      \]
+      $
 
 **Variables:**
 
@@ -157,9 +154,9 @@ the protocol's security.
 
 3. **Sending Final Proof:**
     - **Proof 3:**
-      \[
+      $
       \text{prove, sid, pid}_A, \text{ct}_A, C_1, C_2; a_1, a_2, r, \rho_2 + m \cdot \rho_1, r \cdot \rho_1, \eta
-      \]
+      $
       Sent to $\mathcal{F}_{\text{LDComEval}}[\mathbb{P}_{pp}, \mathbb{P}_{pk}, \mathbb{P}_{ct}_1, \mathbb{P}_{ct}_2]_
       {zk}$.
 
