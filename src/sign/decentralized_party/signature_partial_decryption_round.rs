@@ -1,11 +1,11 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use commitment::{pedersen, GroupsPublicParametersAccessors as _, Pedersen};
-use crypto_bigint::{rand_core::CryptoRngCore, CheckedMul, Encoding, Uint};
+use commitment::{GroupsPublicParametersAccessors as _, pedersen, Pedersen};
+use crypto_bigint::{CheckedMul, Encoding, rand_core::CryptoRngCore, Uint};
 use enhanced_maurer::{
-    committed_linear_evaluation, language::composed_witness_upper_bound, EnhanceableLanguage,
-    EnhancedPublicParameters,
+    committed_linear_evaluation, EnhanceableLanguage, EnhancedPublicParameters,
+    language::composed_witness_upper_bound,
 };
 use group::{AffineXCoordinate, GroupElement, PartyID, PrimeGroupElement, Samplable};
 use homomorphic_encryption::{
@@ -15,16 +15,16 @@ use homomorphic_encryption::{
 use maurer::{
     committment_of_discrete_log, discrete_log_ratio_of_committed_values, SOUND_PROOFS_REPETITIONS,
 };
-use proof::{range::PublicParametersAccessors, AggregatableRangeProof};
+use proof::{AggregatableRangeProof, range::PublicParametersAccessors};
 use serde::Serialize;
 
 use crate::{
-    dkg, presign,
-    sign::{
+    dkg, Error,
+    presign,
+    ProtocolPublicParameters, sign::{
         centralized_party::PublicNonceEncryptedPartialSignatureAndProof,
         decentralized_party::signature_threshold_decryption_round, DIMENSION,
     },
-    Error, ProtocolPublicParameters,
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -136,6 +136,7 @@ where
     /// Partially decrypt the encrypted signature parts sent by the centralized party.
     /// Note: `message` is a `Scalar` which must be a hash on the message bytes translated into a
     /// 32-byte number.
+    /// todo(scaly+erik): why? where is it in the protocol?
     pub fn partially_decrypt_encrypted_signature_parts_prehash(
         self,
         message: GroupElement::Scalar,
@@ -195,6 +196,7 @@ where
             DecryptionKeyShare,
         >,
     )> {
+        // Protocol 6, Step 2a.
         Self::verify_encrypted_signature_parts_prehash_inner(
             message,
             public_nonce_encrypted_partial_signature_and_proof.clone(),
@@ -228,6 +230,8 @@ where
         // = r
         let nonce_x_coordinate = public_nonce.x();
 
+        // todo(scaly+erik): where is step 2b?
+        
         // === Compute pt_A ===
         // Protocol 6, step 2c
         let partial_signature_decryption_share = Option::from(
@@ -270,8 +274,8 @@ where
     }
 
     /// This function implements step 2a of Protocol 6 (Sign):
-    /// Verifies zk-proofs of R_B, (K_A, U_A, X_A) and ct_A.
-    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
+    /// Verifies zk-proofs of $R_B$, ($K_A$, $U_A$, $X_A$) and $ct_A$.
+    /// [Source](https://eprint.iacr.org/archive/2024/253/20240217:153208)
     #[allow(clippy::too_many_arguments)]
     fn verify_encrypted_signature_parts_prehash_inner(
         message: GroupElement::Scalar,
@@ -357,7 +361,7 @@ where
             public_nonce_encrypted_partial_signature_and_proof.public_nonce,
         );
 
-        // === Verify (K_A, R_B) proof ===
+        // === Verify ($K_A$, $R_B$) proof ===
         // Protocol 6, step 2a, dash 1
         public_nonce_encrypted_partial_signature_and_proof
             .public_nonce_proof
@@ -384,7 +388,7 @@ where
                 centralized_party_public_key_share.clone(),
             );
 
-        // = U_A
+        // = $U_A$
         let nonce_share_by_key_share_commitment = GroupElement::new(
             public_nonce_encrypted_partial_signature_and_proof.nonce_share_by_key_share_commitment,
             group_public_parameters,
@@ -482,6 +486,7 @@ where
 
         // === Verify DComEval proof ===
         // Protocol 6, step 2a, dash 3
+        // todo(scaly+erik): where are C1 and C2?
         let range_proof_commitment = proof::range::CommitmentSchemeCommitmentSpaceGroupElement::<
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
             NUM_RANGE_CLAIMS,
@@ -503,9 +508,9 @@ where
                     (
                         encrypted_partial_signature.clone(),
                         [
-                            ((nonce_x_coordinate * nonce_share_by_key_share_commitment)
-                                + (message * &centralized_party_nonce_share_commitment)),
-                            (nonce_x_coordinate * &centralized_party_nonce_share_commitment),
+                            (nonce_x_coordinate * nonce_share_by_key_share_commitment)
+                                + (message * &centralized_party_nonce_share_commitment),
+                            nonce_x_coordinate * &centralized_party_nonce_share_commitment,
                         ]
                         .into(),
                     )

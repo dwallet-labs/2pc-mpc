@@ -3,7 +3,7 @@
 
 use group::{AffineXCoordinate, PrimeGroupElement};
 
-use crate::{sign::verify_signature, Result};
+use crate::{Result, sign::verify_signature};
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<const SCALAR_LIMBS: usize, GroupElement: PrimeGroupElement<SCALAR_LIMBS>> {
@@ -20,7 +20,7 @@ impl<
         self,
         nonce_x_coordinate: GroupElement::Scalar,
         signature_s: GroupElement::Scalar,
-    ) -> crate::Result<()> {
+    ) -> Result<()> {
         verify_signature(
             nonce_x_coordinate, // = r
             signature_s,        // = s

@@ -15,7 +15,7 @@ use homomorphic_encryption::{
     AdditivelyHomomorphicDecryptionKeyShare, AdditivelyHomomorphicEncryptionKey,
 };
 
-use crate::{sign::verify_signature, Error};
+use crate::{Error, sign::verify_signature};
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
 pub struct Party<
@@ -50,14 +50,14 @@ impl<
 where
     Error: From<DecryptionKeyShare::Error>,
 {
-    /// This function implements step 2 of Protocol 6 (Sign):
+    /// This function implements step 2(c) of Protocol 6 (Sign):
     /// Computes signature (r, s) for (m, pk).
-    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
+    /// [Source](https://eprint.iacr.org/archive/2024/253/20240217:153208)
     ///
     /// The designated threshold decryption party logic, which performs the amortized heavy-lifting
-    /// $$ O(n) $$ public decryption logic. An honest party would verify the signature and
+    /// $O(n)$ public decryption logic. An honest party would verify the signature and
     /// output it if and only if it is valid, otherwise (i.e. when
-    /// `Error::SignatureVerification` is returned) requesting an identifiable abort protocol to
+    /// [Error::SignatureVerification] is returned) requesting an identifiable abort protocol to
     /// be commenced.
     ///
     /// This function never returns an invalid signature, so that parties that receive an invalid

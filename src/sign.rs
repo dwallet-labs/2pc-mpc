@@ -3,9 +3,10 @@
 
 use std::ops::Neg;
 
+use group::{AffineXCoordinate, GroupElement, Invert, PrimeGroupElement};
+
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark;
-use group::{AffineXCoordinate, GroupElement, Invert, PrimeGroupElement};
 
 use crate::Error;
 
@@ -48,11 +49,11 @@ pub fn verify_signature<
 #[allow(unused_imports)]
 pub(crate) mod tests {
     use core::marker::PhantomData;
-    use std::{collections::HashMap, iter, ops::Neg, time::Duration};
+    use std::{collections::HashMap, ops::Neg, time::Duration};
 
-    use commitment::{pedersen, HomomorphicCommitmentScheme, Pedersen};
+    use commitment::{HomomorphicCommitmentScheme, pedersen, Pedersen};
     use criterion::measurement::{Measurement, WallTime};
-    use crypto_bigint::{NonZero, Uint, U256, U64};
+    use crypto_bigint::{NonZero, U256, Uint};
     use ecdsa::{
         elliptic_curve::{ops::Reduce, Scalar},
         hazmat::{bits2field, DigestPrimitive},
@@ -60,9 +61,8 @@ pub(crate) mod tests {
         Signature, VerifyingKey,
     };
     use group::{
-        direct_product, ristretto, secp256k1, self_product, AffineXCoordinate, GroupElement as _,
-        Invert, KnownOrderGroupElement, PartyID, Reduce as _, Samplable,
-        StatisticalSecuritySizedNumber,
+        AffineXCoordinate, direct_product, GroupElement as _, Invert, KnownOrderGroupElement, PartyID,
+        Reduce as _, ristretto, Samplable, secp256k1, self_product,
     };
     use homomorphic_encryption::{
         AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicDecryptionKeyShare,
@@ -74,12 +74,10 @@ pub(crate) mod tests {
     use rand_core::OsRng;
     use rstest::rstest;
     use tiresias::{
-        test_exports::{deal_trusted_shares, BASE, N, SECRET_KEY},
-        AdjustedLagrangeCoefficientSizedNumber, DecryptionKeyShare, LargeBiPrimeSizedNumber,
-        PaillierModulusSizedNumber,
+        AdjustedLagrangeCoefficientSizedNumber,
+        DecryptionKeyShare, PaillierModulusSizedNumber, test_exports::{BASE, deal_trusted_shares, N, SECRET_KEY},
     };
 
-    use super::*;
     use crate::{
         dkg::tests::generates_distributed_key_internal,
         presign::tests::generates_presignatures_internal,
@@ -88,13 +86,12 @@ pub(crate) mod tests {
             paillier::bulletproofs::ProtocolPublicParameters,
         },
         sign::decentralized_party::{
-            identifiable_abort::{
-                signature_partial_decryption_proof_round,
-                signature_partial_decryption_verification_round,
-            },
+            identifiable_abort::signature_partial_decryption_proof_round,
             signature_partial_decryption_round,
         },
     };
+
+    use super::*;
 
     fn setup_decryption_key_shares(
         threshold: u16,
@@ -246,9 +243,11 @@ pub(crate) mod tests {
         let m = U256::from(m).into();
 
         let now = measurement.start();
+        // Protocol 6: Step 1: Centralized party computes the encrypted partial signature and sends
+        // it with proof.
         let (
             public_nonce_encrypted_partial_signature_and_proof,
-            signature_verification_round_party,
+            centralized_signature_verification_round_party,
         ) = centralized_party_signature_homomorphic_evaluation_round_party
             .evaluate_encrypted_partial_signature_prehash(m, &mut OsRng)
             .unwrap();
@@ -314,6 +313,7 @@ pub(crate) mod tests {
             })
             .collect();
 
+        // Start of Step 2: Decentralized party verification and output
         let (decryption_shares, signature_threshold_decryption_round_parties): (
             Vec<_>,
             HashMap<_, _>,
@@ -381,6 +381,7 @@ pub(crate) mod tests {
             signature_threshold_decryption_round_parties.next().unwrap();
 
         let now = measurement.start();
+        // Protocol 6: Step 2(c)
         let res = signature_threshold_decryption_round_party.decrypt_signature(
             lagrange_coefficients,
             partial_signature_decryption_shares,
@@ -403,7 +404,7 @@ pub(crate) mod tests {
 
         assert_eq!(nonce_x_coordinate, returned_nonce_x_coordinate);
 
-        // now do the amortized threshold decryption logic which just verifies the signature.
+        // Now do the amortized threshold decryption logic which just verifies the signature.
         signature_threshold_decryption_round_parties.for_each(
             |(_, signature_threshold_decryption_round_party)| {
                 let res = signature_threshold_decryption_round_party
@@ -427,8 +428,8 @@ pub(crate) mod tests {
         );
 
         let now = measurement.start();
-        let res =
-            signature_verification_round_party.verify_signature(nonce_x_coordinate, signature_s);
+        let res = centralized_signature_verification_round_party
+            .verify_signature(nonce_x_coordinate, signature_s);
         centralized_party_total_time =
             measurement.add(&centralized_party_total_time, &measurement.end(now));
 
@@ -508,7 +509,7 @@ pub(crate) mod tests {
         #[case] malicious_decrypter: bool,
         #[case] designated_sending_wrong_signature: bool,
     ) {
-        let protocol_public_parameters = crate::ProtocolPublicParameters::new(N);
+        let protocol_public_parameters = ProtocolPublicParameters::new(N);
 
         let paillier_encryption_key = tiresias::EncryptionKey::new(
             &protocol_public_parameters.encryption_scheme_public_parameters,
@@ -666,12 +667,13 @@ pub(crate) mod tests {
         dkg_presign_signs_internal(threshold, number_of_parties, batch_size)
     }
 
+    // This func tests the whole process -> DKG, Presign, Sign.
     pub fn dkg_presign_signs_internal(
         threshold: PartyID,
         number_of_parties: PartyID,
         batch_size: usize,
     ) {
-        let protocol_public_parameters = crate::ProtocolPublicParameters::new(N);
+        let protocol_public_parameters = ProtocolPublicParameters::new(N);
 
         let (centralized_party_dkg_output, decentralized_party_dkg_output) =
             generates_distributed_key_internal(threshold, number_of_parties);

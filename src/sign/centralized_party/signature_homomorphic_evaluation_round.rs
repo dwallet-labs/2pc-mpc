@@ -4,16 +4,16 @@
 #![allow(clippy::type_complexity)]
 
 use commitment::{pedersen, Pedersen};
-use crypto_bigint::{rand_core::CryptoRngCore, CheckedMul, Encoding, Uint};
+use crypto_bigint::{CheckedMul, Encoding, rand_core::CryptoRngCore, Uint};
 use enhanced_maurer::{
     committed_linear_evaluation,
     committed_linear_evaluation::StatementAccessors as _,
-    language::{composed_witness_upper_bound, EnhancedLanguageStatementAccessors},
-    EnhanceableLanguage, EnhancedLanguage, EnhancedPublicParameters,
+    EnhanceableLanguage,
+    EnhancedLanguage, EnhancedPublicParameters, language::{composed_witness_upper_bound, EnhancedLanguageStatementAccessors},
 };
 use group::{
-    helpers::FlatMapResults, self_product, AffineXCoordinate, GroupElement as _, Invert,
-    PrimeGroupElement, Samplable,
+    AffineXCoordinate, GroupElement as _, helpers::FlatMapResults, Invert, PrimeGroupElement,
+    Samplable, self_product,
 };
 use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
 use maurer::{
@@ -24,14 +24,14 @@ use proof::AggregatableRangeProof;
 use serde::Serialize;
 
 use crate::{
-    dkg, presign,
-    sign::{
+    dkg, Error,
+    presign,
+    ProtocolPublicParameters, sign::{
         centralized_party::{
-            signature_verification_round, PublicNonceEncryptedPartialSignatureAndProof,
+            PublicNonceEncryptedPartialSignatureAndProof, signature_verification_round,
         },
         DIMENSION,
     },
-    Error, ProtocolPublicParameters,
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
@@ -134,8 +134,8 @@ where
     Uint<PLAINTEXT_SPACE_SCALAR_LIMBS>: Encoding,
 {
     /// This function implements step 1 of Protocol 6 (Sign):
-    /// Computes ct_A and constructs zk-proofs for it, R_B and (K_A, U_A, X_A).
-    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
+    /// Computes $ct_A$ and constructs zk-proofs for it, $R_B$ and ($K_A$, $U_A$, $X_A$).
+    /// [Source](https://eprint.iacr.org/archive/2024/253/20240217:153208)
     ///
     /// Evaluate the encrypted partial signature.
     /// Note: `message` is a `Scalar` which must be a hash on the message bytes translated into a
