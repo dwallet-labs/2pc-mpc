@@ -99,11 +99,11 @@ the protocol's security.
 
         - **Proof 1:**  
           Alice sends $(\text{prove, sid, pid}_A, K_A, R_B; k_A, \rho_1)$ to $\mathcal{F}\_
-          {\text{LDComDL}}\[\text{pp}, (\mathbb{G}, R, q)\]\_{zk}$.
+          {\text{LDComDL}}$\text{pp}, (\mathbb{G}, R, q)$\_{zk}$.
 
         - **Proof 2:**  
           Alice sends $(\text{prove, sid, pid}\_A, K_A, U_A, X_A; k_A, x_A, \rho_1, \rho_2)$ to $\mathcal{F}_
-          {\text{LDComRatio}}\[\text{pp}, (\mathbb{G}, G, q)\]_{zk}$.
+          {\text{LDComRatio}}$\text{pp}, (\mathbb{G}, G, q)$_{zk}$.
 
     - **Variables:**
         - **$\text{prove}$**: Operation indicating that Alice is providing a proof of knowledge or correctness.
@@ -146,7 +146,7 @@ the protocol's security.
             - Alice sends:
               $(\text{prove, sid, pid}_A, \text{ct}_A, C_1, C_2; a_1, a_2, r \cdot \rho_2 + m \cdot \rho_1, r \cdot
               \rho_1, \eta)$
-            - To: $\mathcal{F}_{\text{LDComEval}}\[\text{pp}, pk, \text{ct}_1, \text{ct}_2\]\_{zk}$
+            - To: $\mathcal{F}_{\text{LDComEval}}$\text{pp}, pk, \text{ct}_1, \text{ct}_2$\_{zk}$
 
     - **Variables:**
         - **$r$**: x-coordinate of the combined nonce $R$.
@@ -206,16 +206,16 @@ the protocol.
 - **$X_A$**: Alice's public key share.
 - **$\text{ct}\_A$**: Ciphertext resulting from the homomorphic evaluation.
 - **$C_1, C_2$**: Computed values used in the proofs.
-- **$\mathcal{F}\_{\text{LDComDL}}\[\mathbb{P}\_{pp}, (\mathbb{G}, R, q)]\_{zk}$**: Ideal functionality handling
+- **$\mathcal{F}\_{\text{LDComDL}}$\mathbb{P}\_{pp}, (\mathbb{G}, R, q)]\_{zk}$**: Ideal functionality handling
   commitments and zero-knowledge proofs for discrete logarithms.
-- **$\mathcal{F}\_{\text{LDComRatio}}[\mathbb{P}\_{pp}, (\mathbb{G}, G, q)\]\_{zk}$**: Ideal functionality handling
+- **$\mathcal{F}\_{\text{LDComRatio}}[\mathbb{P}\_{pp}, (\mathbb{G}, G, q)$\_{zk}$**: Ideal functionality handling
   commitments and zero-knowledge proofs for ratios.
-- **$\mathcal{F}\_{\text{LDComEval}}\[\mathbb{P}\_{pp}, pk, \text{ct}\_1, \text{ct}\_2]\_{zk}$**: Ideal functionality
+- **$\mathcal{F}\_{\text{LDComEval}}$\mathbb{P}\_{pp}, pk, \text{ct}\_1, \text{ct}\_2]\_{zk}$**: Ideal functionality
   handling commitments and zero-knowledge proofs for evaluations.
 
 #### Proofs Received by Bob:
 
-1. **Proof from $\mathcal{F}\_{\text{LDComDL}}\[\mathbb{P}\_{pp}, (\mathbb{G}, R, q)]\_{zk}$:**
+1. **Proof from $\mathcal{F}\_{\text{LDComDL}}$\mathbb{P}\_{pp}, (\mathbb{G}, R, q)]\_{zk}$:**
     - **Proof Content:**  
       $(\text{proof, sid} \| \text{pid}_A, K_A, R_B)$
 
@@ -225,7 +225,7 @@ the protocol.
       the randomness $\rho_1$. This maintains the integrity of Alice's commitment and the correctness of the public
       value $R_B$.
 
-2. **Proof from $\mathcal{F}\_{\text{LDComRatio}}\[\mathbb{P}\_{pp}, (\mathbb{G}, G, q)\]\_{zk}$:**
+2. **Proof from $\mathcal{F}\_{\text{LDComRatio}}$\mathbb{P}\_{pp}, (\mathbb{G}, G, q)$\_{zk}$:**
     - **Proof Content:**  
       $(\text{proof, sid} \| \text{pid}_A, K_A, U_A, X_A)$
 
@@ -235,7 +235,7 @@ the protocol.
       k_A$ and private key share $x_A$. This verifies the integrity of Alice's key shares and the correctness of the
       commitments.
 
-3. **Proof from $\mathcal{F}\_{\text{LDComEval}}\[\mathbb{P}\_{pp}, pk, \text{ct}\_1, \text{ct}\_2]\_{zk}$:**
+3. **Proof from $\mathcal{F}\_{\text{LDComEval}}$\mathbb{P}\_{pp}, pk, \text{ct}\_1, \text{ct}\_2]\_{zk}$:**
     - **Proof Content:**
       $(\text{proof, sid} \| \text{pid}_A, \text{ct}_A, C_1, C_2)$
 
@@ -255,7 +255,7 @@ without revealing her private values.
 
 ### Step (b) - Verification of Values
 
-**Explanation:**
+**Explanation:**  
 Bob verifies that the values used in the proofs provided by Alice are consistent with the values he has previously
 obtained. This ensures that all commitments, key shares, and computed values match and are valid.
 
@@ -287,8 +287,7 @@ obtained. This ensures that all commitments, key shares, and computed values mat
    **Purpose:**
 
     - This step ensures that the values used in Alice's proofs are consistent with the values obtained during key
-      generation
-      and pre-signing phases. Consistency verifies that no tampering or errors have occurred.
+      generation and pre-signing phases. Consistency verifies that no tampering or errors have occurred.
 
 2. **Verify Computed Values $C_1$ and $C_2$:**
     - Bob verifies that:
@@ -296,10 +295,9 @@ obtained. This ensures that all commitments, key shares, and computed values mat
         - $C_2 = r \circ K_A$
     - Where $r = R|_{x\text{-axis}}$.
 
-**Purpose:**
-
-- Verifying $C_1$ and $C_2$ ensures that Alice's computations involving her commitments, nonce, and the message
-  are correct. This step is crucial for validating the integrity of the signature generation process.
+   **Purpose:**
+    - Verifying $C_1$ and $C_2$ ensures that Alice's computations involving her commitments, nonce, and the message
+      are correct. This step is crucial for validating the integrity of the signature generation process.
 
 #### Summary:
 
@@ -307,3 +305,63 @@ In step (b), Bob verifies that the values used in Alice's proofs are consistent 
 that the computed values $C_1$ and $C_2$ are correct. This verification step is essential for maintaining the
 integrity and security of the protocol, ensuring that all commitments, key shares, and computed values match and are
 valid. If any inconsistencies are found, Bob aborts the protocol.
+
+### Step (c) - Decryption and Computation
+
+**Explanation:**
+Bob performs decryption on received ciphertexts and computes the intermediate signature value. This step is critical for
+ensuring that the computations are valid and for producing the final signature component.
+
+#### Variables and Functions Used:
+
+- **$\text{decrypt}$**: Function to decrypt the given ciphertext.
+- **$pk$**: Public key.
+- **$\text{ct}_A$**: Ciphertext resulting from the homomorphic evaluation.
+- **$\text{ct}_4$**: Additional ciphertext used in the decryption process.
+- **$U_A$**: Commitment to Alice's nonce with additional randomness $\rho_2$.
+- **$pt_4$**: Plaintext result obtained from decrypting $\text{ct}_4$.
+- **$\gamma$**: Random value used in computations.
+- **$r$**: x-coordinate of the combined nonce $R$.
+- **$\rho_1$**: Randomness used in Alice's initial commitment.
+- **$\rho_2$**: Additional randomness used in the commitment $U_A$.
+- **$s'$**: Intermediate signature value.
+- **$q$**: Large prime number.
+- **$m$**: Message to be signed.
+- **$\eta$**: Randomness used in the evaluation.
+
+#### Decryption and Computation Steps:
+
+1. **Sending Decryption Requests:**
+    - Bob sends the following decryption requests to the ideal functionality $\mathcal{F}_{\text{AHE}}$:  
+      $\text{decrypt, pk, ct}_A$  
+      $\text{decrypt, pk, ct}_4$
+
+2. **Waiting for Responses:**
+    - Bob waits for the responses, which include the decrypted values:  
+      $(\text{decrypted, pk, ct}_A, pt_4, U_A)$
+
+3. **Handling Decryption Failures:**
+    - If $pt_4$ is invalid ($pt_4 = \bot$) or missing, Bob aborts the protocol.
+
+4. **Computing Intermediate Signature $s'$:**
+    - If the decryption is successful, Bob computes:  
+      $s' = pt_4^{-1} \cdot \left( (\gamma \cdot k_B)^{-1} \cdot \left( (r \cdot k_A + m \cdot k_A) \cdot \gamma
+      \right) + r \cdot k_A \cdot \gamma \right) \mod q$
+    - Bob then computes:  
+      $s = \min \left\{ s', q - s' \right\}$
+
+**Purpose:**
+
+- **Decryption:** To obtain the plaintext values from the ciphertexts, allowing Bob to verify the correctness of the
+  encrypted computations.
+- **Intermediate Signature Computation:** To compute the intermediate signature value $s'$ and ensure it is within
+  the valid range by taking the minimum value between $s'$ and $q - s'$. This step finalizes the computation
+  needed for the signature.
+
+### Summary:
+
+In step (c), Bob decrypts the received ciphertexts and computes the intermediate signature value $s'$. This involves
+handling decryption failures and ensuring the correctness of the decrypted values. Bob then computes the final signature
+component $s$ by taking the minimum value between $s'$ and $q - s'$. This step is critical for producing a
+valid signature and maintaining the integrity and security of the protocol. If any inconsistencies or errors are found
+during decryption, Bob aborts the protocol.
