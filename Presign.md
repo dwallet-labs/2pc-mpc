@@ -33,8 +33,7 @@ several rounds and messages exchanged between the parties.
 - (v) **Send $R_i$ and $k_i$:**
     - $B_i$ sends $(\text{prove, sid, pid}_i, R_i, \text{ct}_3; k_i, \eta_{\text{mask}_3})$ to $\mathcal{F}_
       {\text{LEncDL}}^{\text{agg-zk}}$.
-    - Can be found
-      in [here](./src/presign/decentralized_party/encrypted_masked_key_share_and_public_nonce_shares_round.rs).
+- Can be found in [here](./src/presign/decentralized_party/encrypted_masked_key_share_and_public_nonce_shares_round.rs).
 
 (b) **Second Round:**
 
