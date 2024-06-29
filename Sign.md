@@ -344,12 +344,17 @@ ensuring that the computations are valid and for producing the final signature c
 3. **Handling Decryption Failures:**
     - If $pt_4$ is invalid ($pt_4 = \bot$) or missing, Bob aborts the protocol.
     - If $pt_a$ is invalid ($pt_a = \bot$) or missing, Bob aborts the protocol.
+    - On both cases output: output $U_A \cup U_4$ and abort.
 
 4. **Computing Intermediate Signature $s'$:**
+    - Otherwise, compute:
+      $s' = pt_4^{-1} \cdot pt_A \mod q$
+      which is equal to:
+      $(\gamma k_B)^{-1} \cdot ((r k_A x_A + m k_A) \gamma + r k_A \gamma x_B) = k^{-1} (r x + m) \mod q$
     - If the decryption is successful, Bob computes:  
       $s' = pt_4^{-1} \cdot \left( (\gamma \cdot k_B)^{-1} \cdot \left( (r \cdot k_A + m \cdot k_A) \cdot \gamma
       \right) + r \cdot k_A \cdot \gamma \right) \mod q$
-    - Bob then computes:
+    - Bob then computes (this ensures the uniqueness of the signature):
 
 ```math
 s = \min \left\{ s', q - s' \right\}
