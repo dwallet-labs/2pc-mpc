@@ -107,7 +107,7 @@ party holds the public key (pk) as input, and the protocol proceeds with the fol
 
 2. **Bi's First Message:**
     - **Receipt:** Each party $Bi$ receives a receipt $(receipt, pid_A)$ from $F_{LDL}^{com-zk}$.
-    - **Random Sampling:** Each $Bi$ samples a random $x_i \in Z_q$ and computes $X_i = x_i \cdot G$.
+    - **Random Sampling:** Each $Bi$ samples a random $x_i \in Z_q$ and computes $X_i = x_i \cdot G$. todo(zeev): add xb sum.
     - **Key Generation (First Execution Only):** Each $Bi$ sends a $(keygen, sid)$ message to $F_{TAHE}$ and
       waits for a response. If the response is $(pubkey, sid, ⊥, U' \cap U)$, the protocol outputs $U' \cap U$
       and aborts. If the response is $(pubkey, sid, pk)$, the protocol continues.
