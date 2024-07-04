@@ -262,7 +262,8 @@ where
                         // sources:
                         // --------
                         // maurer::aggregation::commitment_round::commit_statements_and_statement_mask.
-                        // ct^i_4 = enhanced_maurer::Language::homomorphose(witnesses, &enc_dl_public_parameters).
+                        // ct^i_4 = enhanced_maurer::Language::homomorphose(witnesses,
+                        // &enc_dl_public_parameters).
                         enhanced_maurer::aggregation::commitment_round::Party::<
                             SOUND_PROOFS_REPETITIONS,
                             RANGE_CLAIMS_PER_SCALAR,

@@ -18,7 +18,7 @@ pub(crate) mod tests {
     };
 
     use criterion::measurement::{Measurement, WallTime};
-    use group::{CyclicGroupElement, GroupElement, PartyID, secp256k1};
+    use group::{secp256k1, CyclicGroupElement, GroupElement, PartyID};
     use homomorphic_encryption::{
         AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors,
     };
@@ -35,7 +35,6 @@ pub(crate) mod tests {
     use crate::{
         dkg::decentralized_party::SecretKeyShareEncryptionAndProof, ProtocolPublicParameters,
     };
-
 
     #[rstest]
     #[case(2, 2)]
