@@ -106,12 +106,14 @@ impl<
         // === Construct proof for x_A ===
         // Used in emulating the idealized F^{L_DL}_{com-zk} component
         // Protocol 4, step 1b
-        let language_public_parameters =
-            knowledge_of_discrete_log::PublicParameters::new::<GroupElement::Scalar, GroupElement>(
-                self.scalar_group_public_parameters.clone(),
-                self.group_public_parameters.clone(),
-                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters), // = G (Protocol 4)
-            );
+        let language_public_parameters = knowledge_of_discrete_log::PublicParameters::new::<
+            GroupElement::Scalar,
+            GroupElement,
+        >(
+            self.scalar_group_public_parameters.clone(),
+            self.group_public_parameters.clone(),
+            GroupElement::generator_value_from_public_parameters(&self.group_public_parameters), /* = G (Protocol 4) */
+        );
         let (knowledge_of_discrete_log_proof, public_key_share) = knowledge_of_discrete_log::Proof::<
             GroupElement::Scalar,
             GroupElement,

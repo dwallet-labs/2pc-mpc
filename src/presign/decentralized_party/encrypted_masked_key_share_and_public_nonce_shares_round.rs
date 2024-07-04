@@ -306,7 +306,8 @@ where
         >::new::<SCALAR_LIMBS, GroupElement, EncryptionKey>(
             self.scalar_group_public_parameters.clone(),
             self.encryption_scheme_public_parameters.clone(),
-            self.encrypted_secret_key_share.value(), // = ct_key = AHE.Enc(x_B) (see Protocol 4, step 2e/f)
+            self.encrypted_secret_key_share.value(), /* = ct_key = AHE.Enc(x_B) (see Protocol 4,
+                                                      * step 2e/f) */
             encrypted_secret_key_share_upper_bound,
         );
         let enc_dh_public_parameters = EnhancedPublicParameters::<
@@ -393,7 +394,8 @@ where
         // sources:
         // --------
         // maurer::aggregation::commitment_round::commit_statements_and_statement_mask.
-        // ct^i_1, ct^i_2 = enhanced_maurer::Language::homomorphose(witnesses, &enc_dl_public_parameters).
+        // ct^i_1, ct^i_2 = enhanced_maurer::Language::homomorphose(witnesses,
+        // &enc_dl_public_parameters).
         let key_share_masking_commitment_round_party =
             enhanced_maurer::aggregation::commitment_round::Party::<
                 SOUND_PROOFS_REPETITIONS,
@@ -461,18 +463,22 @@ where
         // Construct L_EncDL public parameters
         // Used in emulating F^{L_EncDL}_{agg-zk}
         // Protocol 5, step 2a (v)
-        let enc_dl_public_parameters =
-            encryption_of_discrete_log::PublicParameters::<
-                PLAINTEXT_SPACE_SCALAR_LIMBS,
-                SCALAR_LIMBS,
-                GroupElement,
-                EncryptionKey,
-            >::new::<PLAINTEXT_SPACE_SCALAR_LIMBS, SCALAR_LIMBS, GroupElement, EncryptionKey>(
-                self.scalar_group_public_parameters.clone(),
-                self.group_public_parameters.clone(),
-                self.encryption_scheme_public_parameters.clone(),
-                GroupElement::generator_value_from_public_parameters(&self.group_public_parameters), // = G (Protocol 5, step 2a (ii))
-            );
+        let enc_dl_public_parameters = encryption_of_discrete_log::PublicParameters::<
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+        >::new::<
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            SCALAR_LIMBS,
+            GroupElement,
+            EncryptionKey,
+        >(
+            self.scalar_group_public_parameters.clone(),
+            self.group_public_parameters.clone(),
+            self.encryption_scheme_public_parameters.clone(),
+            GroupElement::generator_value_from_public_parameters(&self.group_public_parameters), /* = G (Protocol 5, step 2a (ii)) */
+        );
         let enc_dl_public_parameters = EnhancedPublicParameters::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,

@@ -34,8 +34,7 @@ pub(crate) mod tests {
     };
     use proof::{
         aggregation::test_helpers::{
-            aggregates, aggregates_multiple, aggregates_multiple_with_decommitments,
-            aggregates_with_decommitments, commitment_round, decommitment_round,
+            aggregates, aggregates_multiple_with_decommitments, aggregates_with_decommitments,
         },
         range::bulletproofs,
     };
