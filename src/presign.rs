@@ -22,20 +22,20 @@ pub(crate) mod tests {
     };
 
     use criterion::measurement::{Measurement, WallTime};
-    use crypto_bigint::{Uint, U256};
+    use crypto_bigint::{U256, Uint};
     use enhanced_maurer::{
         encryption_of_discrete_log::StatementAccessors,
         language::EnhancedLanguageStatementAccessors,
     };
-    use group::{ristretto, secp256k1, self_product, GroupElement as _, PartyID, Samplable};
+    use group::{GroupElement as _, PartyID, ristretto, Samplable, secp256k1, self_product};
     use homomorphic_encryption::{
         AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
         GroupsPublicParametersAccessors,
     };
     use proof::{
         aggregation::test_helpers::{
-            aggregates, aggregates_multiple, aggregates_multiple_with_decommitments,
-            aggregates_with_decommitments, commitment_round, decommitment_round,
+            aggregates, aggregates_multiple_with_decommitments,
+            aggregates_with_decommitments,
         },
         range::bulletproofs,
     };
