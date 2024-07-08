@@ -176,7 +176,7 @@ where
                 self.encryption_scheme_public_parameters.clone(),
                 GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
-        let language_public_parameters = EnhancedPublicParameters::<
+        let enhanced_language_public_parameters = EnhancedPublicParameters::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -236,7 +236,7 @@ where
                 encryption_randomness,
             )
                 .into(),
-            &language_public_parameters,
+            &enhanced_language_public_parameters,
             rng,
         )?;
 
@@ -268,7 +268,7 @@ where
             >::new_session(
                 self.party_id,
                 self.parties.clone(),
-                language_public_parameters,
+                enhanced_language_public_parameters,
                 // todo(scaly): doc what is protocol context.
                 self.protocol_context.clone(),
                 vec![share_of_decentralized_party_secret_key_share_witness],
