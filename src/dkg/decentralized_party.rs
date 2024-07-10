@@ -23,7 +23,7 @@ pub struct SecretKeyShareEncryptionAndProof<
 > {
     pub(in crate::dkg) public_key_share: GroupElementValue,
     pub(in crate::dkg) encrypted_secret_key_share: CiphertextValue,
-    pub(in crate::dkg) range_proof_commitment: RangeProofCommitmentValue,
+    pub range_proof_commitment: RangeProofCommitmentValue,
     pub(in crate::dkg) encryption_of_secret_key_share_proof: EncDLProof,
 }
 
