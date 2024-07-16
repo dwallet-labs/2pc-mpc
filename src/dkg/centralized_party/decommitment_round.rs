@@ -180,16 +180,16 @@ where
                 .commitment_scheme_public_parameters()
                 .commitment_space_public_parameters(),
         )?;
-
-        let statement = (
-            range_proof_commitment,
-            (
-                encrypted_decentralized_party_secret_key_share.clone(),
-                decentralized_party_public_key_share.clone(),
-            )
-                .into(),
+        // let a = (
+        //     encrypted_decentralized_party_secret_key_share.clone(),
+        //     decentralized_party_public_key_share.clone(),
+        // )
+        let a = (
+            encrypted_decentralized_party_secret_key_share.clone(),
+            decentralized_party_public_key_share.clone(),
         )
             .into();
+        let statement = (range_proof_commitment, a).into();
 
         // Construct L_EncDL parameters
         // Used in emulating the idealized F^{L_EncDL}_{agg-zk} component
