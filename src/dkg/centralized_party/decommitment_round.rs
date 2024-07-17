@@ -26,7 +26,7 @@ pub struct Output<GroupElementValue, ScalarValue, CiphertextSpaceValue> {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct PublicKeyShareDecommitmentAndProof<GroupElementValue, DLProof> {
     pub(in crate::dkg) proof: DLProof,
-    pub(in crate::dkg) public_key_share: GroupElementValue,
+    pub public_key_share: GroupElementValue,
     pub(in crate::dkg) commitment_randomness: ComputationalSecuritySizedNumber,
 }
 
