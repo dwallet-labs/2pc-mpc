@@ -164,7 +164,9 @@ pub mod secp256k1 {
                 committed_linear_evaluation, encryption_of_discrete_log, encryption_of_tuple,
             };
             use group::{direct_product, secp256k1::GroupElement, self_product};
-            use homomorphic_encryption::GroupsPublicParametersAccessors;
+            use homomorphic_encryption::{
+                AdditivelyHomomorphicDecryptionKeyShare, GroupsPublicParametersAccessors,
+            };
             use maurer::{
                 committment_of_discrete_log, discrete_log_ratio_of_committed_values,
                 knowledge_of_decommitment, knowledge_of_discrete_log,
@@ -776,6 +778,18 @@ pub mod secp256k1 {
                 EncryptionKey,
                 DecryptionKeyShare,
             >;
+
+            pub type DecryptionShare =
+                <DecryptionKeyShare as AdditivelyHomomorphicDecryptionKeyShare<
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    EncryptionKey,
+                >>::DecryptionShare;
+
+            pub type PartialDecryptionProof =
+                <tiresias::DecryptionKeyShare as AdditivelyHomomorphicDecryptionKeyShare<
+                    PLAINTEXT_SPACE_SCALAR_LIMBS,
+                    tiresias::EncryptionKey,
+                >>::PartialDecryptionProof;
         }
     }
 
