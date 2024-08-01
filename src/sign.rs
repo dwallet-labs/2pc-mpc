@@ -971,7 +971,7 @@ pub(crate) mod tests {
                         // was invalid, even tho it wasn't.
                         matches!(
                         err,
-                            Error::MaliciousDesignatedDecryptingParty(party_id) if party_id == designated_decrypting_party_id
+                            Error::MaliciousDesignatedDecryptingParty if party_id == designated_decrypting_party_id
                             )
                     } else {
                         matches!(
