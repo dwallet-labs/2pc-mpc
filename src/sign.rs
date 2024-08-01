@@ -407,13 +407,13 @@ pub(crate) mod tests {
         signature_threshold_decryption_round_parties.for_each(
             |(_, signature_threshold_decryption_round_party)| {
                 let res = signature_threshold_decryption_round_party
-                    .verify_decrypted_signature(signature_s, designated_party_id);
+                    .verify_decrypted_signature(signature_s);
 
                 if designated_sending_wrong_signature {
                     assert!(
                         matches!(
                             res.err().unwrap(),
-                            Error::MaliciousDesignatedDecryptingParty(party_id) if party_id == designated_party_id
+                            Error::SignatureVerification
                         ),
                         "Malicious designated decryption party which sends an invalid signature must be blamed"
                     );
@@ -969,10 +969,7 @@ pub(crate) mod tests {
                     if dos {
                         // Test the case where the designated party tried to DOS by saying signature
                         // was invalid, even tho it wasn't.
-                        matches!(
-                        err,
-                            Error::MaliciousDesignatedDecryptingParty if party_id == designated_decrypting_party_id
-                            )
+                        matches!(err, Error::SignatureVerification)
                     } else {
                         matches!(
                         err,

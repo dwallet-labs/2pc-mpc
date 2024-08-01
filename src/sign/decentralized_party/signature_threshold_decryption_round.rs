@@ -162,36 +162,27 @@ where
     pub fn verify_decrypted_signature(
         self,
         signature_s: GroupElement::Scalar,
-        designated_decrypting_party_id: PartyID,
     ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
         Self::verify_decrypted_signature_static(
             signature_s,
-            designated_decrypting_party_id,
             self.nonce_x_coordinate,
             self.message,
             self.public_key,
         )
     }
+
     /// The lightweight $$ O(1) $$ threshold decryption logic, which simply verifies the output of
-    /// the decryption sent by the designated decrypting party. Blames it in case of an invalid
-    /// signature, and accepts otherwise.
+    /// the decryption sent by the designated decrypting party. Returns a [`Error::SignatureVerification`]
+    /// in case of an invalid signature, and accepts otherwise.
     pub fn verify_decrypted_signature_static(
         signature_s: GroupElement::Scalar,
-        designated_decrypting_party_id: PartyID,
         nonce_x_coordinate: GroupElement::Scalar,
         message: GroupElement::Scalar,
         public_key: GroupElement,
     ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
-        verify_signature(
-            nonce_x_coordinate,
-            signature_s,
-            message,
-            public_key,
-        )
-        .map_err(|_| Error::MaliciousDesignatedDecryptingParty(designated_decrypting_party_id))?;
+        verify_signature(nonce_x_coordinate, signature_s, message, public_key)
+            .map_err(|_| Error::SignatureVerification)?;
 
         Ok((nonce_x_coordinate, signature_s))
     }
-
-    //
 }

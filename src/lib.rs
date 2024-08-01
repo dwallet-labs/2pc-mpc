@@ -38,7 +38,7 @@ pub enum Error {
     #[error("the other party maliciously attempted to bypass the commitment round by sending decommitment which does not match its commitment")]
     WrongDecommitment,
     #[error("the designated decrypting party behaved maliciously by not sending the honest decrypted values")]
-    MaliciousDesignatedDecryptingParty,
+    MaliciousDesignatedDecryptingParty(PartyID),
     #[error("signature failed to verify")]
     SignatureVerification,
     #[error("invalid public parameters")]
