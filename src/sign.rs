@@ -377,7 +377,7 @@ pub(crate) mod tests {
             signature_threshold_decryption_round_parties.into_iter();
 
         // choose some party as the amortized threshold decryption party
-        let (designated_party_id, signature_threshold_decryption_round_party) =
+        let (_, signature_threshold_decryption_round_party) =
             signature_threshold_decryption_round_parties.next().unwrap();
 
         let now = measurement.start();
