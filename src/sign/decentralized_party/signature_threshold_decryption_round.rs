@@ -156,15 +156,15 @@ where
         Ok((self.nonce_x_coordinate, signature_s))
     }
 
-    /// A wrapper function for [`Self::verify_decrypted_signature_static`] that uses self's
+    /// A wrapper function for [`Self::verify_decrypted_signature_internal`] that uses self's
     /// attributes to verify the decrypted signature.
     pub fn verify_decrypted_signature(
         self,
         signature_s: GroupElement::Scalar,
     ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
-        Self::verify_decrypted_signature_static(
-            signature_s,
+        Self::verify_decrypted_signature_internal(
             self.nonce_x_coordinate,
+            signature_s,
             self.message,
             self.public_key,
         )
@@ -173,9 +173,9 @@ where
     /// The lightweight $$ O(1) $$ threshold decryption logic, which simply verifies the output of
     /// the decryption sent by the designated decrypting party. Returns a [`Error::SignatureVerification`]
     /// in case of an invalid signature, and accepts otherwise.
-    pub fn verify_decrypted_signature_static(
-        signature_s: GroupElement::Scalar,
+    pub fn verify_decrypted_signature_internal(
         nonce_x_coordinate: GroupElement::Scalar,
+        signature_s: GroupElement::Scalar,
         message: GroupElement::Scalar,
         public_key: GroupElement,
     ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
