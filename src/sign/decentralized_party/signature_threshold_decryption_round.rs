@@ -175,7 +175,6 @@ where
     /// Returns a [`Error::MaliciousDesignatedDecryptingParty`] for an invalid signature,
     /// and accepts otherwise.
     pub fn verify_decrypted_signature_wrapper(
-
         nonce_x_coordinate: GroupElement::Scalar,
         signature_s: GroupElement::Scalar,
         message: GroupElement::Scalar,
