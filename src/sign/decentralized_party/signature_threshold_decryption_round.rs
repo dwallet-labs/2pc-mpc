@@ -1,4 +1,4 @@
- // Author: dWallet Labs, Ltd.
+// Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
 use std::{
