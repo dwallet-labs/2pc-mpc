@@ -18,7 +18,6 @@ pub struct Party<
     DecryptionKeyShare: AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>,
 > {
     pub(super) threshold: PartyID,
-    pub(super) designated_decrypting_party_id: PartyID,
     pub(super) decryption_key_share_public_parameters: DecryptionKeyShare::PublicParameters,
     pub(super) encrypted_partial_signature: EncryptionKey::CiphertextSpaceGroupElement,
     pub(super) encrypted_masked_nonce_share: EncryptionKey::CiphertextSpaceGroupElement,

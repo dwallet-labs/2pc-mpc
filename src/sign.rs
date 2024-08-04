@@ -910,7 +910,6 @@ pub(crate) mod tests {
                         DecryptionKeyShare,
                     > {
                         threshold,
-                        designated_decrypting_party_id,
                         decryption_key_share,
                         decryption_key_share_public_parameters:
                             decryption_key_share_public_parameters.clone(),
