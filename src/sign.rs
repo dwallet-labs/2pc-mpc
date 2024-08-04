@@ -832,8 +832,6 @@ pub(crate) mod tests {
 
         let decrypters: Vec<_> = decryption_key_shares.keys().cloned().collect();
 
-        let designated_decrypting_party_id = *decryption_key_shares.keys().next().unwrap();
-
         let paillier_encryption_key = tiresias::EncryptionKey::new(
             &decryption_key_share_public_parameters.encryption_scheme_public_parameters,
         )
