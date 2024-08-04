@@ -180,7 +180,7 @@ where
         public_key: GroupElement,
     ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
         verify_signature(nonce_x_coordinate, signature_s, message, public_key)
-            .map_err(|_| Error::SignatureVerification)?;
+            .map_err(|_| Error::MaliciousDesignatedDecryptingParty)?;
 
         Ok((nonce_x_coordinate, signature_s))
     }

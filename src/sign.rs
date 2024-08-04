@@ -413,7 +413,7 @@ pub(crate) mod tests {
                     assert!(
                         matches!(
                             res.err().unwrap(),
-                            Error::SignatureVerification
+                            Error::MaliciousDesignatedDecryptingParty
                         ),
                         "Malicious designated decryption party which sends an invalid signature must be blamed"
                     );
@@ -969,7 +969,7 @@ pub(crate) mod tests {
                     if dos {
                         // Test the case where the designated party tried to DOS by saying signature
                         // was invalid, even tho it wasn't.
-                        matches!(err, Error::SignatureVerification)
+                        matches!(err, Error::MaliciousDesignatedDecryptingParty)
                     } else {
                         matches!(
                         err,

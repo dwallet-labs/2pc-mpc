@@ -113,8 +113,6 @@ where
         )
         .err()
         .map(Error::from)
-        .unwrap_or(Error::MaliciousDesignatedDecryptingParty(
-            self.designated_decrypting_party_id,
-        ))
+        .unwrap_or(Error::MaliciousDesignatedDecryptingParty)
     }
 }
