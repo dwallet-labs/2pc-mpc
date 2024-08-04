@@ -171,7 +171,7 @@ where
     }
 
     /// The lightweight $$ O(1) $$ threshold decryption logic, which simply verifies the output of
-    /// the decryption sent by the designated decrypting party. Returns a [`Error::SignatureVerification`]
+    /// the decryption sent by the designated decrypting party. Returns a [`Error::MaliciousDesignatedDecryptingParty`]
     /// in case of an invalid signature, and accepts otherwise.
     pub fn verify_decrypted_signature_internal(
         nonce_x_coordinate: GroupElement::Scalar,
