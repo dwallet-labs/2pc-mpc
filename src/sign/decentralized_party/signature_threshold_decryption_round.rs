@@ -1,4 +1,4 @@
-// Author: dWallet Labs, Ltd.
+ // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
 use std::{
@@ -156,13 +156,13 @@ where
         Ok((self.nonce_x_coordinate, signature_s))
     }
 
-    /// A wrapper function for [`Self::verify_decrypted_signature_wrapper`] that uses self's
+    /// A wrapper function for [`Self::verify_decrypted_signature`] that uses self's
     /// attributes to verify the decrypted signature.
-    pub fn verify_decrypted_signature(
+    pub fn verify_decrypted_signature_wrapper(
         self,
         signature_s: GroupElement::Scalar,
     ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
-        Self::verify_decrypted_signature_wrapper(
+        Self::verify_decrypted_signature(
             self.nonce_x_coordinate,
             signature_s,
             self.message,
@@ -174,7 +174,7 @@ where
     /// the decryption sent by the designated decrypting party.
     /// Returns a [`Error::MaliciousDesignatedDecryptingParty`] for an invalid signature,
     /// and accepts otherwise.
-    pub fn verify_decrypted_signature_wrapper(
+    pub fn verify_decrypted_signature(
         nonce_x_coordinate: GroupElement::Scalar,
         signature_s: GroupElement::Scalar,
         message: GroupElement::Scalar,

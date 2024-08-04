@@ -407,7 +407,7 @@ pub(crate) mod tests {
         signature_threshold_decryption_round_parties.for_each(
             |(_, signature_threshold_decryption_round_party)| {
                 let res = signature_threshold_decryption_round_party
-                    .verify_decrypted_signature(signature_s);
+                    .verify_decrypted_signature_wrapper(signature_s);
 
                 if designated_sending_wrong_signature {
                     assert!(
