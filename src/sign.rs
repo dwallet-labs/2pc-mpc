@@ -376,7 +376,7 @@ pub(crate) mod tests {
         let mut signature_threshold_decryption_round_parties =
             signature_threshold_decryption_round_parties.into_iter();
 
-        // choose some party as the amortized threshold decryption party
+        // Choose some party as the amortized threshold decryption party.
         let (_, signature_threshold_decryption_round_party) =
             signature_threshold_decryption_round_parties.next().unwrap();
 
