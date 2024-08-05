@@ -376,8 +376,8 @@ pub(crate) mod tests {
         let mut signature_threshold_decryption_round_parties =
             signature_threshold_decryption_round_parties.into_iter();
 
-        // choose some party as the amortized threshold decryption party
-        let (designated_party_id, signature_threshold_decryption_round_party) =
+        // Choose some party as the amortized threshold decryption party.
+        let (_, signature_threshold_decryption_round_party) =
             signature_threshold_decryption_round_parties.next().unwrap();
 
         let now = measurement.start();
@@ -407,13 +407,13 @@ pub(crate) mod tests {
         signature_threshold_decryption_round_parties.for_each(
             |(_, signature_threshold_decryption_round_party)| {
                 let res = signature_threshold_decryption_round_party
-                    .verify_decrypted_signature(signature_s, designated_party_id);
+                    .verify_decrypted_signature_wrapper(signature_s);
 
                 if designated_sending_wrong_signature {
                     assert!(
                         matches!(
                             res.err().unwrap(),
-                            Error::MaliciousDesignatedDecryptingParty(party_id) if party_id == designated_party_id
+                            Error::MaliciousDesignatedDecryptingParty
                         ),
                         "Malicious designated decryption party which sends an invalid signature must be blamed"
                     );
@@ -832,8 +832,6 @@ pub(crate) mod tests {
 
         let decrypters: Vec<_> = decryption_key_shares.keys().cloned().collect();
 
-        let designated_decrypting_party_id = *decryption_key_shares.keys().next().unwrap();
-
         let paillier_encryption_key = tiresias::EncryptionKey::new(
             &decryption_key_share_public_parameters.encryption_scheme_public_parameters,
         )
@@ -910,7 +908,6 @@ pub(crate) mod tests {
                         DecryptionKeyShare,
                     > {
                         threshold,
-                        designated_decrypting_party_id,
                         decryption_key_share,
                         decryption_key_share_public_parameters:
                             decryption_key_share_public_parameters.clone(),
@@ -969,10 +966,7 @@ pub(crate) mod tests {
                     if dos {
                         // Test the case where the designated party tried to DOS by saying signature
                         // was invalid, even tho it wasn't.
-                        matches!(
-                        err,
-                            Error::MaliciousDesignatedDecryptingParty(party_id) if party_id == designated_decrypting_party_id
-                            )
+                        matches!(err, Error::MaliciousDesignatedDecryptingParty)
                     } else {
                         matches!(
                         err,

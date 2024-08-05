@@ -156,22 +156,33 @@ where
         Ok((self.nonce_x_coordinate, signature_s))
     }
 
-    /// The lightweight $$ O(1) $$ threshold decryption logic, which simply verifies the output of
-    /// the decryption sent by the designated decrypting party. Blames it in case of an invalid
-    /// signature, and accepts otherwise.
-    pub fn verify_decrypted_signature(
+    /// A wrapper function for [`Self::verify_decrypted_signature`] that uses self's
+    /// attributes to verify the decrypted signature.
+    pub fn verify_decrypted_signature_wrapper(
         self,
         signature_s: GroupElement::Scalar,
-        designated_decrypting_party_id: PartyID,
     ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
-        verify_signature(
+        Self::verify_decrypted_signature(
             self.nonce_x_coordinate,
             signature_s,
             self.message,
             self.public_key,
         )
-        .map_err(|_| Error::MaliciousDesignatedDecryptingParty(designated_decrypting_party_id))?;
+    }
 
-        Ok((self.nonce_x_coordinate, signature_s))
+    /// The lightweight $O(1)$ threshold decryption logic, which simply verifies the output of
+    /// the decryption sent by the designated decrypting party.
+    /// Returns a [`Error::MaliciousDesignatedDecryptingParty`] for an invalid signature,
+    /// and accepts otherwise.
+    pub fn verify_decrypted_signature(
+        nonce_x_coordinate: GroupElement::Scalar,
+        signature_s: GroupElement::Scalar,
+        message: GroupElement::Scalar,
+        public_key: GroupElement,
+    ) -> crate::Result<(GroupElement::Scalar, GroupElement::Scalar)> {
+        verify_signature(nonce_x_coordinate, signature_s, message, public_key)
+            .map_err(|_| Error::MaliciousDesignatedDecryptingParty)?;
+
+        Ok((nonce_x_coordinate, signature_s))
     }
 }
