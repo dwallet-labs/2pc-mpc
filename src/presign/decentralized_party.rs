@@ -8,17 +8,17 @@ use crypto_bigint::{Encoding, Uint};
 use enhanced_maurer::{
     encryption_of_discrete_log, encryption_of_discrete_log::StatementAccessors as _,
     encryption_of_tuple, encryption_of_tuple::StatementAccessors as _,
-    language::EnhancedLanguageStatementAccessors, EnhanceableLanguage,
+    EnhanceableLanguage, language::EnhancedLanguageStatementAccessors,
 };
 use group::{GroupElement as _, PartyID, PrimeGroupElement, Samplable};
 use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
 use maurer::{knowledge_of_decommitment, SOUND_PROOFS_REPETITIONS};
-use proof::{range, AggregatableRangeProof};
+use proof::{AggregatableRangeProof, range};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    presign::centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof,
-    Error, Result,
+    Error,
+    presign::centralized_party::commitment_round::SignatureNonceSharesCommitmentsAndBatchedProof, Result,
 };
 
 pub mod encrypted_masked_key_share_and_public_nonce_shares_round;
@@ -422,7 +422,7 @@ impl<
 
             malicious_parties.sort();
 
-            return Err(Error::MismatchingEncrypedMasks(malicious_parties));
+            return Err(Error::MismatchingEncryptedMasks(malicious_parties));
         }
 
         let encrypted_masked_nonce_share = encrypted_masked_nonce_share.encrypted_product().value();

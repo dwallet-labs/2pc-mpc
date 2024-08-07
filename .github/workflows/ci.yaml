@@ -72,7 +72,7 @@ jobs:
       - name: Install Rust ${{ env.rust_stable }}
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
+          toolchain: ${{ env.rust_stable }}
       - uses: Swatinem/rust-cache@v2
       - name: Run Tests
         run: cargo test --all-features --release
