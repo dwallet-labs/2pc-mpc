@@ -816,6 +816,10 @@ pub(crate) mod tests {
     }
 
     #[rstest]
+    fn itay_test() {
+    }
+
+    #[rstest]
     #[case(2, 2, false)]
     #[case(2, 2, true)]
     #[case(2, 4, false)]
@@ -897,7 +901,7 @@ pub(crate) mod tests {
             })
             .unzip();
 
-        let partial_decryption_proof_round_parties: HashMap<_, _> = decryption_key_shares
+        let partial_decryption_proof_round_parties: HashMap<_, _> = decryption_key_shares.clone()
             .into_iter()
             .map(|(party_id, decryption_key_share)| {
                 (
@@ -918,6 +922,7 @@ pub(crate) mod tests {
             })
             .collect();
 
+        // TODO: call this function from the first identifiable abort round.
         let (signature_partial_decryption_proofs, partial_decryption_verification_round_parties): (
             HashMap<_, _>,
             HashMap<_, _>,
@@ -975,6 +980,42 @@ pub(crate) mod tests {
                     }
                 }
             });
+        let (mut semi, full): (
+            HashMap<_, _>,
+            HashMap<_, _>,
+        ) = decryption_key_shares
+            .clone()
+            .into_iter()
+            .map(|(party_id, decryption_key_share)| {
+                (
+                    (
+                        party_id,
+                        decryption_key_share
+                            .generate_decryption_share_semi_honest(
+                                &encrypted_partial_signature,
+                                &decryption_key_share_public_parameters,
+                            )
+                            .unwrap(),
+                    ),
+                    (
+                        party_id,
+                        decryption_key_share
+                            .generate_decryption_shares(
+                                vec![encrypted_masked_nonce_share],
+                                &decryption_key_share_public_parameters,
+                                &mut OsRng,
+                            )
+                            .unwrap().0[0],
+                    ),
+                )
+            })
+            .unzip();
+
+        for (party_id, semi_decryption_share) in semi.iter_mut() {
+            let full_decryption_share = full.get(party_id).unwrap();
+            assert_eq!(semi_decryption_share, full_decryption_share);
+        }
+
     }
 }
 
