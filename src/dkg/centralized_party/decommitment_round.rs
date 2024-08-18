@@ -16,7 +16,7 @@ use crate::{dkg::decentralized_party, ProtocolPublicParameters};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Output<GroupElementValue, ScalarValue, CiphertextSpaceValue> {
-    pub(crate) secret_key_share: ScalarValue,
+    pub secret_key_share: ScalarValue,
     pub(crate) public_key_share: GroupElementValue,
     pub public_key: GroupElementValue,
     pub encrypted_decentralized_party_secret_key_share: CiphertextSpaceValue,
