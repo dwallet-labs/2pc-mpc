@@ -9,8 +9,8 @@ use std::collections::HashSet;
 use commitment::Commitment;
 use crypto_bigint::{rand_core::CryptoRngCore, Uint};
 use enhanced_maurer::{
-    encryption_of_discrete_log, language::EnhancedPublicParameters, EnhanceableLanguage,
-    EnhancedLanguage,
+    encryption_of_discrete_log, EnhanceableLanguage, EnhancedLanguage,
+    language::EnhancedPublicParameters,
 };
 use group::{GroupElement as _, PartyID, PrimeGroupElement, Samplable};
 use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
@@ -24,6 +24,9 @@ use crate::{
 };
 
 #[cfg_attr(feature = "benchmarking", derive(Clone))]
+/// Party for the decentralized encryption of secret key share round.
+/// This party is responsible for sampling the secret key share, preparing the computation of the
+/// commitment to the secret key share and its zero-knowledge proof.
 pub struct Party<
     const SCALAR_LIMBS: usize,
     const COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS: usize,
@@ -100,13 +103,16 @@ where
         >,
 {
     /// This function implements step 2 of Protocol 4 (DKG):
-    /// Samples x_i and prepares computation of ct_i & its zk-proof.
-    /// src: <https://eprint.iacr.org/archive/2024/253/20240217:153208>
+    /// Samples $x_i$ and prepares computation of $ct_i$ & its zk-proof.
+    /// Reruns the commitment to the secret key share and the `Party` for decommitment proof
+    /// verification round.
+    /// [Source](https://eprint.iacr.org/archive/2024/253/20240217:153208)
     pub fn sample_secret_key_share_and_initialize_proof_aggregation(
         self,
         commitment_to_centralized_party_secret_key_share: Commitment,
         rng: &mut impl CryptoRngCore,
     ) -> crate::Result<(
+        // todo(scaly): what is it here? how is it this generic?
         enhanced_maurer::aggregation::commitment_round::Party<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -137,7 +143,7 @@ where
             return Err(Error::ThresholdNotReached);
         }
 
-        // === Sample x_i ====
+        // === Sample $x_i$ ====
         // Protocol 4, step 2b
         let share_of_decentralized_party_secret_key_share =
             GroupElement::Scalar::sample(&self.scalar_group_public_parameters, rng)?;
@@ -145,7 +151,7 @@ where
         let share_of_decentralized_party_secret_key_share_value: Uint<SCALAR_LIMBS> =
             share_of_decentralized_party_secret_key_share.into();
 
-        // === Sample ρ_i ===
+        // === Sample $ρ_i$ ===
         // Protocol 4, step 2d
         let encryption_randomness = EncryptionKey::RandomnessSpaceGroupElement::sample(
             &self
@@ -155,8 +161,8 @@ where
             rng,
         )?;
 
-        // Construct L_EncDL parameters
-        // Used in emulating the idealized F^{L_EncDL}_{agg-zk} component
+        // Construct `L_EncDL` parameters
+        // Used in emulating the idealized $F^{L_EncDL}_{agg-zk}$ component
         // Protocol 4, steps 2e and 2f.
         let language_public_parameters =
             encryption_of_discrete_log::PublicParameters::<
@@ -170,7 +176,7 @@ where
                 self.encryption_scheme_public_parameters.clone(),
                 GroupElement::generator_value_from_public_parameters(&self.group_public_parameters),
             );
-        let language_public_parameters = EnhancedPublicParameters::<
+        let enhanced_language_public_parameters = EnhancedPublicParameters::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
@@ -204,7 +210,7 @@ where
         // * [unbounded_witness]     uw_i = ρ_i
         //
         // There is no direct mapping of this step to protocol 4;
-        // they are used to emulate the idealized F^{L_{EncDL}}_{agg-zk} component.
+        // they are used to emulate the idealized $F^{L_{EncDL}}_{agg-zk}$ component.
         let share_of_decentralized_party_secret_key_share_witness = EnhancedLanguage::<
             SOUND_PROOFS_REPETITIONS,
             RANGE_CLAIMS_PER_SCALAR,
@@ -230,7 +236,7 @@ where
                 encryption_randomness,
             )
                 .into(),
-            &language_public_parameters,
+            &enhanced_language_public_parameters,
             rng,
         )?;
 
@@ -244,6 +250,7 @@ where
         // --------
         // maurer::aggregation::commitment_round::commit_statements_and_statement_mask.
         // ct_i = enhanced_maurer::Language::homomorphose(witnesses, &enc_dl_public_parameters).
+        // Note in this case Language is encryption_of_discrete_log::Language.
         let encryption_of_secret_share_commitment_round_party =
             enhanced_maurer::aggregation::commitment_round::Party::<
                 SOUND_PROOFS_REPETITIONS,
@@ -261,12 +268,14 @@ where
             >::new_session(
                 self.party_id,
                 self.parties.clone(),
-                language_public_parameters,
+                enhanced_language_public_parameters,
+                // todo(scaly): doc what is protocol context.
                 self.protocol_context.clone(),
                 vec![share_of_decentralized_party_secret_key_share_witness],
                 rng,
             )?;
 
+        // Prepare decommitment proof verification round.
         let decommitment_round_party = decommitment_proof_verification_round::Party::<
             SCALAR_LIMBS,
             COMMITMENT_SCHEME_MESSAGE_SPACE_SCALAR_LIMBS,
