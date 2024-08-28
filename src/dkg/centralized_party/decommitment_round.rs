@@ -20,7 +20,7 @@ pub struct Output<GroupElementValue, ScalarValue, CiphertextSpaceValue> {
     pub public_key_share: GroupElementValue,
     pub public_key: GroupElementValue,
     pub encrypted_decentralized_party_secret_key_share: CiphertextSpaceValue,
-    pub(in crate::dkg) decentralized_party_public_key_share: GroupElementValue,
+    pub decentralized_party_public_key_share: GroupElementValue,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
